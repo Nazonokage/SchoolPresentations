@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Module 14 — Periodical Assessment & DOM Review</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:#090c18;color:#e8edf5}
+#deck{position:relative;width:100vw;height:100vh;overflow:hidden}
+.sw{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:28px 48px 50px;opacity:0;transform:translateX(40px);transition:opacity .35s ease,transform .35s ease;pointer-events:none;overflow-y:auto}
+.sw.active{opacity:1;transform:translateX(0);pointer-events:auto}
+.sw.xl{opacity:0;transform:translateX(-40px)}
+.sw.xr{opacity:0;transform:translateX(40px)}
+@media(prefers-reduced-motion:reduce){.sw{transition:none!important;transform:none!important}.sw.xl,.sw.xr{opacity:0;transform:none!important}}
+.slide{width:100%;max-width:1260px;max-height:100%;background:#131726;border-radius:22px;padding:32px 42px 36px;box-shadow:0 24px 72px rgba(0,0,0,.78);display:flex;flex-direction:column;gap:13px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#232d47 transparent}
+.slide::-webkit-scrollbar{width:5px}.slide::-webkit-scrollbar-thumb{background:#232d47;border-radius:4px}
+.eyebrow{font-size:13px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#4a6888;border-bottom:2px solid #1b2236;padding-bottom:7px}
+.stitle{font-size:clamp(26px,3.3vw,44px);font-weight:900;line-height:1.12;color:#fff;letter-spacing:-.5px}
+.ssub{font-size:16px;color:#7592b2;line-height:1.6}
+.ab{color:#5cb8ff}.ag{color:#4ee3a0}.ao{color:#ffaa5e}.ap{color:#b98cfa}.ar{color:#f87171}.ac{color:#22d3ee}.ay{color:#fbbf24}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px 22px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 18px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 14px}
+.card{background:#1b2236;border-radius:14px;padding:16px 19px;border-left:4px solid #5cb8ff;min-width:0}
+.card.g{border-left-color:#4ee3a0}.card.o{border-left-color:#ffaa5e}.card.p{border-left-color:#b98cfa}.card.r{border-left-color:#f87171}.card.c{border-left-color:#22d3ee}.card.y{border-left-color:#fbbf24}.card.nb{border-left:none}
+.ct{font-size:14px;font-weight:700;color:#96b0ca;letter-spacing:.3px;margin-bottom:6px}
+.cb{font-size:15px;line-height:1.65;color:#c6d4e4}
+.cb strong{color:#eef2fa}
+.cb ul{list-style:none;padding:0;margin:6px 0 0}
+.cb ul li{padding:3px 0 3px 20px;position:relative;font-size:15px;line-height:1.5}
+.cb ul li::before{content:"▸";position:absolute;left:0;color:#5cb8ff;font-weight:700}
+.tw{overflow-x:auto;border-radius:12px;border:1px solid #1b2236}
+.tw table{width:100%;border-collapse:collapse;font-size:15px}
+.tw th{background:#171d2e;color:#7592b2;font-size:12px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;padding:9px 14px;text-align:left;border-bottom:1px solid #1b2236}
+.tw td{padding:9px 14px;border-bottom:1px solid #171d2e;color:#c6d4e4;vertical-align:top;line-height:1.55}
+.tw td:first-child{font-family:monospace;font-size:14px;color:#5cb8ff;white-space:nowrap}
+.tw tr:last-child td{border-bottom:none}
+.tw tr:hover td{background:rgba(92,184,255,.04)}
+.pre{background:#0c1020;border-radius:13px;border:1px solid #1b2236;overflow:hidden}
+.prebar{display:flex;align-items:center;justify-content:space-between;padding:8px 15px;background:#151b2c;border-bottom:1px solid #1b2236}
+.prelang{font-size:13px;font-weight:700;color:#4a6888;letter-spacing:.9px;text-transform:uppercase}
+.copybtn{font-size:13px;font-weight:700;background:#1b2236;color:#7592b2;border:1px solid #252f48;border-radius:8px;padding:4px 13px;cursor:pointer;transition:all .2s}
+.copybtn:hover{background:#5cb8ff;color:#0c1020;border-color:#5cb8ff}
+.copybtn.ok{background:#4ee3a0;color:#0c1020;border-color:#4ee3a0}
+pre{padding:16px 20px;overflow-x:auto;overflow-y:auto;max-height:340px;line-height:1.8;margin:0;scrollbar-width:thin;scrollbar-color:#232d47 transparent;font-size:14px;font-family:Consolas,'Courier New',monospace}
+pre::-webkit-scrollbar{width:5px;height:5px}
+pre::-webkit-scrollbar-thumb{background:#232d47;border-radius:4px}
+.kw{color:#c084fc}.fn{color:#5cb8ff}.st{color:#4ee3a0}.cm{color:#4a6888;font-style:italic}.tg{color:#f87171}.at{color:#ffaa5e}
+#prog{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#5cb8ff,#4ee3a0,#b98cfa);transition:width .3s ease;z-index:100;border-radius:0 2px 2px 0}
+#ctr{position:fixed;bottom:17px;right:22px;font-size:13px;font-weight:700;color:#334d66;z-index:100}
+#sco{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center}
+#sco.show{display:flex}
+#scb{background:#1b2236;border-radius:18px;padding:30px 38px;max-width:460px;width:92%}
+#scb h3{font-size:18px;font-weight:900;color:#fff;margin-bottom:16px}
+.sk{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #1b2236;font-size:15px;color:#c6d4e4}
+.sk:last-child{border-bottom:none}
+.key{font-family:monospace;background:#131726;padding:2px 9px;border-radius:6px;color:#5cb8ff;font-size:13px}
+.scclose{margin-top:18px;background:#5cb8ff;color:#090c18;border:none;border-radius:10px;padding:9px 24px;font-size:15px;font-weight:700;cursor:pointer;width:100%}
+.qblock{background:#1b2236;border-radius:15px;padding:18px 22px;border-left:5px solid #b98cfa;min-width:0}
+.qnum{font-size:13px;font-weight:800;color:#b98cfa;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px}
+.qtext{font-size:15px;color:#e8edf5;font-weight:600;margin-bottom:11px;line-height:1.5}
+.qchoices{display:grid;grid-template-columns:1fr 1fr;gap:5px 16px}
+.qchoice{font-size:14px;color:#8aaabe;padding:2px 0;line-height:1.4}
+.qchoice span{color:#b98cfa;font-weight:800;margin-right:4px}
+.akrow{display:flex;gap:12px;align-items:flex-start;background:#16281e;border-radius:12px;padding:10px 15px}
+.akn{font-size:15px;font-weight:900;color:#4ee3a0;min-width:26px;padding-top:1px}
+.aka{font-size:14px;font-weight:700;color:#4ee3a0}
+.akx{font-size:13px;color:#3d7a58;margin-top:2px;line-height:1.5}
+.qqt{background:#1b2236;border-radius:14px;padding:20px 26px;border-left:5px solid #fbbf24;font-size:16px;line-height:1.75;color:#d6e2f0;font-style:italic}
+.qqt .qsrc{font-size:14px;color:#7592b2;font-style:normal;margin-top:8px;font-weight:600}
+.pill{display:inline-block;font-size:14px;font-weight:700;padding:4px 13px;border-radius:20px;margin:3px}
+.pill.b{background:#1a2e48;color:#5cb8ff}.pill.g{background:#162a1e;color:#4ee3a0}.pill.o{background:#381f10;color:#ffaa5e}.pill.p{background:#261840;color:#b98cfa}.pill.c{background:#0e2432;color:#22d3ee}.pill.y{background:#2e2410;color:#fbbf24}
+code{font-family:monospace;font-size:14px;background:#1b2236;padding:1px 7px;border-radius:5px;color:#5cb8ff}
+.tgiant{font-size:clamp(36px,5vw,66px);font-weight:900;line-height:1.06;letter-spacing:-1.5px}
+.note{background:#102038;border:1px solid #1e3a5a;border-radius:11px;padding:12px 16px;font-size:15px;color:#7ab8e0;line-height:1.65}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;border-radius:14px;overflow:hidden;border:1px solid #1b2236}
+.split-l{background:#1a1030;padding:16px 20px;border-right:1px solid #1b2236}
+.split-r{background:#101a28;padding:16px 20px}
+.split-title{font-size:13px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px}
+.bdg{display:inline-flex;align-items:center;font-size:13px;font-weight:700;padding:2px 10px;border-radius:20px}
+.bdg.y{background:#162a1e;color:#4ee3a0}.bdg.n{background:#2a1010;color:#f87171}
+.pillar{background:#1b2236;border-radius:16px;padding:18px 16px;text-align:center;border-top:4px solid #5cb8ff;min-width:0}
+.pillar.g{border-top-color:#4ee3a0}.pillar.p{border-top-color:#b98cfa}
+.pillar-icon{font-size:28px;margin-bottom:8px}
+.pillar-title{font-size:16px;font-weight:800;color:#fff;margin-bottom:10px}
+.pli{list-style:none;padding:0;text-align:left}
+.pli li{font-size:14px;color:#c6d4e4;padding:3px 0 3px 18px;position:relative;line-height:1.4}
+.pli li::before{content:"▸";position:absolute;left:0;font-size:12px;color:#5cb8ff}
+.pillar.g .pli li::before{color:#4ee3a0}
+.pillar.p .pli li::before{color:#b98cfa}
+.csr{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid #1b2236;font-size:15px}
+.csr:last-child{border-bottom:none}
+.csr-c{font-family:monospace;color:#5cb8ff;font-size:14px;min-width:220px;flex-shrink:0}
+.csr-d{color:#c6d4e4;flex:1}
+.csr-t{font-size:12px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0}
+.live{background:#2a1010;color:#f87171}
+.sta{background:#162a1e;color:#4ee3a0}
+.any{background:#261840;color:#b98cfa}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<div id="ctr"></div>
+<div id="deck"></div>
+<div id="sco">
+  <div id="scb">
+    <h3>&#x2328;&#xFE0F; Keyboard Shortcuts</h3>
+    <div class="sk"><span>Next slide</span><span><span class="key">&rarr;</span> <span class="key">Right-click</span> <span class="key">Mouse4</span></span></div>
+    <div class="sk"><span>Previous slide</span><span><span class="key">&larr;</span> <span class="key">Mouse3</span></span></div>
+    <div class="sk"><span>First / Last</span><span><span class="key">Home</span> / <span class="key">End</span></span></div>
+    <div class="sk"><span>This help</span><span><span class="key">?</span></span></div>
+    <button class="scclose" onclick="document.getElementById('sco').classList.remove('show')">Close</button>
+  </div>
+</div>
+
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     SLIDES — pure HTML, zero JS template literals
+════════════════════════════════════════════════════════════════════ -->
+
+<!-- 0 TITLE -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Module 14 &middot; Periodical Assessment</div>
+  <div class="tgiant" style="margin-top:10px">Comprehensive<br><span class="ab">DOM</span> Review &amp;<br><span class="ap">Quiz Prep</span></div>
+  <div class="ssub" style="margin-top:14px">Synthesis of Modules 10&ndash;13 &middot; Widgets &middot; Web Sensors &middot; DOM &middot; Events &middot; Traversal &middot; Collections</div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:20px">
+    <span class="pill b">HTML DOM</span><span class="pill g">Selection Methods</span><span class="pill o">Node Manipulation</span>
+    <span class="pill p">Event Handling</span><span class="pill c">DOM Traversal</span><span class="pill y">Collections</span>
+  </div>
+  <div style="margin-top:22px;font-size:14px;color:#2e4560">Right-click or &rarr; to navigate &middot; Press ? for shortcuts</div>
+</div></div>
+
+<!-- 1 JOURNEY -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Review &middot; Modules 10&ndash;13</div>
+  <div class="stitle">Our <span class="ab">Journey</span> So Far</div>
+  <div class="ssub" style="margin-bottom:6px">Four modules from static HTML to fully dynamic interactive web interfaces.</div>
+  <div class="g4">
+    <div class="card">
+      <div class="ct">&#x1F4E6; M10 &mdash; Widgets &amp; DOM</div>
+      <div class="cb"><ul>
+        <li>Widget types: Desktop, Web, Mobile</li>
+        <li>Generic Sensor API + permissions</li>
+        <li>DOM tree structure &amp; W3C Standard</li>
+        <li>Core / XML / HTML DOM</li>
+        <li><code>innerHTML</code>, <code>style</code>, <code>getElementById</code></li>
+      </ul></div>
+    </div>
+    <div class="card g">
+      <div class="ct">&#x26A1; M11 &mdash; Event Handling</div>
+      <div class="cb"><ul>
+        <li><code>addEventListener(event, fn, capture)</code></li>
+        <li>Bubbling vs Capturing phase</li>
+        <li><code>removeEventListener()</code></li>
+        <li>Multiple handlers on one element</li>
+        <li>Code Drills: innerHTML + click events</li>
+      </ul></div>
+    </div>
+    <div class="card p">
+      <div class="ct">&#x1F333; M12 &mdash; DOM Traversal</div>
+      <div class="cb"><ul>
+        <li><code>parentNode</code> / <code>parentElement</code></li>
+        <li><code>children</code> vs <code>childNodes</code> (#text trap)</li>
+        <li><code>nextElementSibling</code> / <code>previousElementSibling</code></li>
+        <li><code>insertBefore</code>, <code>cloneNode(true)</code></li>
+        <li>Event delegation via <code>event.target</code></li>
+      </ul></div>
+    </div>
+    <div class="card o">
+      <div class="ct">&#x1F4CB; M13 &mdash; Collections</div>
+      <div class="cb"><ul>
+        <li><code>querySelector</code> / <code>querySelectorAll</code></li>
+        <li>HTMLCollection (live, no forEach)</li>
+        <li>NodeList (static, has forEach)</li>
+        <li>Live vs Static collections</li>
+        <li><code>Array.from()</code> + spread <code>[...col]</code></li>
+      </ul></div>
+    </div>
+  </div>
+  <div class="note">&#x1F4CC; This module synthesizes all four &mdash; expect quiz questions from any of these topics.</div>
+</div></div>
+
+<!-- 2 THREE PILLARS -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Master Summary &middot; Core DOM</div>
+  <div class="stitle">The Three <span class="ag">DOM Pillars</span></div>
+  <div class="ssub" style="margin-bottom:10px">Every DOM interaction falls into one of three categories.</div>
+  <div class="g3" style="margin-bottom:14px">
+    <div class="pillar">
+      <div class="pillar-icon">&#x1F50D;</div>
+      <div class="pillar-title ab">Selection</div>
+      <ul class="pli">
+        <li><code>getElementById(id)</code></li>
+        <li><code>querySelector(sel)</code></li>
+        <li><code>querySelectorAll(sel)</code></li>
+        <li><code>getByClassName(name)</code></li>
+        <li><code>getByTagName(tag)</code></li>
+      </ul>
+    </div>
+    <div class="pillar g">
+      <div class="pillar-icon">&#x270F;&#xFE0F;</div>
+      <div class="pillar-title ag">Manipulation</div>
+      <ul class="pli">
+        <li><code>element.innerHTML</code></li>
+        <li><code>element.style.property</code></li>
+        <li><code>appendChild(node)</code></li>
+        <li><code>removeChild(node)</code></li>
+        <li><code>createElement(tag)</code></li>
+        <li><code>insertBefore(new,ref)</code></li>
+      </ul>
+    </div>
+    <div class="pillar p">
+      <div class="pillar-icon">&#x26A1;</div>
+      <div class="pillar-title ap">Event Handling</div>
+      <ul class="pli">
+        <li><code>addEventListener(ev,fn)</code></li>
+        <li><code>removeEventListener()</code></li>
+        <li><code>event.target</code></li>
+        <li>Events: <code>"click"</code>, <code>"keydown"</code></li>
+        <li>Bubbling <code>false</code> / Capture <code>true</code></li>
+        <li>Event Delegation pattern</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card nb" style="background:#1b2236;padding:13px 18px;border-radius:12px">
+    <div style="font-size:15px;color:#7592b2;line-height:1.6">&#x1F333; <strong style="color:#c6d4e4">Traversal:</strong> <code>parentNode</code> &middot; <code>children</code> &middot; <code>firstElementChild</code> &middot; <code>nextElementSibling</code> &middot; <code>previousElementSibling</code> &middot; <code>cloneNode(true)</code></div>
+  </div>
+</div></div>
+
+<!-- 3 CHEATSHEET -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Cheatsheet &middot; Selection &amp; Collections</div>
+  <div class="stitle">Complete <span class="ab">Method Reference</span></div>
+  <div class="g2" style="flex:1">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="card">
+        <div class="ct">&#x1F50D; Selection Methods</div>
+        <div class="cb">
+          <div class="csr"><span class="csr-c">getElementById(id)</span><span class="csr-d">Single element by unique ID</span><span class="csr-t any">1 element</span></div>
+          <div class="csr"><span class="csr-c">querySelector(sel)</span><span class="csr-d">First CSS match &middot; null if none</span><span class="csr-t any">1 element</span></div>
+          <div class="csr"><span class="csr-c">querySelectorAll(sel)</span><span class="csr-d">All CSS matches &middot; static NodeList</span><span class="csr-t sta">Static</span></div>
+          <div class="csr"><span class="csr-c">getByClassName(name)</span><span class="csr-d">Elements with matching class</span><span class="csr-t live">Live</span></div>
+          <div class="csr"><span class="csr-c">getByTagName(tag)</span><span class="csr-d">Elements with matching tag</span><span class="csr-t live">Live</span></div>
+        </div>
+      </div>
+      <div class="card g">
+        <div class="ct">&#x1F333; Traversal Properties</div>
+        <div class="cb">
+          <div class="csr"><span class="csr-c">parentNode / parentElement</span><span class="csr-d">Direct parent (node / element)</span></div>
+          <div class="csr"><span class="csr-c" style="color:#4ee3a0">children &#x2705;</span><span class="csr-d">HTML element children only</span><span class="csr-t live">Live</span></div>
+          <div class="csr"><span class="csr-c">childNodes</span><span class="csr-d">All nodes incl. #text whitespace</span><span class="csr-t live">Live</span></div>
+          <div class="csr"><span class="csr-c" style="color:#4ee3a0">firstElementChild &#x2705;</span><span class="csr-d">First element child</span></div>
+          <div class="csr"><span class="csr-c" style="color:#4ee3a0">nextElementSibling &#x2705;</span><span class="csr-d">Next sibling element &middot; or null</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="split">
+        <div class="split-l">
+          <div class="split-title" style="color:#5cb8ff">&#x1F5C2; HTMLCollection</div>
+          <div style="font-size:14px;line-height:1.7;color:#c6d4e4">
+            <div style="padding:4px 0;border-bottom:1px solid #252f48"><strong style="color:#eef2fa">From:</strong> getByClass &middot; getByTag &middot; .children</div>
+            <div style="padding:4px 0;border-bottom:1px solid #252f48"><strong style="color:#eef2fa">Nodes:</strong> Elements only</div>
+            <div style="padding:4px 0;border-bottom:1px solid #252f48"><strong style="color:#eef2fa">forEach:</strong> <span class="bdg n">&#x2717; No</span></div>
+            <div style="padding:4px 0"><strong style="color:#eef2fa">Nature:</strong> <span class="bdg n">&#x1F534; Always Live</span></div>
+          </div>
+        </div>
+        <div class="split-r">
+          <div class="split-title" style="color:#4ee3a0">&#x1F4CB; NodeList</div>
+          <div style="font-size:14px;line-height:1.7;color:#c6d4e4">
+            <div style="padding:4px 0;border-bottom:1px solid #252f48"><strong style="color:#eef2fa">From:</strong> querySelectorAll &middot; childNodes</div>
+            <div style="padding:4px 0;border-bottom:1px solid #252f48"><strong style="color:#eef2fa">Nodes:</strong> Any type</div>
+            <div style="padding:4px 0;border-bottom:1px solid #252f48"><strong style="color:#eef2fa">forEach:</strong> <span class="bdg y">&#x2714; Yes</span></div>
+            <div style="padding:4px 0"><strong style="color:#eef2fa">Nature:</strong> <span class="bdg y">&#x1F4F8; Usually Static</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card o">
+        <div class="ct">&#x1F504; Iteration Quick Guide</div>
+        <div class="cb" style="font-size:14px">
+          <div style="padding:4px 0;border-bottom:1px solid #252f48"><code>NodeList</code> &rarr; <code>.forEach(item, i)</code> &#x2705; native</div>
+          <div style="padding:4px 0;border-bottom:1px solid #252f48"><code>HTMLCollection</code> &rarr; <code>for (let i=0; i&lt;col.length; i++)</code></div>
+          <div style="padding:4px 0"><strong>Both</strong> &rarr; <code>Array.from(col)</code> or <code>[...col]</code> &rarr; unlocks <code>.filter()</code> <code>.map()</code></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 4 FAQ -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Review &middot; FAQs</div>
+  <div class="stitle">Common Questions <span class="ao">Answered</span></div>
+  <div style="display:flex;flex-direction:column;gap:12px;flex:1">
+    <div class="card p">
+      <div class="ct">&#x2753; Why use addEventListener over inline onclick?</div>
+      <div class="cb"><ul>
+        <li><strong>Multiple handlers</strong> &mdash; addEventListener stacks; onclick replaces</li>
+        <li><strong>Separation of concerns</strong> &mdash; keeps JS logic out of HTML markup</li>
+        <li><strong>Removable</strong> &mdash; can be detached with <code>removeEventListener()</code></li>
+        <li><strong>Any target</strong> &mdash; works on window, document, or any element</li>
+      </ul></div>
+    </div>
+    <div class="card r">
+      <div class="ct">&#x2753; What is the #text node trap with childNodes / firstChild?</div>
+      <div class="cb">HTML indentation and newlines between tags become <code>#text</code> nodes. Targeting <code>firstChild</code> often lands on invisible whitespace.<br><br>
+      <strong>Fix:</strong> Always use the Element variants: <code>children</code>, <code>firstElementChild</code>, <code>lastElementChild</code>, <code>nextElementSibling</code>.</div>
+    </div>
+    <div class="card g">
+      <div class="ct">&#x2753; Are all NodeLists static?</div>
+      <div class="cb">No. <code>querySelectorAll()</code> returns a <strong>static</strong> NodeList &mdash; a snapshot. But <code>element.childNodes</code> returns a <strong>live</strong> NodeList that updates automatically when the DOM changes.</div>
+    </div>
+    <div class="card">
+      <div class="ct">&#x2753; Why doesn&#x27;t .forEach() work on getElementsByClassName()?</div>
+      <div class="cb"><code>getElementsByClassName()</code> returns an <strong>HTMLCollection</strong> &mdash; no built-in <code>.forEach()</code>. Convert it first:<br><br>
+      <code>Array.from(collection).forEach(...)</code> &nbsp;&middot;&nbsp; or use <code>querySelectorAll()</code> which returns a NodeList with native forEach.</div>
+    </div>
+    <div class="card c">
+      <div class="ct">&#x2753; What is the main DOM vs HTML difference?</div>
+      <div class="cb"><strong>HTML</strong> is static text markup &mdash; a file describing structure. The <strong>DOM</strong> is the browser&#x27;s live, in-memory object representation generated from that HTML, exposing a JavaScript API to read and modify the page at runtime.</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 5 KEY QUOTES -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Key Quotes</div>
+  <div class="stitle">Words Worth <span class="ay">Remembering</span></div>
+  <div style="display:flex;flex-direction:column;gap:14px;flex:1;justify-content:center">
+    <div class="qqt">Think of the DOM as a library&#x27;s digital catalog. Selection methods like querySelector are search queries on the catalog computer. Event Listeners are the desk staff waiting to assist when someone presses a service bell.
+      <div class="qsrc">&mdash; Module 14 Lesson Material</div></div>
+    <div class="qqt" style="border-left-color:#4ee3a0">In standard HTML formatting, indentations and newlines between tags are interpreted as #text nodes. To target actual HTML markup tags safely, use children, firstElementChild, or lastElementChild.
+      <div class="qsrc">&mdash; Module 14 FAQ</div></div>
+    <div class="qqt" style="border-left-color:#b98cfa">addEventListener promotes clean separation of concerns, allows multiple handlers on the same target, and enables dynamic listener detachment via removeEventListener.
+      <div class="qsrc">&mdash; Module 14 FAQ</div></div>
+    <div class="qqt" style="border-left-color:#22d3ee">The DOM is not the HTML file itself &mdash; it is the browser&#x27;s live, in-memory representation of the parsed HTML, exposed through a JavaScript programming API.
+      <div class="qsrc">&mdash; Modules 10&ndash;14</div></div>
+  </div>
+</div></div>
+
+<!-- 6 ANALOGIES -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Analogies &amp; Real-World Applications</div>
+  <div class="stitle">Concepts That <span class="ao">Stick</span></div>
+  <div class="g2" style="flex:1">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card y">
+        <div class="ct">&#x1F4DA; Library Catalog &mdash; The DOM</div>
+        <div class="cb">The DOM is a library&#x27;s digital catalog:<ul>
+          <li><strong>querySelector</strong> = search query at the terminal</li>
+          <li><strong>Event Listeners</strong> = desk staff awaiting service bell click</li>
+          <li><strong>appendChild</strong> = adding a new book to a shelf</li>
+          <li><strong>removeChild</strong> = checking a book out permanently</li>
+        </ul></div>
+      </div>
+      <div class="card c">
+        <div class="ct">&#x1F4F8; Photo vs Live Camera &mdash; Collections</div>
+        <div class="cb">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:14px;margin-top:4px">
+            <div style="background:#0c1020;padding:10px;border-radius:8px;border:1px solid #252f48"><div style="color:#4ee3a0;font-weight:700;margin-bottom:4px">&#x1F4F8; Static NodeList</div><div style="color:#7592b2">Snapshot &mdash; DOM changes after the query don&#x27;t update the list.</div></div>
+            <div style="background:#0c1020;padding:10px;border-radius:8px;border:1px solid #252f48"><div style="color:#f87171;font-weight:700;margin-bottom:4px">&#x1F4F9; Live HTMLCollection</div><div style="color:#7592b2">Live feed &mdash; DOM changes appear instantly. Loop carefully.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card g"><div class="ct">&#x2705; App 1 &mdash; Interactive UI Widgets</div><div class="cb">Modular dynamic widgets (live weather, stock counters) that update via <code>innerHTML</code> or <code>appendChild</code> without reloading the page. Event listeners trigger the refreshes.</div></div>
+      <div class="card p"><div class="ct">&#x270D;&#xFE0F; App 2 &mdash; Form Validation &amp; Feedback</div><div class="cb">Listen for <code>"blur"</code> or <code>"input"</code> events to validate fields in real time. Use <code>element.style.borderColor = "red"</code> to highlight errors instantly.</div></div>
+      <div class="card o"><div class="ct">&#x1F4F0; App 3 &mdash; Dynamic Content Feeds</div><div class="cb">Fetch new data, create card elements with <code>createElement()</code>, populate with <code>innerHTML</code>, and <code>appendChild()</code> into an endless-scroll feed container.</div></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 7 DRILL CODE -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Synthesis Drill &middot; Full Project</div>
+  <div class="stitle">Task List <span class="ag">Manager</span></div>
+  <div class="ssub" style="margin-bottom:12px">One complete app combining all four pillars: selection, manipulation, events, and parent-node deletion.</div>
+  <div class="pre">
+    <div class="prebar"><span class="prelang">html</span><button class="copybtn" onclick="doCopy(this,'d1')">Copy</button></div>
+    <pre id="d1"><span class="tg">&lt;!DOCTYPE html&gt;
+&lt;html</span> <span class="at">lang</span>=<span class="st">"en"</span><span class="tg">&gt;
+&lt;head&gt;&lt;meta</span> <span class="at">charset</span>=<span class="st">"UTF-8"</span><span class="tg">&gt;&lt;title&gt;</span>Task List Manager<span class="tg">&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;input</span> <span class="at">type</span>=<span class="st">"text"</span> <span class="at">id</span>=<span class="st">"taskInput"</span> <span class="at">placeholder</span>=<span class="st">"Enter task..."</span><span class="tg">&gt;
+  &lt;button</span> <span class="at">id</span>=<span class="st">"addBtn"</span><span class="tg">&gt;</span>Add Task<span class="tg">&lt;/button&gt;
+  &lt;div</span> <span class="at">id</span>=<span class="st">"taskList"</span><span class="tg">&gt;&lt;/div&gt;
+
+  &lt;script&gt;</span>
+    <span class="cm">// 1. Selection</span>
+    <span class="kw">const</span> input     = document.<span class="fn">querySelector</span>(<span class="st">"#taskInput"</span>);
+    <span class="kw">const</span> addBtn    = document.<span class="fn">querySelector</span>(<span class="st">"#addBtn"</span>);
+    <span class="kw">const</span> container = document.<span class="fn">querySelector</span>(<span class="st">"#taskList"</span>);
+
+    <span class="cm">// 2. Event: Add Task</span>
+    addBtn.<span class="fn">addEventListener</span>(<span class="st">"click"</span>, <span class="kw">function</span>() {
+      <span class="kw">const</span> taskText = input.value.<span class="fn">trim</span>();
+      <span class="kw">if</span> (taskText === <span class="st">""</span>) { alert(<span class="st">"Enter a valid task!"</span>); <span class="kw">return</span>; }
+
+      <span class="cm">// 3. Manipulation: Create &rarr; Configure &rarr; Append</span>
+      <span class="kw">const</span> row = document.<span class="fn">createElement</span>(<span class="st">"div"</span>);
+      row.className = <span class="st">"task-row"</span>;
+      row.<span class="fn">innerHTML</span> = <span class="st">"&lt;span&gt;"</span> + taskText + <span class="st">"&lt;/span&gt;"</span>;
+      container.<span class="fn">appendChild</span>(row);
+      input.value = <span class="st">""</span>;
+    });
+
+    <span class="cm">// 4. Event Delegation: Delete via parentElement</span>
+    container.<span class="fn">addEventListener</span>(<span class="st">"click"</span>, <span class="kw">function</span>(event) {
+      <span class="kw">if</span> (event.target.classList.<span class="fn">contains</span>(<span class="st">"delete-btn"</span>)) {
+        event.target.<span class="fn">parentElement</span>.remove();
+      }
+    });
+  <span class="tg">&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</span></pre>
+  </div>
+</div></div>
+
+<!-- 8 DRILL BREAKDOWN -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Synthesis Drill &middot; Breakdown</div>
+  <div class="stitle">Four Pillars in <span class="ap">One App</span></div>
+  <div class="g2" style="flex:1">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card"><div class="ct">&#x1F50D; Pillar 1 &mdash; Selection</div><div class="cb"><ul>
+        <li><code>querySelector("#taskInput")</code> &mdash; gets the text input</li>
+        <li><code>querySelector("#addBtn")</code> &mdash; gets the Add button</li>
+        <li><code>querySelector("#taskList")</code> &mdash; gets the container div</li>
+      </ul><br><em>Modern CSS-selector syntax &mdash; works for IDs, classes, or any valid selector.</em></div></div>
+      <div class="card g"><div class="ct">&#x270F;&#xFE0F; Pillar 2 &mdash; Manipulation</div><div class="cb"><ul>
+        <li><code>createElement("div")</code> &mdash; creates a new task row node</li>
+        <li><code>row.className = "task-row"</code> &mdash; sets its class</li>
+        <li><code>row.innerHTML = ...</code> &mdash; injects span + button markup</li>
+        <li><code>container.appendChild(row)</code> &mdash; attaches it to the DOM</li>
+        <li><code>input.value = ""</code> &mdash; clears the text field after add</li>
+      </ul></div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card p"><div class="ct">&#x26A1; Pillar 3 &mdash; Event Handling</div><div class="cb"><ul>
+        <li><code>addBtn.addEventListener("click", fn)</code> &mdash; triggers task creation</li>
+        <li><code>input.value.trim()</code> &mdash; validates the field isn&#x27;t empty</li>
+        <li><code>alert()</code> &mdash; provides immediate user feedback</li>
+        <li>Handler registered without overwriting existing listeners</li>
+      </ul></div></div>
+      <div class="card o"><div class="ct">&#x1F333; Pillar 4 &mdash; Traversal + Delegation</div><div class="cb"><ul>
+        <li><strong>Event Delegation</strong> &mdash; one listener on <code>container</code> handles all delete buttons, even dynamically added ones</li>
+        <li><code>event.target.classList.contains("delete-btn")</code> &mdash; confirms correct element was clicked</li>
+        <li><code>event.target.parentElement</code> &mdash; navigates UP to the task row</li>
+        <li><code>.remove()</code> &mdash; modern self-removal shorthand</li>
+      </ul></div></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 9 RECAP -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Recap &middot; Modules 10&ndash;14</div>
+  <div class="stitle">Everything in <span class="ab">One View</span></div>
+  <div class="g2" style="margin-bottom:12px">
+    <div class="card"><div class="ct">&#x1F333; DOM Fundamentals</div><div class="cb"><ul>
+      <li>DOM = browser&#x27;s live in-memory tree from HTML</li>
+      <li>W3C Standard: <strong>Core</strong> &middot; <strong>XML</strong> &middot; <strong>HTML DOM</strong></li>
+      <li>HTML = static file &middot; DOM = live programmable object</li>
+      <li>Every element is a node with properties &amp; methods</li>
+    </ul></div></div>
+    <div class="card g"><div class="ct">&#x1F50D; Selection</div><div class="cb"><ul>
+      <li><code>getElementById</code> &rarr; single element by ID</li>
+      <li><code>querySelector</code> &rarr; first CSS match &middot; null if none</li>
+      <li><code>querySelectorAll</code> &rarr; static NodeList &middot; forEach &#x2705;</li>
+      <li><code>getByClass / getByTag</code> &rarr; live HTMLCollection</li>
+    </ul></div></div>
+    <div class="card p"><div class="ct">&#x26A1; Events</div><div class="cb"><ul>
+      <li><code>addEventListener(ev, fn, capture)</code></li>
+      <li>Stacks multiple handlers &mdash; no overwriting</li>
+      <li>Bubbling (false) vs Capturing (true)</li>
+      <li>Delegation: listen on parent &middot; check <code>event.target</code></li>
+    </ul></div></div>
+    <div class="card o"><div class="ct">&#x1F4CB; Collections</div><div class="cb"><ul>
+      <li>HTMLCollection &mdash; live, elements only, no forEach</li>
+      <li>NodeList &mdash; usually static, any node type, has forEach</li>
+      <li><code>Array.from(col)</code> or <code>[...col]</code> &rarr; true Array</li>
+      <li>Live loop trap: indices shift when items removed</li>
+    </ul></div></div>
+  </div>
+  <div class="card r"><div class="ct">&#x1F511; The Rules That Prevent 90% of DOM Bugs</div>
+    <div class="cb" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 28px;font-size:15px">
+      <span>&#x25B8; Prefer <code>children</code> over <code>childNodes</code> &mdash; skip #text nodes</span>
+      <span>&#x25B8; <code>querySelector</code> returns <code>null</code> &mdash; always null-check</span>
+      <span>&#x25B8; <code>nextElementSibling</code> returns <code>null</code> &mdash; guard before use</span>
+      <span>&#x25B8; Live collections shift mid-loop &mdash; convert or iterate in reverse</span>
+      <span>&#x25B8; <code>addEventListener</code> stacks &mdash; <code>onclick=</code> overwrites</span>
+      <span>&#x25B8; <code>createElement</code> alone is invisible &mdash; must <code>appendChild</code></span>
+    </div>
+  </div>
+</div></div>
+
+<!-- 10 MCQ 1-4 -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Periodical Quiz &middot; Multiple Choice</div>
+  <div class="stitle">Questions <span class="ap">1 &ndash; 4</span></div>
+  <div class="ssub" style="margin-bottom:12px">No peeking &mdash; answers on the key slides.</div>
+  <div class="g2" style="gap:13px;flex:1">
+    <div class="qblock"><div class="qnum">Question 1</div><div class="qtext">What does DOM stand for in web development?</div><div class="qchoices"><div class="qchoice"><span>A.</span>Data Object Mode</div><div class="qchoice"><span>B.</span>Document Object Model</div><div class="qchoice"><span>C.</span>Digital Oriented Markup</div><div class="qchoice"><span>D.</span>Desktop Operation Model</div></div></div>
+    <div class="qblock"><div class="qnum">Question 2</div><div class="qtext">Which W3C DOM classification defines objects and properties specifically for web page elements?</div><div class="qchoices"><div class="qchoice"><span>A.</span>Core DOM</div><div class="qchoice"><span>B.</span>XML DOM</div><div class="qchoice"><span>C.</span>HTML DOM</div><div class="qchoice"><span>D.</span>Browser DOM</div></div></div>
+    <div class="qblock"><div class="qnum">Question 3</div><div class="qtext">Which DOM property allows JavaScript to get or replace the inner HTML content of an element?</div><div class="qchoices"><div class="qchoice"><span>A.</span><code>element.style</code></div><div class="qchoice"><span>B.</span><code>element.innerHTML</code></div><div class="qchoice"><span>C.</span><code>element.setAttribute()</code></div><div class="qchoice"><span>D.</span><code>document.createElement()</code></div></div></div>
+    <div class="qblock"><div class="qnum">Question 4</div><div class="qtext">Which method selects an element by its unique identifier in the document?</div><div class="qchoices"><div class="qchoice"><span>A.</span><code>document.getElementById()</code></div><div class="qchoice"><span>B.</span><code>document.getElementsByClassName()</code></div><div class="qchoice"><span>C.</span><code>document.querySelectorAll()</code></div><div class="qchoice"><span>D.</span><code>document.createElement()</code></div></div></div>
+  </div>
+</div></div>
+
+<!-- 11 MCQ 5-7 -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Periodical Quiz &middot; Multiple Choice</div>
+  <div class="stitle">Questions <span class="ap">5 &ndash; 7</span></div>
+  <div style="display:flex;flex-direction:column;gap:13px;flex:1">
+    <div class="qblock"><div class="qnum">Question 5</div><div class="qtext">What is the primary function of <code>addEventListener()</code>?</div><div class="qchoices"><div class="qchoice"><span>A.</span>Creating a new HTML element inside the body</div><div class="qchoice"><span>B.</span>Attaching an event handler callback to a target element</div><div class="qchoice"><span>C.</span>Removing an existing node from the DOM tree</div><div class="qchoice"><span>D.</span>Iterating over an HTMLCollection</div></div></div>
+    <div class="qblock"><div class="qnum">Question 6</div><div class="qtext">In the syntax <code>element.addEventListener(type, listener)</code>, what does the first argument specify?</div><div class="qchoices"><div class="qchoice"><span>A.</span>The callback function name</div><div class="qchoice"><span>B.</span>The targeted event name (e.g., "click", "mouseover")</div><div class="qchoice"><span>C.</span>A boolean flag for event bubbling</div><div class="qchoice"><span>D.</span>The replacement HTML text</div></div></div>
+    <div class="qblock"><div class="qnum">Question 7</div><div class="qtext">Which property should you use to select the direct parent node of an element?</div><div class="qchoices"><div class="qchoice"><span>A.</span><code>element.children</code></div><div class="qchoice"><span>B.</span><code>element.nextElementSibling</code></div><div class="qchoice"><span>C.</span><code>element.parentNode</code></div><div class="qchoice"><span>D.</span><code>element.childNodes</code></div></div></div>
+  </div>
+</div></div>
+
+<!-- 12 MCQ 8-10 -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Periodical Quiz &middot; Multiple Choice</div>
+  <div class="stitle">Questions <span class="ap">8 &ndash; 10</span></div>
+  <div style="display:flex;flex-direction:column;gap:13px;flex:1">
+    <div class="qblock"><div class="qnum">Question 8</div><div class="qtext">Which DOM navigation property returns a collection of ONLY HTML element children, excluding text and comment nodes?</div><div class="qchoices"><div class="qchoice"><span>A.</span><code>childNodes</code></div><div class="qchoice"><span>B.</span><code>children</code></div><div class="qchoice"><span>C.</span><code>firstChild</code></div><div class="qchoice"><span>D.</span><code>nextSibling</code></div></div></div>
+    <div class="qblock"><div class="qnum">Question 9</div><div class="qtext">What type of collection object is returned by <code>document.querySelectorAll()</code>?</div><div class="qchoices"><div class="qchoice"><span>A.</span>A live HTMLCollection</div><div class="qchoice"><span>B.</span>A static NodeList</div><div class="qchoice"><span>C.</span>A live NodeList</div><div class="qchoice"><span>D.</span>A native JavaScript Map</div></div></div>
+    <div class="qblock"><div class="qnum">Question 10</div><div class="qtext">Which method is used to instantiate a new DOM element node prior to appending it to the document?</div><div class="qchoices"><div class="qchoice"><span>A.</span><code>document.appendChild()</code></div><div class="qchoice"><span>B.</span><code>document.createElement()</code></div><div class="qchoice"><span>C.</span><code>document.replaceChild()</code></div><div class="qchoice"><span>D.</span><code>element.setAttribute()</code></div></div></div>
+  </div>
+</div></div>
+
+<!-- 13 ANSWER KEY 1-5 -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Answer Key &middot; Page 1 of 2</div>
+  <div class="stitle">Answers <span class="ag">1 &ndash; 5</span></div>
+  <div style="display:flex;flex-direction:column;gap:8px;flex:1">
+    <div class="akrow"><div class="akn">1</div><div><div class="aka">B &mdash; Document Object Model</div><div class="akx">DOM = Document Object Model. The browser-generated, live in-memory tree representation of an HTML page, exposing a JavaScript programming API.</div></div></div>
+    <div class="akrow"><div class="akn">2</div><div><div class="aka">C &mdash; HTML DOM</div><div class="akx">The W3C DOM has 3 parts: Core DOM (all documents), XML DOM (XML files), and HTML DOM &mdash; which defines HTML elements as objects with properties, methods, and events.</div></div></div>
+    <div class="akrow"><div class="akn">3</div><div><div class="aka">B &mdash; element.innerHTML</div><div class="akx">innerHTML gets or sets the HTML markup content inside an element. element.style targets CSS, setAttribute() sets attributes, createElement() creates new nodes.</div></div></div>
+    <div class="akrow"><div class="akn">4</div><div><div class="aka">A &mdash; document.getElementById()</div><div class="akx">getElementById() selects a single unique element by its id attribute. getByClassName and querySelectorAll return collections, not a single element.</div></div></div>
+    <div class="akrow"><div class="akn">5</div><div><div class="aka">B &mdash; Attaching an event handler callback to a target element</div><div class="akx">addEventListener() registers a callback that fires when a specified event occurs on the target. It does NOT create elements, remove nodes, or iterate collections.</div></div></div>
+  </div>
+</div></div>
+
+<!-- 14 ANSWER KEY 6-10 -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Answer Key &middot; Page 2 of 2</div>
+  <div class="stitle">Answers <span class="ag">6 &ndash; 10</span></div>
+  <div style="display:flex;flex-direction:column;gap:8px;flex:1">
+    <div class="akrow"><div class="akn">6</div><div><div class="aka">B &mdash; The targeted event name (e.g., "click", "mouseover")</div><div class="akx">The first argument of addEventListener is always the event type string. The second is the callback function. The optional third is the useCapture boolean.</div></div></div>
+    <div class="akrow"><div class="akn">7</div><div><div class="aka">C &mdash; element.parentNode</div><div class="akx">parentNode moves one level UP the DOM tree to the direct parent. children moves DOWN (to child elements), nextElementSibling moves sideways, childNodes returns all child nodes including #text.</div></div></div>
+    <div class="akrow"><div class="akn">8</div><div><div class="aka">B &mdash; children</div><div class="akx">element.children returns an HTMLCollection of HTML element children only. childNodes includes #text whitespace nodes. firstChild and nextSibling also include text nodes.</div></div></div>
+    <div class="akrow"><div class="akn">9</div><div><div class="aka">B &mdash; A static NodeList</div><div class="akx">querySelectorAll() returns a static NodeList snapshot. DOM changes after the query do not update it. getByClassName/getByTag return live HTMLCollections. childNodes returns a live NodeList.</div></div></div>
+    <div class="akrow"><div class="akn">10</div><div><div class="aka">B &mdash; document.createElement()</div><div class="akx">createElement() instantiates a new element node in memory. It must be appended with appendChild() to appear on the page. appendChild alone cannot create &mdash; only attach.</div></div></div>
+  </div>
+</div></div>
+
+<!-- 15 CLOSING -->
+<div class="sw"><div class="slide" style="align-items:center;justify-content:center;text-align:center">
+  <div class="eyebrow" style="border-bottom:none">Module 14 &middot; Complete</div>
+  <div class="tgiant" style="font-size:clamp(34px,4.6vw,60px);margin-top:10px">You Know the <span class="ab">DOM</span>.<br>Now <span class="ag">Build</span> With It.</div>
+  <div class="qqt" style="max-width:740px;text-align:left;border-left-color:#fbbf24;font-size:16px;margin-top:10px">
+    The DOM is not magic &mdash; it is a tree. Once you see it as a tree, every selection, traversal, event, and manipulation becomes a predictable, learnable move. You have all the pieces. Go build.
+    <div class="qsrc">&mdash; A friendly send-off before your Periodical Quiz &#x1F680;</div>
+  </div>
+  <div class="g4" style="max-width:1000px;margin-top:14px">
+    <div class="card" style="text-align:left"><div class="ct">Selection</div><div class="cb" style="font-size:14px"><code>querySelector</code> + <code>querySelectorAll</code> for everything. Null-check always.</div></div>
+    <div class="card g" style="text-align:left"><div class="ct">Manipulation</div><div class="cb" style="font-size:14px">Create &rarr; Configure &rarr; Append. <code>innerHTML</code> + <code>style</code> for fast updates.</div></div>
+    <div class="card p" style="text-align:left"><div class="ct">Events</div><div class="cb" style="font-size:14px"><code>addEventListener</code> always. Delegate to parent. Check <code>event.target</code>.</div></div>
+    <div class="card o" style="text-align:left"><div class="ct">Collections</div><div class="cb" style="font-size:14px">NodeList has forEach. HTMLCollection needs <code>Array.from()</code>. Live = careful.</div></div>
+  </div>
+  <div style="font-size:14px;color:#2e4560;margin-top:14px">Press <span style="color:#5cb8ff">Home</span> to restart &middot; <span style="color:#5cb8ff">?</span> for shortcuts &middot; Good luck on the quiz! &#x1F393;</div>
+</div></div>
+
+<script>
+/* ── copy helper ── works on file:// too ── */
+function doCopy(btn, id) {
+  var txt = document.getElementById(id).innerText;
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(txt).then(function() { flash(btn); }).catch(function() { fallback(btn, txt); });
+  } else {
+    fallback(btn, txt);
+  }
+}
+function fallback(btn, txt) {
+  var ta = document.createElement('textarea');
+  ta.value = txt;
+  ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;width:1px;height:1px';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try { document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+  flash(btn);
+}
+function flash(btn) {
+  btn.textContent = 'Copied!';
+  btn.classList.add('ok');
+  setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('ok'); }, 1800);
+}
+
+/* ── slide engine ── */
+var slides = document.querySelectorAll('.sw');
+var cur = 0;
+var tot = slides.length;
+var busy = false;
+
+function ui() {
+  document.getElementById('prog').style.width = ((cur + 1) / tot * 100) + '%';
+  document.getElementById('ctr').textContent = (cur + 1) + ' / ' + tot;
+}
+function go(idx, dir) {
+  if (busy || idx === cur || idx < 0 || idx >= tot) return;
+  busy = true;
+  var pv = slides[cur], nx = slides[idx];
+  pv.classList.remove('active');
+  pv.classList.add(dir === 1 ? 'xl' : 'xr');
+  nx.style.transform = dir === 1 ? 'translateX(40px)' : 'translateX(-40px)';
+  nx.style.opacity = '0';
+  nx.classList.add('active');
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      nx.style.transform = '';
+      nx.style.opacity = '';
+    });
+  });
+  cur = idx; ui();
+  setTimeout(function() { pv.classList.remove('xl', 'xr'); busy = false; }, 380);
+}
+
+slides[0].classList.add('active');
+ui();
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(cur + 1, 1);
+  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') go(cur - 1, -1);
+  else if (e.key === 'Home') go(0, -1);
+  else if (e.key === 'End') go(tot - 1, 1);
+  else if (e.key === '?') document.getElementById('sco').classList.toggle('show');
+  else if (e.key === 'Escape') document.getElementById('sco').classList.remove('show');
+});
+document.addEventListener('mousedown', function(e) {
+  if (e.button === 2) { e.preventDefault(); e.stopImmediatePropagation(); go(cur + 1, 1); }
+  else if (e.button === 3) { e.preventDefault(); e.stopImmediatePropagation(); go(cur - 1, -1); }
+  else if (e.button === 4) { e.preventDefault(); e.stopImmediatePropagation(); go(cur + 1, 1); }
+}, true);
+document.addEventListener('contextmenu', function(e) { e.preventDefault(); }, true);
+document.addEventListener('auxclick', function(e) { if (e.button !== 0) e.preventDefault(); }, true);
+var tx = 0;
+document.addEventListener('touchstart', function(e) { tx = e.touches[0].clientX; }, { passive: true });
+document.addEventListener('touchend', function(e) {
+  var dx = e.changedTouches[0].clientX - tx;
+  if (Math.abs(dx) > 50) go(cur + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1);
+}, { passive: true });
+</script>
+</body>
+</html>

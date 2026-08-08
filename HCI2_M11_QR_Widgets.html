@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Module 11 &mdash; Connect Widgets for the Web &amp; QR Code Generation</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:#090c18;color:#e8edf5}
+#deck{position:relative;width:100vw;height:100vh;overflow:hidden}
+.sw{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:28px 48px 50px;opacity:0;transform:translateX(40px);transition:opacity .35s ease,transform .35s ease;pointer-events:none;overflow-y:auto}
+.sw.active{opacity:1;transform:translateX(0);pointer-events:auto}
+.sw.xl{opacity:0;transform:translateX(-40px)}
+.sw.xr{opacity:0;transform:translateX(40px)}
+@media(prefers-reduced-motion:reduce){.sw{transition:none!important;transform:none!important}.sw.xl,.sw.xr{opacity:0;transform:none!important}}
+.slide{width:100%;max-width:1260px;max-height:100%;background:#131726;border-radius:22px;padding:32px 42px 36px;box-shadow:0 24px 72px rgba(0,0,0,.78);display:flex;flex-direction:column;gap:13px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#232d47 transparent}
+.slide::-webkit-scrollbar{width:5px}.slide::-webkit-scrollbar-thumb{background:#232d47;border-radius:4px}
+.eyebrow{font-size:13px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#4a6888;border-bottom:2px solid #1b2236;padding-bottom:7px}
+.stitle{font-size:clamp(26px,3.3vw,44px);font-weight:900;line-height:1.12;color:#fff;letter-spacing:-.5px}
+.ssub{font-size:16px;color:#7592b2;line-height:1.6}
+.ab{color:#5cb8ff}.ag{color:#4ee3a0}.ao{color:#ffaa5e}.ap{color:#b98cfa}.ar{color:#f87171}.ac{color:#22d3ee}.ay{color:#fbbf24}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px 22px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 18px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 14px}
+.card{background:#1b2236;border-radius:14px;padding:16px 19px;border-left:4px solid #5cb8ff;min-width:0}
+.card.g{border-left-color:#4ee3a0}.card.o{border-left-color:#ffaa5e}.card.p{border-left-color:#b98cfa}.card.r{border-left-color:#f87171}.card.c{border-left-color:#22d3ee}.card.y{border-left-color:#fbbf24}.card.nb{border-left:none}
+.ct{font-size:14px;font-weight:700;color:#96b0ca;letter-spacing:.3px;margin-bottom:6px}
+.cb{font-size:15px;line-height:1.65;color:#c6d4e4}
+.cb strong{color:#eef2fa}
+.cb ul{list-style:none;padding:0;margin:6px 0 0}
+.cb ul li{padding:3px 0 3px 20px;position:relative;font-size:15px;line-height:1.5}
+.cb ul li::before{content:"▸";position:absolute;left:0;color:#5cb8ff;font-weight:700}
+.pre{background:#0c1020;border-radius:13px;border:1px solid #1b2236;overflow:hidden}
+.prebar{display:flex;align-items:center;justify-content:space-between;padding:8px 15px;background:#151b2c;border-bottom:1px solid #1b2236}
+.prelang{font-size:13px;font-weight:700;color:#4a6888;letter-spacing:.9px;text-transform:uppercase}
+.copybtn{font-size:13px;font-weight:700;background:#1b2236;color:#7592b2;border:1px solid #252f48;border-radius:8px;padding:4px 13px;cursor:pointer;transition:all .2s}
+.copybtn:hover{background:#5cb8ff;color:#0c1020;border-color:#5cb8ff}
+.copybtn.ok{background:#4ee3a0;color:#0c1020;border-color:#4ee3a0}
+pre{padding:16px 20px;overflow-x:auto;overflow-y:auto;max-height:340px;line-height:1.8;margin:0;scrollbar-width:thin;scrollbar-color:#232d47 transparent;font-size:14px;font-family:Consolas,'Courier New',monospace}
+pre::-webkit-scrollbar{width:5px;height:5px}
+pre::-webkit-scrollbar-thumb{background:#232d47;border-radius:4px}
+.kw{color:#c084fc}.fn{color:#5cb8ff}.st{color:#4ee3a0}.cm{color:#4a6888;font-style:italic}.tg{color:#f87171}.at{color:#ffaa5e}.num{color:#fbbf24}
+.tw{overflow-x:auto;border-radius:12px;border:1px solid #1b2236}
+.tw table{width:100%;border-collapse:collapse;font-size:14px}
+.tw th{background:#171d2e;color:#7592b2;font-size:12px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;padding:9px 14px;text-align:left;border-bottom:1px solid #1b2236}
+.tw td{padding:9px 14px;border-bottom:1px solid #171d2e;color:#c6d4e4;vertical-align:top;line-height:1.55}
+.tw td:first-child{font-weight:700;color:#5cb8ff;white-space:nowrap;font-size:13px}
+.tw tr:last-child td{border-bottom:none}
+.tw tr:hover td{background:rgba(92,184,255,.04)}
+#prog{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#5cb8ff,#4ee3a0,#b98cfa);transition:width .3s ease;z-index:100;border-radius:0 2px 2px 0}
+#ctr{position:fixed;bottom:17px;right:22px;font-size:13px;font-weight:700;color:#334d66;z-index:100}
+#sco{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center}
+#sco.show{display:flex}
+#scb{background:#1b2236;border-radius:18px;padding:30px 38px;max-width:460px;width:92%}
+#scb h3{font-size:18px;font-weight:900;color:#fff;margin-bottom:16px}
+.sk{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #1b2236;font-size:15px;color:#c6d4e4}
+.sk:last-child{border-bottom:none}
+.key{font-family:monospace;background:#131726;padding:2px 9px;border-radius:6px;color:#5cb8ff;font-size:13px}
+.scclose{margin-top:18px;background:#5cb8ff;color:#090c18;border:none;border-radius:10px;padding:9px 24px;font-size:15px;font-weight:700;cursor:pointer;width:100%}
+/* fill-in-the-blank */
+.blank{display:inline-block;min-width:220px;border-bottom:3px solid #5cb8ff;color:#090c18;background:transparent;font-family:monospace;font-size:15px;padding:2px 8px;vertical-align:bottom;opacity:.5}
+/* step numbers */
+.stepnum{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-weight:900;font-size:14px;flex-shrink:0;margin-right:10px}
+.stepnum.b{background:#1a2e48;color:#5cb8ff}
+.stepnum.g{background:#162a1e;color:#4ee3a0}
+.stepnum.p{background:#261840;color:#b98cfa}
+.stepnum.o{background:#381f10;color:#ffaa5e}
+/* answer key */
+.akrow{display:flex;gap:12px;align-items:flex-start;background:#16281e;border-radius:12px;padding:10px 15px}
+.akn{font-size:15px;font-weight:900;color:#4ee3a0;min-width:26px;padding-top:1px}
+.aka{font-size:14px;font-weight:700;color:#4ee3a0}
+.akx{font-size:13px;color:#3d7a58;margin-top:2px;line-height:1.5}
+.qqt{background:#1b2236;border-radius:14px;padding:20px 26px;border-left:5px solid #fbbf24;font-size:16px;line-height:1.75;color:#d6e2f0;font-style:italic}
+.qqt .qsrc{font-size:14px;color:#7592b2;font-style:normal;margin-top:8px;font-weight:600}
+.pill{display:inline-block;font-size:14px;font-weight:700;padding:4px 13px;border-radius:20px;margin:3px}
+.pill.b{background:#1a2e48;color:#5cb8ff}.pill.g{background:#162a1e;color:#4ee3a0}.pill.o{background:#381f10;color:#ffaa5e}.pill.p{background:#261840;color:#b98cfa}.pill.c{background:#0e2432;color:#22d3ee}
+code{font-family:monospace;font-size:14px;background:#1b2236;padding:1px 7px;border-radius:5px;color:#5cb8ff}
+.tgiant{font-size:clamp(36px,5vw,66px);font-weight:900;line-height:1.06;letter-spacing:-1.5px}
+.note{background:#102038;border:1px solid #1e3a5a;border-radius:11px;padding:12px 16px;font-size:15px;color:#7ab8e0;line-height:1.65}
+.warn{background:#2a1a10;border:1px solid #7a4a20;border-radius:11px;padding:12px 16px;font-size:15px;color:#ffaa5e;line-height:1.65}
+/* qr option rows */
+.optrow{display:flex;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid #1b2236;font-size:15px}
+.optrow:last-child{border-bottom:none}
+.optname{font-family:monospace;color:#ffaa5e;font-size:14px;min-width:80px;flex-shrink:0;padding-top:2px}
+.opttype{font-size:12px;font-weight:700;padding:2px 8px;border-radius:8px;background:#1a2e48;color:#5cb8ff;flex-shrink:0;white-space:nowrap}
+.optdesc{color:#c6d4e4;flex:1;line-height:1.5}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<div id="ctr"></div>
+<div id="deck"></div>
+<div id="sco">
+  <div id="scb">
+    <h3>&#x2328;&#xFE0F; Keyboard Shortcuts</h3>
+    <div class="sk"><span>Next slide</span><span><span class="key">&rarr;</span> <span class="key">Right-click</span></span></div>
+    <div class="sk"><span>Previous slide</span><span><span class="key">&larr;</span> <span class="key">Mouse3</span></span></div>
+    <div class="sk"><span>First / Last</span><span><span class="key">Home</span> / <span class="key">End</span></span></div>
+    <div class="sk"><span>This help</span><span><span class="key">?</span></span></div>
+    <button class="scclose" onclick="document.getElementById('sco').classList.remove('show')">Close</button>
+  </div>
+</div>
+<script>
+function doCopy(btn,id){
+  var txt=document.getElementById(id).innerText;
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(txt).then(function(){flash(btn);}).catch(function(){fallback(btn,txt);});}
+  else{fallback(btn,txt);}
+}
+function fallback(btn,txt){
+  var ta=document.createElement('textarea');ta.value=txt;
+  ta.style.cssText='position:fixed;opacity:0;top:0;left:0;width:1px;height:1px';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');}catch(e){}
+  document.body.removeChild(ta);flash(btn);
+}
+function flash(btn){btn.textContent='Copied!';btn.classList.add('ok');setTimeout(function(){btn.textContent='Copy';btn.classList.remove('ok');},1800);}
+var slides,cur,tot,busy;
+function initDeck(){
+  slides=document.querySelectorAll('.sw');
+  cur=0;tot=slides.length;busy=false;
+  slides[0].classList.add('active');ui();
+}
+function ui(){document.getElementById('prog').style.width=((cur+1)/tot*100)+'%';document.getElementById('ctr').textContent=(cur+1)+' / '+tot;}
+function go(idx,dir){
+  if(busy||idx===cur||idx<0||idx>=tot)return;busy=true;
+  var pv=slides[cur],nx=slides[idx];
+  pv.classList.remove('active');pv.classList.add(dir===1?'xl':'xr');
+  nx.style.transform=dir===1?'translateX(40px)':'translateX(-40px)';nx.style.opacity='0';
+  nx.classList.add('active');
+  requestAnimationFrame(function(){requestAnimationFrame(function(){nx.style.transform='';nx.style.opacity='';});});
+  cur=idx;ui();setTimeout(function(){pv.classList.remove('xl','xr');busy=false;},380);
+}
+document.addEventListener('DOMContentLoaded',function(){initDeck();});
+document.addEventListener('keydown',function(e){
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')go(cur+1,1);
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(cur-1,-1);
+  else if(e.key==='Home')go(0,-1);
+  else if(e.key==='End')go(tot-1,1);
+  else if(e.key==='?')document.getElementById('sco').classList.toggle('show');
+  else if(e.key==='Escape')document.getElementById('sco').classList.remove('show');
+});
+document.addEventListener('mousedown',function(e){
+  if(e.button===2){e.preventDefault();e.stopImmediatePropagation();go(cur+1,1);}
+  else if(e.button===3){e.preventDefault();e.stopImmediatePropagation();go(cur-1,-1);}
+  else if(e.button===4){e.preventDefault();e.stopImmediatePropagation();go(cur+1,1);}
+},true);
+document.addEventListener('contextmenu',function(e){e.preventDefault();},true);
+document.addEventListener('auxclick',function(e){if(e.button!==0)e.preventDefault();},true);
+var tx=0;
+document.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;},{passive:true});
+document.addEventListener('touchend',function(e){var dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50)go(cur+(dx<0?1:-1),dx<0?1:-1);},{passive:true});
+</script>
+
+<!-- ══════════════════════ SLIDES ══════════════════════ -->
+
+<!-- 0 TITLE -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Module 11 &middot; ITE 380 Human Computer Interaction 2</div>
+  <div class="tgiant" style="margin-top:10px">Connect <span class="ab">Widgets</span><br>for the <span class="ag">Web</span></div>
+  <div class="ssub" style="margin-top:14px">JavaScript widgets &middot; inline vs external scripts &middot; QR code generation with the QRious library</div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:20px">
+    <span class="pill b">What is a Widget?</span>
+    <span class="pill g">JS Widgets</span>
+    <span class="pill o">Inline vs External</span>
+    <span class="pill p">Script Placement</span>
+    <span class="pill c">QRious Library</span>
+  </div>
+  <div style="margin-top:22px;font-size:14px;color:#2e4560">Right-click or &rarr; to navigate &middot; Press ? for shortcuts</div>
+</div></div>
+
+<!-- 1 PREVIEW -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Lesson Preview</div>
+  <div class="stitle">Building on <span class="ap">Event Listeners</span></div>
+  <div class="g2" style="margin-bottom:14px">
+    <div class="card r">
+      <div class="ct">&#x2705; Previously (M11 &mdash; Event Listeners)</div>
+      <div class="cb"><ul>
+        <li>What event listeners are and how they work</li>
+        <li><code>addEventListener(event, function, useCapture)</code></li>
+        <li>Handling user interactions: clicks, keypresses</li>
+        <li>Named vs anonymous function handlers</li>
+        <li>DOM manipulation in response to events</li>
+      </ul></div>
+    </div>
+    <div class="card p">
+      <div class="ct">&#x1F680; This Module</div>
+      <div class="cb"><ul>
+        <li><strong>What is a widget?</strong> &mdash; definition and role in web dev</li>
+        <li><strong>JavaScript widgets</strong> &mdash; embedded dynamic components</li>
+        <li><strong>Inline vs External</strong> JS &mdash; how to add scripts to HTML</li>
+        <li><strong>Script placement</strong> &mdash; where your <code>&lt;script&gt;</code> tag goes</li>
+        <li><strong>QRious library</strong> &mdash; build a working QR code generator</li>
+      </ul></div>
+    </div>
+  </div>
+  <div class="card o">
+    <div class="ct">&#x1F3AF; The Goal This Module</div>
+    <div class="cb">Apply everything we know &mdash; HTML structure, DOM selection, and event listeners &mdash; to build a <strong>fully functional QR Code Generator</strong> using a third-party JavaScript widget library called <strong>QRious</strong>. Users type any text or URL, click a button, and a scannable QR code appears instantly on the page.</div>
+  </div>
+</div></div>
+
+<!-- 2 WHAT IS A WIDGET -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 1 &middot; Widgets</div>
+  <div class="stitle">What Is a <span class="ab">Widget</span>?</div>
+  <div class="ssub" style="margin-bottom:12px">A <strong>widget</strong> is an application or specific UI component embedded into a webpage that lets the user perform a function or access a service <em>without leaving the current page</em>.</div>
+  <div class="g2" style="margin-bottom:14px">
+    <div class="card">
+      <div class="ct">&#x1F9E9; General Widget</div>
+      <div class="cb">Any embedded application or component on a webpage &mdash; it has a <strong>defined purpose</strong>, occupies a section of the page, and works independently of the rest of the site.<br><br>
+      Examples: weather forecast panel, live chat bubble, embedded map, social share buttons.</div>
+    </div>
+    <div class="card p">
+      <div class="ct">&#x26A1; JavaScript Widget</div>
+      <div class="cb">A <strong>JavaScript widget</strong> is specifically a block of embedded JavaScript code that adds <strong>dynamic interactivity</strong> to otherwise static HTML pages.<br><br>
+      Once you &ldquo;drop&rdquo; a JavaScript widget onto your page, you simply <strong>configure its settings</strong> to control how it behaves.</div>
+    </div>
+  </div>
+  <div class="g3">
+    <div class="card g" style="text-align:center;border-left:none;border-top:3px solid #4ee3a0">
+      <div style="font-size:24px;margin-bottom:6px">&#x2705;</div>
+      <div style="font-size:14px;font-weight:700;color:#4ee3a0;margin-bottom:4px">Form Validation</div>
+      <div style="font-size:13px;color:#7592b2">Check inputs in real time without a page reload</div>
+    </div>
+    <div class="card" style="text-align:center;border-left:none;border-top:3px solid #5cb8ff">
+      <div style="font-size:24px;margin-bottom:6px">&#x1F504;</div>
+      <div style="font-size:14px;font-weight:700;color:#5cb8ff;margin-bottom:4px">Dynamic Content</div>
+      <div style="font-size:13px;color:#7592b2">Load new data into the page without refreshing</div>
+    </div>
+    <div class="card p" style="text-align:center;border-left:none;border-top:3px solid #b98cfa">
+      <div style="font-size:24px;margin-bottom:6px">&#x1F4F7;</div>
+      <div style="font-size:14px;font-weight:700;color:#b98cfa;margin-bottom:4px">Visual Assets</div>
+      <div style="font-size:13px;color:#7592b2">Generate images like QR codes directly on the page</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 3 INLINE VS EXTERNAL -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 2 &middot; Adding JavaScript</div>
+  <div class="stitle">Inline <span class="ab">vs</span> <span class="ag">External</span> Scripts</div>
+  <div class="ssub" style="margin-bottom:12px">Two main ways to get JavaScript into your HTML file.</div>
+  <div class="g2" style="margin-bottom:14px">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="card">
+        <div class="ct">&#x270F;&#xFE0F; Method 1 &mdash; Inline (Direct)</div>
+        <div class="cb">Type your JavaScript code directly inside a <code>&lt;script&gt;</code> tag within the HTML file.</div>
+      </div>
+      <div class="pre">
+        <div class="prebar"><span class="prelang">html</span></div>
+        <pre><span class="tg">&lt;script&gt;</span>
+  <span class="kw">var</span> str = <span class="st">"Hello World!"</span>;
+<span class="tg">&lt;/script&gt;</span></pre>
+      </div>
+      <div class="note">&#x1F4A1; <strong>Pro Tip:</strong> When writing JS directly into HTML, you do <strong>not</strong> add <code>&lt;script&gt;</code> tags <em>inside</em> the JavaScript code itself &mdash; the browser already knows it&#x27;s a script block.</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="card g">
+        <div class="ct">&#x1F4C2; Method 2 &mdash; External File</div>
+        <div class="cb">For larger or reusable scripts, link to a separate <code>.js</code> file using the <code>src</code> attribute.</div>
+      </div>
+      <div class="pre">
+        <div class="prebar"><span class="prelang">html</span></div>
+        <pre><span class="cm">&lt;!-- Your own file --&gt;</span>
+<span class="tg">&lt;script</span> <span class="at">src</span>=<span class="st">"scripts/main.js"</span><span class="tg">&gt;&lt;/script&gt;</span>
+
+<span class="cm">&lt;!-- Third-party CDN library --&gt;</span>
+<span class="tg">&lt;script</span> <span class="at">src</span>=<span class="st">"https://cdnjs.cloudflare.com/..."</span><span class="tg">&gt;&lt;/script&gt;</span></pre>
+      </div>
+      <div class="card o">
+        <div class="ct">&#x1F4A1; When to Use Each</div>
+        <div class="cb">
+          <strong>Inline:</strong> Quick snippets, small page-specific logic<br>
+          <strong>External:</strong> Reusable code, third-party libraries, production projects
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 4 SCRIPT PLACEMENT -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 2 &middot; Script Placement</div>
+  <div class="stitle">Where to Put Your <span class="ap">&lt;script&gt;</span> Tag</div>
+  <div class="ssub" style="margin-bottom:12px">The <em>location</em> of your <code>&lt;script&gt;</code> tag dictates <strong>when it executes</strong>. Choose based on your needs.</div>
+  <div class="tw" style="margin-bottom:14px"><table>
+    <thead><tr><th>Location</th><th>Execution Timing</th><th>Best Use Case</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>In &lt;head&gt;</td>
+        <td style="font-family:sans-serif">Executes immediately as the page loads</td>
+        <td style="font-family:sans-serif">Small scripts required for initial setup &mdash; but can slow rendering</td>
+      </tr>
+      <tr>
+        <td>Where widget is dropped</td>
+        <td style="font-family:sans-serif">Executes when that specific element loads</td>
+        <td style="font-family:sans-serif">Widgets that need to bind to an element immediately</td>
+      </tr>
+      <tr>
+        <td style="color:#4ee3a0">Before &lt;/body&gt; &#x2705;</td>
+        <td style="font-family:sans-serif">Executes at the very end of the loading process</td>
+        <td style="font-family:sans-serif"><strong>Recommended.</strong> Full HTML is parsed before JS runs &mdash; safe for DOM manipulation and heavy widgets</td>
+      </tr>
+    </tbody>
+  </table></div>
+  <div class="g2">
+    <div class="pre">
+      <div class="prebar"><span class="prelang">html &mdash; recommended pattern</span></div>
+      <pre><span class="tg">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;</span>
+  <span class="cm">&lt;!-- CDN libraries loaded here --&gt;</span>
+  <span class="tg">&lt;script</span> <span class="at">src</span>=<span class="st">"https://cdn.../library.js"</span><span class="tg">&gt;&lt;/script&gt;</span>
+<span class="tg">&lt;/head&gt;
+&lt;body&gt;</span>
+
+  <span class="cm">&lt;!-- All your HTML content here --&gt;</span>
+
+  <span class="cm">&lt;!-- Your JS goes LAST, before closing body --&gt;</span>
+  <span class="tg">&lt;script&gt;</span>
+    <span class="cm">// DOM is fully loaded, safe to use!</span>
+    document.<span class="fn">getElementById</span>(<span class="st">"myEl"</span>);
+  <span class="tg">&lt;/script&gt;</span>
+<span class="tg">&lt;/body&gt;
+&lt;/html&gt;</span></pre>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="card r">
+        <div class="ct">&#x26A0;&#xFE0F; Why NOT always in &lt;head&gt;?</div>
+        <div class="cb">If your script runs in the <code>&lt;head&gt;</code> and tries to select a DOM element that hasn&#x27;t been created yet &mdash; it will return <code>null</code> and likely crash.<br><br>This is the <strong>same classList error</strong> we fixed in earlier modules.</div>
+      </div>
+      <div class="card g">
+        <div class="ct">&#x2705; The Golden Rule</div>
+        <div class="cb">Load <strong>third-party CDN libraries</strong> in the <code>&lt;head&gt;</code> so they are available when needed. Put <strong>your own JS logic</strong> just before <code>&lt;/body&gt;</code> so the full DOM exists before you touch it.</div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 5 QRIOUS INTRO -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 3 &middot; QR Code Generation</div>
+  <div class="stitle">Meet the <span class="ag">QRious</span> Library</div>
+  <div class="ssub" style="margin-bottom:12px"><strong>QRious</strong> is a lightweight third-party JavaScript library that generates QR codes using pure JavaScript &mdash; no server, no plugin, no image upload needed.</div>
+  <div class="g2" style="margin-bottom:14px">
+    <div class="card g">
+      <div class="ct">&#x1F4E6; Step 1 &mdash; Import via CDN</div>
+      <div class="cb">Add this inside the <code>&lt;head&gt;</code> of your HTML. This loads the QRious library from the internet so you can use its <code>QRious</code> class in your code.</div>
+    </div>
+    <div class="pre" style="align-self:center">
+      <div class="prebar"><span class="prelang">html</span><button class="copybtn" onclick="doCopy(this,'cdn1')">Copy</button></div>
+      <pre id="cdn1"><span class="tg">&lt;script</span> <span class="at">src</span>=<span class="st">"https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"</span><span class="tg">&gt;&lt;/script&gt;</span></pre>
+    </div>
+  </div>
+  <div class="card o" style="margin-bottom:14px">
+    <div class="ct">&#x1F381; The Gift Wrapper Analogy</div>
+    <div class="cb">Think of <strong>QRious</strong> as a skilled gift wrapper. You hand it a box (the <strong>input text</strong>) and choose the paper size (the <strong>size option</strong>). The wrapper does the complex folding and taping in the background and hands you back a fully wrapped gift (the <strong>QR code image</strong>) that you can display instantly.</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:0;background:#1b2236;border-radius:14px;overflow:hidden">
+    <div style="padding:12px 18px;background:#151b2c;font-size:13px;font-weight:700;color:#4a6888;letter-spacing:.8px;text-transform:uppercase">QRious() Options</div>
+    <div style="padding:6px 18px">
+      <div class="optrow"><span class="optname">value</span><span class="opttype">String</span><span class="optdesc">The text or URL to encode into the QR code</span></div>
+      <div class="optrow"><span class="optname">size</span><span class="opttype">Number</span><span class="optdesc">Width &amp; height of the QR code in pixels &mdash; 400 is a good web standard</span></div>
+      <div class="optrow"><span class="optname">level</span><span class="opttype">String</span><span class="optdesc">Error correction level: <code>'L'</code> Low (7%) &middot; <code>'M'</code> Medium (15%) &middot; <code>'Q'</code> Quartile (25%) &middot; <code>'H'</code> High (30%)</span></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 6 HTML STRUCTURE -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 3 &middot; Step 2</div>
+  <div class="stitle">Structure the <span class="ab">HTML Interface</span></div>
+  <div class="ssub" style="margin-bottom:12px">Three elements are needed: an input field, a trigger button, and an image placeholder.</div>
+  <div class="pre" style="margin-bottom:14px">
+    <div class="prebar"><span class="prelang">html</span><button class="copybtn" onclick="doCopy(this,'html1')">Copy</button></div>
+    <pre id="html1"><span class="cm">&lt;!-- Input field for user text or URL --&gt;</span>
+<span class="tg">&lt;input</span> <span class="at">type</span>=<span class="st">"text"</span> <span class="at">id</span>=<span class="st">"qr-code-value"</span> <span class="at">placeholder</span>=<span class="st">"Enter text or URL"</span><span class="tg">&gt;</span>
+
+<span class="cm">&lt;!-- Button that triggers the generation --&gt;</span>
+<span class="tg">&lt;button</span> <span class="at">onclick</span>=<span class="st">"generateQRCode()"</span><span class="tg">&gt;</span>Generate QR Code<span class="tg">&lt;/button&gt;</span>
+
+<span class="cm">&lt;!-- Placeholder image where QR code will appear --&gt;</span>
+<span class="tg">&lt;img</span> <span class="at">id</span>=<span class="st">"qr-code-image"</span> <span class="at">alt</span>=<span class="st">"QR Code"</span><span class="tg">&gt;</span></pre>
+  </div>
+  <div class="g3">
+    <div class="card">
+      <div class="ct">&#x1F4DD; &lt;input type="text"&gt;</div>
+      <div class="cb"><ul>
+        <li><code>id="qr-code-value"</code> &mdash; lets JS select it</li>
+        <li><code>placeholder</code> &mdash; hint text shown when empty</li>
+        <li><code>.value</code> property reads what the user typed</li>
+      </ul></div>
+    </div>
+    <div class="card p">
+      <div class="ct">&#x1F6CE;&#xFE0F; &lt;button onclick&gt;</div>
+      <div class="cb"><ul>
+        <li><code>onclick="generateQRCode()"</code> calls our function when clicked</li>
+        <li>Alternative: use <code>addEventListener("click", ...)</code> from M11</li>
+        <li>Both approaches work identically here</li>
+      </ul></div>
+    </div>
+    <div class="card g">
+      <div class="ct">&#x1F5BC;&#xFE0F; &lt;img id="qr-code-image"&gt;</div>
+      <div class="cb"><ul>
+        <li>Starts empty &mdash; no <code>src</code> attribute yet</li>
+        <li>JS will inject the QR code as a <strong>Data URL</strong> into the <code>src</code></li>
+        <li>The browser renders it as an image automatically</li>
+      </ul></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 7 JS LOGIC -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 3 &middot; Step 3</div>
+  <div class="stitle">The <span class="ap">JavaScript</span> Logic</div>
+  <div class="ssub" style="margin-bottom:12px">Five steps inside <code>generateQRCode()</code> &mdash; read input, configure options, create object, convert to image, inject into DOM.</div>
+  <div class="pre" style="margin-bottom:14px">
+    <div class="prebar"><span class="prelang">javascript</span><button class="copybtn" onclick="doCopy(this,'js1')">Copy</button></div>
+    <pre id="js1"><span class="kw">function</span> <span class="fn">generateQRCode</span>() {
+
+  <span class="cm">// Step 1: Get the user's input from the text field</span>
+  <span class="kw">const</span> value = document.<span class="fn">getElementById</span>(<span class="st">'qr-code-value'</span>).value;
+
+  <span class="cm">// Step 2: Set up the options dictionary</span>
+  <span class="kw">const</span> options = {
+    value: value,   <span class="cm">// The text/URL to embed</span>
+    size:  <span class="num">400</span>,    <span class="cm">// Width/height of the QR code in pixels</span>
+    level: <span class="st">'H'</span>    <span class="cm">// Error correction level ('H' = High = 30% resilience)</span>
+  };
+
+  <span class="cm">// Step 3: Create a new QRious object using the options</span>
+  <span class="kw">const</span> qrCode = <span class="kw">new</span> <span class="fn">QRious</span>(options);
+
+  <span class="cm">// Step 4: Convert QR code object into a Data URL string</span>
+  <span class="kw">const</span> qrCodeImage = qrCode.<span class="fn">toDataURL</span>();
+
+  <span class="cm">// Step 5: Inject the Data URL into the &lt;img&gt; tag's src attribute</span>
+  document.<span class="fn">getElementById</span>(<span class="st">'qr-code-image'</span>).src = qrCodeImage;
+}</pre>
+  </div>
+  <div class="g2">
+    <div class="card c">
+      <div class="ct">&#x1F4CA; What is a Data URL?</div>
+      <div class="cb">A <strong>Data URL</strong> is a URI that embeds image data directly as a Base64-encoded string inside the <code>src</code> attribute.<br><br>
+      Instead of pointing to a file path like <code>image.png</code>, it looks like:<br>
+      <code style="font-size:12px">data:image/png;base64,iVBORw0KGgo...</code><br><br>
+      The browser renders this as a full image &mdash; no file saved to disk!</div>
+    </div>
+    <div class="card o">
+      <div class="ct">&#x1F512; Error Correction Levels</div>
+      <div class="cb">
+        <div style="display:grid;grid-template-columns:auto 1fr auto;gap:5px 12px;font-size:14px;align-items:center">
+          <code>&#x27;L&#x27;</code><span style="color:#7592b2">Low</span><span style="color:#4ee3a0">7% recovery</span>
+          <code>&#x27;M&#x27;</code><span style="color:#7592b2">Medium</span><span style="color:#4ee3a0">15% recovery</span>
+          <code>&#x27;Q&#x27;</code><span style="color:#7592b2">Quartile</span><span style="color:#4ee3a0">25% recovery</span>
+          <code>&#x27;H&#x27;</code><span style="color:#7592b2">High</span><span style="color:#fbbf24">30% recovery &#x2605;</span>
+        </div>
+        <div style="margin-top:8px;font-size:13px;color:#7592b2"><code>'H'</code> means even if ~30% of the QR code is scratched or covered, a scanner can still read it.</div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 8 FULL PROJECT CODE -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Skill-Building Activity &middot; Full Project</div>
+  <div class="stitle">Complete <span class="ag">QR Code Generator</span></div>
+  <div class="ssub" style="margin-bottom:12px">Copy, paste into a file named <code>QRcodeGenerator.html</code>, open in browser, and test it!</div>
+  <div class="pre">
+    <div class="prebar"><span class="prelang">html &mdash; QRcodeGenerator.html</span><button class="copybtn" onclick="doCopy(this,'full1')">Copy</button></div>
+    <pre id="full1"><span class="tg">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;</span>
+  <span class="tg">&lt;title&gt;</span>QR Code Generator<span class="tg">&lt;/title&gt;</span>
+  <span class="cm">&lt;!-- Import the QRious library from CDN --&gt;</span>
+  <span class="tg">&lt;script</span> <span class="at">src</span>=<span class="st">"https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"</span><span class="tg">&gt;&lt;/script&gt;</span>
+<span class="tg">&lt;/head&gt;
+&lt;body</span> <span class="at">style</span>=<span class="st">"background-color:sandybrown; font-family:sans-serif; text-align:center;"</span><span class="tg">&gt;</span>
+
+  <span class="tg">&lt;h2</span> <span class="at">style</span>=<span class="st">"color:black;"</span><span class="tg">&gt;</span>UI QR Code Basic Generator<span class="tg">&lt;/h2&gt;</span>
+
+  <span class="cm">&lt;!-- Input field for text or URL --&gt;</span>
+  <span class="tg">&lt;div&gt;</span>
+    <span class="tg">&lt;input</span> <span class="at">type</span>=<span class="st">"text"</span> <span class="at">id</span>=<span class="st">"qr-code-value"</span> <span class="at">placeholder</span>=<span class="st">"Enter text or URL"</span><span class="tg">&gt;</span>
+  <span class="tg">&lt;/div&gt;</span>
+  <span class="tg">&lt;br&gt;</span>
+
+  <span class="cm">&lt;!-- Trigger button --&gt;</span>
+  <span class="tg">&lt;button</span> <span class="at">onclick</span>=<span class="st">"generateQRCode()"</span><span class="tg">&gt;</span>Generate QR Code<span class="tg">&lt;/button&gt;</span>
+  <span class="tg">&lt;br&gt;&lt;br&gt;</span>
+
+  <span class="cm">&lt;!-- QR code image output --&gt;</span>
+  <span class="tg">&lt;img</span> <span class="at">id</span>=<span class="st">"qr-code-image"</span> <span class="at">alt</span>=<span class="st">"QR Code"</span><span class="tg">&gt;</span>
+
+  <span class="cm">&lt;!-- JS goes before closing body tag --&gt;</span>
+  <span class="tg">&lt;script&gt;</span>
+    <span class="kw">function</span> <span class="fn">generateQRCode</span>() {
+      <span class="kw">const</span> value = document.<span class="fn">getElementById</span>(<span class="st">'qr-code-value'</span>).value;
+      <span class="kw">const</span> options = { value: value, size: <span class="num">400</span>, level: <span class="st">'H'</span> };
+      <span class="kw">const</span> qrCode = <span class="kw">new</span> <span class="fn">QRious</span>(options);
+      <span class="kw">const</span> qrCodeImage = qrCode.<span class="fn">toDataURL</span>();
+      document.<span class="fn">getElementById</span>(<span class="st">'qr-code-image'</span>).src = qrCodeImage;
+    }
+  <span class="tg">&lt;/script&gt;</span>
+<span class="tg">&lt;/body&gt;
+&lt;/html&gt;</span></pre>
+  </div>
+</div></div>
+
+<!-- 9 FAQ -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">FAQs</div>
+  <div class="stitle">Common Questions <span class="ao">Answered</span></div>
+  <div style="display:flex;flex-direction:column;gap:12px;flex:1">
+    <div class="card p">
+      <div class="ct">&#x2753; How do I create a QR code in JavaScript?</div>
+      <div class="cb">The standard approach: create an instance of a QR code object (like <code>new QRious(options)</code>), pass in the text content, and convert that object into an image format using <code>toDataURL()</code>. Different libraries vary in syntax but follow the same pattern.</div>
+    </div>
+    <div class="card g">
+      <div class="ct">&#x2753; Can I develop a circular or styled QR code?</div>
+      <div class="cb">Yes! While the basic QRious library creates square codes, you can build custom styles using CSS around the <code>&lt;img&gt;</code> tag (e.g., <code>border-radius: 50%</code> for circular masks). Advanced QR platforms also offer templates to embed logos or circular overlays.</div>
+    </div>
+    <div class="card">
+      <div class="ct">&#x2753; Why use <code>size: 400</code>?</div>
+      <div class="cb">400px is a good standard for web apps &mdash; large enough to be easily scanned by a smartphone camera without taking up too much screen space. Smaller values (like 150) are fine for compact UIs; larger values improve readability from a distance.</div>
+    </div>
+    <div class="card o">
+      <div class="ct">&#x2753; What does <code>level: 'H'</code> mean?</div>
+      <div class="cb">This sets the <strong>Error Correction Level</strong>. <code>'H'</code> (High) means the QR code is resilient to up to 30% damage. Even if part of the image is scratched or covered, a smartphone scanner can still read the data successfully.</div>
+    </div>
+    <div class="card r">
+      <div class="ct">&#x2753; Why put the JS before <code>&lt;/body&gt;</code> instead of <code>&lt;head&gt;</code>?</div>
+      <div class="cb">Scripts in <code>&lt;head&gt;</code> run <em>before</em> the HTML is rendered &mdash; if they try to select DOM elements that don&#x27;t exist yet, they return <code>null</code> and crash. Placing JS before <code>&lt;/body&gt;</code> ensures the full page is loaded first.</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 10 ANALOGIES -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Analogies &amp; Real-World Use Cases</div>
+  <div class="stitle">Making It <span class="ao">Click</span></div>
+  <div class="g2" style="flex:1">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card y">
+        <div class="ct">&#x1F381; Gift Wrapper &mdash; QRious</div>
+        <div class="cb">QRious is like a skilled gift wrapper:<ul>
+          <li><strong>The box</strong> = your input text</li>
+          <li><strong>Paper size</strong> = the <code>size</code> option</li>
+          <li><strong>Wrapping</strong> = QR encoding (done internally)</li>
+          <li><strong>Finished gift</strong> = the QR code image you display</li>
+        </ul>You don&#x27;t need to know how gift-wrapping works &mdash; you just configure and receive.</div>
+      </div>
+      <div class="card c">
+        <div class="ct">&#x1F4E6; Widget as a Vending Machine</div>
+        <div class="cb">A JS widget is like a vending machine embedded in your page:<ul>
+          <li>It takes an input (coin = user text)</li>
+          <li>Processes it internally (the machine logic)</li>
+          <li>Produces an output (snack = QR image)</li>
+        </ul>You configure the machine settings &mdash; you don&#x27;t rebuild the machine.</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card g">
+        <div class="ct">&#x1F354; Use Case 1 &mdash; Restaurant Menus</div>
+        <div class="cb">A restaurant website uses this widget to dynamically generate a QR code pointing to their digital menu. Customers scan it at their table to view current offerings &mdash; no printed menus, always up to date.</div>
+      </div>
+      <div class="card p">
+        <div class="ct">&#x1F4BC; Use Case 2 &mdash; Event Networking</div>
+        <div class="cb">At a conference, attendees enter their LinkedIn profile URL. The system instantly generates a QR code on their digital name badge. Others scan it to connect &mdash; no business cards needed.</div>
+      </div>
+      <div class="card o">
+        <div class="ct">&#x1F517; Use Case 3 &mdash; URL Shortener Display</div>
+        <div class="cb">Marketing teams enter campaign URLs, generate QR codes, and embed them on posters, ads, or packaging &mdash; all from a single lightweight widget on their internal tools page.</div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 11 KEY QUOTES -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Key Quotes &amp; Takeaways</div>
+  <div class="stitle">Words Worth <span class="ay">Remembering</span></div>
+  <div style="display:flex;flex-direction:column;gap:14px;flex:1;justify-content:center">
+    <div class="qqt">The mind is not a vessel to be filled but a fire to be ignited.
+      <div class="qsrc">&mdash; Plutarch &middot; quoted in Module 11</div></div>
+    <div class="qqt" style="border-left-color:#4ee3a0;font-style:normal">
+      <div style="font-size:13px;font-weight:800;color:#4ee3a0;letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px">Module 11 Key Takeaways</div>
+      <ul style="list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;font-size:15px;font-style:normal">
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>Widgets are embedded UI components with a specific function</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>JS widgets add dynamic interactivity to static HTML pages</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>Load external libraries in &lt;head&gt;; your JS before &lt;/body&gt;</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>QRious simplifies QR generation via a single JS object</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span><code>toDataURL()</code> returns a Base64 image string for the src</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>level: 'H' = 30% damage resilience for the QR code</li>
+      </ul>
+    </div>
+  </div>
+</div></div>
+
+<!-- 12 FILL IN THE BLANKS -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Skill-Building Check &middot; Fill in the Blanks</div>
+  <div class="stitle">Complete the <span class="ap">Code</span> <span style="font-size:18px;font-weight:400;color:#4a6888">(2 pts each)</span></div>
+  <div class="ssub" style="margin-bottom:12px">Review the code below and identify what goes in each blank.</div>
+  <div class="pre">
+    <div class="prebar"><span class="prelang">html &mdash; three blanks to fill</span></div>
+    <pre><span class="tg">&lt;head&gt;
+  &lt;title&gt;</span>QR Code Generator<span class="tg">&lt;/title&gt;</span>
+<span class="tg">&lt;/head&gt;
+&lt;body&gt;</span>
+  <span class="tg">&lt;input</span> <span class="at">type</span>=<span class="st">"text"</span> <span class="at">id</span>=<span class="st">"qr-code-value"</span> <span class="at">placeholder</span>=<span class="st">"Enter a text or URL"</span><span class="tg">&gt;</span>
+  <span class="tg">&lt;button</span> <span class="at">onclick</span>=<span class="st">"generateQRCode()"</span><span class="tg">&gt;</span>Generate QR code<span class="tg">&lt;/button&gt;</span>
+  <span class="tg">&lt;img</span> <span class="at">id</span>=<span class="st">"qr-code-image"</span> <span class="at">alt</span>=<span class="st">"QR code"</span><span class="tg">&gt;</span>
+
+  <span class="cm">&lt;!-- 1. Fill in the blank: src for the QRious library --&gt;</span>
+  <span class="tg">&lt;script</span> <span class="at">src</span>=<span class="st">"<span style="background:#2a1a10;color:#ffaa5e;padding:0 8px;border-radius:4px">_________________________________</span>"</span><span class="tg">&gt;&lt;/script&gt;</span>
+
+  <span class="tg">&lt;script&gt;</span>
+    <span class="cm">// 2. Fill in the blank: function name</span>
+    <span class="kw">function</span> <span style="background:#1a1040;color:#b98cfa;padding:0 12px;border-radius:4px">_______________</span>() {
+      <span class="kw">const</span> value = document.<span class="fn">getElementById</span>(<span class="st">'qr-code-value'</span>).value;
+      <span class="kw">const</span> options = { value: value, size: <span class="num">400</span>, level: <span class="st">'H'</span> };
+
+      <span class="cm">// 3. Fill in the blank: create the QRious instance</span>
+      <span class="kw">const</span> qrCode = <span class="kw">new</span> <span style="background:#102018;color:#4ee3a0;padding:0 12px;border-radius:4px">______________</span>(options);
+
+      <span class="kw">const</span> qrCodeImage = qrCode.<span class="fn">toDataURL</span>();
+      document.<span class="fn">getElementById</span>(<span class="st">'qr-code-image'</span>).src = qrCodeImage;
+    }
+  <span class="tg">&lt;/script&gt;</span>
+<span class="tg">&lt;/body&gt;</span></pre>
+  </div>
+  <div class="note" style="margin-top:4px">&#x1F4AC; Answers on the next slide &rarr;</div>
+</div></div>
+
+<!-- 13 ANSWER KEY -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Skill-Building Check &middot; Answer Key</div>
+  <div class="stitle">Check Your <span class="ag">Answers</span></div>
+  <div style="display:flex;flex-direction:column;gap:12px;flex:1;justify-content:center">
+    <div class="akrow">
+      <div class="akn">1</div>
+      <div>
+        <div class="aka">https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js</div>
+        <div class="akx">This is the CDN URL for the QRious library. It goes in the <code>src</code> attribute of the first <code>&lt;script&gt;</code> tag, loaded in the <code>&lt;head&gt;</code> so the QRious class is available before your function runs.</div>
+      </div>
+    </div>
+    <div class="akrow">
+      <div class="akn">2</div>
+      <div>
+        <div class="aka">generateQRCode</div>
+        <div class="akx">This is the name of the function declared with <code>function generateQRCode()</code>. It matches the name called in the button's <code>onclick="generateQRCode()"</code> attribute &mdash; the names must match exactly.</div>
+      </div>
+    </div>
+    <div class="akrow">
+      <div class="akn">3</div>
+      <div>
+        <div class="aka">QRious</div>
+        <div class="akx"><code>new QRious(options)</code> creates a new QR code object using the options you configured. The <code>new</code> keyword instantiates the class from the QRious library you imported in blank #1. Then <code>.toDataURL()</code> converts it to an image string.</div>
+      </div>
+    </div>
+    <div class="card o" style="margin-top:4px">
+      <div class="ct">&#x1F501; The Three Pieces Connect</div>
+      <div class="cb" style="font-size:14px">
+        Blank 1 <span style="color:#4a6888">(CDN)</span> &rarr; loads the <strong>QRious class</strong> into the page<br>
+        Blank 2 <span style="color:#4a6888">(function name)</span> &rarr; must match the <code>onclick</code> attribute exactly<br>
+        Blank 3 <span style="color:#4a6888">(QRious)</span> &rarr; creates the object from the class imported in Blank 1
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 14 CLOSING -->
+<div class="sw"><div class="slide" style="align-items:center;justify-content:center;text-align:center">
+  <div class="eyebrow" style="border-bottom:none">Module 11 &middot; Complete</div>
+  <div class="tgiant" style="font-size:clamp(34px,4.6vw,60px);margin-top:10px">Drop a Widget.<br><span class="ab">Build</span> Something <span class="ag">Real</span>.</div>
+  <div class="qqt" style="max-width:740px;text-align:left;border-left-color:#fbbf24;font-size:16px;margin-top:14px">
+    The mind is not a vessel to be filled but a fire to be ignited. You now have the tools &mdash; a CDN link, three lines of JS, and a QRious object &mdash; to generate scannable QR codes from any text or URL. That&#x27;s a real, usable tool.
+    <div class="qsrc">&mdash; Plutarch &middot; applied &#x1F680;</div>
+  </div>
+  <div class="g4" style="max-width:1080px;margin-top:14px">
+    <div class="card" style="text-align:left"><div class="ct">Practice</div><div class="cb" style="font-size:14px">Build the QR generator, scan your own name with your phone, and see it appear in Google Search.</div></div>
+    <div class="card g" style="text-align:left"><div class="ct">Extend It</div><div class="cb" style="font-size:14px">Add a dropdown to let users choose the error correction level (L / M / Q / H) before generating.</div></div>
+    <div class="card p" style="text-align:left"><div class="ct">Style It</div><div class="cb" style="font-size:14px">Apply CSS to the <code>&lt;img&gt;</code> &mdash; add a border, shadow, or <code>border-radius</code> to create a custom framed QR card.</div></div>
+    <div class="card o" style="text-align:left"><div class="ct">Challenge</div><div class="cb" style="font-size:14px">Add a download button that saves the QR code as a PNG file using <code>&lt;a download&gt;</code> with the Data URL as href.</div></div>
+  </div>
+  <div style="font-size:14px;color:#2e4560;margin-top:14px">Press <span style="color:#5cb8ff">Home</span> to restart &middot; <span style="color:#5cb8ff">?</span> for shortcuts</div>
+</div></div>
+
+</body>
+</html>

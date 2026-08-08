@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Module 15 &mdash; Modern Web APIs &amp; Client-Side Storage</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:#090c18;color:#e8edf5}
+#deck{position:relative;width:100vw;height:100vh;overflow:hidden}
+.sw{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:28px 48px 50px;opacity:0;transform:translateX(40px);transition:opacity .35s ease,transform .35s ease;pointer-events:none;overflow-y:auto}
+.sw.active{opacity:1;transform:translateX(0);pointer-events:auto}
+.sw.xl{opacity:0;transform:translateX(-40px)}
+.sw.xr{opacity:0;transform:translateX(40px)}
+@media(prefers-reduced-motion:reduce){.sw{transition:none!important;transform:none!important}.sw.xl,.sw.xr{opacity:0;transform:none!important}}
+.slide{width:100%;max-width:1260px;max-height:100%;background:#131726;border-radius:22px;padding:32px 42px 36px;box-shadow:0 24px 72px rgba(0,0,0,.78);display:flex;flex-direction:column;gap:13px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#232d47 transparent}
+.slide::-webkit-scrollbar{width:5px}.slide::-webkit-scrollbar-thumb{background:#232d47;border-radius:4px}
+.eyebrow{font-size:13px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#4a6888;border-bottom:2px solid #1b2236;padding-bottom:7px}
+.stitle{font-size:clamp(26px,3.3vw,44px);font-weight:900;line-height:1.12;color:#fff;letter-spacing:-.5px}
+.ssub{font-size:16px;color:#7592b2;line-height:1.6}
+.ab{color:#5cb8ff}.ag{color:#4ee3a0}.ao{color:#ffaa5e}.ap{color:#b98cfa}.ar{color:#f87171}.ac{color:#22d3ee}.ay{color:#fbbf24}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px 22px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 18px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 14px}
+.card{background:#1b2236;border-radius:14px;padding:16px 19px;border-left:4px solid #5cb8ff;min-width:0}
+.card.g{border-left-color:#4ee3a0}.card.o{border-left-color:#ffaa5e}.card.p{border-left-color:#b98cfa}.card.r{border-left-color:#f87171}.card.c{border-left-color:#22d3ee}.card.y{border-left-color:#fbbf24}.card.nb{border-left:none}
+.ct{font-size:14px;font-weight:700;color:#96b0ca;letter-spacing:.3px;margin-bottom:6px}
+.cb{font-size:15px;line-height:1.65;color:#c6d4e4}
+.cb strong{color:#eef2fa}
+.cb ul{list-style:none;padding:0;margin:6px 0 0}
+.cb ul li{padding:3px 0 3px 20px;position:relative;font-size:15px;line-height:1.5}
+.cb ul li::before{content:"▸";position:absolute;left:0;color:#5cb8ff;font-weight:700}
+.pre{background:#0c1020;border-radius:13px;border:1px solid #1b2236;overflow:hidden}
+.prebar{display:flex;align-items:center;justify-content:space-between;padding:8px 15px;background:#151b2c;border-bottom:1px solid #1b2236}
+.prelang{font-size:13px;font-weight:700;color:#4a6888;letter-spacing:.9px;text-transform:uppercase}
+.copybtn{font-size:13px;font-weight:700;background:#1b2236;color:#7592b2;border:1px solid #252f48;border-radius:8px;padding:4px 13px;cursor:pointer;transition:all .2s}
+.copybtn:hover{background:#5cb8ff;color:#0c1020;border-color:#5cb8ff}
+.copybtn.ok{background:#4ee3a0;color:#0c1020;border-color:#4ee3a0}
+pre{padding:16px 20px;overflow-x:auto;overflow-y:auto;max-height:320px;line-height:1.8;margin:0;scrollbar-width:thin;scrollbar-color:#232d47 transparent;font-size:14px;font-family:Consolas,'Courier New',monospace}
+pre::-webkit-scrollbar{width:5px;height:5px}
+pre::-webkit-scrollbar-thumb{background:#232d47;border-radius:4px}
+.kw{color:#c084fc}.fn{color:#5cb8ff}.st{color:#4ee3a0}.cm{color:#4a6888;font-style:italic}.tg{color:#f87171}.at{color:#ffaa5e}
+.tw{overflow-x:auto;border-radius:12px;border:1px solid #1b2236}
+.tw table{width:100%;border-collapse:collapse;font-size:14px}
+.tw th{background:#171d2e;color:#7592b2;font-size:12px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;padding:9px 14px;text-align:left;border-bottom:1px solid #1b2236}
+.tw td{padding:9px 14px;border-bottom:1px solid #171d2e;color:#c6d4e4;vertical-align:top;line-height:1.55}
+.tw td:first-child{font-weight:700;color:#5cb8ff;white-space:nowrap;font-size:13px}
+.tw tr:last-child td{border-bottom:none}
+.tw tr:hover td{background:rgba(92,184,255,.04)}
+#prog{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#5cb8ff,#4ee3a0,#b98cfa);transition:width .3s ease;z-index:100;border-radius:0 2px 2px 0}
+#ctr{position:fixed;bottom:17px;right:22px;font-size:13px;font-weight:700;color:#334d66;z-index:100}
+#sco{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center}
+#sco.show{display:flex}
+#scb{background:#1b2236;border-radius:18px;padding:30px 38px;max-width:460px;width:92%}
+#scb h3{font-size:18px;font-weight:900;color:#fff;margin-bottom:16px}
+.sk{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #1b2236;font-size:15px;color:#c6d4e4}
+.sk:last-child{border-bottom:none}
+.key{font-family:monospace;background:#131726;padding:2px 9px;border-radius:6px;color:#5cb8ff;font-size:13px}
+.scclose{margin-top:18px;background:#5cb8ff;color:#090c18;border:none;border-radius:10px;padding:9px 24px;font-size:15px;font-weight:700;cursor:pointer;width:100%}
+.qblock{background:#1b2236;border-radius:15px;padding:18px 22px;border-left:5px solid #b98cfa;min-width:0}
+.qnum{font-size:13px;font-weight:800;color:#b98cfa;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px}
+.qtext{font-size:15px;color:#e8edf5;font-weight:600;margin-bottom:11px;line-height:1.5}
+.qchoices{display:grid;grid-template-columns:1fr 1fr;gap:5px 16px}
+.qchoice{font-size:14px;color:#8aaabe;padding:2px 0;line-height:1.4}
+.qchoice span{color:#b98cfa;font-weight:800;margin-right:4px}
+.akrow{display:flex;gap:12px;align-items:flex-start;background:#16281e;border-radius:12px;padding:10px 15px}
+.akn{font-size:15px;font-weight:900;color:#4ee3a0;min-width:26px;padding-top:1px}
+.aka{font-size:14px;font-weight:700;color:#4ee3a0}
+.akx{font-size:13px;color:#3d7a58;margin-top:2px;line-height:1.5}
+.qqt{background:#1b2236;border-radius:14px;padding:20px 26px;border-left:5px solid #fbbf24;font-size:16px;line-height:1.75;color:#d6e2f0;font-style:italic}
+.qqt .qsrc{font-size:14px;color:#7592b2;font-style:normal;margin-top:8px;font-weight:600}
+.pill{display:inline-block;font-size:14px;font-weight:700;padding:4px 13px;border-radius:20px;margin:3px}
+.pill.b{background:#1a2e48;color:#5cb8ff}.pill.g{background:#162a1e;color:#4ee3a0}.pill.o{background:#381f10;color:#ffaa5e}.pill.p{background:#261840;color:#b98cfa}.pill.c{background:#0e2432;color:#22d3ee}.pill.r{background:#2a1010;color:#f87171}
+code{font-family:monospace;font-size:14px;background:#1b2236;padding:1px 7px;border-radius:5px;color:#5cb8ff}
+.tgiant{font-size:clamp(36px,5vw,66px);font-weight:900;line-height:1.06;letter-spacing:-1.5px}
+.note{background:#102038;border:1px solid #1e3a5a;border-radius:11px;padding:12px 16px;font-size:15px;color:#7ab8e0;line-height:1.65}
+.warn{background:#2a1a10;border:1px solid #7a4a20;border-radius:11px;padding:12px 16px;font-size:15px;color:#ffaa5e;line-height:1.65}
+/* security flag badges */
+.flag{display:inline-flex;align-items:center;gap:8px;background:#1b2236;border-radius:10px;padding:10px 14px;font-size:14px}
+.flag-name{font-family:monospace;font-weight:800;color:#f87171;font-size:15px}
+.flag-desc{color:#c6d4e4;line-height:1.5}
+/* storage columns */
+.scol{background:#1b2236;border-radius:14px;padding:16px 18px;border-top:4px solid #5cb8ff;min-width:0}
+.scol.g{border-top-color:#4ee3a0}
+.scol.o{border-top-color:#ffaa5e}
+.scol-title{font-size:15px;font-weight:800;color:#fff;margin-bottom:10px}
+.scol-row{display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;border-bottom:1px solid #131726;font-size:14px;gap:8px}
+.scol-row:last-child{border-bottom:none}
+.scol-label{color:#4a6888;font-weight:700;flex-shrink:0}
+.scol-val{color:#c6d4e4;text-align:right;line-height:1.4}
+/* promise state */
+.pstate{border-radius:12px;padding:14px 18px;text-align:center;flex:1;border:2px solid transparent}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<div id="ctr"></div>
+<div id="deck"></div>
+<div id="sco">
+  <div id="scb">
+    <h3>&#x2328;&#xFE0F; Keyboard Shortcuts</h3>
+    <div class="sk"><span>Next slide</span><span><span class="key">&rarr;</span> <span class="key">Right-click</span></span></div>
+    <div class="sk"><span>Previous slide</span><span><span class="key">&larr;</span> <span class="key">Mouse3</span></span></div>
+    <div class="sk"><span>First / Last</span><span><span class="key">Home</span> / <span class="key">End</span></span></div>
+    <div class="sk"><span>This help</span><span><span class="key">?</span></span></div>
+    <button class="scclose" onclick="document.getElementById('sco').classList.remove('show')">Close</button>
+  </div>
+</div>
+<script>
+function doCopy(btn,id){
+  var txt=document.getElementById(id).innerText;
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(txt).then(function(){flash(btn);}).catch(function(){fallback(btn,txt);});}
+  else{fallback(btn,txt);}
+}
+function fallback(btn,txt){
+  var ta=document.createElement('textarea');ta.value=txt;
+  ta.style.cssText='position:fixed;opacity:0;top:0;left:0;width:1px;height:1px';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');}catch(e){}
+  document.body.removeChild(ta);flash(btn);
+}
+function flash(btn){btn.textContent='Copied!';btn.classList.add('ok');setTimeout(function(){btn.textContent='Copy';btn.classList.remove('ok');},1800);}
+var slides,cur,tot,busy;
+function initDeck(){
+  slides=document.querySelectorAll('.sw');
+  cur=0;tot=slides.length;busy=false;
+  slides[0].classList.add('active');ui();
+}
+function ui(){document.getElementById('prog').style.width=((cur+1)/tot*100)+'%';document.getElementById('ctr').textContent=(cur+1)+' / '+tot;}
+function go(idx,dir){
+  if(busy||idx===cur||idx<0||idx>=tot)return;busy=true;
+  var pv=slides[cur],nx=slides[idx];
+  pv.classList.remove('active');pv.classList.add(dir===1?'xl':'xr');
+  nx.style.transform=dir===1?'translateX(40px)':'translateX(-40px)';nx.style.opacity='0';
+  nx.classList.add('active');
+  requestAnimationFrame(function(){requestAnimationFrame(function(){nx.style.transform='';nx.style.opacity='';});});
+  cur=idx;ui();setTimeout(function(){pv.classList.remove('xl','xr');busy=false;},380);
+}
+document.addEventListener('DOMContentLoaded',function(){initDeck();});
+document.addEventListener('keydown',function(e){
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')go(cur+1,1);
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(cur-1,-1);
+  else if(e.key==='Home')go(0,-1);
+  else if(e.key==='End')go(tot-1,1);
+  else if(e.key==='?')document.getElementById('sco').classList.toggle('show');
+  else if(e.key==='Escape')document.getElementById('sco').classList.remove('show');
+});
+document.addEventListener('mousedown',function(e){
+  if(e.button===2){e.preventDefault();e.stopImmediatePropagation();go(cur+1,1);}
+  else if(e.button===3){e.preventDefault();e.stopImmediatePropagation();go(cur-1,-1);}
+  else if(e.button===4){e.preventDefault();e.stopImmediatePropagation();go(cur+1,1);}
+},true);
+document.addEventListener('contextmenu',function(e){e.preventDefault();},true);
+document.addEventListener('auxclick',function(e){if(e.button!==0)e.preventDefault();},true);
+var tx=0;
+document.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;},{passive:true});
+document.addEventListener('touchend',function(e){var dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50)go(cur+(dx<0?1:-1),dx<0?1:-1);},{passive:true});
+</script>
+
+<!-- ═══════════════════════ SLIDES ═══════════════════════ -->
+
+<!-- 0 TITLE -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Module 15 &middot; ITE 380 Human Computer Interaction 2</div>
+  <div class="tgiant" style="margin-top:10px">Modern <span class="ab">Web APIs</span> &amp;<br>Client-Side <span class="ag">Storage</span></div>
+  <div class="ssub" style="margin-top:14px">Async JS &middot; Fetch API &middot; Device APIs &middot; LocalStorage &middot; SessionStorage &middot; Cookies</div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:20px">
+    <span class="pill b">Async vs Sync</span>
+    <span class="pill g">AJAX &amp; fetch()</span>
+    <span class="pill o">Promises</span>
+    <span class="pill p">getUserMedia()</span>
+    <span class="pill c">LocalStorage</span>
+    <span class="pill r">Cookie Security</span>
+  </div>
+  <div style="margin-top:22px;font-size:14px;color:#2e4560">Right-click or &rarr; to navigate &middot; Press ? for shortcuts</div>
+</div></div>
+
+<!-- 1 PREVIEW -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Lesson Preview</div>
+  <div class="stitle">What You Will <span class="ag">Learn</span></div>
+  <div class="g2" style="margin-bottom:12px">
+    <div class="card p">
+      <div class="ct">&#x1F680; This Module Covers</div>
+      <div class="cb"><ul>
+        <li><strong>Async vs Sync</strong> &mdash; why asynchronous execution matters</li>
+        <li><strong>AJAX &amp; fetch()</strong> &mdash; requesting remote data via Promises</li>
+        <li><strong>Device APIs</strong> &mdash; <code>getUserMedia()</code> for webcam &amp; mic streams</li>
+        <li><strong>Client-Side Storage</strong> &mdash; LocalStorage, SessionStorage, Cookies</li>
+        <li><strong>Cookie Security Flags</strong> &mdash; HttpOnly, Secure, SameSite</li>
+      </ul></div>
+    </div>
+    <div class="card r">
+      <div class="ct">&#x2705; Prerequisites</div>
+      <div class="cb"><ul>
+        <li>JavaScript fundamentals &mdash; variables, functions, objects, arrays</li>
+        <li>DOM manipulation (Modules 10&ndash;13)</li>
+        <li>Event listeners &amp; <code>addEventListener()</code> (Module 11)</li>
+        <li>Basic HTTP principles &mdash; GET / POST, status codes, headers</li>
+      </ul></div>
+    </div>
+  </div>
+  <div class="g3">
+    <div class="card" style="text-align:center;border-left:none;border-top:3px solid #5cb8ff">
+      <div style="font-size:26px;margin-bottom:6px">&#x1F310;</div>
+      <div style="font-size:14px;font-weight:700;color:#5cb8ff;margin-bottom:4px">Server APIs</div>
+      <div style="font-size:13px;color:#7592b2">fetch() + AJAX<br>Remote JSON data</div>
+    </div>
+    <div class="card" style="text-align:center;border-left:none;border-top:3px solid #b98cfa">
+      <div style="font-size:26px;margin-bottom:6px">&#x1F4F7;</div>
+      <div style="font-size:14px;font-weight:700;color:#b98cfa;margin-bottom:4px">Device APIs</div>
+      <div style="font-size:13px;color:#7592b2">getUserMedia()<br>Camera &amp; mic streams</div>
+    </div>
+    <div class="card" style="text-align:center;border-left:none;border-top:3px solid #4ee3a0">
+      <div style="font-size:26px;margin-bottom:6px">&#x1F4BE;</div>
+      <div style="font-size:14px;font-weight:700;color:#4ee3a0;margin-bottom:4px">Storage APIs</div>
+      <div style="font-size:13px;color:#7592b2">localStorage<br>sessionStorage &middot; Cookies</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 2 SYNC vs ASYNC -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 1 &middot; Execution Models</div>
+  <div class="stitle">Synchronous <span class="ar">vs</span> <span class="ag">Asynchronous</span></div>
+  <div class="g2" style="margin-bottom:14px">
+    <div class="card r">
+      <div class="ct">&#x231B; Synchronous</div>
+      <div class="cb">Code runs <strong>line-by-line in a single thread</strong>. Each instruction must complete before the next begins.<br><br>
+      If a script downloads data from a remote server, the <strong>entire page UI freezes</strong> until the download finishes.</div>
+    </div>
+    <div class="card g">
+      <div class="ct">&#x26A1; Asynchronous</div>
+      <div class="cb">Time-consuming operations run <strong>in the background</strong>. The main thread stays free to handle user clicks, animations, and input.<br><br>
+      When the background task completes, a <strong>callback</strong> or <strong>Promise resolution</strong> delivers the result.</div>
+    </div>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>Concept</th><th>Synchronous</th><th>Asynchronous</th></tr></thead>
+    <tbody>
+      <tr><td>Execution Flow</td><td style="font-family:sans-serif">Line-by-line, sequential order</td><td style="font-family:sans-serif">Non-blocking, runs concurrently in background</td></tr>
+      <tr><td>UI Responsiveness</td><td style="font-family:sans-serif">Freezes during long-running tasks</td><td style="font-family:sans-serif">Remains responsive while background tasks complete</td></tr>
+      <tr><td>Primary Use Cases</td><td style="font-family:sans-serif">Math logic, local data transformation</td><td style="font-family:sans-serif">Network requests, hardware access, database queries</td></tr>
+    </tbody>
+  </table></div>
+  <div class="warn">&#x26A0;&#xFE0F; Standard JavaScript runs on a <strong>single thread</strong>. Any synchronous operation that blocks for 3+ seconds completely locks the browser &mdash; no clicks, scrolling, or animation will work.</div>
+</div></div>
+
+<!-- 3 FETCH API -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 2 &middot; Server APIs &mdash; AJAX &amp; fetch()</div>
+  <div class="stitle">Fetching Data with <span class="ab">fetch()</span></div>
+  <div class="ssub" style="margin-bottom:12px"><strong>AJAX</strong> = Asynchronous JavaScript and XML &mdash; a technique to fetch or send data to remote servers without a full page reload. Modern AJAX uses <strong>JSON</strong>, not XML.</div>
+  <div class="pre" style="margin-bottom:14px">
+    <div class="prebar"><span class="prelang">javascript</span><button class="copybtn" onclick="doCopy(this,'fc1')">Copy</button></div>
+    <pre id="fc1"><span class="fn">fetch</span>(<span class="st">'https://api.example.com/data'</span>)
+  .<span class="fn">then</span>(<span class="kw">function</span>(response) {
+    <span class="cm">// ⚠️ fetch() ONLY rejects on network failure &mdash; NOT on 404/500</span>
+    <span class="kw">if</span> (!response.ok) {
+      <span class="kw">throw new</span> Error(<span class="st">'HTTP Error Status: '</span> + response.status);
+    }
+    <span class="kw">return</span> response.<span class="fn">json</span>(); <span class="cm">// Parses JSON payload into a JS Object</span>
+  })
+  .<span class="fn">then</span>(<span class="kw">function</span>(data) {
+    console.<span class="fn">log</span>(<span class="st">'Retrieved Data:'</span>, data);
+  })
+  .<span class="fn">catch</span>(<span class="kw">function</span>(error) {
+    console.<span class="fn">error</span>(<span class="st">'Network/Fetch Error:'</span>, error);
+  });</pre>
+  </div>
+  <div class="g3">
+    <div class="card">
+      <div class="ct">&#x1F7E2; Step 1 &mdash; fetch(url)</div>
+      <div class="cb">Sends HTTP GET in the background. Returns a <strong>Promise&lt;Response&gt;</strong> immediately &mdash; execution continues without waiting.</div>
+    </div>
+    <div class="card g">
+      <div class="ct">&#x1F7E1; Step 2 &mdash; response.json()</div>
+      <div class="cb">The first <code>.then()</code> gives you the <strong>Response object</strong>, not the data yet. Call <code>.json()</code> to parse it &mdash; returns another Promise.</div>
+    </div>
+    <div class="card p">
+      <div class="ct">&#x1F7E3; Step 3 &mdash; Use data / .catch()</div>
+      <div class="cb">Second <code>.then()</code> receives the parsed JS object. <code>.catch()</code> handles <em>both</em> network failures and manually thrown errors.</div>
+    </div>
+  </div>
+  <div class="warn">&#x26A0;&#xFE0F; <strong>Critical:</strong> A 404 or 500 HTTP response does NOT reject the Promise. Always check <code>if (!response.ok)</code> and throw manually!</div>
+</div></div>
+
+<!-- 4 PROMISE LIFECYCLE -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 2 &middot; Promises</div>
+  <div class="stitle">The <span class="ac">Promise</span> Lifecycle</div>
+  <div class="ssub" style="margin-bottom:12px">A <strong>Promise</strong> represents an async operation that hasn&#x27;t finished yet but is expected to complete in the future.</div>
+  <div style="display:flex;gap:14px;margin-bottom:14px">
+    <div class="pstate" style="background:#1e2438;border-color:#5cb8ff;text-align:center;padding:18px">
+      <div style="font-size:28px;margin-bottom:6px">&#x23F3;</div>
+      <div style="font-size:15px;font-weight:800;color:#5cb8ff;margin-bottom:6px">Pending</div>
+      <div style="font-size:13px;color:#7592b2">Initial state. The operation is still in progress.</div>
+    </div>
+    <div style="display:flex;align-items:center;font-size:22px;color:#334d66">&#x2192;</div>
+    <div class="pstate" style="background:#162a1e;border-color:#4ee3a0;text-align:center;padding:18px">
+      <div style="font-size:28px;margin-bottom:6px">&#x2705;</div>
+      <div style="font-size:15px;font-weight:800;color:#4ee3a0;margin-bottom:6px">Fulfilled</div>
+      <div style="font-size:13px;color:#7592b2">Operation succeeded. <code>.then()</code> fires with the result.</div>
+    </div>
+    <div style="display:flex;align-items:center;font-size:22px;color:#334d66">&#x2192;</div>
+    <div class="pstate" style="background:#2a1010;border-color:#f87171;text-align:center;padding:18px">
+      <div style="font-size:28px;margin-bottom:6px">&#x274C;</div>
+      <div style="font-size:15px;font-weight:800;color:#f87171;margin-bottom:6px">Rejected</div>
+      <div style="font-size:13px;color:#7592b2">Operation failed. <code>.catch()</code> fires with the error.</div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card c">
+      <div class="ct">&#x26D3;&#xFE0F; Promise Chain Methods</div>
+      <div class="cb"><ul>
+        <li><code>.then(result =&gt; ...)</code> &mdash; runs when fulfilled; chainable</li>
+        <li><code>.catch(error =&gt; ...)</code> &mdash; catches any rejection in the chain above</li>
+        <li><code>.finally(() =&gt; ...)</code> &mdash; runs regardless of outcome (cleanup)</li>
+        <li>Each <code>.then()</code> can return a new Promise &mdash; enabling chained async steps</li>
+      </ul></div>
+    </div>
+    <div class="card o">
+      <div class="ct">&#x26A0;&#xFE0F; Common Promise Mistakes</div>
+      <div class="cb"><ul>
+        <li>Missing <code>.catch()</code> &mdash; unhandled rejections fail silently</li>
+        <li>Not returning <code>response.json()</code> &mdash; breaks the chain</li>
+        <li>Treating the first <code>.then()</code> as the data &mdash; it&#x27;s the Response object</li>
+        <li>Assuming 404/500 rejects &mdash; they don&#x27;t; check <code>response.ok</code></li>
+      </ul></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 5 DEVICE APIs -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 3 &middot; Device Web APIs</div>
+  <div class="stitle">Hardware Access with <span class="ap">getUserMedia()</span></div>
+  <div class="ssub" style="margin-bottom:12px">Unlike Server APIs that query remote databases, <strong>Device APIs</strong> interface directly with hardware on the user&#x27;s machine &mdash; webcam, microphone, GPS.</div>
+  <div class="pre" style="margin-bottom:14px">
+    <div class="prebar"><span class="prelang">javascript</span><button class="copybtn" onclick="doCopy(this,'gum1')">Copy</button></div>
+    <pre id="gum1"><span class="cm">// Requesting access to the user's camera</span>
+navigator.mediaDevices.<span class="fn">getUserMedia</span>({ video: <span class="kw">true</span>, audio: <span class="kw">false</span> })
+  .<span class="fn">then</span>(<span class="kw">function</span>(stream) {
+    <span class="kw">const</span> videoElement = document.<span class="fn">querySelector</span>(<span class="st">'video'</span>);
+    videoElement.srcObject = stream; <span class="cm">// Attach live stream to &lt;video&gt; tag</span>
+  })
+  .<span class="fn">catch</span>(<span class="kw">function</span>(error) {
+    console.<span class="fn">error</span>(<span class="st">'Camera access denied or unavailable:'</span>, error);
+  });</pre>
+  </div>
+  <div class="g2">
+    <div class="card p">
+      <div class="ct">&#x1F4F7; How getUserMedia() Works</div>
+      <div class="cb"><ul>
+        <li>Accepts a <strong>constraints object</strong> <code>{ video: true, audio: false }</code></li>
+        <li>Returns a <strong>Promise&lt;MediaStream&gt;</strong></li>
+        <li>Browser shows a <strong>permission pop-up</strong> &mdash; user must explicitly approve</li>
+        <li>On approval: attaches the stream to a <code>&lt;video&gt;</code> via <code>srcObject</code></li>
+        <li>On denial: Promise rejects &rarr; <code>.catch()</code> handles the error</li>
+      </ul></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="card r">
+        <div class="ct">&#x1F512; Security Requirement</div>
+        <div class="cb">Hardware Device APIs like <code>getUserMedia()</code> require a <strong>secure context</strong> &mdash; either <code>HTTPS</code> or <code>localhost</code>.<br><br>They will silently fail or be unavailable on plain <code>http://</code> sites.</div>
+      </div>
+      <div class="card o">
+        <div class="ct">&#x1F4F9; Practical Use Cases</div>
+        <div class="cb"><ul>
+          <li>Video conferencing (Google Meet, Zoom Web)</li>
+          <li>Profile photo capture via webcam</li>
+          <li>QR code / barcode scanning in the browser</li>
+          <li>Voice recording or transcription apps</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 6 SERVER vs DEVICE APIs -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 3 &middot; API Types Compared</div>
+  <div class="stitle">Server <span class="ab">vs</span> <span class="ap">Device</span> Web APIs</div>
+  <div class="tw" style="margin-bottom:16px"><table>
+    <thead><tr><th>Feature</th><th>Server Web APIs &mdash; fetch()</th><th>Device Web APIs &mdash; getUserMedia()</th></tr></thead>
+    <tbody>
+      <tr><td>Data Source</td><td style="font-family:sans-serif">Remote web backend / REST server</td><td style="font-family:sans-serif">Physical hardware connected to client device</td></tr>
+      <tr><td>Permissions</td><td style="font-family:sans-serif">Subject to CORS (Cross-Origin Resource Sharing)</td><td style="font-family:sans-serif">Requires explicit browser pop-up approval from the user</td></tr>
+      <tr><td>Security Context</td><td style="font-family:sans-serif">Standard HTTP or HTTPS</td><td style="font-family:sans-serif">Requires HTTPS or localhost only</td></tr>
+      <tr><td>Data Formats</td><td style="font-family:sans-serif">Structured payloads: JSON, XML, HTML text</td><td style="font-family:sans-serif">Binary streams: MediaStream, GPS coordinates</td></tr>
+      <tr><td>Returns</td><td style="font-family:sans-serif">Promise&lt;Response&gt; &rarr; parsed JSON object</td><td style="font-family:sans-serif">Promise&lt;MediaStream&gt; &rarr; live hardware feed</td></tr>
+    </tbody>
+  </table></div>
+  <div class="g2">
+    <div class="qqt" style="border-left-color:#5cb8ff;font-style:normal">
+      <div style="font-size:13px;font-weight:800;color:#5cb8ff;letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px">&#x1F37D;&#xFE0F; Waiter Analogy &mdash; Server API</div>
+      Making a <code>fetch()</code> request is like ordering food from a restaurant waiter. You place an order (request), the waiter takes it to the kitchen (server), and returns with your food (JSON response). You do not go to the kitchen yourself.
+    </div>
+    <div class="qqt" style="border-left-color:#b98cfa;font-style:normal">
+      <div style="font-size:13px;font-weight:800;color:#b98cfa;letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px">&#x1F4F9; Front Door Camera &mdash; Device API</div>
+      Calling <code>getUserMedia()</code> is like turning on your home&#x27;s front door camera. You must grant access (unlock security), and the system directly captures a live visual feed from local hardware &mdash; no remote server involved.
+    </div>
+  </div>
+</div></div>
+
+<!-- 7 CLIENT-SIDE STORAGE INTRO -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 4 &middot; Client-Side Storage</div>
+  <div class="stitle">Storing Data in the <span class="ag">Browser</span></div>
+  <div class="ssub" style="margin-bottom:14px">Web Storage APIs let applications save key-value data directly in the browser &mdash; preserving user state, settings, and session data without a server.</div>
+  <div class="g3" style="margin-bottom:14px">
+    <div class="scol">
+      <div class="scol-title ab">&#x1F4DA; localStorage</div>
+      <div class="scol-row"><span class="scol-label">Capacity</span><span class="scol-val">~5&ndash;10 MB</span></div>
+      <div class="scol-row"><span class="scol-label">Expires</span><span class="scol-val">Permanent<br>(until manually cleared)</span></div>
+      <div class="scol-row"><span class="scol-label">Sent to server</span><span class="scol-val">Never</span></div>
+      <div class="scol-row"><span class="scol-label">Scope</span><span class="scol-val">All tabs, same origin</span></div>
+      <div class="scol-row"><span class="scol-label">Best for</span><span class="scol-val">User prefs, themes, saved drafts</span></div>
+    </div>
+    <div class="scol g">
+      <div class="scol-title ag">&#x1F4CB; sessionStorage</div>
+      <div class="scol-row"><span class="scol-label">Capacity</span><span class="scol-val">~5 MB</span></div>
+      <div class="scol-row"><span class="scol-label">Expires</span><span class="scol-val">Tab / session close</span></div>
+      <div class="scol-row"><span class="scol-label">Sent to server</span><span class="scol-val">Never</span></div>
+      <div class="scol-row"><span class="scol-label">Scope</span><span class="scol-val">Current tab only</span></div>
+      <div class="scol-row"><span class="scol-label">Best for</span><span class="scol-val">Temp form data, step wizards</span></div>
+    </div>
+    <div class="scol o">
+      <div class="scol-title ao">&#x1F36A; Cookies</div>
+      <div class="scol-row"><span class="scol-label">Capacity</span><span class="scol-val">~4 KB</span></div>
+      <div class="scol-row"><span class="scol-label">Expires</span><span class="scol-val">Configurable expiry date</span></div>
+      <div class="scol-row"><span class="scol-label">Sent to server</span><span class="scol-val">Automatically with every request</span></div>
+      <div class="scol-row"><span class="scol-label">Scope</span><span class="scol-val">Configurable domain/path</span></div>
+      <div class="scol-row"><span class="scol-label">Best for</span><span class="scol-val">Auth tokens, session IDs, tracking</span></div>
+    </div>
+  </div>
+  <div class="note">&#x1F4A1; All three storage types store values as <strong>strings</strong>. Use <code>JSON.stringify()</code> before storing objects and <code>JSON.parse()</code> when reading them back.</div>
+</div></div>
+
+<!-- 8 LOCALSTORAGE CODE -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 4 &middot; Working with Storage</div>
+  <div class="stitle">localStorage &amp; <span class="ag">sessionStorage</span> Methods</div>
+  <div class="ssub" style="margin-bottom:12px">Both use <strong>identical methods</strong> &mdash; only their persistence scope differs.</div>
+  <div class="pre" style="margin-bottom:14px">
+    <div class="prebar"><span class="prelang">javascript</span><button class="copybtn" onclick="doCopy(this,'ls1')">Copy</button></div>
+    <pre id="ls1"><span class="cm">// ── 1. Basic CRUD Operations ───────────────────────────────────</span>
+localStorage.<span class="fn">setItem</span>(<span class="st">'theme'</span>, <span class="st">'dark'</span>);
+<span class="kw">const</span> currentTheme = localStorage.<span class="fn">getItem</span>(<span class="st">'theme'</span>); <span class="cm">// "dark"</span>
+localStorage.<span class="fn">removeItem</span>(<span class="st">'theme'</span>);
+localStorage.<span class="fn">clear</span>();                               <span class="cm">// Clears ALL items for this origin</span>
+
+<span class="cm">// ── 2. Storing Objects — MUST use JSON.stringify() ─────────────</span>
+<span class="kw">const</span> userProfile = { name: <span class="st">'Alex'</span>, role: <span class="st">'Developer'</span> };
+
+localStorage.<span class="fn">setItem</span>(<span class="st">'user'</span>, JSON.<span class="fn">stringify</span>(userProfile));
+
+<span class="cm">// ── 3. Reading Objects — MUST use JSON.parse() ─────────────────</span>
+<span class="kw">const</span> storedUser = JSON.<span class="fn">parse</span>(localStorage.<span class="fn">getItem</span>(<span class="st">'user'</span>));
+console.<span class="fn">log</span>(storedUser.name); <span class="cm">// Output: "Alex"</span>
+
+<span class="cm">// ── ⚠️ WITHOUT JSON.stringify — broken result ─────────────────</span>
+localStorage.<span class="fn">setItem</span>(<span class="st">'bad'</span>, userProfile);
+localStorage.<span class="fn">getItem</span>(<span class="st">'bad'</span>); <span class="cm">// "[object Object]" — unusable!</span></pre>
+  </div>
+  <div class="g2">
+    <div class="card y">
+      <div class="ct">&#x1F4DA; Bookshelf Analogy &mdash; localStorage</div>
+      <div class="cb"><strong>localStorage</strong> is like a home bookshelf: books stay there <em>indefinitely</em> until you physically remove them. Even closing the browser and coming back days later &mdash; your data persists.</div>
+    </div>
+    <div class="card g">
+      <div class="ct">&#x1F3E8; Hotel Notepad Analogy &mdash; sessionStorage</div>
+      <div class="cb"><strong>sessionStorage</strong> is like a hotel room notepad: anything written is cleared as soon as you check out and close the tab. A new tab = a fresh notepad.</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 9 COOKIE SECURITY FLAGS -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 4 &middot; Cookie Security</div>
+  <div class="stitle">HTTP Cookie <span class="ar">Security Flags</span></div>
+  <div class="ssub" style="margin-bottom:14px">Cookies support specialized flags to protect sensitive data from attacks.</div>
+  <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:14px">
+    <div class="flag">
+      <div>
+        <div class="flag-name">HttpOnly</div>
+        <div class="flag-desc">Blocks client-side JavaScript (<code>document.cookie</code>) from reading the cookie. Mitigates <strong>Cross-Site Scripting (XSS)</strong> attacks where malicious scripts attempt to steal session tokens.</div>
+      </div>
+    </div>
+    <div class="flag">
+      <div>
+        <div class="flag-name" style="color:#ffaa5e">Secure</div>
+        <div class="flag-desc">Restricts cookie transmission to <strong>encrypted HTTPS requests only</strong>. Prevents the cookie from being sent over insecure HTTP connections where it could be intercepted.</div>
+      </div>
+    </div>
+    <div class="flag">
+      <div>
+        <div class="flag-name" style="color:#b98cfa">SameSite</div>
+        <div class="flag-desc">Controls cross-site request handling to mitigate <strong>Cross-Site Request Forgery (CSRF)</strong> attacks. Values: <code>Strict</code> (same origin only) &middot; <code>Lax</code> (allows safe cross-site) &middot; <code>None</code> (unrestricted, requires Secure).</div>
+      </div>
+    </div>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>Flag</th><th>Threat Blocked</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td>HttpOnly</td><td style="font-family:sans-serif">XSS (Cross-Site Scripting)</td><td style="font-family:sans-serif">JS cannot read cookie via <code>document.cookie</code></td></tr>
+      <tr><td>Secure</td><td style="font-family:sans-serif">Network interception / MITM</td><td style="font-family:sans-serif">Cookie only sent over HTTPS</td></tr>
+      <tr><td>SameSite=Strict</td><td style="font-family:sans-serif">CSRF (Cross-Site Request Forgery)</td><td style="font-family:sans-serif">Cookie never sent on cross-origin requests</td></tr>
+    </tbody>
+  </table></div>
+</div></div>
+
+<!-- 10 DRILL CODE -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Guided Drill &middot; Full Project</div>
+  <div class="stitle">Camera &amp; Storage <span class="ap">Demo App</span></div>
+  <div class="ssub" style="margin-bottom:12px">Combines <code>getUserMedia()</code> for webcam, <code>localStorage</code> for theme, and Canvas for photo capture.</div>
+  <div class="pre">
+    <div class="prebar"><span class="prelang">html</span><button class="copybtn" onclick="doCopy(this,'d1')">Copy</button></div>
+    <pre id="d1"><span class="tg">&lt;!DOCTYPE html&gt;
+&lt;html</span> <span class="at">lang</span>=<span class="st">"en"</span><span class="tg">&gt;&lt;head&gt;&lt;meta</span> <span class="at">charset</span>=<span class="st">"UTF-8"</span><span class="tg">&gt;&lt;title&gt;</span>Camera &amp; Storage Module<span class="tg">&lt;/title&gt;
+&lt;style&gt;</span>
+  body.light { background:#f4f4f9; color:#222; font-family:sans-serif; padding:20px; }
+  body.dark  { background:#1e1e2f; color:#fff; font-family:sans-serif; padding:20px; }
+  video, canvas { width:300px; height:225px; border:2px dashed #888; border-radius:6px; }
+<span class="tg">&lt;/style&gt;&lt;/head&gt;
+&lt;body</span> <span class="at">class</span>=<span class="st">"light"</span><span class="tg">&gt;
+  &lt;h2&gt;</span>Device &amp; Web Storage Demo<span class="tg">&lt;/h2&gt;
+  &lt;button</span> <span class="at">id</span>=<span class="st">"theme-btn"</span><span class="tg">&gt;</span>Toggle Theme<span class="tg">&lt;/button&gt;
+  &lt;button</span> <span class="at">id</span>=<span class="st">"cam-btn"</span><span class="tg">&gt;</span>Start Camera<span class="tg">&lt;/button&gt;
+  &lt;button</span> <span class="at">id</span>=<span class="st">"snap-btn"</span><span class="tg">&gt;</span>Take Photo<span class="tg">&lt;/button&gt;
+  &lt;div&gt;&lt;video</span> <span class="at">id</span>=<span class="st">"webcam"</span> <span class="at">autoplay</span> <span class="at">playsinline</span><span class="tg">&gt;&lt;/video&gt;
+  &lt;canvas</span> <span class="at">id</span>=<span class="st">"snapshot"</span><span class="tg">&gt;&lt;/canvas&gt;&lt;/div&gt;
+  &lt;script&gt;</span>
+    <span class="cm">// 1. localStorage Theme Management</span>
+    <span class="kw">const</span> savedTheme = localStorage.<span class="fn">getItem</span>(<span class="st">'appTheme'</span>) || <span class="st">'light'</span>;
+    document.body.className = savedTheme;
+    document.<span class="fn">getElementById</span>(<span class="st">'theme-btn'</span>).<span class="fn">addEventListener</span>(<span class="st">'click'</span>, <span class="kw">function</span>() {
+      <span class="kw">const</span> newTheme = document.body.className === <span class="st">'light'</span> ? <span class="st">'dark'</span> : <span class="st">'light'</span>;
+      document.body.className = newTheme;
+      localStorage.<span class="fn">setItem</span>(<span class="st">'appTheme'</span>, newTheme); <span class="cm">// Persist preference</span>
+    });
+
+    <span class="cm">// 2. Device API &mdash; getUserMedia</span>
+    <span class="kw">const</span> video  = document.<span class="fn">getElementById</span>(<span class="st">'webcam'</span>);
+    <span class="kw">const</span> canvas = document.<span class="fn">getElementById</span>(<span class="st">'snapshot'</span>);
+    document.<span class="fn">getElementById</span>(<span class="st">'cam-btn'</span>).<span class="fn">addEventListener</span>(<span class="st">'click'</span>, <span class="kw">function</span>() {
+      navigator.mediaDevices.<span class="fn">getUserMedia</span>({ video: <span class="kw">true</span> })
+        .<span class="fn">then</span>(<span class="kw">function</span>(stream) { video.srcObject = stream; })
+        .<span class="fn">catch</span>(<span class="kw">function</span>() { alert(<span class="st">'Could not access camera hardware.'</span>); });
+    });
+
+    <span class="cm">// 3. Canvas Frame Capture</span>
+    document.<span class="fn">getElementById</span>(<span class="st">'snap-btn'</span>).<span class="fn">addEventListener</span>(<span class="st">'click'</span>, <span class="kw">function</span>() {
+      canvas.<span class="fn">getContext</span>(<span class="st">'2d'</span>).<span class="fn">drawImage</span>(video, <span class="st">0</span>, <span class="st">0</span>, canvas.width, canvas.height);
+    });
+  <span class="tg">&lt;/script&gt;
+&lt;/body&gt;&lt;/html&gt;</span></pre>
+  </div>
+</div></div>
+
+<!-- 11 DRILL BREAKDOWN -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Guided Drill &middot; Breakdown</div>
+  <div class="stitle">Three Systems <span class="ap">Working Together</span></div>
+  <div class="g3" style="flex:1">
+    <div class="card">
+      <div class="ct">&#x1F4BE; Part 1 &mdash; localStorage Theme</div>
+      <div class="cb"><ul>
+        <li><code>localStorage.getItem('appTheme')</code> reads saved theme on page load</li>
+        <li>Falls back to <code>'light'</code> with <code>|| 'light'</code> if no value exists yet</li>
+        <li>Sets <code>document.body.className</code> to apply the CSS class</li>
+        <li>On toggle: saves the new theme back with <code>setItem</code></li>
+        <li>Theme <strong>persists across page refreshes</strong> &mdash; that&#x27;s localStorage&#x27;s power</li>
+      </ul></div>
+    </div>
+    <div class="card p">
+      <div class="ct">&#x1F4F7; Part 2 &mdash; getUserMedia</div>
+      <div class="cb"><ul>
+        <li>Calls <code>navigator.mediaDevices.getUserMedia({ video: true })</code></li>
+        <li>Browser shows a <strong>permission pop-up</strong> asking the user to allow camera</li>
+        <li>On approval: Promise fulfills with a <code>MediaStream</code> object</li>
+        <li>Assign to <code>video.srcObject</code> to display live feed in the <code>&lt;video&gt;</code> tag</li>
+        <li><code>.catch()</code> handles denial or hardware unavailability</li>
+      </ul></div>
+    </div>
+    <div class="card g">
+      <div class="ct">&#x1F5BC;&#xFE0F; Part 3 &mdash; Canvas Snapshot</div>
+      <div class="cb"><ul>
+        <li>Gets the 2D rendering context: <code>canvas.getContext('2d')</code></li>
+        <li>Calls <code>drawImage(video, 0, 0, width, height)</code> to capture the current video frame</li>
+        <li>The canvas now holds a <strong>static image snapshot</strong> of that exact moment</li>
+        <li>Can be exported as PNG via <code>canvas.toDataURL()</code> and uploaded via <code>fetch()</code></li>
+      </ul></div>
+    </div>
+  </div>
+  <div class="note" style="margin-top:4px">&#x1F4A1; <strong>Real-world combo:</strong> This pattern &mdash; getUserMedia + Canvas + fetch() &mdash; powers profile photo capture tools, ID verification apps, and video snapshot features in production web apps.</div>
+</div></div>
+
+<!-- 12 FAQ -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">FAQs</div>
+  <div class="stitle">Common Questions <span class="ao">Answered</span></div>
+  <div style="display:flex;flex-direction:column;gap:12px;flex:1">
+    <div class="card r">
+      <div class="ct">&#x2753; Why does getUserMedia() fail on my HTTP testing site?</div>
+      <div class="cb">Modern browsers enforce strict security protocols for hardware access. <code>getUserMedia()</code> requires a <strong>secure context</strong> &mdash; either <code>HTTPS</code> or <code>localhost</code>. It will fail silently or be unavailable on plain <code>http://</code> sites.</div>
+    </div>
+    <div class="card o">
+      <div class="ct">&#x2753; Can I store passwords or access tokens in localStorage?</div>
+      <div class="cb"><strong>No.</strong> Any JavaScript running on the page can read <code>localStorage</code>, making it vulnerable to <strong>Cross-Site Scripting (XSS)</strong> attacks. Sensitive authorization tokens are safer in <code>HttpOnly</code> cookies which are invisible to JavaScript.</div>
+    </div>
+    <div class="card y">
+      <div class="ct">&#x2753; What happens if I store an object without JSON.stringify()?</div>
+      <div class="cb">JavaScript automatically coerces the object into a string, resulting in the useless text value <strong><code>"[object Object]"</code></strong>. Always use <code>JSON.stringify()</code> before storing and <code>JSON.parse()</code> when reading objects.</div>
+    </div>
+    <div class="card p">
+      <div class="ct">&#x2753; Does fetch() reject on 404 or 500 errors?</div>
+      <div class="cb"><strong>No.</strong> <code>fetch()</code> only rejects on <em>network failures</em> (total connectivity loss). HTTP error codes like 404 or 500 still <em>fulfill</em> the Promise. Always manually check <code>if (!response.ok)</code> before processing data.</div>
+    </div>
+    <div class="card g">
+      <div class="ct">&#x2753; What is the difference between localStorage and sessionStorage?</div>
+      <div class="cb"><strong>localStorage</strong> persists until explicitly cleared &mdash; survives browser restarts. <strong>sessionStorage</strong> is cleared automatically when the tab or browser session closes. Both are client-side only and are never sent to the server.</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 13 KEY QUOTES -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Key Quotes &amp; Analogies</div>
+  <div class="stitle">Words Worth <span class="ay">Remembering</span></div>
+  <div style="display:flex;flex-direction:column;gap:13px;flex:1;justify-content:center">
+    <div class="qqt">localStorage is like a home bookshelf: books stay there indefinitely until you physically clean them out. sessionStorage is like a hotel room notepad: anything written down is cleared as soon as you check out and leave the room.
+      <div class="qsrc">&mdash; Module 15 Analogy</div></div>
+    <div class="qqt" style="border-left-color:#b98cfa">getUserMedia() is like turning on your home's front door camera. You must grant access (unlock security), and the system directly captures a live visual feed from local hardware &mdash; no remote server involved.
+      <div class="qsrc">&mdash; Module 15 Analogy</div></div>
+    <div class="qqt" style="border-left-color:#f87171">The HttpOnly flag prevents client-side scripts from reading cookie content via document.cookie, helping defend against XSS attacks where malicious scripts attempt to steal session tokens.
+      <div class="qsrc">&mdash; Module 15 Lesson Material</div></div>
+    <div class="qqt" style="border-left-color:#22d3ee">fetch() resolves successfully as long as the HTTP request reaches the server and receives any response. Checking response.ok is required to detect HTTP error codes like 404 and 500.
+      <div class="qsrc">&mdash; Module 15 Critical Note</div></div>
+  </div>
+</div></div>
+
+<!-- 14 RECAP -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Recap</div>
+  <div class="stitle">Module 15 at a <span class="ab">Glance</span></div>
+  <div class="g2" style="margin-bottom:12px">
+    <div class="card">
+      <div class="ct">&#x26A1; Async Execution</div>
+      <div class="cb"><ul>
+        <li>Sync = sequential, blocks UI during long tasks</li>
+        <li>Async = background execution, UI stays responsive</li>
+        <li>JS is single-threaded &mdash; blocking = frozen page</li>
+      </ul></div>
+    </div>
+    <div class="card g">
+      <div class="ct">&#x1F310; fetch() &amp; AJAX</div>
+      <div class="cb"><ul>
+        <li>Returns <code>Promise&lt;Response&gt;</code> immediately</li>
+        <li>First <code>.then()</code> = Response, not data yet</li>
+        <li>Call <code>response.json()</code> &rarr; another Promise</li>
+        <li>404/500 do NOT reject &mdash; check <code>response.ok</code></li>
+      </ul></div>
+    </div>
+    <div class="card p">
+      <div class="ct">&#x1F4F7; getUserMedia()</div>
+      <div class="cb"><ul>
+        <li>Returns <code>Promise&lt;MediaStream&gt;</code></li>
+        <li>Requires HTTPS or localhost</li>
+        <li>Browser must show permission pop-up</li>
+        <li>Attach to <code>&lt;video&gt;</code> via <code>srcObject</code></li>
+      </ul></div>
+    </div>
+    <div class="card o">
+      <div class="ct">&#x1F4BE; Storage APIs</div>
+      <div class="cb"><ul>
+        <li><strong>localStorage</strong> &mdash; permanent, ~5MB, all tabs</li>
+        <li><strong>sessionStorage</strong> &mdash; tab-only, clears on close</li>
+        <li><strong>Cookies</strong> &mdash; ~4KB, sent with every request</li>
+        <li>Objects need <code>JSON.stringify</code> / <code>JSON.parse</code></li>
+      </ul></div>
+    </div>
+  </div>
+  <div class="card r">
+    <div class="ct">&#x1F511; Golden Rules</div>
+    <div class="cb" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 28px;font-size:15px">
+      <span>&#x25B8; Always check <code>response.ok</code> before parsing fetch data</span>
+      <span>&#x25B8; Always add <code>.catch()</code> &mdash; unhandled rejections fail silently</span>
+      <span>&#x25B8; getUserMedia() needs HTTPS &mdash; fails on plain http://</span>
+      <span>&#x25B8; Never store tokens in localStorage &mdash; use HttpOnly cookies</span>
+      <span>&#x25B8; Always <code>JSON.stringify()</code> before storing objects</span>
+      <span>&#x25B8; Always <code>JSON.parse()</code> when reading objects back</span>
+    </div>
+  </div>
+</div></div>
+
+<!-- 15 QUIZ -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Activities &middot; Multiple Choice</div>
+  <div class="stitle">Test Your <span class="ap">Knowledge</span></div>
+  <div class="g2" style="gap:13px;flex:1">
+    <div class="qblock">
+      <div class="qnum">Question 1</div>
+      <div class="qtext">Which API is specifically designed to stream video or audio hardware input from a user&#x27;s local device into a browser application?</div>
+      <div class="qchoices">
+        <div class="qchoice"><span>A.</span><code>fetch()</code></div>
+        <div class="qchoice"><span>B.</span><code>localStorage</code></div>
+        <div class="qchoice"><span>C.</span><code>navigator.mediaDevices.getUserMedia()</code></div>
+        <div class="qchoice"><span>D.</span><code>document.cookie</code></div>
+      </div>
+    </div>
+    <div class="qblock">
+      <div class="qnum">Question 2</div>
+      <div class="qtext">How should JavaScript objects or arrays be prepared before storing them in <code>localStorage</code>?</div>
+      <div class="qchoices">
+        <div class="qchoice"><span>A.</span>Converted to an ArrayBuffer using fetch()</div>
+        <div class="qchoice"><span>B.</span>Serialized to a JSON string using JSON.stringify()</div>
+        <div class="qchoice"><span>C.</span>Encrypted using HttpOnly</div>
+        <div class="qchoice"><span>D.</span>Assigned directly without modification</div>
+      </div>
+    </div>
+    <div class="qblock">
+      <div class="qnum">Question 3</div>
+      <div class="qtext">What security flag on a cookie prevents client-side JavaScript from accessing its content?</div>
+      <div class="qchoices">
+        <div class="qchoice"><span>A.</span>SameSite</div>
+        <div class="qchoice"><span>B.</span>Secure</div>
+        <div class="qchoice"><span>C.</span>HttpOnly</div>
+        <div class="qchoice"><span>D.</span>Domain</div>
+      </div>
+    </div>
+    <div class="qblock">
+      <div class="qnum">Question 4</div>
+      <div class="qtext">Does a <code>fetch()</code> Promise automatically reject when an endpoint returns a <code>404 Not Found</code> status?</div>
+      <div class="qchoices">
+        <div class="qchoice"><span>A.</span>Yes, all HTTP errors reject automatically</div>
+        <div class="qchoice"><span>B.</span>No &mdash; fetch() only rejects on network failures; check response.ok manually</div>
+        <div class="qchoice"><span>C.</span>Yes, but only for POST requests</div>
+        <div class="qchoice"><span>D.</span>No &mdash; fetch() retries until it succeeds</div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 16 ANSWER KEY -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Answer Key</div>
+  <div class="stitle">Answers &amp; <span class="ag">Explanations</span></div>
+  <div style="display:flex;flex-direction:column;gap:10px;flex:1">
+    <div class="akrow">
+      <div class="akn">1</div>
+      <div><div class="aka">C &mdash; navigator.mediaDevices.getUserMedia()</div>
+      <div class="akx">getUserMedia() accesses media input devices like cameras and microphones, returning a Promise&lt;MediaStream&gt;. fetch() retrieves remote data, localStorage stores strings, and document.cookie manages cookies.</div></div>
+    </div>
+    <div class="akrow">
+      <div class="akn">2</div>
+      <div><div class="aka">B &mdash; Serialized to a JSON string using JSON.stringify()</div>
+      <div class="akx">localStorage stores values exclusively as strings. Non-primitive types (objects, arrays) must be converted with JSON.stringify() before storing and JSON.parse() when reading. Skipping this produces the useless "[object Object]" string.</div></div>
+    </div>
+    <div class="akrow">
+      <div class="akn">3</div>
+      <div><div class="aka">C &mdash; HttpOnly</div>
+      <div class="akx">HttpOnly prevents document.cookie from reading the cookie via JavaScript, mitigating XSS attacks. Secure restricts transmission to HTTPS. SameSite prevents CSRF. Domain controls which host receives the cookie.</div></div>
+    </div>
+    <div class="akrow">
+      <div class="akn">4</div>
+      <div><div class="aka">B &mdash; No; fetch() only rejects on network failures</div>
+      <div class="akx">fetch() resolves as long as the request reaches the server and receives any response &mdash; including 404 and 500. Developers must check if (!response.ok) and throw manually. fetch() only rejects on total network failures like no connectivity.</div></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 17 CLOSING -->
+<div class="sw"><div class="slide" style="align-items:center;justify-content:center;text-align:center">
+  <div class="eyebrow" style="border-bottom:none">Module 15 &middot; Complete</div>
+  <div class="tgiant" style="font-size:clamp(34px,4.6vw,60px);margin-top:10px">The Web is <span class="ab">Connected</span>.<br>Now Make It <span class="ag">Remember</span>.</div>
+  <div class="qqt" style="max-width:740px;text-align:left;border-left-color:#fbbf24;font-size:16px;margin-top:14px">
+    When you combine async fetch, device hardware access, and client-side storage &mdash; you are no longer building static pages. You are building living applications that talk to servers, see through cameras, and remember their users.
+    <div class="qsrc">&mdash; A friendly send-off &#x1F680;</div>
+  </div>
+  <div class="g4" style="max-width:1080px;margin-top:14px">
+    <div class="card" style="text-align:left"><div class="ct">Practice fetch()</div><div class="cb" style="font-size:14px">Fetch posts from <code>jsonplaceholder.typicode.com/posts</code> and render each title into a list.</div></div>
+    <div class="card g" style="text-align:left"><div class="ct">Practice Storage</div><div class="cb" style="font-size:14px">Build a note-saver: type a note, click Save, and have it survive a page refresh using <code>localStorage</code>.</div></div>
+    <div class="card p" style="text-align:left"><div class="ct">Practice Camera</div><div class="cb" style="font-size:14px">Open <code>localhost</code>, call <code>getUserMedia()</code>, stream to a <code>&lt;video&gt;</code>, and capture a frame to Canvas on click.</div></div>
+    <div class="card o" style="text-align:left"><div class="ct">Challenge</div><div class="cb" style="font-size:14px">Chain fetch() + localStorage: fetch a user profile, store it locally, and skip the API call on next load if cached.</div></div>
+  </div>
+  <div style="font-size:14px;color:#2e4560;margin-top:14px">Press <span style="color:#5cb8ff">Home</span> to restart &middot; <span style="color:#5cb8ff">?</span> for shortcuts</div>
+</div></div>
+
+</body>
+</html>

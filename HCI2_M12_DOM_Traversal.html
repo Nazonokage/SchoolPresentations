@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Module 12 &mdash; DOM Traversal, Navigation &amp; Event Listeners</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:#090c18;color:#e8edf5}
+#deck{position:relative;width:100vw;height:100vh;overflow:hidden}
+.sw{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:28px 48px 50px;opacity:0;transform:translateX(40px);transition:opacity .35s ease,transform .35s ease;pointer-events:none;overflow-y:auto}
+.sw.active{opacity:1;transform:translateX(0);pointer-events:auto}
+.sw.xl{opacity:0;transform:translateX(-40px)}
+.sw.xr{opacity:0;transform:translateX(40px)}
+@media(prefers-reduced-motion:reduce){.sw{transition:none!important;transform:none!important}.sw.xl,.sw.xr{opacity:0;transform:none!important}}
+.slide{width:100%;max-width:1260px;max-height:100%;background:#131726;border-radius:22px;padding:32px 42px 36px;box-shadow:0 24px 72px rgba(0,0,0,.78);display:flex;flex-direction:column;gap:13px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#232d47 transparent}
+.slide::-webkit-scrollbar{width:5px}.slide::-webkit-scrollbar-thumb{background:#232d47;border-radius:4px}
+.eyebrow{font-size:13px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#4a6888;border-bottom:2px solid #1b2236;padding-bottom:7px}
+.stitle{font-size:clamp(26px,3.3vw,44px);font-weight:900;line-height:1.12;color:#fff;letter-spacing:-.5px}
+.ssub{font-size:16px;color:#7592b2;line-height:1.6}
+.ab{color:#5cb8ff}.ag{color:#4ee3a0}.ao{color:#ffaa5e}.ap{color:#b98cfa}.ar{color:#f87171}.ac{color:#22d3ee}.ay{color:#fbbf24}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px 22px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 18px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 14px}
+.card{background:#1b2236;border-radius:14px;padding:16px 19px;border-left:4px solid #5cb8ff;min-width:0}
+.card.g{border-left-color:#4ee3a0}.card.o{border-left-color:#ffaa5e}.card.p{border-left-color:#b98cfa}.card.r{border-left-color:#f87171}.card.c{border-left-color:#22d3ee}.card.y{border-left-color:#fbbf24}.card.nb{border-left:none}
+.ct{font-size:14px;font-weight:700;color:#96b0ca;letter-spacing:.3px;margin-bottom:6px}
+.cb{font-size:15px;line-height:1.65;color:#c6d4e4}
+.cb strong{color:#eef2fa}
+.cb ul{list-style:none;padding:0;margin:6px 0 0}
+.cb ul li{padding:3px 0 3px 20px;position:relative;font-size:15px;line-height:1.5}
+.cb ul li::before{content:"\25B8";position:absolute;left:0;color:#5cb8ff;font-weight:700}
+.pre{background:#0c1020;border-radius:13px;border:1px solid #1b2236;overflow:hidden}
+.prebar{display:flex;align-items:center;justify-content:space-between;padding:8px 15px;background:#151b2c;border-bottom:1px solid #1b2236}
+.prelang{font-size:13px;font-weight:700;color:#4a6888;letter-spacing:.9px;text-transform:uppercase}
+.copybtn{font-size:13px;font-weight:700;background:#1b2236;color:#7592b2;border:1px solid #252f48;border-radius:8px;padding:4px 13px;cursor:pointer;transition:all .2s}
+.copybtn:hover{background:#5cb8ff;color:#0c1020;border-color:#5cb8ff}
+.copybtn.ok{background:#4ee3a0;color:#0c1020;border-color:#4ee3a0}
+pre{padding:16px 20px;overflow-x:auto;overflow-y:auto;max-height:320px;line-height:1.8;margin:0;scrollbar-width:thin;scrollbar-color:#232d47 transparent;font-size:14px;font-family:Consolas,'Courier New',monospace}
+pre::-webkit-scrollbar{width:5px;height:5px}
+pre::-webkit-scrollbar-thumb{background:#232d47;border-radius:4px}
+.kw{color:#c084fc}.fn{color:#5cb8ff}.st{color:#4ee3a0}.cm{color:#4a6888;font-style:italic}.tg{color:#f87171}.at{color:#ffaa5e}
+.tw{overflow-x:auto;border-radius:12px;border:1px solid #1b2236}
+.tw table{width:100%;border-collapse:collapse;font-size:15px}
+.tw th{background:#171d2e;color:#7592b2;font-size:12px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;padding:9px 14px;text-align:left;border-bottom:1px solid #1b2236}
+.tw td{padding:9px 14px;border-bottom:1px solid #171d2e;color:#c6d4e4;vertical-align:top;line-height:1.55;font-size:15px}
+.tw td:first-child{font-family:monospace;font-size:14px;color:#5cb8ff;white-space:nowrap}
+.tw tr:last-child td{border-bottom:none}
+.tw tr:hover td{background:rgba(92,184,255,.04)}
+#prog{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#5cb8ff,#4ee3a0,#b98cfa);transition:width .3s ease;z-index:100;border-radius:0 2px 2px 0}
+#ctr{position:fixed;bottom:17px;right:22px;font-size:13px;font-weight:700;color:#334d66;z-index:100}
+#sco{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center}
+#sco.show{display:flex}
+#scb{background:#1b2236;border-radius:18px;padding:30px 38px;max-width:460px;width:92%}
+#scb h3{font-size:18px;font-weight:900;color:#fff;margin-bottom:16px}
+.sk{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #1b2236;font-size:15px;color:#c6d4e4}
+.sk:last-child{border-bottom:none}
+.key{font-family:monospace;background:#131726;padding:2px 9px;border-radius:6px;color:#5cb8ff;font-size:13px}
+.scclose{margin-top:18px;background:#5cb8ff;color:#090c18;border:none;border-radius:10px;padding:9px 24px;font-size:15px;font-weight:700;cursor:pointer;width:100%}
+.qblock{background:#1b2236;border-radius:15px;padding:18px 22px;border-left:5px solid #b98cfa;min-width:0}
+.qnum{font-size:13px;font-weight:800;color:#b98cfa;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px}
+.qtext{font-size:15px;color:#e8edf5;font-weight:600;margin-bottom:11px;line-height:1.5}
+.qchoices{display:grid;grid-template-columns:1fr 1fr;gap:5px 16px}
+.qchoice{font-size:14px;color:#8aaabe;padding:2px 0;line-height:1.4}
+.qchoice span{color:#b98cfa;font-weight:800;margin-right:4px}
+.idblock{background:#1b2236;border-radius:15px;padding:18px 22px;border-left:5px solid #ffaa5e;min-width:0}
+.idnum{font-size:13px;font-weight:800;color:#ffaa5e;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px}
+.idtext{font-size:15px;color:#e8edf5;line-height:1.65}
+.idline{border-bottom:2px solid #5cb8ff;opacity:.4;margin-top:14px}
+.akrow{display:flex;gap:12px;align-items:flex-start;background:#16281e;border-radius:12px;padding:10px 15px}
+.akrow.id{background:#281a0e}
+.akn{font-size:15px;font-weight:900;color:#4ee3a0;min-width:26px;padding-top:1px}
+.akrow.id .akn{color:#ffaa5e}
+.aka{font-size:14px;font-weight:700;color:#4ee3a0}
+.akrow.id .aka{color:#ffaa5e}
+.akx{font-size:13px;color:#3d7a58;margin-top:2px;line-height:1.5}
+.akrow.id .akx{color:#7a5430}
+.qqt{background:#1b2236;border-radius:14px;padding:20px 26px;border-left:5px solid #fbbf24;font-size:16px;line-height:1.75;color:#d6e2f0;font-style:italic}
+.qqt .qsrc{font-size:14px;color:#7592b2;font-style:normal;margin-top:8px;font-weight:600}
+.pill{display:inline-block;font-size:14px;font-weight:700;padding:4px 13px;border-radius:20px;margin:3px}
+.pill.b{background:#1a2e48;color:#5cb8ff}.pill.g{background:#162a1e;color:#4ee3a0}.pill.o{background:#381f10;color:#ffaa5e}.pill.p{background:#261840;color:#b98cfa}.pill.c{background:#0e2432;color:#22d3ee}
+code{font-family:monospace;font-size:14px;background:#1b2236;padding:1px 7px;border-radius:5px;color:#5cb8ff}
+.tgiant{font-size:clamp(36px,5vw,66px);font-weight:900;line-height:1.06;letter-spacing:-1.5px}
+.note{background:#102038;border:1px solid #1e3a5a;border-radius:11px;padding:12px 16px;font-size:15px;color:#7ab8e0;line-height:1.65}
+.warn{background:#2a1a10;border:1px solid #7a4a20;border-radius:11px;padding:12px 16px;font-size:15px;color:#ffaa5e;line-height:1.65}
+/* syntax highlight box */
+.synbox{background:#0c1020;border-radius:12px;padding:16px 20px;border:1px solid #1b2236;font-family:monospace;font-size:15px;line-height:1.9;color:#c6d4e4}
+/* param rows */
+.prow{display:flex;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid #1b2236;font-size:15px}
+.prow:last-child{border-bottom:none}
+.pname{font-family:monospace;color:#5cb8ff;font-size:14px;min-width:120px;flex-shrink:0;padding-top:2px}
+.pdesc{color:#c6d4e4;flex:1;line-height:1.55}
+.ptag{font-size:12px;font-weight:700;padding:2px 9px;border-radius:10px;flex-shrink:0;white-space:nowrap;align-self:flex-start}
+.ptag.req{background:#1a2e48;color:#5cb8ff}
+.ptag.opt{background:#261840;color:#b98cfa}
+/* DOM node visual */
+.dnode{display:inline-flex;align-items:center;justify-content:center;border-radius:10px;padding:9px 16px;font-family:monospace;font-weight:700;font-size:14px;white-space:nowrap}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<div id="ctr"></div>
+<div id="deck"></div>
+<div id="sco">
+  <div id="scb">
+    <h3>&#x2328;&#xFE0F; Keyboard Shortcuts</h3>
+    <div class="sk"><span>Next slide</span><span><span class="key">&rarr;</span> <span class="key">Right-click</span> <span class="key">Mouse4</span></span></div>
+    <div class="sk"><span>Previous slide</span><span><span class="key">&larr;</span> <span class="key">Mouse3</span></span></div>
+    <div class="sk"><span>First / Last</span><span><span class="key">Home</span> / <span class="key">End</span></span></div>
+    <div class="sk"><span>This help</span><span><span class="key">?</span></span></div>
+    <button class="scclose" onclick="document.getElementById('sco').classList.remove('show')">Close</button>
+  </div>
+</div>
+<script>
+function doCopy(btn,id){
+  var txt=document.getElementById(id).innerText;
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(txt).then(function(){flash(btn);}).catch(function(){fallback(btn,txt);});}
+  else{fallback(btn,txt);}
+}
+function fallback(btn,txt){
+  var ta=document.createElement('textarea');ta.value=txt;
+  ta.style.cssText='position:fixed;opacity:0;top:0;left:0;width:1px;height:1px';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');}catch(e){}
+  document.body.removeChild(ta);flash(btn);
+}
+function flash(btn){btn.textContent='Copied!';btn.classList.add('ok');setTimeout(function(){btn.textContent='Copy';btn.classList.remove('ok');},1800);}
+window.addEventListener('DOMContentLoaded', function() {
+  var slides,cur,tot,busy;
+  function initDeck(){
+    slides=document.querySelectorAll('.sw');
+    cur=0;tot=slides.length;busy=false;
+    slides[0].classList.add('active');ui();
+  }
+  function ui(){document.getElementById('prog').style.width=((cur+1)/tot*100)+'%';document.getElementById('ctr').textContent=(cur+1)+' / '+tot;}
+  function go(idx,dir){
+    if(busy||idx===cur||idx<0||idx>=tot)return;busy=true;
+    var pv=slides[cur],nx=slides[idx];
+    pv.classList.remove('active');pv.classList.add(dir===1?'xl':'xr');
+    nx.style.transform=dir===1?'translateX(40px)':'translateX(-40px)';nx.style.opacity='0';
+    nx.classList.add('active');
+    requestAnimationFrame(function(){requestAnimationFrame(function(){nx.style.transform='';nx.style.opacity='';});});
+    cur=idx;ui();setTimeout(function(){pv.classList.remove('xl','xr');busy=false;},380);
+  }
+  initDeck();
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key==='ArrowDown')go(cur+1,1);
+    else if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(cur-1,-1);
+    else if(e.key==='Home')go(0,-1);
+    else if(e.key==='End')go(tot-1,1);
+    else if(e.key==='?')document.getElementById('sco').classList.toggle('show');
+    else if(e.key==='Escape')document.getElementById('sco').classList.remove('show');
+  });
+  document.addEventListener('mousedown',function(e){
+    if(e.button===2){e.preventDefault();e.stopImmediatePropagation();go(cur+1,1);}
+    else if(e.button===3){e.preventDefault();e.stopImmediatePropagation();go(cur-1,-1);}
+    else if(e.button===4){e.preventDefault();e.stopImmediatePropagation();go(cur+1,1);}
+  },true);
+  document.addEventListener('contextmenu',function(e){e.preventDefault();},true);
+  document.addEventListener('auxclick',function(e){if(e.button!==0)e.preventDefault();},true);
+  var tx=0;
+  document.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;},{passive:true});
+  document.addEventListener('touchend',function(e){var dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50)go(cur+(dx<0?1:-1),dx<0?1:-1);},{passive:true});
+});
+</script>
+
+<!-- ═══════════════════════════ SLIDES ═══════════════════════════ -->
+
+<!-- 0 TITLE -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Module 12 &middot; IT 103 Human Computer Interaction 2</div>
+  <div class="tgiant" style="margin-top:10px">DOM <span class="ab">Traversal</span>,<br>Navigation &amp;<br><span class="ap">Event Listeners</span></div>
+  <div class="ssub" style="margin-top:14px">Navigate the DOM tree up, down, and sideways &mdash; then make it respond to the user with event listeners</div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:20px">
+    <span class="pill b">DOM Relationships</span>
+    <span class="pill g">Tree Navigation</span>
+    <span class="pill o">Node Manipulation</span>
+    <span class="pill p">Event Listeners</span>
+    <span class="pill c">addEventListener()</span>
+  </div>
+  <div style="margin-top:22px;font-size:14px;color:#2e4560">Right-click or &rarr; to navigate &middot; Press ? for shortcuts</div>
+</div></div>
+
+<!-- 1 PREVIEW -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Lesson Preview</div>
+  <div class="stitle">Building on <span class="ab">Module 10</span></div>
+  <div class="g2" style="margin-bottom:12px">
+    <div class="card r">
+      <div class="ct">&#x2705; Previously (M10)</div>
+      <div class="cb"><ul>
+        <li>Widget types: Desktop, Web, Mobile</li>
+        <li>Generic Sensor API &amp; permission policies</li>
+        <li>DOM definition &amp; W3C Standard (Core / XML / HTML)</li>
+        <li>Selecting elements: <code>getElementById</code>, <code>innerHTML</code>, <code>style</code></li>
+        <li>Creating &amp; appending nodes: <code>createElement</code> + <code>appendChild</code></li>
+      </ul></div>
+    </div>
+    <div class="card p">
+      <div class="ct">&#x1F680; This Module</div>
+      <div class="cb"><ul>
+        <li><strong>DOM Relationships</strong> &mdash; parent, child, sibling, ancestor</li>
+        <li><strong>Navigation Properties</strong> &mdash; move up/down/sideways in the tree</li>
+        <li><strong>Advanced Node Methods</strong> &mdash; <code>insertBefore</code>, <code>cloneNode</code></li>
+        <li><strong>Event Listeners</strong> &mdash; what they are and how they work</li>
+        <li><strong>addEventListener()</strong> &mdash; syntax, parameters, and examples</li>
+      </ul></div>
+    </div>
+  </div>
+  <div style="background:#0c1020;border-radius:14px;padding:18px 22px;border:1px solid #1b2236">
+    <div style="font-size:13px;font-weight:700;color:#4a6888;letter-spacing:.8px;text-transform:uppercase;margin-bottom:12px">DOM TREE &mdash; RELATIONSHIP MAP</div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+      <div class="dnode" style="background:#1a2d45;border:2px solid #5cb8ff;color:#5cb8ff">Parent Node</div>
+      <div style="color:#334d66;font-size:18px">&#x2502;</div>
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center">
+        <div class="dnode" style="background:#1b2236;border:2px solid #7592b2;color:#7592b2">First Child</div>
+        <div style="color:#334d66;font-size:14px">&larr;&mdash;</div>
+        <div class="dnode" style="background:#1f2040;border:2px solid #b98cfa;color:#b98cfa">&#x1F3AF; Target Node</div>
+        <div style="color:#334d66;font-size:14px">&mdash;&rarr;</div>
+        <div class="dnode" style="background:#1b2236;border:2px solid #7592b2;color:#7592b2">Last Child</div>
+      </div>
+      <div style="display:flex;gap:28px;font-size:13px;color:#4a6888;flex-wrap:wrap;justify-content:center">
+        <span><code>previousElementSibling</code></span>
+        <span><code>parentNode</code> &#x2191;</span>
+        <span><code>nextElementSibling</code></span>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 2 DOM RELATIONSHIPS -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 1 &middot; DOM Relationships</div>
+  <div class="stitle">Understanding the <span class="ab">Node Hierarchy</span></div>
+  <div class="ssub" style="margin-bottom:10px">The DOM is a tree of nodes &mdash; every element has a position in this hierarchy.</div>
+  <div class="g4" style="margin-bottom:14px">
+    <div class="card"><div class="ct">&#x1F446; Parent Node</div><div class="cb">The node <strong>immediately above</strong> a given node. Every node has exactly one parent (except the root <code>document</code>).</div></div>
+    <div class="card g"><div class="ct">&#x1F447; Child Node</div><div class="cb">Any node <strong>directly underneath</strong> a parent. A parent can have zero or more children.</div></div>
+    <div class="card p"><div class="ct">&#x2194;&#xFE0F; Sibling Nodes</div><div class="cb">Nodes sharing the <strong>same direct parent</strong> &mdash; at the same level of the hierarchy.</div></div>
+    <div class="card o"><div class="ct">&#x1F333; Ancestors &amp; Descendants</div><div class="cb"><strong>Ancestors</strong> = all nodes above &middot; <strong>Descendants</strong> = all nodes below</div></div>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>Property</th><th>Description</th><th>Returns</th></tr></thead>
+    <tbody>
+      <tr><td>parentNode / parentElement</td><td style="font-family:sans-serif">Direct parent (node / element variant)</td><td style="font-family:sans-serif">Node / Element</td></tr>
+      <tr><td>children &#x2705;</td><td style="font-family:sans-serif">HTML element children only &mdash; excludes #text whitespace</td><td style="font-family:sans-serif">HTMLCollection</td></tr>
+      <tr><td>childNodes</td><td style="font-family:sans-serif">All child nodes including text &amp; whitespace</td><td style="font-family:sans-serif">NodeList</td></tr>
+      <tr><td>firstElementChild &#x2705;</td><td style="font-family:sans-serif">First child that is an HTML element</td><td style="font-family:sans-serif">Element</td></tr>
+      <tr><td>lastElementChild &#x2705;</td><td style="font-family:sans-serif">Last child that is an HTML element</td><td style="font-family:sans-serif">Element</td></tr>
+      <tr><td>nextElementSibling &#x2705;</td><td style="font-family:sans-serif">Next sibling HTML element &middot; returns null if none</td><td style="font-family:sans-serif">Element / null</td></tr>
+      <tr><td>previousElementSibling &#x2705;</td><td style="font-family:sans-serif">Previous sibling HTML element &middot; returns null if none</td><td style="font-family:sans-serif">Element / null</td></tr>
+    </tbody>
+  </table></div>
+  <div class="warn">&#x26A0;&#xFE0F; <strong>#text node trap:</strong> <code>childNodes</code>, <code>firstChild</code>, and <code>lastChild</code> include whitespace and newlines as <code>#text</code> nodes. Always use the <strong>Element</strong> variants (&#x2705;) to target actual HTML tags.</div>
+</div></div>
+
+<!-- 3 NODE MANIPULATION -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 1 &middot; Advanced Node Methods</div>
+  <div class="stitle">Building, Inserting &amp; <span class="ag">Cloning</span> Nodes</div>
+  <div class="tw" style="margin-bottom:14px"><table>
+    <thead><tr><th>Method</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td>document.createElement(tag)</td><td style="font-family:sans-serif">Creates a new element node (not yet in the DOM)</td></tr>
+      <tr><td>parent.appendChild(node)</td><td style="font-family:sans-serif">Adds node as the <strong>last</strong> child of parent</td></tr>
+      <tr><td>parent.insertBefore(new, ref)</td><td style="font-family:sans-serif">Inserts new node <strong>directly before</strong> a reference sibling</td></tr>
+      <tr><td>parent.removeChild(child)</td><td style="font-family:sans-serif">Removes a specified child node from the tree</td></tr>
+      <tr><td>parent.replaceChild(new, old)</td><td style="font-family:sans-serif">Replaces an existing child with a new node</td></tr>
+      <tr><td>node.cloneNode(deep)</td><td style="font-family:sans-serif">Clones a node &mdash; pass <code>true</code> for deep clone (includes all children)</td></tr>
+      <tr><td>element.remove()</td><td style="font-family:sans-serif">Modern shorthand: removes the element itself without needing a parent reference</td></tr>
+    </tbody>
+  </table></div>
+  <div class="g2">
+    <div class="card o">
+      <div class="ct">&#x1F527; createElement &mdash; 3-Step Workflow</div>
+      <div class="cb">
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:start;font-size:14px">
+          <span style="background:#1a2e48;color:#5cb8ff;font-weight:700;padding:2px 8px;border-radius:6px;font-size:13px">1</span><span><strong>Create</strong> &mdash; <code>document.createElement("div")</code></span>
+          <span style="background:#162a1e;color:#4ee3a0;font-weight:700;padding:2px 8px;border-radius:6px;font-size:13px">2</span><span><strong>Configure</strong> &mdash; set <code>innerHTML</code>, <code>className</code>, <code>style</code></span>
+          <span style="background:#261840;color:#b98cfa;font-weight:700;padding:2px 8px;border-radius:6px;font-size:13px">3</span><span><strong>Attach</strong> &mdash; <code>parent.appendChild(newEl)</code></span>
+        </div>
+        <div style="margin-top:10px;font-size:14px;color:#7592b2">Until step 3, the element exists <em>only in memory</em> &mdash; invisible on the page.</div>
+      </div>
+    </div>
+    <div class="card p">
+      <div class="ct">&#x1F4DA; Real-World Patterns</div>
+      <div class="cb"><ul>
+        <li><strong>Dynamic Todo Lists</strong> &mdash; <code>event.target.parentElement.remove()</code> deletes a row without needing unique IDs</li>
+        <li><strong>Dropdown Menus</strong> &mdash; <code>element.nextElementSibling.classList.toggle("show")</code></li>
+        <li><strong>Breadcrumb Nav</strong> &mdash; traverse up via <code>parentNode</code> to build hierarchy trails</li>
+      </ul></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 4 WHAT IS AN EVENT LISTENER -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 2 &middot; Event Listeners</div>
+  <div class="stitle">What Is an <span class="ap">Event Listener</span>?</div>
+  <div class="ssub" style="margin-bottom:12px">A procedure in JavaScript that <strong>waits for an event to occur</strong>.</div>
+  <div class="g2" style="margin-bottom:14px">
+    <div class="card p">
+      <div class="ct">&#x1F514; Definition</div>
+      <div class="cb">An <strong>event listener</strong> is a procedure in JavaScript that waits for a specific event to occur.<br><br>
+      A simple example of an event is a user <strong>clicking the mouse</strong> or <strong>pressing a key</strong> on the keyboard.<br><br>
+      The <code>addEventListener()</code> method of the <strong>EventTarget interface</strong> sets up a function that will be called <em>whenever</em> the specified event is delivered to the target.</div>
+    </div>
+    <div class="card g">
+      <div class="ct">&#x1F3AF; Common Event Targets</div>
+      <div class="cb">You can listen for events on any DOM object &mdash; not just HTML elements:<ul>
+        <li><strong>Element</strong> &mdash; any HTML tag on the page</li>
+        <li><strong>Element.children</strong> &mdash; child elements of a parent</li>
+        <li><strong>Document</strong> &mdash; the entire HTML document</li>
+        <li><strong>Window</strong> &mdash; the browser window object</li>
+        <li><strong>XMLHttpRequest</strong> &mdash; for AJAX requests</li>
+      </ul></div>
+    </div>
+  </div>
+  <div class="card o">
+    <div class="ct">&#x2728; Key Benefits of addEventListener()</div>
+    <div class="cb" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 24px;font-size:15px">
+      <span>&#x25B8; Attaches a handler <strong>without overwriting</strong> existing handlers</span>
+      <span>&#x25B8; Add <strong>multiple handlers</strong> of the same type to one element</span>
+      <span>&#x25B8; Works on <strong>any DOM object</strong> (window, document, XMLHttpRequest)</span>
+      <span>&#x25B8; Keeps JavaScript <strong>separated from HTML markup</strong></span>
+      <span>&#x25B8; Easier to <strong>control event bubbling</strong> behavior</span>
+      <span>&#x25B8; Easily remove listeners with <code>removeEventListener()</code></span>
+    </div>
+  </div>
+</div></div>
+
+<!-- 5 SYNTAX -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 2 &middot; Event Listeners</div>
+  <div class="stitle">addEventListener() <span class="ab">Syntax &amp; Parameters</span></div>
+  <div style="margin-bottom:14px">
+    <div class="synbox"><span class="kw">element</span>.<span class="fn">addEventListener</span>(<span class="st"><em>event</em></span>, <span class="st"><em>function</em></span>, <span class="st"><em>useCapture</em></span>);</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:0;background:#1b2236;border-radius:14px;overflow:hidden;margin-bottom:14px">
+    <div class="prow" style="padding:12px 18px">
+      <span class="pname">event</span>
+      <span class="pdesc">The <strong>type of event</strong> to listen for &mdash; a string such as <code>"click"</code>, <code>"mousedown"</code>, <code>"keydown"</code>, or any other valid HTML DOM Event.</span>
+      <span class="ptag req">Required</span>
+    </div>
+    <div class="prow" style="padding:12px 18px">
+      <span class="pname">function</span>
+      <span class="pdesc">The <strong>callback function</strong> we want to call when the event occurs. This is the code that runs in response to the event.</span>
+      <span class="ptag req">Required</span>
+    </div>
+    <div class="prow" style="padding:12px 18px">
+      <span class="pname">useCapture</span>
+      <span class="pdesc">A <strong>boolean value</strong> specifying whether to use event bubbling (<code>false</code>, default) or event capturing (<code>true</code>). This parameter is <em>optional</em>.</span>
+      <span class="ptag opt">Optional</span>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ct">&#x1F4AC; Common Event Types</div>
+      <div class="cb">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;font-size:14px">
+          <span><code>"click"</code> &mdash; mouse click</span>
+          <span><code>"dblclick"</code> &mdash; double click</span>
+          <span><code>"mousedown"</code> &mdash; mouse pressed</span>
+          <span><code>"mouseup"</code> &mdash; mouse released</span>
+          <span><code>"keydown"</code> &mdash; key pressed</span>
+          <span><code>"keyup"</code> &mdash; key released</span>
+          <span><code>"submit"</code> &mdash; form submitted</span>
+          <span><code>"input"</code> &mdash; input changed</span>
+          <span><code>"mouseover"</code> &mdash; hover enter</span>
+          <span><code>"load"</code> &mdash; page/resource loaded</span>
+        </div>
+      </div>
+    </div>
+    <div class="card c">
+      <div class="ct">&#x1F504; Bubbling vs Capturing</div>
+      <div class="cb">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:14px">
+          <div style="background:#0c1020;padding:10px;border-radius:8px;border:1px solid #252f48">
+            <div style="color:#4ee3a0;font-weight:700;margin-bottom:4px">Bubbling (default)</div>
+            <div style="color:#7592b2">Event travels <em>up</em> from target &rarr; ancestors<br><code>useCapture: false</code></div>
+          </div>
+          <div style="background:#0c1020;padding:10px;border-radius:8px;border:1px solid #252f48">
+            <div style="color:#ffaa5e;font-weight:700;margin-bottom:4px">Capturing</div>
+            <div style="color:#7592b2">Event travels <em>down</em> from root &rarr; target<br><code>useCapture: true</code></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 6 SAMPLE CODE 1 — DATE -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Sample Code 1 &middot; Date Display</div>
+  <div class="stitle">Click to Show <span class="ag">Current Date</span></div>
+  <div class="ssub" style="margin-bottom:12px">A button click fires a named function that injects the current date into a paragraph using <code>innerHTML</code>.</div>
+  <div class="pre" style="margin-bottom:14px">
+    <div class="prebar"><span class="prelang">html</span><button class="copybtn" onclick="doCopy(this,'sc1')">Copy</button></div>
+    <pre id="sc1"><span class="tg">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;body</span> <span class="at">style</span>=<span class="st">"background-color: bisque;"</span><span class="tg">&gt;
+
+  &lt;h1</span> <span class="at">style</span>=<span class="st">"text-align:center; color: brown; font-style: oblique;"</span><span class="tg">&gt;</span>My Blog Site<span class="tg">&lt;/h1&gt;
+
+  &lt;p</span> <span class="at">style</span>=<span class="st">"text-align: center;"</span><span class="tg">&gt;</span>This site is regarding about my daily activities
+  and also this serve as my portfolio<span class="tg">&lt;/p&gt;
+
+  &lt;button</span> <span class="at">id</span>=<span class="st">"Btn"</span><span class="tg">&gt;</span>DATE<span class="tg">&lt;/button&gt;
+
+  &lt;p</span> <span class="at">id</span>=<span class="st">"1"</span><span class="tg">&gt;&lt;/p&gt;
+
+  &lt;script</span> <span class="at">style</span>=<span class="st">"text-align: center;"</span><span class="tg">&gt;</span>
+    document.<span class="fn">getElementById</span>(<span class="st">"Btn"</span>).<span class="fn">addEventListener</span>(<span class="st">"click"</span>, displayDate);
+
+    <span class="kw">function</span> <span class="fn">displayDate</span>() {
+      document.<span class="fn">getElementById</span>(<span class="st">"1"</span>).<span class="fn">innerHTML</span> = Date();
+    }
+  <span class="tg">&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;</span></pre>
+  </div>
+  <div class="g2">
+    <div class="card g">
+      <div class="ct">&#x1F511; What&#x27;s Happening</div>
+      <div class="cb"><ul>
+        <li>The button with <code>id="Btn"</code> is selected by <code>getElementById</code></li>
+        <li><code>addEventListener("click", displayDate)</code> registers a <em>named function</em> as the handler</li>
+        <li>When clicked, <code>displayDate()</code> fires and sets <code>innerHTML</code> of the <code>&lt;p id="1"&gt;</code> to the current date &amp; time via JavaScript&#x27;s built-in <code>Date()</code></li>
+      </ul></div>
+    </div>
+    <div class="card p">
+      <div class="ct">&#x1F4A1; Named Function vs Anonymous</div>
+      <div class="cb">Here a <strong>named function</strong> (<code>displayDate</code>) is passed as the handler &mdash; it can be referenced and <em>removed later</em> with <code>removeEventListener("click", displayDate)</code>.<br><br>Anonymous functions <code>function() {...}</code> cannot be removed once registered.</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 7 SAMPLE CODE 2 — ALERT -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Sample Code 2 &middot; Skill-Building</div>
+  <div class="stitle">Click to Show <span class="ao">Welcome Alert</span></div>
+  <div class="ssub" style="margin-bottom:12px">An anonymous function is passed directly into <code>addEventListener</code> to trigger an alert dialog on click.</div>
+  <div class="pre" style="margin-bottom:14px">
+    <div class="prebar"><span class="prelang">html</span><button class="copybtn" onclick="doCopy(this,'sc2')">Copy</button></div>
+    <pre id="sc2"><span class="tg">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;body</span> <span class="at">style</span>=<span class="st">"background-color: bisque;"</span><span class="tg">&gt;
+
+  &lt;h1</span> <span class="at">style</span>=<span class="st">"text-align:center; color: brown; font-style: oblique;"</span><span class="tg">&gt;</span>My Blog Site<span class="tg">&lt;/h1&gt;
+
+  &lt;p</span> <span class="at">style</span>=<span class="st">"text-align: center;"</span><span class="tg">&gt;</span>This site is regarding about my daily activities
+  and also this serve as my portfolio<span class="tg">&lt;/p&gt;
+
+  &lt;button</span> <span class="at">id</span>=<span class="st">"Btn"</span><span class="tg">&gt;</span>Click Here<span class="tg">&lt;/button&gt;
+
+  &lt;script&gt;</span>
+    document.<span class="fn">getElementById</span>(<span class="st">"Btn"</span>).<span class="fn">addEventListener</span>(<span class="st">"click"</span>, <span class="kw">function</span>() {
+      alert(<span class="st">"Welcome to my Site"</span>);
+    });
+  <span class="tg">&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;</span></pre>
+  </div>
+  <div class="g2">
+    <div class="card o">
+      <div class="ct">&#x1F511; What&#x27;s Happening</div>
+      <div class="cb"><ul>
+        <li>Same pattern &mdash; <code>getElementById("Btn")</code> selects the button</li>
+        <li>This time an <strong>anonymous function</strong> is passed directly as the second argument</li>
+        <li>When clicked, <code>alert("Welcome to my Site")</code> fires a browser dialog box</li>
+        <li>No separate named function needed for simple one-off actions</li>
+      </ul></div>
+    </div>
+    <div class="card r">
+      <div class="ct">&#x26A0;&#xFE0F; Key Rule &mdash; No Duplicate Listeners</div>
+      <div class="cb">If the same function or object is already in the list of event listeners for the same event type on the same target, it is <strong>not added a second time</strong>.<br><br>This prevents accidental duplicate event firing when code runs more than once.</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 8 KEY QUOTES -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Key Quotes</div>
+  <div class="stitle">Words Worth <span class="ay">Remembering</span></div>
+  <div style="display:flex;flex-direction:column;gap:14px;flex:1;justify-content:center">
+    <div class="qqt">An event listener is a procedure in JavaScript that waits for an event to occur. A simple example of an event is a user clicking the mouse or pressing a key on the keyboard.
+      <div class="qsrc">&mdash; Module 12 Lesson Material</div></div>
+    <div class="qqt" style="border-left-color:#4ee3a0">The addEventListener() method of the EventTarget interface sets up a function that will be called whenever the specified event is delivered to the target.
+      <div class="qsrc">&mdash; Module 12 Lesson Material</div></div>
+    <div class="qqt" style="border-left-color:#b98cfa">Common targets are Element, or its children, Document, and Window &mdash; but the target may be any object that supports events, such as XMLHttpRequest.
+      <div class="qsrc">&mdash; Module 12 Lesson Material</div></div>
+    <div class="qqt" style="border-left-color:#f87171">Properties like childNodes, firstChild, and lastChild count whitespace and line breaks between HTML tags as #text nodes. To target actual HTML tags safely, use children, firstElementChild, or lastElementChild.
+      <div class="qsrc">&mdash; Module 12 Warning Note</div></div>
+  </div>
+</div></div>
+
+<!-- 9 ANALOGIES -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Analogies &amp; Real-World Use Cases</div>
+  <div class="stitle">Making It <span class="ao">Click</span></div>
+  <div class="g2" style="flex:1">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card y">
+        <div class="ct">&#x1F333; The Family Tree Analogy &mdash; DOM</div>
+        <div class="cb">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:14px;margin-top:4px">
+            <div style="background:#0c1020;padding:8px 12px;border-radius:8px;border:1px solid #252f48"><code>parentNode</code><br><span style="color:#7592b2">Your parent</span></div>
+            <div style="background:#0c1020;padding:8px 12px;border-radius:8px;border:1px solid #252f48"><code>children</code><br><span style="color:#7592b2">Your offspring</span></div>
+            <div style="background:#0c1020;padding:8px 12px;border-radius:8px;border:1px solid #252f48"><code>nextElementSibling</code><br><span style="color:#7592b2">Younger sibling</span></div>
+            <div style="background:#0c1020;padding:8px 12px;border-radius:8px;border:1px solid #252f48"><code>firstElementChild</code><br><span style="color:#7592b2">Eldest child</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card c">
+        <div class="ct">&#x1F514; Doorbell Analogy &mdash; Event Listener</div>
+        <div class="cb">An event listener is like a <strong>doorbell</strong>:<ul>
+          <li>The <strong>button</strong> = the HTML element being watched</li>
+          <li><strong>Pressing it</strong> = the event (e.g., <code>"click"</code>)</li>
+          <li>The <strong>chime inside</strong> = the callback function that runs</li>
+          <li>You can add <strong>multiple chimes</strong> to one button &mdash; all fire on press</li>
+        </ul></div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card g"><div class="ct">&#x2705; Use Case 1 &mdash; Dynamic Todo Lists</div><div class="cb">Each &ldquo;Delete&rdquo; button uses <strong>event delegation</strong> on the parent container. <code>event.target.parentElement.remove()</code> deletes the entire task row without needing IDs on every item.</div></div>
+      <div class="card p"><div class="ct">&#x1F4AC; Use Case 2 &mdash; Interactive Forms</div><div class="cb">Listen for <code>"input"</code> events on a text field to validate in real time. Highlight in red with <code>element.style.borderColor = "red"</code> as the user types.</div></div>
+      <div class="card o"><div class="ct">&#x1F510; Use Case 3 &mdash; Modal Dialogs</div><div class="cb">Listen for a <code>"click"</code> on a Close button, then <code>removeEventListener</code> after dismissal so the dialog cannot be closed twice accidentally.</div></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 10 RECAP -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Recap</div>
+  <div class="stitle">Module 12 at a <span class="ab">Glance</span></div>
+  <div class="g2" style="margin-bottom:14px">
+    <div class="card">
+      <div class="ct">&#x1F333; DOM Relationships &amp; Traversal</div>
+      <div class="cb"><ul>
+        <li><strong>Parent</strong> &mdash; node immediately above</li>
+        <li><strong>Child</strong> &mdash; node directly below</li>
+        <li><strong>Siblings</strong> &mdash; same direct parent</li>
+        <li>Prefer <code>children</code>, <code>firstElementChild</code>, <code>nextElementSibling</code> &mdash; skip #text nodes</li>
+        <li><code>nextElementSibling</code> returns <code>null</code> if no next element &mdash; always null-check</li>
+      </ul></div>
+    </div>
+    <div class="card o">
+      <div class="ct">&#x1F527; Advanced Node Methods</div>
+      <div class="cb"><ul>
+        <li><code>insertBefore(new, ref)</code> &mdash; insert before a sibling</li>
+        <li><code>replaceChild(new, old)</code> &mdash; swap an existing node</li>
+        <li><code>cloneNode(true)</code> &mdash; deep clone including children</li>
+        <li><code>element.remove()</code> &mdash; modern self-removal shorthand</li>
+      </ul></div>
+    </div>
+    <div class="card p">
+      <div class="ct">&#x26A1; Event Listeners</div>
+      <div class="cb"><ul>
+        <li>A <strong>procedure that waits</strong> for a specific event to occur</li>
+        <li>Syntax: <code>element.addEventListener(event, fn, useCapture)</code></li>
+        <li>Targets: Element, Document, Window, XMLHttpRequest</li>
+        <li>Stacks handlers &mdash; does NOT overwrite existing ones</li>
+        <li>Remove with <code>removeEventListener()</code></li>
+      </ul></div>
+    </div>
+    <div class="card g">
+      <div class="ct">&#x1F4A1; Code Patterns Covered</div>
+      <div class="cb"><ul>
+        <li>Named function handler &rarr; <code>getElementById("Btn").addEventListener("click", displayDate)</code></li>
+        <li>Anonymous function handler &rarr; <code>addEventListener("click", function() { alert(...); })</code></li>
+        <li>Event delegation &rarr; listen on parent, check <code>event.target</code></li>
+      </ul></div>
+    </div>
+  </div>
+  <div class="card r">
+    <div class="ct">&#x1F511; Golden Rules</div>
+    <div class="cb" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 28px;font-size:15px">
+      <span>&#x25B8; Prefer <code>Element</code> variants over plain <code>Node</code> variants</span>
+      <span>&#x25B8; <code>nextElementSibling</code> returns <code>null</code> &mdash; always guard before use</span>
+      <span>&#x25B8; Named functions can be removed; anonymous functions cannot</span>
+      <span>&#x25B8; Same listener on same target for same event = added only once</span>
+    </div>
+  </div>
+</div></div>
+
+<!-- 11 MCQ -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Activities &middot; Multiple Choice</div>
+  <div class="stitle">Test Your <span class="ap">Knowledge</span></div>
+  <div class="ssub" style="margin-bottom:12px">Choose the best answer. Answers on the next slide.</div>
+  <div class="g2" style="gap:13px;flex:1">
+    <div class="qblock">
+      <div class="qnum">Question 1</div>
+      <div class="qtext">Which property returns a collection of ONLY HTML element children, excluding text and whitespace nodes?</div>
+      <div class="qchoices">
+        <div class="qchoice"><span>A.</span><code>childNodes</code></div>
+        <div class="qchoice"><span>B.</span><code>children</code></div>
+        <div class="qchoice"><span>C.</span><code>firstChild</code></div>
+        <div class="qchoice"><span>D.</span><code>parentNode</code></div>
+      </div>
+    </div>
+    <div class="qblock">
+      <div class="qnum">Question 2</div>
+      <div class="qtext">An event listener is best defined as:</div>
+      <div class="qchoices">
+        <div class="qchoice"><span>A.</span>A CSS property that styles a clicked element</div>
+        <div class="qchoice"><span>B.</span>A procedure in JavaScript that waits for an event to occur</div>
+        <div class="qchoice"><span>C.</span>A method that selects elements by class name</div>
+        <div class="qchoice"><span>D.</span>A function that reloads the browser page</div>
+      </div>
+    </div>
+    <div class="qblock">
+      <div class="qnum">Question 3</div>
+      <div class="qtext">Which method inserts a new element directly <em>before</em> a specified reference node inside a parent?</div>
+      <div class="qchoices">
+        <div class="qchoice"><span>A.</span><code>appendChild()</code></div>
+        <div class="qchoice"><span>B.</span><code>replaceChild()</code></div>
+        <div class="qchoice"><span>C.</span><code>insertBefore()</code></div>
+        <div class="qchoice"><span>D.</span><code>createElement()</code></div>
+      </div>
+    </div>
+    <div class="qblock">
+      <div class="qnum">Question 4</div>
+      <div class="qtext">In <code>element.addEventListener(event, function, useCapture)</code>, what does the <strong>first argument</strong> specify?</div>
+      <div class="qchoices">
+        <div class="qchoice"><span>A.</span>The callback function name</div>
+        <div class="qchoice"><span>B.</span>A boolean for event bubbling</div>
+        <div class="qchoice"><span>C.</span>The targeted event type (e.g., <code>"click"</code>)</div>
+        <div class="qchoice"><span>D.</span>The replacement HTML text</div>
+      </div>
+    </div>
+    <div class="qblock" style="grid-column:1/-1">
+      <div class="qnum">Question 5</div>
+      <div class="qtext">If <code>nextElementSibling</code> is called on the last element inside a parent container, what value does it return?</div>
+      <div class="qchoices">
+        <div class="qchoice"><span>A.</span><code>undefined</code></div>
+        <div class="qchoice"><span>B.</span><code>null</code></div>
+        <div class="qchoice"><span>C.</span><code>0</code></div>
+        <div class="qchoice"><span>D.</span>An empty <code>NodeList</code></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 12 IDENTIFICATION -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Activities &middot; Identification</div>
+  <div class="stitle">Name That <span class="ao">Term or Method</span></div>
+  <div class="ssub" style="margin-bottom:14px">Write the exact property, method, or concept described in each item.</div>
+  <div class="g2" style="gap:12px;flex:1">
+    <div class="idblock">
+      <div class="idnum">Item 1</div>
+      <div class="idtext">The navigation property that returns the next HTML element at the same hierarchical level &mdash; skipping any whitespace text nodes.</div>
+      <div class="idline"></div>
+    </div>
+    <div class="idblock">
+      <div class="idnum">Item 2</div>
+      <div class="idtext">The JavaScript interface whose <code>addEventListener()</code> method is used to register event handlers. Common targets like Element, Document, and Window all implement this interface.</div>
+      <div class="idline"></div>
+    </div>
+    <div class="idblock">
+      <div class="idnum">Item 3</div>
+      <div class="idtext">The method that attaches a newly created element as the <em>last</em> child of a specified parent node in the document tree.</div>
+      <div class="idline"></div>
+    </div>
+    <div class="idblock">
+      <div class="idnum">Item 4</div>
+      <div class="idtext">The modern DOM method called directly on an element to remove itself from the DOM &mdash; without needing a reference to its parent.</div>
+      <div class="idline"></div>
+    </div>
+    <div class="idblock">
+      <div class="idnum">Item 5</div>
+      <div class="idtext">The method used to <em>detach</em> a previously registered event listener from a DOM element, requiring the same function reference that was passed to <code>addEventListener()</code>.</div>
+      <div class="idline"></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 13 ANSWER KEY -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Answer Key &middot; All Items</div>
+  <div class="stitle">Answers &amp; <span class="ag">Explanations</span></div>
+  <div class="g2" style="flex:1;gap:8px">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="font-size:13px;font-weight:800;color:#4ee3a0;letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px">Multiple Choice (1&ndash;5)</div>
+      <div class="akrow"><div class="akn">1</div><div><div class="aka">B &mdash; children</div><div class="akx">element.children returns an HTMLCollection of element-type children only. childNodes includes #text whitespace nodes created by HTML indentation.</div></div></div>
+      <div class="akrow"><div class="akn">2</div><div><div class="aka">B &mdash; A procedure that waits for an event to occur</div><div class="akx">Exact definition from the module. Events include mouse clicks, key presses, and any other user or system action delivered to a DOM target.</div></div></div>
+      <div class="akrow"><div class="akn">3</div><div><div class="aka">C &mdash; insertBefore()</div><div class="akx">Syntax: parent.insertBefore(newNode, referenceNode). Inserts newNode immediately before the reference child inside the parent.</div></div></div>
+      <div class="akrow"><div class="akn">4</div><div><div class="aka">C &mdash; The targeted event type (e.g., "click")</div><div class="akx">The first argument is always the event type string. The second is the callback function. The optional third is the useCapture boolean.</div></div></div>
+      <div class="akrow"><div class="akn">5</div><div><div class="aka">B &mdash; null</div><div class="akx">nextElementSibling returns null (not undefined) when there is no following sibling element. Always guard with: if (next) { ... } before accessing properties on it.</div></div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="font-size:13px;font-weight:800;color:#ffaa5e;letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px">Identification (1&ndash;5)</div>
+      <div class="akrow id"><div class="akn">1</div><div><div class="aka">nextElementSibling</div><div class="akx">The "Element" variant skips invisible text nodes from indentation. nextSibling would often land on a #text node instead of the next tag.</div></div></div>
+      <div class="akrow id"><div class="akn">2</div><div><div class="aka">EventTarget</div><div class="akx">The EventTarget interface is implemented by any object that can receive events. All DOM elements, Document, and Window implement EventTarget.</div></div></div>
+      <div class="akrow id"><div class="akn">3</div><div><div class="aka">appendChild()</div><div class="akx">The final step of the 3-step createElement workflow. Without this, the new element exists only in memory and is invisible on the rendered page.</div></div></div>
+      <div class="akrow id"><div class="akn">4</div><div><div class="aka">element.remove()</div><div class="akx">Modern DOM API shorthand. Equivalent to element.parentNode.removeChild(element) but far more concise and readable.</div></div></div>
+      <div class="akrow id"><div class="akn">5</div><div><div class="aka">removeEventListener()</div><div class="akx">Must be called with the same event type and the exact same function reference. Anonymous functions cannot be removed this way since they have no referenceable name.</div></div></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 14 CLOSING -->
+<div class="sw"><div class="slide" style="align-items:center;justify-content:center;text-align:center">
+  <div class="eyebrow" style="border-bottom:none">Module 12 &middot; Complete</div>
+  <div class="tgiant" style="font-size:clamp(34px,4.6vw,60px);margin-top:10px">Navigate the Tree.<br><span class="ab">Listen</span> to the <span class="ag">User</span>.</div>
+  <div class="qqt" style="max-width:740px;text-align:left;border-left-color:#fbbf24;font-size:16px;margin-top:14px">
+    Once you understand that the DOM is a tree and every action is just an event waiting for a listener &mdash; every interactive web page becomes something you can build, not just use.
+    <div class="qsrc">&mdash; A friendly reminder to keep building &#x1F680;</div>
+  </div>
+  <div class="g3" style="max-width:860px;margin-top:14px">
+    <div class="card" style="text-align:left"><div class="ct">Practice Traversal</div><div class="cb" style="font-size:14px">Build a nested comment thread &mdash; add replies using <code>insertBefore</code> and delete them via <code>parentElement.remove()</code>.</div></div>
+    <div class="card g" style="text-align:left"><div class="ct">Practice Events</div><div class="cb" style="font-size:14px">Add a keyboard listener on <code>document</code> for the <code>"keydown"</code> event and display which key was pressed in a <code>&lt;p&gt;</code> tag.</div></div>
+    <div class="card p" style="text-align:left"><div class="ct">Challenge</div><div class="cb" style="font-size:14px">Combine both: build a sortable list where clicking any item moves it up using <code>insertBefore</code> and <code>previousElementSibling</code>.</div></div>
+  </div>
+  <div style="font-size:14px;color:#2e4560;margin-top:14px">Press <span style="color:#5cb8ff">Home</span> to restart &middot; <span style="color:#5cb8ff">?</span> for shortcuts</div>
+</div></div>
+
+</body>
+</html>

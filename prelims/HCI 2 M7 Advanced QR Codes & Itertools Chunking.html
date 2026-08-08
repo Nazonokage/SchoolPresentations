@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Advanced QR Codes &amp; Itertools Chunking — Module 07</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-deep: #080c16;
+      --bg-mid: #0e1526;
+      --glass-bg: rgba(255,255,255,0.055);
+      --glass-border: rgba(255,255,255,0.14);
+      --glass-border-strong: rgba(255,255,255,0.24);
+      --accent-cyan: #4fd8e8;
+      --accent-violet: #9d8cff;
+      --accent-amber: #f5c26b;
+      --text-primary: #f2f5fb;
+      --text-secondary: #a9b4c9;
+      --text-faint: #6b7690;
+      --code-bg: rgba(6,10,20,0.55);
+      --shadow-deep: 0 20px 60px -20px rgba(0,0,0,0.6);
+      --radius-lg: 22px;
+      --radius-md: 14px;
+      --dur: 400ms;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background:
+        radial-gradient(60% 50% at 12% 8%, rgba(157,140,255,0.20), transparent 60%),
+        radial-gradient(50% 45% at 88% 15%, rgba(79,216,232,0.16), transparent 60%),
+        radial-gradient(70% 60% at 50% 100%, rgba(79,216,232,0.08), transparent 60%),
+        linear-gradient(180deg, var(--bg-deep), var(--bg-mid) 60%, var(--bg-deep));
+      color: var(--text-primary);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      cursor: pointer;
+      -webkit-font-smoothing: antialiased;
+    }
+    ::selection { background: rgba(79,216,232,0.35); }
+
+    .ambient { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.5;
+    }
+    .blob1 { width: 420px; height: 420px; top: -120px; left: -100px; background: radial-gradient(circle, rgba(157,140,255,0.35), transparent 70%); }
+    .blob2 { width: 380px; height: 380px; bottom: -140px; right: -80px; background: radial-gradient(circle, rgba(79,216,232,0.30), transparent 70%); }
+
+    .finder {
+      position: fixed;
+      width: 46px;
+      height: 46px;
+      z-index: 5;
+      pointer-events: none;
+      opacity: 0.55;
+    }
+    .finder svg { width: 100%; height: 100%; display: block; }
+    .finder.tl { top: 22px; left: 22px; }
+    .finder.br { bottom: 22px; right: 22px; transform: rotate(180deg); }
+
+    #deck { position: relative; width: 100vw; height: 100vh; z-index: 1; }
+
+    .slide {
+      position: absolute; inset: 0;
+      overflow-y: auto; overflow-x: hidden;
+      transition: transform var(--dur) cubic-bezier(.22,.68,.35,1), opacity var(--dur) ease;
+      -webkit-overflow-scrolling: touch;
+    }
+    .slide.pos-current { transform: translateX(0) scale(1); opacity: 1; z-index: 3; }
+    .slide.pos-next { transform: translateX(4.5%) scale(0.97); opacity: 0; z-index: 2; }
+    .slide.pos-prev { transform: translateX(-4.5%) scale(0.97); opacity: 0; z-index: 2; }
+    .slide.pos-far { transform: translateX(0) scale(0.97); opacity: 0; z-index: 1; }
+
+    .slide-outer {
+      min-height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 88px 56px 96px;
+    }
+    .slide-content { width: 100%; max-width: 1120px; min-width: 0; }
+
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--accent-cyan);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      padding: 6px 14px 6px 10px;
+      border-radius: 100px;
+      margin-bottom: 26px;
+    }
+    .eyebrow::before {
+      content: "";
+      width: 8px; height: 8px; border-radius: 2px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+      display: inline-block;
+    }
+    h1.title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: clamp(30px, 4.4vw, 54px);
+      line-height: 1.08;
+      margin: 0 0 20px;
+      letter-spacing: -0.01em;
+      background: linear-gradient(180deg, #ffffff 30%, #c9d3ea 100%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    p.subtitle {
+      font-size: clamp(15px, 1.5vw, 18px);
+      color: var(--text-secondary);
+      max-width: 70ch;
+      line-height: 1.6;
+      margin: 0 0 34px;
+    }
+    .analogy {
+      margin-top: 28px;
+      padding: 16px 20px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(120deg, rgba(157,140,255,0.10), rgba(79,216,232,0.07));
+      border: 1px solid var(--glass-border);
+      font-size: 14.5px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+    .analogy b { color: var(--text-primary); font-weight: 600; }
+    .analogy .tag {
+      font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--accent-amber); display: block; margin-bottom: 6px;
+    }
+
+    .glass {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
+      box-shadow: var(--shadow-deep), inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    ul.bullets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+    ul.bullets li {
+      display: flex; gap: 14px; align-items: flex-start;
+      font-size: 16.5px; line-height: 1.55; color: var(--text-primary);
+      padding: 16px 20px; min-width: 0;
+    }
+    ul.bullets li .dot {
+      flex: 0 0 auto; width: 9px; height: 9px; border-radius: 50%; margin-top: 8px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+    }
+    ul.bullets li b { color: var(--accent-cyan); font-weight: 600; }
+
+    .cols2 { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 22px; }
+    .col-card { padding: 26px 26px 28px; min-width: 0; }
+    .col-card h3 {
+      font-family: 'Space Grotesk', sans-serif; font-size: 19px; margin: 0 0 14px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .col-card h3 .chip {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 3px 9px; border-radius: 6px;
+      background: rgba(255,255,255,0.08); color: var(--text-secondary); letter-spacing: 0.05em;
+    }
+    .col-card ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 11px; }
+    .col-card li { font-size: 14.5px; line-height: 1.55; color: var(--text-secondary); padding-left: 16px; position: relative; }
+    .col-card li::before { content: "—"; position: absolute; left: 0; color: var(--text-faint); }
+    .col-card.accent-a { border-color: rgba(245,194,107,0.35); }
+    .col-card.accent-b { border-color: rgba(79,216,232,0.35); }
+
+    .grid-cards { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; }
+    .grid-cards.cols2g { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .card { padding: 20px 20px 22px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+    .card .badge {
+      width: 30px; height: 30px; border-radius: 9px;
+      background: linear-gradient(135deg, rgba(79,216,232,0.25), rgba(157,140,255,0.25));
+      border: 1px solid var(--glass-border-strong);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent-cyan);
+    }
+    .card .badge.icon-badge {
+      width: 56px; height: 56px; border-radius: 12px;
+      background: linear-gradient(145deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
+      padding: 8px;
+    }
+    .card .badge.icon-badge svg { width: 100%; height: 100%; display: block; }
+    .card .badge.photo-badge {
+      width: 64px; height: 64px; border-radius: 12px;
+      background: #0e1526; padding: 0; overflow: hidden;
+    }
+    .card .badge.photo-badge img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .card h4 { margin: 2px 0 0; font-family: 'Space Grotesk', sans-serif; font-size: 16px; }
+    .card p { margin: 0; font-size: 13.3px; line-height: 1.55; color: var(--text-secondary); }
+    .card .capacity {
+      margin-top: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: var(--accent-amber); padding-top: 8px; border-top: 1px solid var(--glass-border);
+    }
+
+    .steps { display: flex; flex-direction: column; gap: 14px; }
+    .step { display: flex; gap: 18px; align-items: flex-start; padding: 18px 22px; min-width: 0; }
+    .step .num {
+      flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet)); color: #0b0f1a;
+    }
+    .step h4 { margin: 0 0 4px; font-size: 15.5px; font-family: 'Space Grotesk', sans-serif; }
+    .step p { margin: 0; font-size: 13.8px; color: var(--text-secondary); line-height: 1.5; }
+
+    .code-layout { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(0,0.9fr); gap: 22px; align-items: stretch; }
+    .code-panel { padding: 0; overflow: hidden; min-width: 0; }
+    .code-head {
+      display: flex; align-items: center; gap: 8px; padding: 12px 18px;
+      border-bottom: 1px solid var(--glass-border);
+      font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--text-faint);
+    }
+    .code-head .dots { display: flex; gap: 6px; margin-right: 6px; }
+    .code-head .dots span { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+    .code-head .dots span:nth-child(1) { background: #ff5f57; }
+    .code-head .dots span:nth-child(2) { background: #febc2e; }
+    .code-head .dots span:nth-child(3) { background: #28c840; }
+    pre.code {
+      margin: 0; padding: 20px; background: var(--code-bg);
+      font-family: 'JetBrains Mono', monospace; font-size: 13.3px; line-height: 1.65;
+      color: #dbe4f3; overflow-x: auto; min-width: 0;
+    }
+    .tok-comment { color: #6b7690; font-style: italic; }
+    .tok-string { color: #a8e6b8; }
+    .tok-keyword { color: #9d8cff; font-weight: 600; }
+    .tok-builtin { color: #4fd8e8; }
+    .tok-number { color: #f5c26b; }
+    .explain { padding: 24px 24px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+    .explain h4 { margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 16px; }
+    .explain p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--text-secondary); }
+    .output-box {
+      font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--accent-cyan);
+      background: rgba(79,216,232,0.07); border: 1px solid rgba(79,216,232,0.25);
+      border-radius: 10px; padding: 10px 14px; white-space: pre-wrap; word-break: break-word;
+    }
+
+    .qr-layout { display: grid; grid-template-columns: minmax(0,0.85fr) minmax(0,1.15fr); gap: 32px; align-items: center; }
+    .qr-visual { display: flex; align-items: center; justify-content: center; padding: 28px; }
+    .qr-visual svg { width: min(280px, 90%); height: auto; filter: drop-shadow(0 20px 40px rgba(0,0,0,0.5)); }
+    .callouts { display: flex; flex-direction: column; gap: 12px; }
+    .callout { display: flex; gap: 12px; padding: 14px 18px; min-width: 0; }
+    .callout .mark {
+      flex: 0 0 auto; width: 8px; border-radius: 4px;
+      background: linear-gradient(180deg, var(--accent-cyan), var(--accent-violet));
+    }
+    .callout h5 { margin: 0 0 3px; font-size: 14.5px; font-family: 'Space Grotesk', sans-serif; }
+    .callout p { margin: 0; font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+
+    .statement { display: flex; flex-direction: column; align-items: flex-start; }
+    .statement .big {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+      font-size: clamp(26px, 3.6vw, 44px); line-height: 1.2; max-width: 18ch;
+      background: linear-gradient(120deg, #fff, var(--accent-cyan) 60%, var(--accent-violet));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+
+    .recap-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 18px; }
+    .recap-card { padding: 26px; min-width: 0; }
+    .recap-card .tag {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--accent-violet); margin-bottom: 10px; display: block;
+    }
+    .recap-card h4 { margin: 0 0 10px; font-size: 18px; font-family: 'Space Grotesk', sans-serif; }
+    .recap-card p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--text-secondary); }
+
+    .quiz-item {
+      padding: 14px 22px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .quiz-item .qnum {
+      flex: 0 0 28px;
+      font-weight: 600;
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .quiz-item .qtext { color: var(--text-primary); }
+    .quiz-item .qtext code {
+      background: rgba(255,255,255,0.08);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--accent-amber);
+    }
+
+    .answer-grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px 40px;
+      padding: 8px 0;
+    }
+    .answer-col {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .answer-col .ans-row {
+      display: flex;
+      gap: 10px;
+      font-size: 14px;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      align-items: baseline;
+    }
+    .answer-col .ans-num {
+      color: var(--text-faint);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      width: 28px;
+      flex-shrink: 0;
+    }
+    .answer-col .ans-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      font-size: 13px;
+      min-width: 20px;
+      flex-shrink: 0;
+    }
+    .answer-col .ans-val.true { color: var(--accent-cyan); }
+    .answer-col .ans-val.false { color: #ff7b72; }
+    .answer-col .ans-val.neutral { color: var(--accent-amber); }
+    .answer-col .ans-explain {
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin: 0 0 12px 0;
+    }
+    .table-wrap table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    .table-wrap table th {
+      text-align: left;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      color: var(--text-primary);
+      padding: 10px 12px;
+      border-bottom: 2px solid var(--glass-border);
+    }
+    .table-wrap table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--glass-border);
+      vertical-align: top;
+    }
+    .table-wrap table td:first-child {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .error-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 24px;
+      padding: 6px 0;
+    }
+    .error-grid .err-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 14px;
+    }
+    .error-grid .err-item .level {
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+    }
+    .error-grid .err-item .pct {
+      color: var(--accent-amber);
+      font-weight: 600;
+    }
+
+    #progress-wrap {
+      position: fixed; top: 0; left: 0; width: 100%; height: 3px; z-index: 50;
+      background: rgba(255,255,255,0.06);
+    }
+    #progress-bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--accent-violet), var(--accent-cyan));
+      box-shadow: 0 0 14px 1px rgba(79,216,232,0.6);
+      transition: width var(--dur) ease;
+    }
+    #counter {
+      position: fixed; bottom: 22px; right: 28px; z-index: 50;
+      font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--text-secondary);
+      background: var(--glass-bg); border: 1px solid var(--glass-border);
+      padding: 7px 14px; border-radius: 100px; backdrop-filter: blur(14px);
+      pointer-events: none;
+    }
+    #hint {
+      position: fixed; bottom: 22px; left: 28px; z-index: 50;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-faint);
+      letter-spacing: 0.04em; pointer-events: none;
+    }
+
+    @media (max-width: 860px) {
+      .cols2, .code-layout, .qr-layout, .recap-grid, .answer-grid-2col, .error-grid { grid-template-columns: minmax(0,1fr); }
+      .grid-cards { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .grid-cards.cols2g { grid-template-columns: minmax(0,1fr); }
+      .slide-outer { padding: 70px 22px 90px; }
+      #hint { display: none; }
+    }
+    @media (max-width: 520px) {
+      .grid-cards { grid-template-columns: minmax(0,1fr); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .slide { transition: opacity 180ms linear !important; transform: none !important; }
+      .slide.pos-next, .slide.pos-prev, .slide.pos-far { transform: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ambient">
+    <div class="blob blob1"></div>
+    <div class="blob blob2"></div>
+  </div>
+
+  <div class="finder tl">
+    <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="1" width="38" height="38" rx="7" fill="none" stroke="#4fd8e8" stroke-width="2.4"/>
+      <rect x="12" y="12" width="16" height="16" rx="3" fill="#4fd8e8"/>
+    </svg>
+  </div>
+  <div class="finder br">
+    <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="1" width="38" height="38" rx="7" fill="none" stroke="#9d8cff" stroke-width="2.4"/>
+      <rect x="12" y="12" width="16" height="16" rx="3" fill="#9d8cff"/>
+    </svg>
+  </div>
+
+  <div id="progress-wrap"><div id="progress-bar"></div></div>
+  <div id="counter">1 / 1</div>
+  <div id="hint">click or → to advance · ← back</div>
+
+  <div id="deck"></div>
+
+  <script>
+    (function() {
+
+      // ---------- highlighter ----------
+      function escapeHtml(str) {
+        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      }
+      function highlightPython(code) {
+        var escaped = escapeHtml(code);
+        var tokenRe = /(?<comment>#[^\n]*)|(?<string>'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")|(?<keyword>\b(?:import|from|as|def|return|for|in|if|else|print|list|zip_longest|zip|map|filter|lambda)\b)|(?<builtin>\b(?:itertools|qrcode|cv2|QRCode|QRCodeDetector|make|make_image|add_data|detectAndDecode|imread)\b)|(?<number>\b\d+(?:\.\d+)?\b)/g;
+        return escaped.replace(tokenRe, function(match, comment, string, keyword, builtin, number, offset, whole, groups) {
+          var g = groups || {comment:comment, string:string, keyword:keyword, builtin:builtin, number:number};
+          if (g.comment) return '<span class="tok-comment">' + match + '</span>';
+          if (g.string)  return '<span class="tok-string">' + match + '</span>';
+          if (g.keyword) return '<span class="tok-keyword">' + match + '</span>';
+          if (g.builtin) return '<span class="tok-builtin">' + match + '</span>';
+          if (g.number)  return '<span class="tok-number">' + match + '</span>';
+          return match;
+        });
+      }
+
+      // ---------- helpers ----------
+      function eyebrow(text) { return '<div class="eyebrow">' + text + '</div>'; }
+      function renderAnalogy(a) {
+        return '<div class="analogy"><span class="tag">Think of it like</span><b>' + a.lead + '</b> ' + a.body + '</div>';
+      }
+      function bulletsList(items) {
+        var html = '<ul class="bullets">';
+        items.forEach(function(it) {
+          html += '<li class="glass"><span class="dot"></span><span class="body">' + it + '</span></li>';
+        });
+        html += '</ul>';
+        return html;
+      }
+
+      // ---------- renderers ----------
+      var renderers = {
+        title: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            '<p class="subtitle">' + s.subtitle + '</p>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        bullets: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            (s.subtitle ? '<p class="subtitle">' + s.subtitle + '</p>' : '') +
+            bulletsList(s.items) +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        cols2: function(s) {
+          var c = s.columns;
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            (s.subtitle ? '<p class="subtitle">' + s.subtitle + '</p>' : '') +
+            '<div class="cols2">' +
+              c.map(function(col, i) {
+                return '<div class="glass col-card ' + (i===0?'accent-a':'accent-b') + '">' +
+                  '<h3>' + col.title + ' <span class="chip">' + col.chip + '</span></h3>' +
+                  '<ul>' + col.points.map(function(p){ return '<li>' + p + '</li>'; }).join('') + '</ul>' +
+                '</div>';
+              }).join('') +
+            '</div>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        cards: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            (s.subtitle ? '<p class="subtitle">' + s.subtitle + '</p>' : '') +
+            '<div class="grid-cards' + (s.cols2 ? ' cols2g' : '') + '">' +
+              s.cards.map(function(c) {
+                return '<div class="glass card">' +
+                  (c.img ? '<div class="badge photo-badge"><img src="' + c.img + '" alt="' + c.title + '" loading="lazy"></div>' :
+                   c.icon ? '<div class="badge icon-badge">' + c.icon + '</div>' :
+                   '<div class="badge">#</div>') +
+                  '<h4>' + c.title + '</h4>' +
+                  '<p>' + c.body + '</p>' +
+                  (c.capacity ? '<div class="capacity">' + c.capacity + '</div>' : '') +
+                '</div>';
+              }).join('') +
+            '</div>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        steps: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            (s.subtitle ? '<p class="subtitle">' + s.subtitle + '</p>' : '') +
+            '<div class="steps">' +
+              s.steps.map(function(st, i) {
+                return '<div class="glass step"><div class="num">' + (i+1) + '</div>' +
+                  '<div><h4>' + st.title + '</h4><p>' + st.body + '</p></div></div>';
+              }).join('') +
+            '</div>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        code: function(s) {
+          var highlighted = highlightPython(s.code);
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            '<div class="code-layout">' +
+              '<div class="glass code-panel">' +
+                '<div class="code-head"><span class="dots"><span></span><span></span><span></span></span>' + s.filename + '</div>' +
+                '<pre class="code"><code>' + highlighted + '</code></pre>' +
+              '</div>' +
+              '<div class="glass explain">' +
+                '<h4>' + s.explain.title + '</h4>' +
+                '<p>' + s.explain.body + '</p>' +
+                (s.explain.output ? '<div class="output-box">' + s.explain.output + '</div>' : '') +
+              '</div>' +
+            '</div>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        qr: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            '<div class="qr-layout">' +
+              '<div class="glass qr-visual">' + s.svg + '</div>' +
+              '<div class="callouts">' +
+                s.callouts.map(function(c) {
+                  return '<div class="glass callout"><div class="mark"></div><div><h5>' + c.title + '</h5><p>' + c.body + '</p></div></div>';
+                }).join('') +
+              '</div>' +
+            '</div>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        statement: function(s) {
+          return '<div class="slide-content statement">' +
+            eyebrow(s.eyebrow) +
+            '<div class="big">' + s.big + '</div>' +
+            (s.subtitle ? '<p class="subtitle" style="margin-top:22px;">' + s.subtitle + '</p>' : '') +
+          '</div>';
+        },
+        recap: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            '<div class="recap-grid">' +
+              s.cards.map(function(c) {
+                return '<div class="glass recap-card"><span class="tag">' + c.tag + '</span><h4>' + c.title + '</h4><p>' + c.body + '</p></div>';
+              }).join('') +
+            '</div>' +
+            (s.subtitle ? '<p class="subtitle" style="margin-top:26px;">' + s.subtitle + '</p>' : '') +
+          '</div>';
+        },
+        quiz: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            '<p class="subtitle">' + s.subtitle + '</p>' +
+            '<div>' +
+              s.questions.map(function(q, i) {
+                return '<div class="glass quiz-item"><span class="qnum">' + (i+1) + '.</span><span class="qtext">' + q.text + '</span></div>';
+              }).join('') +
+            '</div>' +
+            (s.footer ? '<p class="subtitle" style="margin-top:24px;font-size:14px;color:var(--text-faint);">' + s.footer + '</p>' : '') +
+          '</div>';
+        },
+        answerkey: function(s) {
+          var mid = Math.ceil(s.answers.length / 2);
+          var left = s.answers.slice(0, mid);
+          var right = s.answers.slice(mid);
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            '<div class="glass" style="padding:28px 32px;">' +
+              '<div class="answer-grid-2col">' +
+                '<div class="answer-col">' +
+                  left.map(function(a, i) {
+                    var label = '', cls = 'neutral';
+                    if (a.correct === true) { label = 'T'; cls = 'true'; }
+                    else if (a.correct === false) { label = 'F'; cls = 'false'; }
+                    else { label = '➔'; cls = 'neutral'; }
+                    return '<div class="ans-row"><span class="ans-num">' + (i+1) + '.</span><span class="ans-val ' + cls + '">' + label + '</span><span class="ans-explain">' + a.explanation + '</span></div>';
+                  }).join('') +
+                '</div>' +
+                '<div class="answer-col">' +
+                  right.map(function(a, i) {
+                    var label = '', cls = 'neutral';
+                    if (a.correct === true) { label = 'T'; cls = 'true'; }
+                    else if (a.correct === false) { label = 'F'; cls = 'false'; }
+                    else { label = '➔'; cls = 'neutral'; }
+                    var num = i + mid + 1;
+                    return '<div class="ans-row"><span class="ans-num">' + num + '.</span><span class="ans-val ' + cls + '">' + label + '</span><span class="ans-explain">' + a.explanation + '</span></div>';
+                  }).join('') +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+            (s.subtitle ? '<p class="subtitle" style="margin-top:26px;">' + s.subtitle + '</p>' : '') +
+          '</div>';
+        },
+        table: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            (s.subtitle ? '<p class="subtitle">' + s.subtitle + '</p>' : '') +
+            '<div class="glass" style="padding:20px 24px;">' +
+              '<div class="table-wrap">' +
+                '<table>' +
+                  '<thead><tr>' + s.headers.map(function(h){ return '<th>' + h + '</th>'; }).join('') + '</tr></thead>' +
+                  '<tbody>' +
+                    s.rows.map(function(row) {
+                      return '<tr>' + row.map(function(cell){ return '<td>' + cell + '</td>'; }).join('') + '</tr>';
+                    }).join('') +
+                  '</tbody>' +
+                '</table>' +
+              '</div>' +
+            '</div>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        errors: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            (s.subtitle ? '<p class="subtitle">' + s.subtitle + '</p>' : '') +
+            '<div class="glass" style="padding:24px 28px;">' +
+              '<div class="error-grid">' +
+                s.levels.map(function(lv) {
+                  return '<div class="err-item"><span class="level">' + lv.name + '</span><span class="pct">' + lv.pct + '</span></div>';
+                }).join('') +
+              '</div>' +
+            '</div>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        }
+      };
+
+      // ---------- SVG asset: styled QR code (dark green / light yellow) ----------
+      var qrSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">' +
+        '<rect width="200" height="200" rx="15" fill="#fefef0"/>' +
+        '<rect x="20" y="20" width="40" height="40" rx="4" fill="#006400" stroke="#fefef0" stroke-width="4"/>' +
+        '<rect x="30" y="30" width="20" height="20" rx="2" fill="#006400"/>' +
+        '<rect x="140" y="20" width="40" height="40" rx="4" fill="#006400" stroke="#fefef0" stroke-width="4"/>' +
+        '<rect x="150" y="30" width="20" height="20" rx="2" fill="#006400"/>' +
+        '<rect x="20" y="140" width="40" height="40" rx="4" fill="#006400" stroke="#fefef0" stroke-width="4"/>' +
+        '<rect x="30" y="150" width="20" height="20" rx="2" fill="#006400"/>' +
+        '<rect x="75" y="20" width="12" height="12" rx="2" fill="#006400"/>' +
+        '<rect x="95" y="30" width="12" height="12" rx="2" fill="#006400"/>' +
+        '<rect x="115" y="20" width="12" height="12" rx="2" fill="#006400"/>' +
+        '<rect x="75" y="45" width="12" height="12" rx="2" fill="#006400"/>' +
+        '<rect x="20" y="75" width="12" height="12" rx="2" fill="#006400"/>' +
+        '<rect x="45" y="85" width="12" height="12" rx="2" fill="#006400"/>' +
+        '<rect x="20" y="105" width="12" height="12" rx="2" fill="#006400"/>' +
+        '<rect x="75" y="75" width="20" height="20" rx="3" fill="#006400"/>' +
+        '<rect x="105" y="85" width="12" height="12" rx="2" fill="#006400"/>' +
+        '<rect x="110" y="110" width="25" height="12" rx="2" fill="#006400"/>' +
+        '<rect x="150" y="75" width="12" height="12" rx="2" fill="#006400"/>' +
+        '<rect x="140" y="100" width="12" height="12" rx="2" fill="#006400"/>' +
+        '<rect x="160" y="115" width="12" height="12" rx="2" fill="#006400"/>' +
+        '<rect x="75" y="140" width="12" height="12" rx="2" fill="#006400"/>' +
+        '<rect x="95" y="155" width="12" height="12" rx="2" fill="#006400"/>' +
+        '<rect x="115" y="145" width="12" height="12" rx="2" fill="#006400"/>' +
+        '<rect x="140" y="150" width="12" height="12" rx="2" fill="#006400"/>' +
+      '</svg>';
+
+      // ---------- slide data ----------
+      var slides = [
+        {
+          type: 'title',
+          eyebrow: 'Advanced Python · Module 07',
+          title: 'Advanced QR Codes &amp; Itertools Chunking',
+          subtitle: 'An advanced developer\'s guide to grouping stream data using memory-efficient iterators and programmatically generating, customizing, and decoding QR codes.'
+        },
+        {
+          type: 'cols2',
+          eyebrow: 'Roadmap',
+          title: 'Three core skills',
+          subtitle: 'Master chunking, generation, and decoding — all with Python.',
+          columns: [
+            { title: 'Part 1 — itertools Chunking', chip: 'MEMORY', points: [
+              'The grouper recipe with zip_longest',
+              'Fixed‑length chunking of any iterable',
+              'Memory‑efficient, lazy evaluation',
+              'Padding missing values with a fillvalue'
+            ]},
+            { title: 'Part 2 & 3 — QR Codes', chip: 'PYTHON', points: [
+              'Generate QR codes with qrcode library',
+              'Advanced customization: version, box_size, border',
+              'Error correction levels (L, M, Q, H)',
+              'Decode QR codes from images using OpenCV'
+            ]}
+          ]
+        },
+        {
+          type: 'code',
+          eyebrow: 'Part 1 · The grouper recipe',
+          title: 'Chunk any iterable into fixed‑length groups',
+          filename: 'grouper.py',
+          code: 'import itertools as it\n\ndef grouper(inputs, n, fillvalue=None):\n    """Collect data into non-overlapping, fixed-length chunks"""\n    iters = [iter(inputs)] * n\n    return it.zip_longest(*iters, fillvalue=fillvalue)\n\n# Example Usage:\nalpha = [\'a\', \'b\', \'c\', \'d\', \'e\', \'f\', \'g\', \'h\', \'i\', \'j\', \'k\', \'l\', \'m\']\nchunked_data = list(grouper(alpha, 3))\nprint(chunked_data)',
+          explain: {
+            title: 'How it works',
+            body: 'The function creates n references to the same iterator, then uses zip_longest to pair elements from each reference. When one reference runs out, the others are padded with fillvalue. This is memory‑efficient because it never materializes the whole input at once.',
+            output: "[('a', 'b', 'c'), ('d', 'e', 'f'), ('g', 'h', 'i'), ('j', 'k', 'l'), ('m', None, None)]"
+          },
+          analogy: { lead: 'a conveyor belt with bins.', body: 'Items flow in one by one. The grouper fills bins of size n. If the last bin isn\'t full, it pads with a placeholder — just like a factory worker adding a dummy item to complete the bin.' }
+        },
+        {
+          type: 'bullets',
+          eyebrow: 'Part 1 · Why chunk?',
+          title: 'Batch processing with iterators',
+          subtitle: 'Chunking is essential for streaming data, API pagination, and memory‑limited environments.',
+          items: [
+            '<b>Memory efficiency:</b> processes one chunk at a time instead of loading the entire dataset',
+            '<b>Predictable batches:</b> fixed‑size groups simplify parallel processing and rate‑limited APIs',
+            '<b>Lazy evaluation:</b> the grouper only consumes the input as it\'s iterated over',
+            'Works with any iterable — lists, generators, file handles, database cursors'
+          ],
+          analogy: { lead: 'eating a pizza slice by slice.', body: 'You don\'t need to put the whole pizza in your mouth at once. You take one slice (one chunk), eat it, then take the next. The grouper hands you slices of your data stream.' }
+        },
+        {
+          type: 'code',
+          eyebrow: 'Part 2 · Install & basic generation',
+          title: 'QR codes with qrcode + pillow',
+          filename: 'basic_qr.py',
+          code: '# Install: pip install qrcode pillow\nimport qrcode\n\n# Quick generation using .make()\nimg = qrcode.make("https://your-target-url.com")\nimg.save("quick_qr.png")\n\nprint("QR code saved as quick_qr.png")',
+          explain: {
+            title: 'One‑line generation',
+            body: 'The .make() method is the fastest way to generate a QR code. It uses default settings: version determined automatically, error correction M, box_size 10, border 4. For more control, instantiate QRCode manually.',
+            output: 'QR code saved as quick_qr.png'
+          },
+          analogy: { lead: 'a polaroid camera.', body: 'Point, click, and you have a physical print. .make() is the instant camera of QR code generation — fast, simple, and ready to use.' }
+        },
+        {
+          type: 'table',
+          eyebrow: 'Part 2 · Advanced parameters',
+          title: 'QRCode object — fine‑tuned control',
+          subtitle: 'Initialize QRCode with these parameters for precise layout.',
+          headers: ['Parameter', 'Type / Range', 'Description'],
+          rows: [
+            ['version', 'Integer (1 to 40)', 'Controls overall size. Version 1 = 21×21 matrix. Higher versions = more data capacity.'],
+            ['error_correction', 'Constants', 'Determines how much damage the code can survive (L, M, Q, H).'],
+            ['box_size', 'Integer', 'Pixels per module (grid cell). Larger = more visual weight.'],
+            ['border', 'Integer (min: 4)', 'Thickness of the outer white quiet zone (safety border).']
+          ],
+          analogy: { lead: 'tuning a printer.', body: 'Version is the paper size, box_size is the font size, border is the margin, and error correction is the ink quality — each setting changes the final output in a specific way.' }
+        },
+        {
+          type: 'errors',
+          eyebrow: 'Part 2 · Error correction levels',
+          title: 'How much damage can your QR code survive?',
+          subtitle: 'Higher correction = more redundancy, but also more modules (larger code).',
+          levels: [
+            { name: 'ERROR_CORRECT_L', pct: 'up to 7%' },
+            { name: 'ERROR_CORRECT_M (default)', pct: 'up to 15%' },
+            { name: 'ERROR_CORRECT_Q', pct: 'up to 25%' },
+            { name: 'ERROR_CORRECT_H', pct: 'up to 30% — best for logos/graphics' }
+          ],
+          analogy: { lead: 'a safety net with different mesh sizes.', body: 'L is a small net — catches minor falls. H is a dense net — catches almost anything, but takes more material (larger code). Choose based on how much risk you expect.' }
+        },
+        {
+          type: 'code',
+          eyebrow: 'Part 2 · Custom styling',
+          title: 'Color your QR code',
+          filename: 'styled_qr.py',
+          code: 'import qrcode\n\nqr = qrcode.QRCode(version=3, box_size=12, border=4)\nqr.add_data("Customized Styling Information")\nqr.make(fit=True)\n\n# Custom colors: dark green modules on light yellow background\nstyled_img = qr.make_image(fill_color="darkgreen", back_color="lightyellow")\nstyled_img.save("styled_qr.png")\n\nprint("Styled QR code saved!")',
+          explain: {
+            title: 'fill_color & back_color',
+            body: 'Pass any valid color name or hex code to make_image. The fill_color is the modules (dark area), back_color is the background. This gives you on‑brand QR codes without sacrificing readability.',
+            output: 'Styled QR code saved!'
+          },
+          analogy: { lead: 'choosing ink and paper.', body: 'You can print the same content in black ink on white paper, or in dark green ink on light yellow paper. The information stays the same, but the look changes to match your brand.' }
+        },
+        {
+          type: 'code',
+          eyebrow: 'Part 3 · Decoding with OpenCV',
+          title: 'Read QR codes from images',
+          filename: 'decode_qr.py',
+          code: 'import cv2\n\n# Initialize the detector\ndetector = cv2.QRCodeDetector()\n\n# Detect and decode from an image file\ndata, points, straight_qrcode = detector.detectAndDecode(cv2.imread("styled_qr.png"))\n\nif points is not None:\n    print(f"Decoded Data: {data}")\nelse:\n    print("No valid QR code detected.")',
+          explain: {
+            title: 'OpenCV QRCodeDetector',
+            body: 'OpenCV comes with a built‑in QR code detector that returns the decoded data, the corner points, and a straightened version of the code. It handles perspective distortion and rotation automatically.',
+            output: 'Decoded Data: Customized Styling Information'
+          },
+          analogy: { lead: 'a barcode scanner app.', body: 'You point your phone at a QR code, and it reads the data. OpenCV does the same thing programmatically — it finds the pattern, corrects the angle, and extracts the text.' }
+        },
+        {
+          type: 'qr',
+          eyebrow: 'Part 3 · Visual asset',
+          title: 'Styled QR code — dark green on light yellow',
+          svg: qrSvg,
+          callouts: [
+            { title: 'Finder patterns (corners)', body: 'The three dark squares at the corners — orientation markers for the scanner.' },
+            { title: 'Data modules', body: 'The scattered dark cells — the actual encoded bits. In this example, they\'re dark green on a light yellow background.' },
+            { title: 'Quiet zone (border)', body: 'The outer light yellow area — the "safety margin" that helps scanners find the code.' }
+          ],
+          analogy: { lead: 'a printed poster with a frame.', body: 'The finder patterns are the corner marks, the data modules are the text, and the quiet zone is the white margin around the poster — all essential for readability.' }
+        },
+        {
+          type: 'recap',
+          eyebrow: 'Wrap‑up',
+          title: 'Three tools, one workflow',
+          cards: [
+            { tag: 'Chunking', title: 'itertools grouper', body: 'Batch any iterable into fixed‑size groups with zip_longest padding. Memory‑efficient and lazy — ideal for streaming data and API pagination.' },
+            { tag: 'Generation', title: 'qrcode library', body: 'Generate QR codes with precise control over version, box_size, border, and error correction. Style them with custom fill and background colors.' },
+            { tag: 'Decoding', title: 'OpenCV detector', body: 'Decode QR codes from images using cv2.QRCodeDetector. Handles rotation, distortion, and returns the extracted data.' }
+          ],
+          subtitle: 'From raw data to QR code and back — all in Python, with minimal dependencies and maximum control.'
+        },
+        // ----- QUIZ -----
+        {
+          type: 'quiz',
+          eyebrow: 'Check your understanding',
+          title: 'True / False & Identification',
+          subtitle: 'Questions 1–5: True or False. Questions 6–10: Fill in the blank or short answer.',
+          footer: 'Answers on the next page →',
+          questions: [
+            { text: 'The grouper function creates n independent iterators from the input.' },
+            { text: 'zip_longest is used in the grouper to pad missing values with a fillvalue.' },
+            { text: 'ERROR_CORRECT_L can correct up to 15% of errors.' },
+            { text: 'OpenCV\'s QRCodeDetector can decode QR codes from images even if they are rotated.' },
+            { text: 'The version parameter in QRCode controls the pixel size of each module.' },
+            { text: 'The outer white safety border of a QR code is called the ______ zone.' },
+            { text: 'The default error correction level in qrcode is ______.' },
+            { text: 'What library provides the QRCodeDetector class?' },
+            { text: 'The grouper function returns an iterator of ______ (tuples) when zipped.' },
+            { text: 'To style a QR code, you pass ______ and back_color to make_image.' }
+          ]
+        },
+        // ----- ANSWER KEY -----
+        {
+          type: 'answerkey',
+          eyebrow: 'Answer key',
+          title: 'Quiz answers',
+          subtitle: 'Check your work.',
+          answers: [
+            { correct: false, explanation: 'It creates n references to the same iterator, not independent ones.' },
+            { correct: true, explanation: 'zip_longest pads the shorter iterators with fillvalue.' },
+            { correct: false, explanation: 'L corrects up to 7%; M is 15%, Q is 25%, H is 30%.' },
+            { correct: true, explanation: 'The detector handles perspective distortion and rotation automatically.' },
+            { correct: false, explanation: 'Version controls the matrix size (e.g., 21×21); box_size controls pixel size.' },
+            { correct: null, explanation: '<b>quiet</b> zone (or safety border).' },
+            { correct: null, explanation: '<b>ERROR_CORRECT_M</b> (the default).' },
+            { correct: null, explanation: '<b>OpenCV</b> (cv2).' },
+            { correct: null, explanation: '<b>tuples</b> (from zip_longest).' },
+            { correct: null, explanation: '<b>fill_color</b> (the module color).' }
+          ]
+        }
+      ];
+
+      // ---------- deck engine ----------
+      var deckEl = document.getElementById('deck');
+      var progressBar = document.getElementById('progress-bar');
+      var counterEl = document.getElementById('counter');
+      var current = 0;
+      var total = slides.length;
+      var slideEls = [];
+
+      slides.forEach(function(s, i) {
+        var el = document.createElement('section');
+        el.className = 'slide';
+        el.innerHTML = '<div class="slide-outer">' + renderers[s.type](s) + '</div>';
+        deckEl.appendChild(el);
+        slideEls.push(el);
+      });
+
+      function update() {
+        slideEls.forEach(function(el, i) {
+          el.classList.remove('pos-current','pos-next','pos-prev','pos-far');
+          if (i === current) el.classList.add('pos-current');
+          else if (i === current + 1) el.classList.add('pos-next');
+          else if (i === current - 1) el.classList.add('pos-prev');
+          else el.classList.add('pos-far');
+          if (i === current) el.scrollTop = 0;
+        });
+        progressBar.style.width = (((current + 1) / total) * 100) + '%';
+        counterEl.textContent = (current + 1) + ' / ' + total;
+      }
+
+      function goTo(idx) {
+        if (idx < 0 || idx > total - 1 || idx === current) return;
+        current = idx;
+        update();
+      }
+      function next() { if (current < total - 1) goTo(current + 1); }
+      function prev() { if (current > 0) goTo(current - 1); }
+
+      document.addEventListener('click', function(e) {
+        if (e.target.closest('a')) return;
+        next();
+      });
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
+        else if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+        else if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+        else if (e.key === 'End') { e.preventDefault(); goTo(total - 1); }
+      });
+
+      update();
+    })();
+  </script>
+</body>
+</html>

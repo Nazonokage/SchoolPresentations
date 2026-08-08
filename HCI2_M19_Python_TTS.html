@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Module 19 &mdash; Python Text-to-Speech Modules</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:#090c18;color:#e8edf5}
+#deck{position:relative;width:100vw;height:100vh;overflow:hidden}
+.sw{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:28px 48px 50px;opacity:0;transform:translateX(40px);transition:opacity .35s ease,transform .35s ease;pointer-events:none;overflow-y:auto}
+.sw.active{opacity:1;transform:translateX(0);pointer-events:auto}
+.sw.xl{opacity:0;transform:translateX(-40px)}
+.sw.xr{opacity:0;transform:translateX(40px)}
+@media(prefers-reduced-motion:reduce){.sw{transition:none!important;transform:none!important}.sw.xl,.sw.xr{opacity:0;transform:none!important}}
+.slide{width:100%;max-width:1260px;max-height:100%;background:#131726;border-radius:22px;padding:32px 42px 36px;box-shadow:0 24px 72px rgba(0,0,0,.78);display:flex;flex-direction:column;gap:13px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#232d47 transparent}
+.slide::-webkit-scrollbar{width:5px}.slide::-webkit-scrollbar-thumb{background:#232d47;border-radius:4px}
+.eyebrow{font-size:13px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#4a6888;border-bottom:2px solid #1b2236;padding-bottom:7px}
+.stitle{font-size:clamp(26px,3.3vw,44px);font-weight:900;line-height:1.12;color:#fff;letter-spacing:-.5px}
+.ssub{font-size:16px;color:#7592b2;line-height:1.6}
+.ab{color:#5cb8ff}.ag{color:#4ee3a0}.ao{color:#ffaa5e}.ap{color:#b98cfa}.ar{color:#f87171}.ac{color:#22d3ee}.ay{color:#fbbf24}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px 22px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 18px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 14px}
+.card{background:#1b2236;border-radius:14px;padding:16px 19px;border-left:4px solid #5cb8ff;min-width:0}
+.card.g{border-left-color:#4ee3a0}.card.o{border-left-color:#ffaa5e}.card.p{border-left-color:#b98cfa}.card.r{border-left-color:#f87171}.card.c{border-left-color:#22d3ee}.card.y{border-left-color:#fbbf24}
+.ct{font-size:14px;font-weight:700;color:#96b0ca;letter-spacing:.3px;margin-bottom:6px}
+.cb{font-size:15px;line-height:1.65;color:#c6d4e4}
+.cb strong{color:#eef2fa}
+.cb ul{list-style:none;padding:0;margin:6px 0 0}
+.cb ul li{padding:3px 0 3px 20px;position:relative;font-size:15px;line-height:1.5}
+.cb ul li::before{content:"▸";position:absolute;left:0;color:#5cb8ff;font-weight:700}
+.pre{background:#0c1020;border-radius:13px;border:1px solid #1b2236;overflow:hidden}
+.prebar{display:flex;align-items:center;justify-content:space-between;padding:8px 15px;background:#151b2c;border-bottom:1px solid #1b2236}
+.prelang{font-size:13px;font-weight:700;color:#4a6888;letter-spacing:.9px;text-transform:uppercase}
+.copybtn{font-size:13px;font-weight:700;background:#1b2236;color:#7592b2;border:1px solid #252f48;border-radius:8px;padding:4px 13px;cursor:pointer;transition:all .2s}
+.copybtn:hover{background:#5cb8ff;color:#0c1020;border-color:#5cb8ff}
+.copybtn.ok{background:#4ee3a0;color:#0c1020;border-color:#4ee3a0}
+pre{padding:16px 20px;overflow-x:auto;overflow-y:auto;max-height:320px;line-height:1.8;margin:0;scrollbar-width:thin;scrollbar-color:#232d47 transparent;font-size:14px;font-family:Consolas,'Courier New',monospace}
+pre::-webkit-scrollbar{width:5px;height:5px}
+pre::-webkit-scrollbar-thumb{background:#232d47;border-radius:4px}
+.kw{color:#c084fc}.fn{color:#5cb8ff}.st{color:#4ee3a0}.cm{color:#4a6888;font-style:italic}.bi{color:#fbbf24}
+.tw{overflow-x:auto;border-radius:12px;border:1px solid #1b2236}
+.tw table{width:100%;border-collapse:collapse;font-size:14px}
+.tw th{background:#171d2e;color:#7592b2;font-size:12px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;padding:9px 14px;text-align:left;border-bottom:1px solid #1b2236}
+.tw td{padding:9px 14px;border-bottom:1px solid #171d2e;color:#c6d4e4;vertical-align:top;line-height:1.55;font-size:14px}
+.tw td:first-child{font-weight:700;color:#5cb8ff;white-space:nowrap;font-size:13px}
+.tw tr:last-child td{border-bottom:none}
+.tw tr:hover td{background:rgba(92,184,255,.04)}
+#prog{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#5cb8ff,#4ee3a0,#b98cfa);transition:width .3s ease;z-index:100;border-radius:0 2px 2px 0}
+#ctr{position:fixed;bottom:17px;right:22px;font-size:13px;font-weight:700;color:#334d66;z-index:100}
+#sco{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center}
+#sco.show{display:flex}
+#scb{background:#1b2236;border-radius:18px;padding:30px 38px;max-width:460px;width:92%}
+#scb h3{font-size:18px;font-weight:900;color:#fff;margin-bottom:16px}
+.sk{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #1b2236;font-size:15px;color:#c6d4e4}
+.sk:last-child{border-bottom:none}
+.key{font-family:monospace;background:#131726;padding:2px 9px;border-radius:6px;color:#5cb8ff;font-size:13px}
+.scclose{margin-top:18px;background:#5cb8ff;color:#090c18;border:none;border-radius:10px;padding:9px 24px;font-size:15px;font-weight:700;cursor:pointer;width:100%}
+/* advantage / disadvantage rows */
+.adrow{display:flex;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid #131726;font-size:14px;line-height:1.55}
+.adrow:last-child{border-bottom:none}
+.adtag{font-size:12px;font-weight:800;padding:3px 10px;border-radius:8px;white-space:nowrap;flex-shrink:0;margin-top:1px}
+.adtag.a{background:#162a1e;color:#4ee3a0}
+.adtag.d{background:#2a1010;color:#f87171}
+.addesc{color:#c6d4e4;flex:1}
+/* fill in blanks */
+.fibrow{display:flex;align-items:flex-start;gap:14px;background:#1b2236;border-radius:12px;padding:13px 16px}
+.fibnum{font-size:15px;font-weight:900;color:#b98cfa;min-width:24px;flex-shrink:0;padding-top:2px}
+.fibstmt{font-size:15px;color:#c6d4e4;line-height:1.65;flex:1}
+.fibblank{display:inline-block;min-width:180px;border-bottom:3px solid #5cb8ff;height:20px;vertical-align:bottom}
+/* answer key */
+.akrow{display:flex;gap:12px;align-items:flex-start;border-radius:12px;padding:10px 15px}
+.akrow.a{background:#16281e}
+.akrow.d{background:#2a1010}
+.akrow.b{background:#16281e}
+.akn{font-size:15px;font-weight:900;min-width:40px;padding-top:1px}
+.akrow.a .akn{color:#4ee3a0}
+.akrow.d .akn{color:#f87171}
+.akrow.b .akn{color:#b98cfa}
+.aka{font-size:14px;font-weight:700}
+.akrow.a .aka{color:#4ee3a0}
+.akrow.d .aka{color:#f87171}
+.akrow.b .aka{color:#b98cfa}
+.akx{font-size:13px;margin-top:2px;line-height:1.5}
+.akrow.a .akx{color:#3d7a58}
+.akrow.d .akx{color:#7a3a30}
+.akrow.b .akx{color:#6a4a8a}
+.qqt{background:#1b2236;border-radius:14px;padding:20px 26px;border-left:5px solid #fbbf24;font-size:16px;line-height:1.75;color:#d6e2f0;font-style:italic}
+.qqt .qsrc{font-size:14px;color:#7592b2;font-style:normal;margin-top:8px;font-weight:600}
+.pill{display:inline-block;font-size:14px;font-weight:700;padding:4px 13px;border-radius:20px;margin:3px}
+.pill.b{background:#1a2e48;color:#5cb8ff}.pill.g{background:#162a1e;color:#4ee3a0}.pill.o{background:#381f10;color:#ffaa5e}.pill.p{background:#261840;color:#b98cfa}.pill.r{background:#2a1010;color:#f87171}
+code{font-family:monospace;font-size:14px;background:#1b2236;padding:1px 7px;border-radius:5px;color:#5cb8ff}
+.tgiant{font-size:clamp(36px,5vw,66px);font-weight:900;line-height:1.06;letter-spacing:-1.5px}
+.note{background:#102038;border:1px solid #1e3a5a;border-radius:11px;padding:12px 16px;font-size:15px;color:#7ab8e0;line-height:1.65}
+.warn{background:#2a1a10;border:1px solid #7a4a20;border-radius:11px;padding:12px 16px;font-size:15px;color:#ffaa5e;line-height:1.65}
+/* platform compare split */
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;border-radius:14px;overflow:hidden;border:1px solid #1b2236}
+.split-l{background:#0e1e14;padding:18px 22px;border-right:1px solid #1b2236}
+.split-r{background:#0e1428;padding:18px 22px}
+.split-title{font-size:15px;font-weight:800;margin-bottom:12px}
+/* engine badge */
+.eng{display:flex;align-items:center;gap:10px;background:#0c1020;border-radius:10px;padding:8px 14px;border:1px solid #1b2236;font-size:14px}
+.engos{font-weight:700;color:#5cb8ff;min-width:70px;font-size:13px}
+.engmod{font-family:monospace;color:#4ee3a0;font-size:13px;min-width:80px}
+.engname{color:#7592b2;font-size:13px}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<div id="ctr"></div>
+<div id="deck"></div>
+<div id="sco">
+  <div id="scb">
+    <h3>&#x2328;&#xFE0F; Keyboard Shortcuts</h3>
+    <div class="sk"><span>Next slide</span><span><span class="key">&rarr;</span> <span class="key">Right-click</span></span></div>
+    <div class="sk"><span>Previous slide</span><span><span class="key">&larr;</span> <span class="key">Mouse3</span></span></div>
+    <div class="sk"><span>First / Last</span><span><span class="key">Home</span> / <span class="key">End</span></span></div>
+    <div class="sk"><span>This help</span><span><span class="key">?</span></span></div>
+    <button class="scclose" onclick="document.getElementById('sco').classList.remove('show')">Close</button>
+  </div>
+</div>
+<script>
+function doCopy(btn,id){
+  var txt=document.getElementById(id).innerText;
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(txt).then(function(){flash(btn);}).catch(function(){fallback(btn,txt);});}
+  else{fallback(btn,txt);}
+}
+function fallback(btn,txt){
+  var ta=document.createElement('textarea');ta.value=txt;
+  ta.style.cssText='position:fixed;opacity:0;top:0;left:0;width:1px;height:1px';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');}catch(e){}
+  document.body.removeChild(ta);flash(btn);
+}
+function flash(btn){btn.textContent='Copied!';btn.classList.add('ok');setTimeout(function(){btn.textContent='Copy';btn.classList.remove('ok');},1800);}
+var slides,cur,tot,busy;
+function initDeck(){slides=document.querySelectorAll('.sw');cur=0;tot=slides.length;busy=false;slides[0].classList.add('active');ui();}
+function ui(){document.getElementById('prog').style.width=((cur+1)/tot*100)+'%';document.getElementById('ctr').textContent=(cur+1)+' / '+tot;}
+function go(idx,dir){
+  if(busy||idx===cur||idx<0||idx>=tot)return;busy=true;
+  var pv=slides[cur],nx=slides[idx];
+  pv.classList.remove('active');pv.classList.add(dir===1?'xl':'xr');
+  nx.style.transform=dir===1?'translateX(40px)':'translateX(-40px)';nx.style.opacity='0';
+  nx.classList.add('active');
+  requestAnimationFrame(function(){requestAnimationFrame(function(){nx.style.transform='';nx.style.opacity='';});});
+  cur=idx;ui();setTimeout(function(){pv.classList.remove('xl','xr');busy=false;},380);
+}
+document.addEventListener('DOMContentLoaded',function(){initDeck();});
+document.addEventListener('keydown',function(e){
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')go(cur+1,1);
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(cur-1,-1);
+  else if(e.key==='Home')go(0,-1);
+  else if(e.key==='End')go(tot-1,1);
+  else if(e.key==='?')document.getElementById('sco').classList.toggle('show');
+  else if(e.key==='Escape')document.getElementById('sco').classList.remove('show');
+});
+document.addEventListener('mousedown',function(e){
+  if(e.button===2){e.preventDefault();e.stopImmediatePropagation();go(cur+1,1);}
+  else if(e.button===3){e.preventDefault();e.stopImmediatePropagation();go(cur-1,-1);}
+  else if(e.button===4){e.preventDefault();e.stopImmediatePropagation();go(cur+1,1);}
+},true);
+document.addEventListener('contextmenu',function(e){e.preventDefault();},true);
+document.addEventListener('auxclick',function(e){if(e.button!==0)e.preventDefault();},true);
+var tx=0;
+document.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;},{passive:true});
+document.addEventListener('touchend',function(e){var dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50)go(cur+(dx<0?1:-1),dx<0?1:-1);},{passive:true});
+</script>
+
+<!-- ══════════════════════ SLIDES ══════════════════════ -->
+
+<!-- 0 TITLE -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Module 19 &middot; ITE 380 Human Computer Interaction 2</div>
+  <div class="tgiant" style="margin-top:10px"><span class="ab">Python</span><br>Text-to-Speech<br><span class="ag">Modules</span></div>
+  <div class="ssub" style="margin-top:14px">gTTS vs pyttsx3 &mdash; online vs offline TTS, advantages, disadvantages, and a hands-on Python script</div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:20px">
+    <span class="pill b">What is TTS?</span>
+    <span class="pill g">gTTS &mdash; Google TTS</span>
+    <span class="pill o">pyttsx3 &mdash; Offline</span>
+    <span class="pill p">Advantages vs Disadvantages</span>
+    <span class="pill r">Python Code Drill</span>
+  </div>
+  <div style="margin-top:22px;font-size:14px;color:#2e4560">Right-click or &rarr; to navigate &middot; Press ? for shortcuts</div>
+</div></div>
+
+<!-- 1 WHAT IS TTS IN PYTHON -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Lesson Preview &middot; What Is TTS in Python?</div>
+  <div class="stitle">Text Becomes <span class="ab">Sound</span></div>
+  <div class="ssub" style="margin-bottom:12px"><strong>Text-to-Speech (TTS)</strong> is a form of assistive technology that reads digital text aloud &mdash; converting written words into synthetic audio. In Python, TTS lets you provide text as input and receive spoken audio as output.</div>
+  <div class="g2" style="margin-bottom:14px">
+    <div class="card">
+      <div class="ct">&#x1F4DA; Why Python for TTS?</div>
+      <div class="cb">Python has several powerful and easy-to-use TTS libraries. Unlike cloud-based APIs, some Python TTS libraries operate entirely <strong>offline</strong>, giving developers full control over <strong>privacy</strong> and <strong>connectivity</strong>.<br><br>
+      This module focuses on two key libraries:<br>
+      <strong class="ab">gTTS</strong> &mdash; online, high-quality, Google-powered<br>
+      <strong class="ag">pyttsx3</strong> &mdash; offline, platform-native, no API needed</div>
+    </div>
+    <div class="card p">
+      <div class="ct">&#x267F; Why TTS Matters for HCI</div>
+      <div class="cb">TTS technology is especially important for <strong>accessibility</strong> &mdash; particularly for users who have trouble reading sentences and words properly.<br><br>
+      It bridges the gap between text-based interfaces and users who benefit from audio output, making digital content more inclusive for everyone.</div>
+    </div>
+  </div>
+  <div class="g3">
+    <div class="card g" style="text-align:center;border-left:none;border-top:3px solid #4ee3a0">
+      <div style="font-size:22px;margin-bottom:6px">&#x1F4F6;</div>
+      <div style="font-size:14px;font-weight:700;color:#4ee3a0;margin-bottom:4px">Online</div>
+      <div style="font-size:13px;color:#7592b2">gTTS via Google Translate API</div>
+    </div>
+    <div class="card" style="text-align:center;border-left:none;border-top:3px solid #5cb8ff">
+      <div style="font-size:22px;margin-bottom:6px">&#x1F4BB;</div>
+      <div style="font-size:14px;font-weight:700;color:#5cb8ff;margin-bottom:4px">Offline</div>
+      <div style="font-size:13px;color:#7592b2">pyttsx3 via OS native engines</div>
+    </div>
+    <div class="card p" style="text-align:center;border-left:none;border-top:3px solid #b98cfa">
+      <div style="font-size:22px;margin-bottom:6px">&#x1F4E6;</div>
+      <div style="font-size:14px;font-weight:700;color:#b98cfa;margin-bottom:4px">Install</div>
+      <div style="font-size:13px;color:#7592b2"><code>pip install gTTS</code><br><code>pip install pyttsx3</code></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 2 gTTS -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Module 1 &middot; gTTS</div>
+  <div class="stitle">gTTS &mdash; <span class="ab">Google</span> Text-to-Speech</div>
+  <div class="ssub" style="margin-bottom:12px">A Python library and CLI tool that interfaces with <strong>Google Translate&#x27;s TTS API</strong> to convert text into MP3 audio. Ideal for quick, high-quality projects.</div>
+  <div class="g2" style="margin-bottom:12px">
+    <div class="card">
+      <div class="ct">&#x1F4CB; Key Features</div>
+      <div class="cb"><ul>
+        <li><strong>Output:</strong> Converts text into <code>.mp3</code> audio files</li>
+        <li><strong>Format:</strong> Can write MP3 data to a file, a file-like object (bytestring), or stdout</li>
+        <li><strong>Languages:</strong> English, Hindi, Tamil, French, German, and many more</li>
+        <li><strong>Speed:</strong> Two available speeds &mdash; <strong>fast</strong> or <strong>slow</strong></li>
+      </ul></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="card g">
+        <div class="ct">&#x2699;&#xFE0F; How to Install</div>
+        <div class="cb">Open your terminal / command prompt and run:</div>
+      </div>
+      <div class="pre">
+        <div class="prebar"><span class="prelang">bash</span><button class="copybtn" onclick="doCopy(this,'i1')">Copy</button></div>
+        <pre id="i1">pip install gTTS</pre>
+      </div>
+      <div class="card p">
+        <div class="ct">&#x26A1; How gTTS Works Under the Hood</div>
+        <div class="cb">Uses a <strong>single end-to-end model</strong> that performs text analysis, acoustic modeling, and audio synthesis in one step &mdash; generating speech directly from characters rather than using a multi-stage pipeline.</div>
+      </div>
+    </div>
+  </div>
+  <div class="note">&#x1F4A1; gTTS requires an <strong>active internet connection</strong> because it sends text to Google&#x27;s servers and receives back the synthesized audio. It cannot operate offline.</div>
+</div></div>
+
+<!-- 3 gTTS ADVANTAGES -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">gTTS &middot; Advantages</div>
+  <div class="stitle">What gTTS Does <span class="ag">Well</span></div>
+  <div style="background:#1b2236;border-radius:14px;overflow:hidden;flex:1">
+    <div style="padding:12px 18px;background:#151b2c;border-bottom:1px solid #131726;font-size:13px;font-weight:700;color:#4a6888;letter-spacing:.8px;text-transform:uppercase">Advantages of Modern Python TTS (gTTS)</div>
+    <div style="padding:8px 18px">
+      <div class="adrow"><span class="adtag a">A</span><span class="addesc"><strong style="color:#eef2fa">Simplified Architecture</strong> &mdash; Only requires a single model to perform text analysis, acoustic modeling, and audio synthesis. Generates speech directly from characters.</span></div>
+      <div class="adrow"><span class="adtag a">A</span><span class="addesc"><strong style="color:#eef2fa">Efficiency</strong> &mdash; Requires less manual feature engineering by the developer, reducing the complexity of building a TTS pipeline.</span></div>
+      <div class="adrow"><span class="adtag a">A</span><span class="addesc"><strong style="color:#eef2fa">Adaptability</strong> &mdash; Easily adapts to new data and allows for rich conditioning on attributes like speaker identity or language.</span></div>
+      <div class="adrow"><span class="adtag a">A</span><span class="addesc"><strong style="color:#eef2fa">Robustness</strong> &mdash; A single model prevents error compounding across different processing stages (compared to multi-stage pipelines).</span></div>
+      <div class="adrow"><span class="adtag a">A</span><span class="addesc"><strong style="color:#eef2fa">Intelligent Output</strong> &mdash; Capable of generating highly intelligible and natural-sounding speech using deep learning.</span></div>
+      <div class="adrow"><span class="adtag a">A</span><span class="addesc"><strong style="color:#eef2fa">Small Footprint</strong> &mdash; Does not require maintaining a large database of pre-recorded audio clips, saving significant storage space.</span></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 4 gTTS DISADVANTAGES -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">gTTS &middot; Disadvantages</div>
+  <div class="stitle">Where gTTS <span class="ar">Falls Short</span></div>
+  <div style="background:#1b2236;border-radius:14px;overflow:hidden;flex:1">
+    <div style="padding:12px 18px;background:#151b2c;border-bottom:1px solid #131726;font-size:13px;font-weight:700;color:#4a6888;letter-spacing:.8px;text-transform:uppercase">Disadvantages of Modern Python TTS (gTTS)</div>
+    <div style="padding:8px 18px">
+      <div class="adrow"><span class="adtag d">D</span><span class="addesc"><strong style="color:#eef2fa">Requires Internet</strong> &mdash; Relies entirely on the Google Translate API. An active internet connection is mandatory to generate any audio output.</span></div>
+      <div class="adrow"><span class="adtag d">D</span><span class="addesc"><strong style="color:#eef2fa">Slow Inference</strong> &mdash; Auto-regressive-based models suffer from slow inference speed &mdash; they generate audio sequentially, which takes time especially for long texts.</span></div>
+      <div class="adrow"><span class="adtag d">D</span><span class="addesc"><strong style="color:#eef2fa">Data Dependency</strong> &mdash; Output speech may not be robust if the training data used to build the underlying model is insufficient in quantity or quality.</span></div>
+      <div class="adrow"><span class="adtag d">D</span><span class="addesc"><strong style="color:#eef2fa">Lack of Controllability</strong> &mdash; Compared to traditional concatenative or statistical parametric approaches, modern models offer less granular control over specific vocal nuances.</span></div>
+      <div class="adrow"><span class="adtag d">D</span><span class="addesc"><strong style="color:#eef2fa">Flat Prosody</strong> &mdash; Models tend to learn flat speaking tones by averaging out training data, and output smoothed acoustic features due to standard L1 or L2 loss functions &mdash; making speech sound monotone.</span></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 5 pyttsx3 -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Module 2 &middot; pyttsx3</div>
+  <div class="stitle">pyttsx3 &mdash; <span class="ag">Offline</span> TTS for Python</div>
+  <div class="ssub" style="margin-bottom:12px">A widely-used TTS library designed to work <strong>entirely offline</strong> using your operating system&#x27;s native speech engines. No API key, no internet, no problem.</div>
+  <div class="g2" style="margin-bottom:12px">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="card g">
+        <div class="ct">&#x1F4CB; Key Features</div>
+        <div class="cb"><ul>
+          <li><strong>Offline Capability</strong> &mdash; Primary advantage: works without internet</li>
+          <li><strong>Compatibility</strong> &mdash; Works with both <strong>Python 2 and Python 3</strong></li>
+          <li><strong>Voice Support</strong> &mdash; Two basic voices: <strong>Female</strong> and <strong>Male</strong></li>
+          <li><strong>Platform-Independent</strong> &mdash; Uses the best engine available on your OS</li>
+        </ul></div>
+      </div>
+      <div class="card o">
+        <div class="ct">&#x1F4E5; How to Install</div>
+        <div class="cb">Open your terminal and run:</div>
+      </div>
+      <div class="pre">
+        <div class="prebar"><span class="prelang">bash</span><button class="copybtn" onclick="doCopy(this,'i2')">Copy</button></div>
+        <pre id="i2">pip install pyttsx3</pre>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px;font-weight:700;color:#4a6888;letter-spacing:.8px;text-transform:uppercase">Platform-Specific Engines</div>
+      <div class="eng"><span class="engos">&#x1FA9F; Windows</span><span class="engmod">sapi5</span><span class="engname">SAPI5 (Speech API 5)</span></div>
+      <div class="eng"><span class="engos">&#x1F34F; Mac OS X</span><span class="engmod">nsss</span><span class="engname">NSSpeechSynthesizer</span></div>
+      <div class="eng"><span class="engos">&#x1F427; Linux</span><span class="engmod">espeak</span><span class="engname">eSpeak engine</span></div>
+      <div class="card p" style="margin-top:4px">
+        <div class="ct">&#x1F4A1; Pro Tip &mdash; pyttsx3.init()</div>
+        <div class="cb">Use the <code>pyttsx3.init()</code> factory function to get a reference to a <code>pyttsx3.Engine</code> instance. This engine object is what you call <code>.say()</code> and <code>.runAndWait()</code> on to synthesize speech.</div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 6 SIDE BY SIDE COMPARISON -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Comparison</div>
+  <div class="stitle">gTTS <span class="ab">vs</span> <span class="ag">pyttsx3</span></div>
+  <div class="ssub" style="margin-bottom:14px">Choose the right tool for the right job &mdash; it depends entirely on your needs.</div>
+  <div class="split" style="margin-bottom:14px">
+    <div class="split-l">
+      <div class="split-title ab">&#x1F4F6; gTTS &mdash; Online</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:14px">
+        <div style="padding:5px 0;border-bottom:1px solid #252f48;color:#c6d4e4"><strong style="color:#eef2fa">Connection:</strong> Requires internet</div>
+        <div style="padding:5px 0;border-bottom:1px solid #252f48;color:#c6d4e4"><strong style="color:#eef2fa">Output:</strong> MP3 audio file</div>
+        <div style="padding:5px 0;border-bottom:1px solid #252f48;color:#c6d4e4"><strong style="color:#eef2fa">Voice Quality:</strong> High-fidelity, Google neural voices</div>
+        <div style="padding:5px 0;border-bottom:1px solid #252f48;color:#c6d4e4"><strong style="color:#eef2fa">Languages:</strong> 100+ via Google Translate</div>
+        <div style="padding:5px 0;border-bottom:1px solid #252f48;color:#c6d4e4"><strong style="color:#eef2fa">Best For:</strong> High-quality audio files, podcasts</div>
+        <div style="padding:5px 0;color:#c6d4e4"><strong style="color:#eef2fa">Dependency:</strong> Google API (rate-limited)</div>
+      </div>
+    </div>
+    <div class="split-r">
+      <div class="split-title ag">&#x1F4BB; pyttsx3 &mdash; Offline</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:14px">
+        <div style="padding:5px 0;border-bottom:1px solid #252f48;color:#c6d4e4"><strong style="color:#eef2fa">Connection:</strong> Fully offline</div>
+        <div style="padding:5px 0;border-bottom:1px solid #252f48;color:#c6d4e4"><strong style="color:#eef2fa">Output:</strong> Real-time speech playback</div>
+        <div style="padding:5px 0;border-bottom:1px solid #252f48;color:#c6d4e4"><strong style="color:#eef2fa">Voice Quality:</strong> OS system voices (varies)</div>
+        <div style="padding:5px 0;border-bottom:1px solid #252f48;color:#c6d4e4"><strong style="color:#eef2ff">Languages:</strong> Depends on installed OS voices</div>
+        <div style="padding:5px 0;border-bottom:1px solid #252f48;color:#c6d4e4"><strong style="color:#eef2fa">Best For:</strong> Desktop apps, low-connectivity environments</div>
+        <div style="padding:5px 0;color:#c6d4e4"><strong style="color:#eef2fa">Dependency:</strong> None &mdash; uses native OS engines</div>
+      </div>
+    </div>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>Feature</th><th>gTTS</th><th>pyttsx3</th></tr></thead>
+    <tbody>
+      <tr><td>Internet Required</td><td style="font-family:sans-serif;color:#f87171">Yes &#x274C;</td><td style="font-family:sans-serif;color:#4ee3a0">No &#x2705;</td></tr>
+      <tr><td>Python 2 Support</td><td style="font-family:sans-serif;color:#f87171">No</td><td style="font-family:sans-serif;color:#4ee3a0">Yes</td></tr>
+      <tr><td>Voice Gender Choice</td><td style="font-family:sans-serif;color:#f87171">Limited</td><td style="font-family:sans-serif;color:#4ee3a0">Male / Female</td></tr>
+      <tr><td>Saves as MP3</td><td style="font-family:sans-serif;color:#4ee3a0">Yes &#x2705;</td><td style="font-family:sans-serif;color:#f87171">No (real-time)</td></tr>
+      <tr><td>No API Key Needed</td><td style="font-family:sans-serif;color:#4ee3a0">Yes (basic)</td><td style="font-family:sans-serif;color:#4ee3a0">Yes &#x2705;</td></tr>
+    </tbody>
+  </table></div>
+</div></div>
+
+<!-- 7 PYTHON CODE DRILL -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Guided Drill &middot; Python Code</div>
+  <div class="stitle">Testing <span class="ag">pyttsx3</span> &mdash; Your First TTS Script</div>
+  <div class="ssub" style="margin-bottom:12px">Create a Python script that takes user input and speaks it back using your computer&#x27;s built-in system voice. No internet needed.</div>
+  <div class="pre" style="margin-bottom:14px">
+    <div class="prebar"><span class="prelang">python &mdash; tts_demo.py</span><button class="copybtn" onclick="doCopy(this,'code1')">Copy</button></div>
+    <pre id="code1"><span class="kw">import</span> pyttsx3
+
+<span class="cm"># Initialize the TTS engine (uses OS native voice engine)</span>
+engine = pyttsx3.<span class="fn">init</span>()
+
+<span class="cm"># Get user input</span>
+text = <span class="fn">input</span>(<span class="st">"Enter the text you want to hear: "</span>)
+
+<span class="cm"># Convert text to speech</span>
+engine.<span class="fn">say</span>(text)
+
+<span class="cm"># Wait for the speech to finish before continuing</span>
+engine.<span class="fn">runAndWait</span>()
+
+<span class="fn">print</span>(<span class="st">"Finished speaking!"</span>)</pre>
+  </div>
+  <div class="g2">
+    <div class="card g">
+      <div class="ct">&#x1F4A1; Line-by-Line Breakdown</div>
+      <div class="cb">
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:14px;margin-top:4px">
+          <div style="background:#0c1020;padding:8px 12px;border-radius:8px;border:1px solid #1b2236"><code>pyttsx3.init()</code> &mdash; Creates &amp; returns the TTS Engine instance</div>
+          <div style="background:#0c1020;padding:8px 12px;border-radius:8px;border:1px solid #1b2236"><code>input()</code> &mdash; Accepts text from the user via terminal</div>
+          <div style="background:#0c1020;padding:8px 12px;border-radius:8px;border:1px solid #1b2236"><code>engine.say(text)</code> &mdash; Queues the text for speech synthesis</div>
+          <div style="background:#0c1020;padding:8px 12px;border-radius:8px;border:1px solid #1b2236"><code>engine.runAndWait()</code> &mdash; Runs the engine and waits until speaking is done</div>
+        </div>
+      </div>
+    </div>
+    <div class="card o">
+      <div class="ct">&#x1F5A5;&#xFE0F; Platform Engines Used</div>
+      <div class="cb">When you call <code>pyttsx3.init()</code>, the library automatically detects your OS and selects the right engine:<ul>
+        <li><strong>Windows</strong> &rarr; <code>sapi5</code> (Microsoft SAPI5)</li>
+        <li><strong>Mac OS X</strong> &rarr; <code>nsss</code> (NSSpeechSynthesizer)</li>
+        <li><strong>Linux</strong> &rarr; <code>espeak</code> (open-source)</li>
+      </ul>No configuration needed &mdash; it just works!</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 8 ANALOGIES & USE CASES -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Analogies &amp; Use Cases</div>
+  <div class="stitle">Making It <span class="ao">Click</span></div>
+  <div class="g2" style="flex:1">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card y">
+        <div class="ct">&#x1F4D6; Offline Dictionary vs Online Interpreter</div>
+        <div class="cb">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:14px;margin-top:4px">
+            <div style="background:#0c1020;padding:10px;border-radius:8px;border:1px solid #252f48"><div style="color:#4ee3a0;font-weight:700;margin-bottom:4px">&#x1F4BB; pyttsx3</div><div style="color:#7592b2">Like an offline translation dictionary. No signal? No problem &mdash; it uses the book you already have (your OS engine).</div></div>
+            <div style="background:#0c1020;padding:10px;border-radius:8px;border:1px solid #252f48"><div style="color:#5cb8ff;font-weight:700;margin-bottom:4px">&#x1F4F6; gTTS</div><div style="color:#7592b2">Like calling a remote interpreter. You need a signal (internet) &mdash; and get back a professional MP3 recording.</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card g">
+        <div class="ct">&#x267F; Use Case 1 &mdash; Accessibility Tool (pyttsx3)</div>
+        <div class="cb">A non-profit builds a Python script using <strong>pyttsx3</strong> for blind users on low-cost Raspberry Pi computers in rural areas. It reads digital news articles and menu items <strong>completely offline</strong> &mdash; no internet required.</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card p">
+        <div class="ct">&#x1F3A7; Use Case 2 &mdash; Automated Software Tutorials (gTTS)</div>
+        <div class="cb">A software company uses <strong>gTTS</strong> in their build pipeline. When a new update releases, a Python script automatically reads the release notes, converts them to <strong>high-fidelity MP3 files</strong> using Google&#x27;s voices, and uploads them to their support portal.</div>
+      </div>
+      <div class="card r">
+        <div class="ct">&#x2753; Which Should I Choose?</div>
+        <div class="cb">
+          <div style="font-size:14px">
+            <div style="padding:5px 0;border-bottom:1px solid #252f48">Choose <strong style="color:#5cb8ff">gTTS</strong> for highest quality voices, MP3 output, and constant internet access</div>
+            <div style="padding:5px 0">Choose <strong style="color:#4ee3a0">pyttsx3</strong> for offline apps, desktop tools, or environments where internet isn&#x27;t guaranteed</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 9 FAQ -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">FAQs</div>
+  <div class="stitle">Common Questions <span class="ao">Answered</span></div>
+  <div style="display:flex;flex-direction:column;gap:12px;flex:1">
+    <div class="card p">
+      <div class="ct">&#x2753; Which is better: gTTS or pyttsx3?</div>
+      <div class="cb">It depends on your needs:<ul>
+        <li>Choose <strong>gTTS</strong> for highest quality, natural-sounding voices, constant internet access, and MP3 file output</li>
+        <li>Choose <strong>pyttsx3</strong> for offline functionality, desktop apps, no API dependencies, and guaranteed availability without internet</li>
+      </ul></div>
+    </div>
+    <div class="card g">
+      <div class="ct">&#x2753; Is gTTS completely free?</div>
+      <div class="cb">The library itself is <strong>free and open-source</strong>. However, it interfaces with Google Translate&#x27;s TTS API and is subject to Google&#x27;s rate limiting. While it doesn&#x27;t require a commercial API key for basic use, heavy commercial usage should use <strong>Google Cloud TTS</strong> for guaranteed reliability.</div>
+    </div>
+    <div class="card">
+      <div class="ct">&#x2753; Does pyttsx3 require external dependencies?</div>
+      <div class="cb"><strong>No.</strong> pyttsx3 is platform-independent and leverages native TTS engines already installed on your OS. You do not need to download large ML models or set up API keys &mdash; just <code>pip install pyttsx3</code> and run.</div>
+    </div>
+    <div class="card r">
+      <div class="ct">&#x2753; Why is modern TTS sometimes flat or robotic?</div>
+      <div class="cb">The flat tone is caused by deep-learning models using <strong>L1 or L2 loss functions</strong>. These losses average out training data to find the safest statistically correct output. While this creates intelligible speech, it strips away the emotional highs and lows (<strong>prosody</strong>) that make human speech sound natural.</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 10 KEY QUOTES -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Key Quotes &amp; Takeaways</div>
+  <div class="stitle">Words Worth <span class="ay">Remembering</span></div>
+  <div style="display:flex;flex-direction:column;gap:14px;flex:1;justify-content:center">
+    <div class="qqt">Spread love everywhere you go. Let no one ever come to you without leaving happier.
+      <div class="qsrc">&mdash; Mother Teresa &middot; quoted in Module 19</div></div>
+    <div class="qqt" style="border-left-color:#4ee3a0;font-style:normal">
+      <div style="font-size:13px;font-weight:800;color:#4ee3a0;letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px">Module 19 Key Takeaways</div>
+      <ul style="list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;font-size:15px">
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>TTS converts written text into synthesized spoken audio</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span><strong>gTTS</strong> &mdash; online, Google API, outputs MP3, CLI tool</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span><strong>pyttsx3</strong> &mdash; offline, Python 2+3, native OS engines</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>pyttsx3 engines: sapi5 (Win), nsss (Mac), espeak (Linux)</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>gTTS advantage: single model, no large audio DB needed</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>gTTS disadvantage: needs internet, slow inference, flat prosody</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span><code>pyttsx3.init()</code> returns the Engine instance</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>L1/L2 loss functions cause flat prosody in modern TTS</li>
+      </ul>
+    </div>
+  </div>
+</div></div>
+
+<!-- 11 SKILL CHECK PART 1 — A vs D -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Skill-Building Check &middot; Part 1</div>
+  <div class="stitle">Advantage <span class="ag">A</span> or Disadvantage <span class="ar">D</span>?</div>
+  <div class="ssub" style="margin-bottom:12px">Write <strong>A</strong> for Advantage or <strong>D</strong> for Disadvantage of modern Python TTS modules. Answers on the next slide.</div>
+  <div style="background:#1b2236;border-radius:14px;overflow:hidden;flex:1">
+    <div style="padding:6px 18px">
+      <div class="adrow" style="padding:14px 0">
+        <span style="font-weight:900;color:#b98cfa;min-width:24px;flex-shrink:0">1</span>
+        <span class="addesc">Powerful model capacity to capture the hidden internal structures of data.</span>
+        <span class="adtag a" style="opacity:.3">A / D</span>
+      </div>
+      <div class="adrow" style="padding:14px 0">
+        <span style="font-weight:900;color:#b98cfa;min-width:24px;flex-shrink:0">2</span>
+        <span class="addesc">Auto-regressive-based models suffer from slow inference problems.</span>
+        <span class="adtag d" style="opacity:.3">A / D</span>
+      </div>
+      <div class="adrow" style="padding:14px 0">
+        <span style="font-weight:900;color:#b98cfa;min-width:24px;flex-shrink:0">3</span>
+        <span class="addesc">Capable of generating intelligible and natural speech.</span>
+        <span class="adtag a" style="opacity:.3">A / D</span>
+      </div>
+      <div class="adrow" style="padding:14px 0">
+        <span style="font-weight:900;color:#b98cfa;min-width:24px;flex-shrink:0">4</span>
+        <span class="addesc">Tend to learn flat prosody by averaging over training data.</span>
+        <span class="adtag d" style="opacity:.3">A / D</span>
+      </div>
+      <div class="adrow" style="padding:14px 0;border-bottom:none">
+        <span style="font-weight:900;color:#b98cfa;min-width:24px;flex-shrink:0">5</span>
+        <span class="addesc">Lack of controllability compared to traditional concatenative and statistical parametric approaches.</span>
+        <span class="adtag d" style="opacity:.3">A / D</span>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 12 SKILL CHECK PART 2 — FILL IN THE BLANKS -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Skill-Building Check &middot; Part 2</div>
+  <div class="stitle">Fill in the <span class="ap">Blanks</span></div>
+  <div class="ssub" style="margin-bottom:12px">Fill each blank with the correct word or phrase. Answers follow on the answer key slide.</div>
+  <div style="display:flex;flex-direction:column;gap:10px;flex:1">
+    <div class="fibrow"><div class="fibnum">1</div><div class="fibstmt"><span class="fibblank"></span> is a text-to-speech conversion library in Python that works completely offline and uses your platform&#x27;s native engines.</div></div>
+    <div class="fibrow"><div class="fibnum">2</div><div class="fibstmt">gTTS is a Python library and <span class="fibblank"></span> tool to interface with Google Translate&#x27;s text-to-speech API.</div></div>
+    <div class="fibrow"><div class="fibnum">3</div><div class="fibstmt">Only need a <span class="fibblank"></span> to perform text analysis, acoustic modeling, and audio synthesis.</div></div>
+    <div class="fibrow"><div class="fibnum">4</div><div class="fibstmt">Output speech is not robust when data are not <span class="fibblank"></span>.</div></div>
+    <div class="fibrow"><div class="fibnum">5</div><div class="fibstmt">Tend to output smoothed <span class="fibblank"></span> because the L1 or L2 loss is used.</div></div>
+  </div>
+</div></div>
+
+<!-- 13 ANSWER KEY -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Answer Key &middot; Parts 1 &amp; 2</div>
+  <div class="stitle">Check Your <span class="ag">Answers</span></div>
+  <div class="g2" style="flex:1;gap:8px">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="font-size:13px;font-weight:800;color:#4ee3a0;letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px">Part 1 &mdash; Advantage / Disadvantage</div>
+      <div class="akrow a"><div class="akn">1 &mdash; A</div><div><div class="aka">Advantage</div><div class="akx">Powerful model capacity to capture hidden internal data structures is a strength of modern deep learning TTS &mdash; it learns complex speech patterns without manual feature engineering.</div></div></div>
+      <div class="akrow d"><div class="akn">2 &mdash; D</div><div><div class="aka">Disadvantage</div><div class="akx">Auto-regressive models generate audio token by token sequentially, which causes slow inference &mdash; particularly noticeable for long text inputs.</div></div></div>
+      <div class="akrow a"><div class="akn">3 &mdash; A</div><div><div class="aka">Advantage</div><div class="akx">Modern TTS models like gTTS generate highly intelligible and natural-sounding speech using neural networks trained on large datasets.</div></div></div>
+      <div class="akrow d"><div class="akn">4 &mdash; D</div><div><div class="aka">Disadvantage</div><div class="akx">By averaging over training data, models produce flat prosody (monotone delivery) lacking the natural emotional variation of human speech.</div></div></div>
+      <div class="akrow d"><div class="akn">5 &mdash; D</div><div><div class="aka">Disadvantage</div><div class="akx">Modern end-to-end models offer less granular control over vocal nuances than traditional concatenative or statistical parametric approaches.</div></div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="font-size:13px;font-weight:800;color:#b98cfa;letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px">Part 2 &mdash; Fill in the Blanks</div>
+      <div class="akrow b"><div class="akn">1</div><div><div class="aka">pyttsx3</div><div class="akx">pyttsx3 is the Python TTS library designed for fully offline use, leveraging native OS engines (SAPI5 on Windows, NSSpeechSynthesizer on Mac, eSpeak on Linux).</div></div></div>
+      <div class="akrow b"><div class="akn">2</div><div><div class="aka">CLI (command-line interface)</div><div class="akx">gTTS is both a Python library and a CLI tool, meaning you can use it both in Python scripts and directly from the terminal command line.</div></div></div>
+      <div class="akrow b"><div class="akn">3</div><div><div class="aka">single model</div><div class="akx">gTTS uses a single end-to-end model for all steps: text analysis, acoustic modeling, and audio synthesis &mdash; unlike multi-stage pipelines that use separate components for each step.</div></div></div>
+      <div class="akrow b"><div class="akn">4</div><div><div class="aka">sufficient</div><div class="akx">If the training data used to build the TTS model is insufficient in quantity or quality, the output speech quality degrades and becomes unreliable.</div></div></div>
+      <div class="akrow b"><div class="akn">5</div><div><div class="aka">acoustic features</div><div class="akx">L1/L2 loss functions encourage models to output smooth, averaged acoustic features rather than capturing the full range of human vocal variation &mdash; causing the flat robotic sound.</div></div></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 14 CLOSING -->
+<div class="sw"><div class="slide" style="align-items:center;justify-content:center;text-align:center">
+  <div class="eyebrow" style="border-bottom:none">Module 19 &middot; Complete</div>
+  <div class="tgiant" style="font-size:clamp(34px,4.6vw,60px);margin-top:10px">Give Your <span class="ab">Code</span><br>a <span class="ag">Voice</span>.</div>
+  <div class="qqt" style="max-width:740px;text-align:left;border-left-color:#fbbf24;font-size:16px;margin-top:14px">
+    Spread love everywhere you go. Let no one ever come to you without leaving happier. Your TTS program can do exactly that &mdash; leave every user with a voice reading their content, wherever they are, online or off.
+    <div class="qsrc">&mdash; Mother Teresa &middot; applied &#x1F680;</div>
+  </div>
+  <div class="g4" style="max-width:1080px;margin-top:14px">
+    <div class="card" style="text-align:left"><div class="ct">Try pyttsx3</div><div class="cb" style="font-size:14px">Run the drill script, type your name, and hear your computer speak it back. Then change the voice to Female using <code>engine.setProperty('voice', voices[1].id)</code>.</div></div>
+    <div class="card g" style="text-align:left"><div class="ct">Try gTTS</div><div class="cb" style="font-size:14px">Install gTTS, convert a sentence to MP3, and play it back. Try it in 3 different languages: English, French, and Filipino.</div></div>
+    <div class="card p" style="text-align:left"><div class="ct">Combine</div><div class="cb" style="font-size:14px">Build a script: if internet is available use gTTS for MP3 quality; else fall back to pyttsx3 offline. Use <code>try/except</code> to handle the switch.</div></div>
+    <div class="card o" style="text-align:left"><div class="ct">Challenge</div><div class="cb" style="font-size:14px">Connect M18&#x27;s TTS API concepts + M19&#x27;s Python code: use the Google Cloud TTS REST API via <code>requests</code> in Python to get a premium voice MP3.</div></div>
+  </div>
+  <div style="font-size:14px;color:#2e4560;margin-top:14px">Press <span style="color:#5cb8ff">Home</span> to restart &middot; <span style="color:#5cb8ff">?</span> for shortcuts</div>
+</div></div>
+
+</body>
+</html>

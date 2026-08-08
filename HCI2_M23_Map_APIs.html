@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Module 23 &mdash; Map APIs for Augmented Reality</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:#090c18;color:#e8edf5}
+#deck{position:relative;width:100vw;height:100vh;overflow:hidden}
+.sw{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:28px 48px 50px;opacity:0;transform:translateX(40px);transition:opacity .35s ease,transform .35s ease;pointer-events:none;overflow-y:auto}
+.sw.active{opacity:1;transform:translateX(0);pointer-events:auto}
+.sw.xl{opacity:0;transform:translateX(-40px)}
+.sw.xr{opacity:0;transform:translateX(40px)}
+@media(prefers-reduced-motion:reduce){.sw{transition:none!important;transform:none!important}.sw.xl,.sw.xr{opacity:0;transform:none!important}}
+.slide{width:100%;max-width:1260px;max-height:100%;background:#131726;border-radius:22px;padding:32px 42px 36px;box-shadow:0 24px 72px rgba(0,0,0,.78);display:flex;flex-direction:column;gap:13px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#232d47 transparent}
+.slide::-webkit-scrollbar{width:5px}.slide::-webkit-scrollbar-thumb{background:#232d47;border-radius:4px}
+.eyebrow{font-size:13px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#4a6888;border-bottom:2px solid #1b2236;padding-bottom:7px}
+.stitle{font-size:clamp(26px,3.3vw,44px);font-weight:900;line-height:1.12;color:#fff;letter-spacing:-.5px}
+.ssub{font-size:16px;color:#7592b2;line-height:1.6}
+.ab{color:#5cb8ff}.ag{color:#4ee3a0}.ao{color:#ffaa5e}.ap{color:#b98cfa}.ar{color:#f87171}.ac{color:#22d3ee}.ay{color:#fbbf24}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px 22px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 18px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 14px}
+.card{background:#1b2236;border-radius:14px;padding:16px 19px;border-left:4px solid #5cb8ff;min-width:0}
+.card.g{border-left-color:#4ee3a0}.card.o{border-left-color:#ffaa5e}.card.p{border-left-color:#b98cfa}.card.r{border-left-color:#f87171}.card.c{border-left-color:#22d3ee}.card.y{border-left-color:#fbbf24}
+.ct{font-size:14px;font-weight:700;color:#96b0ca;letter-spacing:.3px;margin-bottom:6px}
+.cb{font-size:15px;line-height:1.65;color:#c6d4e4}
+.cb strong{color:#eef2fa}
+.cb ul{list-style:none;padding:0;margin:6px 0 0}
+.cb ul li{padding:3px 0 3px 20px;position:relative;font-size:15px;line-height:1.5}
+.cb ul li::before{content:"▸";position:absolute;left:0;color:#5cb8ff;font-weight:700}
+.pre{background:#0c1020;border-radius:13px;border:1px solid #1b2236;overflow:hidden}
+.prebar{display:flex;align-items:center;justify-content:space-between;padding:8px 15px;background:#151b2c;border-bottom:1px solid #1b2236}
+.prelang{font-size:13px;font-weight:700;color:#4a6888;letter-spacing:.9px;text-transform:uppercase}
+.copybtn{font-size:13px;font-weight:700;background:#1b2236;color:#7592b2;border:1px solid #252f48;border-radius:8px;padding:4px 13px;cursor:pointer;transition:all .2s}
+.copybtn:hover{background:#5cb8ff;color:#0c1020;border-color:#5cb8ff}
+.copybtn.ok{background:#4ee3a0;color:#0c1020;border-color:#4ee3a0}
+pre{padding:16px 20px;overflow-x:auto;overflow-y:auto;max-height:340px;line-height:1.8;margin:0;scrollbar-width:thin;scrollbar-color:#232d47 transparent;font-size:14px;font-family:Consolas,'Courier New',monospace}
+pre::-webkit-scrollbar{width:5px;height:5px}
+pre::-webkit-scrollbar-thumb{background:#232d47;border-radius:4px}
+.kw{color:#c084fc}.fn{color:#5cb8ff}.st{color:#4ee3a0}.cm{color:#4a6888;font-style:italic}.bi{color:#fbbf24}.tg{color:#f87171}.at{color:#ffaa5e}
+.tw{overflow-x:auto;border-radius:12px;border:1px solid #1b2236}
+.tw table{width:100%;border-collapse:collapse;font-size:14px}
+.tw th{background:#171d2e;color:#7592b2;font-size:12px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;padding:9px 14px;text-align:left;border-bottom:1px solid #1b2236}
+.tw td{padding:9px 14px;border-bottom:1px solid #171d2e;color:#c6d4e4;vertical-align:top;line-height:1.55;font-size:14px}
+.tw td:first-child{font-weight:700;color:#5cb8ff;white-space:nowrap;font-size:13px}
+.tw tr:last-child td{border-bottom:none}
+.tw tr:hover td{background:rgba(92,184,255,.04)}
+#prog{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#5cb8ff,#4ee3a0,#b98cfa);transition:width .3s ease;z-index:100;border-radius:0 2px 2px 0}
+#ctr{position:fixed;bottom:17px;right:22px;font-size:13px;font-weight:700;color:#334d66;z-index:100}
+#sco{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center}
+#sco.show{display:flex}
+#scb{background:#1b2236;border-radius:18px;padding:30px 38px;max-width:460px;width:92%}
+#scb h3{font-size:18px;font-weight:900;color:#fff;margin-bottom:16px}
+.sk{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #1b2236;font-size:15px;color:#c6d4e4}
+.sk:last-child{border-bottom:none}
+.key{font-family:monospace;background:#131726;padding:2px 9px;border-radius:6px;color:#5cb8ff;font-size:13px}
+.scclose{margin-top:18px;background:#5cb8ff;color:#090c18;border:none;border-radius:10px;padding:9px 24px;font-size:15px;font-weight:700;cursor:pointer;width:100%}
+/* feature grid */
+.feat{background:#1b2236;border-radius:12px;padding:12px 16px;border-top:3px solid #5cb8ff;min-width:0}
+.feat.g{border-top-color:#4ee3a0}.feat.o{border-top-color:#ffaa5e}.feat.p{border-top-color:#b98cfa}.feat.c{border-top-color:#22d3ee}.feat.y{border-top-color:#fbbf24}.feat.r{border-top-color:#f87171}
+.feat-icon{font-size:20px;margin-bottom:4px}
+.feat-title{font-size:14px;font-weight:800;color:#fff;margin-bottom:4px}
+.feat-desc{font-size:13px;color:#c6d4e4;line-height:1.5}
+/* step card */
+.step{display:flex;align-items:flex-start;gap:14px}
+.stepnum{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;font-weight:900;font-size:16px;flex-shrink:0}
+.steplabel{font-size:15px;font-weight:700;color:#eef2fa;margin-bottom:4px}
+.stepdesc{font-size:14px;color:#c6d4e4;line-height:1.6}
+/* TF activity */
+.tfrow{display:flex;align-items:flex-start;gap:14px;padding:10px 0;border-bottom:1px solid #1b2236;font-size:15px}
+.tfrow:last-child{border-bottom:none}
+.tfnum{font-weight:900;color:#b98cfa;min-width:24px;flex-shrink:0;padding-top:2px}
+.tfstmt{color:#c6d4e4;flex:1;line-height:1.6}
+.tflabel{font-size:13px;font-weight:900;padding:2px 12px;border-radius:10px;flex-shrink:0;align-self:flex-start;margin-top:2px}
+.tft{background:#162a1e;color:#4ee3a0}
+.tff{background:#2a1010;color:#f87171}
+/* answer key */
+.akrow{display:flex;gap:12px;align-items:flex-start;border-radius:12px;padding:10px 15px}
+.akrow.t{background:#16281e}
+.akrow.f{background:#2a1010}
+.akn{font-size:15px;font-weight:900;min-width:40px;padding-top:1px}
+.akrow.t .akn{color:#4ee3a0}
+.akrow.f .akn{color:#f87171}
+.aka{font-size:14px;font-weight:700}
+.akrow.t .aka{color:#4ee3a0}
+.akrow.f .aka{color:#f87171}
+.akx{font-size:13px;margin-top:2px;line-height:1.5}
+.akrow.t .akx{color:#3d7a58}
+.akrow.f .akx{color:#7a3a30}
+.qqt{background:#1b2236;border-radius:14px;padding:20px 26px;border-left:5px solid #fbbf24;font-size:16px;line-height:1.75;color:#d6e2f0;font-style:italic}
+.qqt .qsrc{font-size:14px;color:#7592b2;font-style:normal;margin-top:8px;font-weight:600}
+.pill{display:inline-block;font-size:14px;font-weight:700;padding:4px 13px;border-radius:20px;margin:3px}
+.pill.b{background:#1a2e48;color:#5cb8ff}.pill.g{background:#162a1e;color:#4ee3a0}.pill.o{background:#381f10;color:#ffaa5e}.pill.p{background:#261840;color:#b98cfa}.pill.c{background:#0e2432;color:#22d3ee}
+code{font-family:monospace;font-size:14px;background:#1b2236;padding:1px 7px;border-radius:5px;color:#5cb8ff}
+.tgiant{font-size:clamp(36px,5vw,66px);font-weight:900;line-height:1.06;letter-spacing:-1.5px}
+.note{background:#102038;border:1px solid #1e3a5a;border-radius:11px;padding:12px 16px;font-size:15px;color:#7ab8e0;line-height:1.65}
+.warn{background:#2a1a10;border:1px solid #7a4a20;border-radius:11px;padding:12px 16px;font-size:15px;color:#ffaa5e;line-height:1.65}
+/* benefit card */
+.ben{background:#1b2236;border-radius:11px;padding:11px 15px;border-left:3px solid #4ee3a0;font-size:14px;color:#c6d4e4;line-height:1.5}
+.ben strong{color:#4ee3a0;display:block;margin-bottom:2px;font-size:13px}
+/* geocode flow */
+.geoflow{background:#0c1020;border-radius:12px;padding:16px 20px;border:1px solid #1b2236}
+.geo-in{background:#131726;padding:8px 14px;border-radius:8px;font-size:14px;color:#c6d4e4;border:1px solid #252f48}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<div id="ctr"></div>
+<div id="deck"></div>
+<div id="sco">
+  <div id="scb">
+    <h3>&#x2328;&#xFE0F; Keyboard Shortcuts</h3>
+    <div class="sk"><span>Next slide</span><span><span class="key">&rarr;</span> <span class="key">Right-click</span></span></div>
+    <div class="sk"><span>Previous slide</span><span><span class="key">&larr;</span> <span class="key">Mouse3</span></span></div>
+    <div class="sk"><span>First / Last</span><span><span class="key">Home</span> / <span class="key">End</span></span></div>
+    <div class="sk"><span>This help</span><span><span class="key">?</span></span></div>
+    <button class="scclose" onclick="document.getElementById('sco').classList.remove('show')">Close</button>
+  </div>
+</div>
+<script>
+function doCopy(btn,id){
+  var txt=document.getElementById(id).innerText;
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(txt).then(function(){flash(btn);}).catch(function(){fallback(btn,txt);});}
+  else{fallback(btn,txt);}
+}
+function fallback(btn,txt){
+  var ta=document.createElement('textarea');ta.value=txt;
+  ta.style.cssText='position:fixed;opacity:0;top:0;left:0;width:1px;height:1px';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');}catch(e){}
+  document.body.removeChild(ta);flash(btn);
+}
+function flash(btn){btn.textContent='Copied!';btn.classList.add('ok');setTimeout(function(){btn.textContent='Copy';btn.classList.remove('ok');},1800);}
+var slides,cur,tot,busy;
+function initDeck(){slides=document.querySelectorAll('.sw');cur=0;tot=slides.length;busy=false;slides[0].classList.add('active');ui();}
+function ui(){document.getElementById('prog').style.width=((cur+1)/tot*100)+'%';document.getElementById('ctr').textContent=(cur+1)+' / '+tot;}
+function go(idx,dir){
+  if(busy||idx===cur||idx<0||idx>=tot)return;busy=true;
+  var pv=slides[cur],nx=slides[idx];
+  pv.classList.remove('active');pv.classList.add(dir===1?'xl':'xr');
+  nx.style.transform=dir===1?'translateX(40px)':'translateX(-40px)';nx.style.opacity='0';
+  nx.classList.add('active');
+  requestAnimationFrame(function(){requestAnimationFrame(function(){nx.style.transform='';nx.style.opacity='';});});
+  cur=idx;ui();setTimeout(function(){pv.classList.remove('xl','xr');busy=false;},380);
+}
+document.addEventListener('DOMContentLoaded',function(){initDeck();});
+document.addEventListener('keydown',function(e){
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')go(cur+1,1);
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(cur-1,-1);
+  else if(e.key==='Home')go(0,-1);
+  else if(e.key==='End')go(tot-1,1);
+  else if(e.key==='?')document.getElementById('sco').classList.toggle('show');
+  else if(e.key==='Escape')document.getElementById('sco').classList.remove('show');
+});
+document.addEventListener('mousedown',function(e){
+  if(e.button===2){e.preventDefault();e.stopImmediatePropagation();go(cur+1,1);}
+  else if(e.button===3){e.preventDefault();e.stopImmediatePropagation();go(cur-1,-1);}
+  else if(e.button===4){e.preventDefault();e.stopImmediatePropagation();go(cur+1,1);}
+},true);
+document.addEventListener('contextmenu',function(e){e.preventDefault();},true);
+document.addEventListener('auxclick',function(e){if(e.button!==0)e.preventDefault();},true);
+var tx=0;
+document.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;},{passive:true});
+document.addEventListener('touchend',function(e){var dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50)go(cur+(dx<0?1:-1),dx<0?1:-1);},{passive:true});
+</script>
+
+<!-- ══════════════════════ SLIDES ══════════════════════ -->
+
+<!-- 0 TITLE -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Module 23 &middot; ITE 380 Human Computer Interaction 2</div>
+  <div class="tgiant" style="margin-top:10px"><span class="ab">Map APIs</span><br>for <span class="ag">Augmented</span><br>Reality</div>
+  <div class="ssub" style="margin-top:14px">Geographic intelligence for the web &mdash; embedding, geocoding, geolocation, and AR-map integration with real code</div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:20px">
+    <span class="pill b">What is a Map API?</span>
+    <span class="pill g">Geocoding &amp; Geolocation</span>
+    <span class="pill o">Embed with iframe</span>
+    <span class="pill p">JS Interactive Map</span>
+    <span class="pill c">Google &middot; Mapbox &middot; Bing</span>
+  </div>
+  <div style="margin-top:22px;font-size:14px;color:#2e4560">Right-click or &rarr; to navigate &middot; Press ? for shortcuts</div>
+</div></div>
+
+<!-- 1 WHAT IS MAP API -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 1 &middot; Definition</div>
+  <div class="stitle">What Is a <span class="ab">Map API</span>?</div>
+  <div class="ssub" style="margin-bottom:12px">A <strong>Map API</strong> (also called Mapping API) provides <strong>location intelligence</strong> for software developers &mdash; the foundational building block for anything that needs to know <em>where</em>.</div>
+  <div class="g2" style="margin-bottom:14px">
+    <div class="card">
+      <div class="ct">&#x1F5FA;&#xFE0F; Core Purpose</div>
+      <div class="cb">A Map API is the foundational block for:<ul>
+        <li>Creating <strong>location-based</strong> applications and services</li>
+        <li>Building <strong>feature-rich, interactive maps</strong></li>
+        <li>Retrieving <strong>geographic-related data</strong></li>
+      </ul></div>
+    </div>
+    <div class="card p">
+      <div class="ct">&#x1F517; Why Maps Matter in AR</div>
+      <div class="cb">AR doesn&#x27;t just need to <em>see</em> things &mdash; it often needs to know <strong>where things are</strong>. Map APIs bring geographic intelligence to AR experiences, powering:<ul>
+        <li>Location-based AR (Pok&eacute;mon GO style)</li>
+        <li>Navigation overlays</li>
+        <li>Real-world coordinate anchoring</li>
+      </ul></div>
+    </div>
+  </div>
+  <div class="card y">
+    <div class="ct">&#x1F4A1; Why Are Maps So Valuable?</div>
+    <div class="cb">Maps provide <strong>interactive and informative alternatives to plain text</strong>. They are an easy-to-use, cost-effective tool for branding, storytelling, and engaging customers &mdash; especially for small businesses. A single map on a landing page often converts better than paragraphs of address text.</div>
+  </div>
+</div></div>
+
+<!-- 2 MAP API FEATURES -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 1 &middot; Features</div>
+  <div class="stitle">What Modern Map APIs <span class="ao">Offer</span></div>
+  <div class="ssub" style="margin-bottom:14px">Typical features you get out of the box with a modern Map API.</div>
+  <div class="g3" style="margin-bottom:12px">
+    <div class="feat">
+      <div class="feat-icon">&#x1F4CD;</div>
+      <div class="feat-title ab">Geocoding</div>
+      <div class="feat-desc">Convert a human address (&ldquo;1600 Amphitheatre Pkwy&rdquo;) into GPS coordinates (Lat/Lng).</div>
+    </div>
+    <div class="feat g">
+      <div class="feat-icon">&#x1F310;</div>
+      <div class="feat-title ag">Reverse Geocoding</div>
+      <div class="feat-desc">Take coordinates and return the nearest human-readable address or place name.</div>
+    </div>
+    <div class="feat o">
+      <div class="feat-icon">&#x1F4F1;</div>
+      <div class="feat-title ao">Geolocation</div>
+      <div class="feat-desc">Find the user&#x27;s current physical position using GPS, Wi-Fi, or IP address triangulation.</div>
+    </div>
+    <div class="feat p">
+      <div class="feat-icon">&#x1F9ED;</div>
+      <div class="feat-title ap">Directions &amp; Nav</div>
+      <div class="feat-desc">Compute routes between points with turn-by-turn instructions, ETAs, and traffic data.</div>
+    </div>
+    <div class="feat c">
+      <div class="feat-icon">&#x1F44B;</div>
+      <div class="feat-title ac">Touch Interaction</div>
+      <div class="feat-desc">Panning, zooming, tapping &mdash; native gesture support built into every embed.</div>
+    </div>
+    <div class="feat y">
+      <div class="feat-icon">&#x1F5FE;</div>
+      <div class="feat-title ay">Multiple Map Types</div>
+      <div class="feat-desc">Terrain, satellite, street view, hybrid &mdash; swap views to fit the use case.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ct">&#x1F3A8; Customization &mdash; Overlays &amp; Data Layers</div>
+    <div class="cb">Developers can heavily customize maps with <strong>context- and industry-relevant data overlays</strong>:<ul>
+      <li>Widgets, gadgets, and interactive markers</li>
+      <li>Custom graphics, images, and popups</li>
+      <li>Data visualization (heatmaps, traffic layers, choropleth maps)</li>
+      <li>Custom control objects (zoom bars, layer toggles, drawing tools)</li>
+    </ul></div>
+  </div>
+</div></div>
+
+<!-- 3 GEOCODING DEEP DIVE (SUPPORTING) -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 1 &middot; Deep Dive</div>
+  <div class="stitle">Geocoding vs <span class="ag">Reverse Geocoding</span></div>
+  <div class="ssub" style="margin-bottom:14px">These two operations power almost every location-aware feature. Understanding them is essential.</div>
+  <div class="g2" style="margin-bottom:12px">
+    <div class="card">
+      <div class="ct">&#x27A1;&#xFE0F; Geocoding &mdash; Address to Coordinates</div>
+      <div class="cb">
+        <div class="geoflow">
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:stretch">
+            <div class="geo-in" style="border-color:#5cb8ff">&#x1F4E5; Input: <code>"Rizal Park, Manila, PH"</code></div>
+            <div style="text-align:center;color:#5cb8ff;font-size:20px">&#x2B07;&#xFE0F;</div>
+            <div class="geo-in" style="border-color:#4ee3a0;color:#4ee3a0"><strong>Output:</strong> <code>14.5825&deg; N, 120.9793&deg; E</code></div>
+          </div>
+        </div>
+        <div style="font-size:13px;color:#7592b2;margin-top:8px">Used when the user types an address and you need to place a pin on the map.</div>
+      </div>
+    </div>
+    <div class="card g">
+      <div class="ct">&#x2B05;&#xFE0F; Reverse Geocoding &mdash; Coordinates to Address</div>
+      <div class="cb">
+        <div class="geoflow">
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:stretch">
+            <div class="geo-in" style="border-color:#4ee3a0">&#x1F4E5; Input: <code>14.5825&deg; N, 120.9793&deg; E</code></div>
+            <div style="text-align:center;color:#4ee3a0;font-size:20px">&#x2B07;&#xFE0F;</div>
+            <div class="geo-in" style="border-color:#5cb8ff;color:#5cb8ff"><strong>Output:</strong> <code>"Rizal Park, Manila, PH"</code></div>
+          </div>
+        </div>
+        <div style="font-size:13px;color:#7592b2;margin-top:8px">Used when the phone reports GPS coords and you need to show the user a readable place name.</div>
+      </div>
+    </div>
+  </div>
+  <div class="g3">
+    <div class="ben"><strong>&#x1F511; Real-World Example 1</strong>Airbnb geocodes hosts&#x27; addresses to pin their listings on the map.</div>
+    <div class="ben"><strong>&#x1F511; Real-World Example 2</strong>Uber reverse-geocodes your pickup GPS to show &ldquo;you&#x27;re at 5th Ave.&rdquo;</div>
+    <div class="ben"><strong>&#x1F511; Real-World Example 3</strong>Instagram reverse-geocodes photo EXIF data to auto-suggest location tags.</div>
+  </div>
+</div></div>
+
+<!-- 4 BROWSER GEOLOCATION (SUPPORTING) -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Bonus &middot; Browser Geolocation API</div>
+  <div class="stitle">Getting the User&#x27;s <span class="ao">Location</span> in JavaScript</div>
+  <div class="ssub" style="margin-bottom:12px">Modern browsers include a built-in <strong>Geolocation API</strong> (<code>navigator.geolocation</code>) &mdash; no external library needed. This connects seamlessly to any Map API.</div>
+  <div class="pre" style="margin-bottom:12px">
+    <div class="prebar"><span class="prelang">javascript &mdash; geolocation demo</span><button class="copybtn" onclick="doCopy(this,'geo1')">Copy</button></div>
+    <pre id="geo1"><span class="cm">// Check if geolocation is supported by the browser</span>
+<span class="kw">if</span> (navigator.geolocation) {
+  navigator.geolocation.<span class="fn">getCurrentPosition</span>(
+    <span class="cm">// Success callback</span>
+    <span class="kw">function</span>(position) {
+      <span class="kw">const</span> lat = position.coords.latitude;
+      <span class="kw">const</span> lng = position.coords.longitude;
+      console.<span class="fn">log</span>(<span class="st">"Latitude: "</span> + lat);
+      console.<span class="fn">log</span>(<span class="st">"Longitude: "</span> + lng);
+      <span class="cm">// Now feed these coords into your Map API!</span>
+    },
+    <span class="cm">// Error callback</span>
+    <span class="kw">function</span>(error) {
+      console.<span class="fn">error</span>(<span class="st">"Location access denied or unavailable"</span>);
+    }
+  );
+} <span class="kw">else</span> {
+  <span class="fn">alert</span>(<span class="st">"Geolocation is not supported by this browser."</span>);
+}</pre>
+  </div>
+  <div class="g2">
+    <div class="card c">
+      <div class="ct">&#x1F510; Permission Required</div>
+      <div class="cb">Browsers <strong>always ask the user for permission</strong> before sharing GPS coords &mdash; a fundamental privacy safeguard. If the user denies, the error callback fires. Never assume location access.</div>
+    </div>
+    <div class="card p">
+      <div class="ct">&#x1F4A1; This is Location-Based AR&#x27;s Foundation</div>
+      <div class="cb">This exact <code>getCurrentPosition()</code> pattern is how <strong>Pok&eacute;mon GO knows where to spawn creatures</strong>, and how tourism AR apps trigger content when you enter a specific neighborhood. Coordinates &rarr; Map API &rarr; AR overlay.</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 5 BENEFITS -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 2 &middot; Benefits</div>
+  <div class="stitle">Why <span class="ag">Businesses</span> Use Map APIs</div>
+  <div class="ssub" style="margin-bottom:12px">Integrating a Map API into your business or app provides numerous advantages beyond just showing a pretty map.</div>
+  <div class="g4" style="flex:1">
+    <div class="ben"><strong>&#x1F4C8; Standardize Development</strong>Use recognized protocols to standardize app development and data retrieval methods across teams.</div>
+    <div class="ben"><strong>&#x1F4B0; Reduce Costs</strong>Save millions in engineering costs by using established APIs instead of building a mapping engine from scratch.</div>
+    <div class="ben"><strong>&#x26A1; Accelerate Development</strong>Use Agile methodologies with pre-built libraries to speed up your deployment timeline dramatically.</div>
+    <div class="ben"><strong>&#x1F30D; Increase Digital Presence</strong>Most users research businesses with maps <em>before</em> visiting. A map on your site builds trust.</div>
+    <div class="ben"><strong>&#x267B;&#xFE0F; Avoid Code Duplication</strong>No need to reinvent the wheel &mdash; standard code routines already exist within the API.</div>
+    <div class="ben"><strong>&#x1F517; Simplify IT Models</strong>Easier to integrate with business partners, suppliers, and downstream vendors.</div>
+    <div class="ben"><strong>&#x1F4CA; Gain Deeper Insights</strong>Pattern-based data analytics that traditional text-only reporting simply can&#x27;t provide.</div>
+    <div class="ben"><strong>&#x1F30F; Go Global</strong>Map APIs inherently support localization &mdash; they don&#x27;t care where in the world your users are.</div>
+  </div>
+  <div class="note" style="margin-top:4px">&#x1F4A1; <strong>Analytical Bonus:</strong> Developers use maps to retrieve <em>region statistics, proximity details, travel distances, and consumer trends</em>. Researchers use them for <em>weather anomaly detection, disease outbreak tracking, disaster grid planning, and customer behavior analysis</em>.</div>
+</div></div>
+
+<!-- 6 EMBED (NO-CODE WAY) -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 3 &middot; The No-Code Way</div>
+  <div class="stitle">Embed a Map with an <span class="ab">iframe</span></div>
+  <div class="ssub" style="margin-bottom:12px">Two ways to integrate a Google Map into HTML: <strong>with an API key</strong> (professional, customizable) or <strong>without a key</strong> using the Embed method (quick, easy). Here&#x27;s the 3-step no-code approach.</div>
+  <div style="display:flex;flex-direction:column;gap:12px;flex:1">
+    <div class="step">
+      <div class="stepnum" style="background:#1a2e48;color:#5cb8ff">1</div>
+      <div>
+        <div class="steplabel">Search for Your Desired Location</div>
+        <div class="stepdesc">Go to <code>maps.google.com</code> and search for the specific location you want to display &mdash; e.g., <em>&ldquo;Iloilo City, Iloilo&rdquo;</em>. Wait for the pin to drop on the map.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="stepnum" style="background:#162a1e;color:#4ee3a0">2</div>
+      <div>
+        <div class="steplabel">Copy the Embed Code</div>
+        <div class="stepdesc"><ul style="list-style:none;padding:0;margin-top:4px">
+          <li style="padding:2px 0 2px 16px;position:relative"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>Click the <strong>&ldquo;Share&rdquo;</strong> button (side panel or top left)</li>
+          <li style="padding:2px 0 2px 16px;position:relative"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>In the pop-up, click the <strong>&ldquo;Embed a map&rdquo;</strong> tab</li>
+          <li style="padding:2px 0 2px 16px;position:relative"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>Google provides an <code>&lt;iframe&gt;</code> snippet &mdash; click <strong>&ldquo;Copy HTML&rdquo;</strong></li>
+        </ul></div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="stepnum" style="background:#381f10;color:#ffaa5e">3</div>
+      <div>
+        <div class="steplabel">Paste It Inside Your HTML Page</div>
+        <div class="stepdesc">Open your HTML file in a code editor and paste the copied <code>&lt;iframe&gt;</code> code wherever you want the map to appear (usually inside <code>&lt;body&gt;</code>).</div>
+      </div>
+    </div>
+    <div class="pre">
+      <div class="prebar"><span class="prelang">html &mdash; sample iframe</span><button class="copybtn" onclick="doCopy(this,'if1')">Copy</button></div>
+      <pre id="if1"><span class="tg">&lt;iframe</span>
+  <span class="at">src</span>=<span class="st">"https://www.google.com/maps/embed?pb=!1m18!..."</span>
+  <span class="at">width</span>=<span class="st">"600"</span> <span class="at">height</span>=<span class="st">"450"</span>
+  <span class="at">style</span>=<span class="st">"border:0;"</span>
+  <span class="at">allowfullscreen</span>=<span class="st">""</span> <span class="at">loading</span>=<span class="st">"lazy"</span><span class="tg">&gt;&lt;/iframe&gt;</span></pre>
+    </div>
+    <div class="note">&#x1F4A1; <strong>Pro Tip:</strong> Resize the map by adjusting the <code>width</code> and <code>height</code> attributes inside the <code>&lt;iframe&gt;</code>. Use <code>width="100%"</code> for responsive layouts.</div>
+  </div>
+</div></div>
+
+<!-- 7 INTERACTIVE JS PROTOTYPE -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Advanced Drill &middot; Interactive Map</div>
+  <div class="stitle">The <span class="ap">JavaScript</span> AR Map Prototype</div>
+  <div class="ssub" style="margin-bottom:12px">The <code>&lt;iframe&gt;</code> method is static. For AR-focused apps, you need <strong>interactivity</strong>. This prototype combines a location prompt (simulating location-based AR) with a Google Maps redirect. Save as <code>map.html</code>.</div>
+  <div class="pre" style="margin-bottom:10px">
+    <div class="prebar"><span class="prelang">html &mdash; map.html</span><button class="copybtn" onclick="doCopy(this,'ar1')">Copy</button></div>
+    <pre id="ar1"><span class="tg">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;title&gt;</span>AR Map Prototype<span class="tg">&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;h2&gt;</span>AR Map Prototype<span class="tg">&lt;/h2&gt;
+  &lt;p&gt;</span>Press the button to check the map<span class="tg">&lt;/p&gt;
+
+  &lt;!-- Button triggers the JavaScript function --&gt;
+  &lt;button</span> <span class="at">onclick</span>=<span class="st">"map_data()"</span><span class="tg">&gt;</span>Map it<span class="tg">&lt;/button&gt;
+
+  &lt;!-- Paragraph to display status messages --&gt;
+  &lt;p</span> <span class="at">id</span>=<span class="st">"demo"</span><span class="tg">&gt;&lt;/p&gt;
+
+  &lt;script&gt;</span>
+    <span class="kw">function</span> <span class="fn">map_data</span>() {
+      <span class="cm">// Ask the user for a location</span>
+      <span class="kw">let</span> x = <span class="fn">prompt</span>(<span class="st">"Enter location"</span>);
+
+      <span class="cm">// Check if input matches target location</span>
+      <span class="kw">if</span> (x == <span class="st">"iloilo"</span>) {
+        <span class="cm">// Open Google Maps URL in a new window</span>
+        window.<span class="fn">open</span>(<span class="st">"https://www.google.com/maps/place/Iloilo+City,+Iloilo/..."</span>);
+      } <span class="kw">else</span> {
+        <span class="cm">// Display error message</span>
+        document.<span class="fn">getElementById</span>(<span class="st">"demo"</span>).innerHTML = <span class="st">"404! Location not found."</span>;
+      }
+    }
+  <span class="tg">&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</span></pre>
+  </div>
+</div></div>
+
+<!-- 8 CODE BREAKDOWN -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Advanced Drill &middot; Breakdown</div>
+  <div class="stitle">How the <span class="ap">Prototype</span> Works</div>
+  <div class="g2" style="flex:1">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card">
+        <div class="ct">&#x1F3AF; Line-by-Line Logic</div>
+        <div class="cb"><ul>
+          <li><code>onclick="map_data()"</code> &mdash; the button click event triggers the JS function</li>
+          <li><code>prompt("Enter location")</code> &mdash; opens a modal asking for text input</li>
+          <li><code>if (x == "iloilo")</code> &mdash; checks if the user typed the target keyword</li>
+          <li><code>window.open(URL)</code> &mdash; opens the Google Maps location in a new tab</li>
+          <li><code>innerHTML = "404!..."</code> &mdash; error path if no match</li>
+        </ul></div>
+      </div>
+      <div class="card g">
+        <div class="ct">&#x1F517; Why This Is &ldquo;AR-Like&rdquo;</div>
+        <div class="cb">This mimics location-based AR flow: <strong>trigger &rarr; check location &rarr; display content</strong>. Real AR apps replace the <code>prompt()</code> with actual GPS data via <code>navigator.geolocation</code> (from earlier slide), and replace <code>window.open()</code> with 3D content rendering.</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card o">
+        <div class="ct">&#x1F680; Level-Up Challenge Ideas</div>
+        <div class="cb"><ul>
+          <li>Replace <code>"iloilo"</code> with your own city or landmark</li>
+          <li>Change the URL to point to your specific location</li>
+          <li>Customize the error to <code>&ldquo;Location not found. Please try another city.&rdquo;</code></li>
+          <li>Add multiple valid locations using <code>else if</code> chains</li>
+          <li>Combine with the <code>navigator.geolocation</code> API for real GPS</li>
+        </ul></div>
+      </div>
+      <div class="card r">
+        <div class="ct">&#x26A0;&#xFE0F; Limitations to Know</div>
+        <div class="cb">This prototype is <strong>case-sensitive</strong> (typing <em>&ldquo;Iloilo&rdquo;</em> won&#x27;t match). Add <code>x.toLowerCase()</code> before comparison to fix. Also, <code>prompt()</code> is old-school &mdash; modern apps use HTML form inputs for better UX.</div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 9 API COMPARISON -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 4 &middot; API Comparison</div>
+  <div class="stitle">Which Map API Should You <span class="ao">Choose</span>?</div>
+  <div class="ssub" style="margin-bottom:12px"><strong>&ldquo;Best&rdquo;</strong> depends on your needs. Google Maps is the industry standard but can get costly at scale. Here&#x27;s how the top four stack up.</div>
+  <div class="tw" style="margin-bottom:12px"><table>
+    <thead><tr><th>Map API</th><th>Imagery</th><th>Free Tier</th><th>Best For</th></tr></thead>
+    <tbody>
+      <tr><td>Google Maps</td><td style="font-family:sans-serif;color:#4ee3a0">Yes &#x2705;</td><td style="font-family:sans-serif">$200 free usage / month</td><td style="font-family:sans-serif">General use, broad features, best street view quality</td></tr>
+      <tr><td>Bing Maps</td><td style="font-family:sans-serif;color:#4ee3a0">Yes &#x2705;</td><td style="font-family:sans-serif">Unpublished / negotiable</td><td style="font-family:sans-serif">Microsoft ecosystem integration (Azure, Office)</td></tr>
+      <tr><td>Mapbox</td><td style="font-family:sans-serif;color:#4ee3a0">Yes &#x2705;</td><td style="font-family:sans-serif">Up to 50,000 map views / month</td><td style="font-family:sans-serif">Highly customizable vector maps, developer-friendly</td></tr>
+      <tr><td>Foursquare</td><td style="font-family:sans-serif;color:#4ee3a0">Yes &#x2705;</td><td style="font-family:sans-serif">Up to 99,500 API calls / month</td><td style="font-family:sans-serif">Location data analytics &amp; venue discovery</td></tr>
+    </tbody>
+  </table></div>
+  <div class="g4">
+    <div class="card" style="text-align:center;border-left:none;border-top:3px solid #5cb8ff">
+      <div style="font-size:24px;margin-bottom:4px">&#x1F947;</div>
+      <div style="font-weight:700;color:#5cb8ff;font-size:14px">Most Complete</div>
+      <div style="font-size:13px;color:#7592b2">Google Maps</div>
+    </div>
+    <div class="card" style="text-align:center;border-left:none;border-top:3px solid #4ee3a0">
+      <div style="font-size:24px;margin-bottom:4px">&#x1F3A8;</div>
+      <div style="font-weight:700;color:#4ee3a0;font-size:14px">Most Customizable</div>
+      <div style="font-size:13px;color:#7592b2">Mapbox</div>
+    </div>
+    <div class="card" style="text-align:center;border-left:none;border-top:3px solid #b98cfa">
+      <div style="font-size:24px;margin-bottom:4px">&#x1F4CA;</div>
+      <div style="font-weight:700;color:#b98cfa;font-size:14px">Best Analytics</div>
+      <div style="font-size:13px;color:#7592b2">Foursquare</div>
+    </div>
+    <div class="card" style="text-align:center;border-left:none;border-top:3px solid #ffaa5e">
+      <div style="font-size:24px;margin-bottom:4px">&#x1F3E2;</div>
+      <div style="font-weight:700;color:#ffaa5e;font-size:14px">Enterprise-Friendly</div>
+      <div style="font-size:13px;color:#7592b2">Bing Maps</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 10 ANALOGIES + USE CASES -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Analogies &amp; Use Cases</div>
+  <div class="stitle">Maps in the <span class="ao">Real World</span></div>
+  <div class="g2" style="flex:1">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card y">
+        <div class="ct">&#x1F5FA;&#xFE0F; The Digital Town Guide Analogy</div>
+        <div class="cb">Think of a Map API like a high-tech tourist guide. You don&#x27;t have to be a local to find a hidden coffee shop &mdash; you just ask the guide, and it instantly gives you:<ul>
+          <li>Exact coordinates</li>
+          <li>A photo of the storefront</li>
+          <li>Street view</li>
+          <li>Walking time and directions</li>
+        </ul></div>
+      </div>
+      <div class="card c">
+        <div class="ct">&#x1F3DB;&#xFE0F; Use Case 1 &mdash; AR Tourism</div>
+        <div class="cb">A city tourism board develops an app. When a user points their phone at a historic building, the AR overlay uses a Map API to fetch the building&#x27;s geolocation. It then pins <strong>3D information bubbles</strong> around the building showing its history &mdash; directly overlaying the user&#x27;s real-world view.</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card g">
+        <div class="ct">&#x1F69A; Use Case 2 &mdash; Fleet Management</div>
+        <div class="cb">A logistics company uses a Map API to track delivery trucks in real-time. The dashboard displays a custom Google Map with interactive markers for each truck. Clicking a marker shows <strong>real-time distance data</strong> to the next destination, enabling efficient dispatch and routing.</div>
+      </div>
+      <div class="card p">
+        <div class="ct">&#x1F517; Connection to Prior Modules</div>
+        <div class="cb"><ul>
+          <li><strong>M15</strong> &mdash; you learned <code>getUserMedia()</code> Device APIs</li>
+          <li><strong>M16</strong> &mdash; Location-Based AR (Pok&eacute;mon GO) uses this</li>
+          <li><strong>M22</strong> &mdash; you connected Forms to WebAR via QR</li>
+          <li><strong>M23</strong> &mdash; you now add geographic intelligence</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 11 FAQ -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">FAQs</div>
+  <div class="stitle">Common Questions <span class="ao">Answered</span></div>
+  <div style="display:flex;flex-direction:column;gap:12px;flex:1">
+    <div class="card">
+      <div class="ct">&#x2753; What does a Map API do?</div>
+      <div class="cb">A Map API provides <strong>prepackaged pieces of code</strong> that let you quickly include dynamic, interactive maps in websites or mobile apps. They&#x27;re available for Android, iOS, web browsers, and as HTTP web services for backend data integration.</div>
+    </div>
+    <div class="card g">
+      <div class="ct">&#x2753; Which Map API is best?</div>
+      <div class="cb">Depends on your needs:<ul>
+        <li><strong>Google Maps</strong> &mdash; industry standard, best imagery/features (but costly at scale)</li>
+        <li><strong>Mapbox</strong> &mdash; ~50k free views/month, best for custom styling</li>
+        <li><strong>Bing Maps</strong> &mdash; ideal within Microsoft/Azure ecosystems</li>
+        <li><strong>Foursquare</strong> &mdash; ~99.5k free calls/month, best for venue analytics</li>
+      </ul></div>
+    </div>
+    <div class="card p">
+      <div class="ct">&#x2753; Geocoding vs Reverse Geocoding?</div>
+      <div class="cb"><strong>Geocoding</strong> turns a human address (&ldquo;1600 Amphitheatre Pkwy&rdquo;) into GPS coordinates (Lat/Lng). <strong>Reverse Geocoding</strong> does the opposite &mdash; takes coordinates and returns the nearest human-readable address.</div>
+    </div>
+    <div class="card o">
+      <div class="ct">&#x2753; Do I need an API key for Google Maps?</div>
+      <div class="cb">For <strong>professional/production websites</strong>: yes &mdash; sign up for Google Cloud Platform and generate a key.<br><br>For <strong>simple demos or hobby projects</strong>: no &mdash; use the &ldquo;Embed a map&rdquo; <code>&lt;iframe&gt;</code> method without a key.</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 12 KEY QUOTES -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Key Quotes &amp; Takeaways</div>
+  <div class="stitle">Words Worth <span class="ay">Remembering</span></div>
+  <div style="display:flex;flex-direction:column;gap:14px;flex:1;justify-content:center">
+    <div class="qqt">Motivation is what gets you started. Habit is what keeps you going.
+      <div class="qsrc">&mdash; Jim Ryun &middot; quoted in Module 23</div></div>
+    <div class="qqt" style="border-left-color:#4ee3a0;font-style:normal">
+      <div style="font-size:13px;font-weight:800;color:#4ee3a0;letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px">Module 23 Key Takeaways</div>
+      <ul style="list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;font-size:15px">
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>Map APIs add <strong>location intelligence</strong> to web &amp; AR apps</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>Core features: Geocoding, Reverse Geocoding, Geolocation, Directions</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>Two integration paths: API Key (professional) or iframe Embed (no-code)</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>Interactive maps need JavaScript logic (see prototype)</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span><code>navigator.geolocation</code> = browser-native user location API</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>Top 4 APIs: Google, Mapbox, Bing, Foursquare</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>Reduces engineering costs, accelerates dev, standardizes IT</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>Maps + AR = tourism, fleet, navigation, real-estate visualization</li>
+      </ul>
+    </div>
+  </div>
+</div></div>
+
+<!-- 13 TRUE OR FALSE -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Skill-Building Check &middot; True or False</div>
+  <div class="stitle">Write <span class="ag">T</span> or <span class="ar">F</span></div>
+  <div class="ssub" style="margin-bottom:12px">Read each statement carefully. Write <strong>T</strong> if true, <strong>F</strong> if false. Answers on the next slide.</div>
+  <div style="background:#1b2236;border-radius:14px;overflow:hidden;flex:1">
+    <div style="padding:6px 18px">
+      <div class="tfrow">
+        <div class="tfnum">1</div>
+        <div class="tfstmt">Accelerating digital development is not possible while using Agile methodologies.</div>
+        <div class="tflabel tff">?</div>
+      </div>
+      <div class="tfrow">
+        <div class="tfnum">2</div>
+        <div class="tfstmt">Developers can customize maps with context- and industry-relevant data overlays using widgets, gadgets, markers, graphics, images, and popups.</div>
+        <div class="tflabel tft">?</div>
+      </div>
+      <div class="tfrow">
+        <div class="tfnum">3</div>
+        <div class="tfstmt">Integrating business partnerships and suppliers in your industry is a confirmed benefit of using Map APIs.</div>
+        <div class="tflabel tft">?</div>
+      </div>
+      <div class="tfrow">
+        <div class="tfnum">4</div>
+        <div class="tfstmt">A Map API provides location intelligence for software developers creating location-based products and services.</div>
+        <div class="tflabel tft">?</div>
+      </div>
+      <div class="tfrow">
+        <div class="tfnum">5</div>
+        <div class="tfstmt">Development costs increase when utilizing open-source mapping tools.</div>
+        <div class="tflabel tff">?</div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 14 ANSWER KEY -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Answer Key &middot; True or False</div>
+  <div class="stitle">Answers &amp; <span class="ag">Explanations</span></div>
+  <div style="display:flex;flex-direction:column;gap:10px;flex:1;justify-content:center">
+    <div class="akrow f">
+      <div class="akn">1 &mdash; F</div>
+      <div><div class="aka">FALSE &mdash; Agile methodologies actually accelerate development</div><div class="akx">Accelerating digital development is highly achievable and often relies on Agile methodologies combined with pre-built API tools. Agile and Map APIs work together perfectly to shorten timelines.</div></div>
+    </div>
+    <div class="akrow t">
+      <div class="akn">2 &mdash; T</div>
+      <div><div class="aka">TRUE &mdash; Maps support all these overlay types</div><div class="akx">Developers can customize maps with widgets, gadgets, interactive markers, custom graphics, images, and popups. Data visualization layers like heatmaps and traffic overlays are also standard.</div></div>
+    </div>
+    <div class="akrow t">
+      <div class="akn">3 &mdash; T</div>
+      <div><div class="aka">TRUE &mdash; Simplifying integration is a real benefit</div><div class="akx">One of the confirmed benefits of Map APIs is simplified IT models &mdash; making it easier to integrate with business partners, suppliers, and downstream vendors across your industry.</div></div>
+    </div>
+    <div class="akrow t">
+      <div class="akn">4 &mdash; T</div>
+      <div><div class="aka">TRUE &mdash; This is the exact core definition</div><div class="akx">A Map API provides location intelligence for software developers creating location-based products and services. This is the definition of what a Map API is.</div></div>
+    </div>
+    <div class="akrow f">
+      <div class="akn">5 &mdash; F</div>
+      <div><div class="aka">FALSE &mdash; Open-source tools REDUCE costs</div><div class="akx">Using open-source tools and standard APIs significantly reduces costs by eliminating the need to create complex mapping systems from scratch. Developers save millions in engineering costs.</div></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 15 CLOSING -->
+<div class="sw"><div class="slide" style="align-items:center;justify-content:center;text-align:center">
+  <div class="eyebrow" style="border-bottom:none">Module 23 &middot; Complete</div>
+  <div class="tgiant" style="font-size:clamp(34px,4.6vw,60px);margin-top:10px">The Whole <span class="ab">World</span><br>on Your <span class="ag">Screen</span>.</div>
+  <div class="qqt" style="max-width:740px;text-align:left;border-left-color:#fbbf24;font-size:16px;margin-top:14px">
+    Motivation is what gets you started. Habit is what keeps you going. You now understand how Map APIs bring geographic intelligence to any web app or AR experience &mdash; from a static iframe to a full geolocation-powered prototype. The map is just the beginning.
+    <div class="qsrc">&mdash; Jim Ryun &middot; applied &#x1F680;</div>
+  </div>
+  <div class="g4" style="max-width:1080px;margin-top:14px">
+    <div class="card" style="text-align:left"><div class="ct">Embed It</div><div class="cb" style="font-size:14px">Go to Google Maps, find your school or hometown, copy the iframe, paste it into a fresh HTML file, and open it in your browser.</div></div>
+    <div class="card g" style="text-align:left"><div class="ct">Level Up</div><div class="cb" style="font-size:14px">Modify the JS prototype: replace <code>"iloilo"</code> with your city, update the URL, customize the error, and add <code>.toLowerCase()</code> to make it case-insensitive.</div></div>
+    <div class="card p" style="text-align:left"><div class="ct">Locate Yourself</div><div class="cb" style="font-size:14px">Try the <code>navigator.geolocation.getCurrentPosition()</code> snippet in your browser console. Watch it ask for permission &mdash; then log your real coordinates.</div></div>
+    <div class="card o" style="text-align:left"><div class="ct">Full Stack</div><div class="cb" style="font-size:14px">Combine M22 + M23: create a Google Form with a QR that opens a map showing an AR experience at a specific GPS coordinate.</div></div>
+  </div>
+  <div style="font-size:14px;color:#2e4560;margin-top:14px">Press <span style="color:#5cb8ff">Home</span> to restart &middot; <span style="color:#5cb8ff">?</span> for shortcuts</div>
+</div></div>
+
+</body>
+</html>

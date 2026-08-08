@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Module 16 &mdash; Introduction to Augmented Reality (AR)</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:#090c18;color:#e8edf5}
+#deck{position:relative;width:100vw;height:100vh;overflow:hidden}
+.sw{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:28px 48px 50px;opacity:0;transform:translateX(40px);transition:opacity .35s ease,transform .35s ease;pointer-events:none;overflow-y:auto}
+.sw.active{opacity:1;transform:translateX(0);pointer-events:auto}
+.sw.xl{opacity:0;transform:translateX(-40px)}
+.sw.xr{opacity:0;transform:translateX(40px)}
+@media(prefers-reduced-motion:reduce){.sw{transition:none!important;transform:none!important}.sw.xl,.sw.xr{opacity:0;transform:none!important}}
+.slide{width:100%;max-width:1260px;max-height:100%;background:#131726;border-radius:22px;padding:32px 42px 36px;box-shadow:0 24px 72px rgba(0,0,0,.78);display:flex;flex-direction:column;gap:13px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#232d47 transparent}
+.slide::-webkit-scrollbar{width:5px}.slide::-webkit-scrollbar-thumb{background:#232d47;border-radius:4px}
+.eyebrow{font-size:13px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#4a6888;border-bottom:2px solid #1b2236;padding-bottom:7px}
+.stitle{font-size:clamp(26px,3.3vw,44px);font-weight:900;line-height:1.12;color:#fff;letter-spacing:-.5px}
+.ssub{font-size:16px;color:#7592b2;line-height:1.6}
+.ab{color:#5cb8ff}.ag{color:#4ee3a0}.ao{color:#ffaa5e}.ap{color:#b98cfa}.ar{color:#f87171}.ac{color:#22d3ee}.ay{color:#fbbf24}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px 22px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 18px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 14px}
+.card{background:#1b2236;border-radius:14px;padding:16px 19px;border-left:4px solid #5cb8ff;min-width:0}
+.card.g{border-left-color:#4ee3a0}.card.o{border-left-color:#ffaa5e}.card.p{border-left-color:#b98cfa}.card.r{border-left-color:#f87171}.card.c{border-left-color:#22d3ee}.card.y{border-left-color:#fbbf24}.card.nb{border-left:none}
+.ct{font-size:14px;font-weight:700;color:#96b0ca;letter-spacing:.3px;margin-bottom:6px}
+.cb{font-size:15px;line-height:1.65;color:#c6d4e4}
+.cb strong{color:#eef2fa}
+.cb ul{list-style:none;padding:0;margin:6px 0 0}
+.cb ul li{padding:3px 0 3px 20px;position:relative;font-size:15px;line-height:1.5}
+.cb ul li::before{content:"▸";position:absolute;left:0;color:#5cb8ff;font-weight:700}
+.tw{overflow-x:auto;border-radius:12px;border:1px solid #1b2236}
+.tw table{width:100%;border-collapse:collapse;font-size:14px}
+.tw th{background:#171d2e;color:#7592b2;font-size:12px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;padding:9px 14px;text-align:left;border-bottom:1px solid #1b2236}
+.tw td{padding:9px 14px;border-bottom:1px solid #171d2e;color:#c6d4e4;vertical-align:top;line-height:1.55;font-size:14px}
+.tw td:first-child{font-weight:700;color:#5cb8ff;white-space:nowrap;font-size:13px}
+.tw tr:last-child td{border-bottom:none}
+.tw tr:hover td{background:rgba(92,184,255,.04)}
+#prog{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#5cb8ff,#4ee3a0,#b98cfa);transition:width .3s ease;z-index:100;border-radius:0 2px 2px 0}
+#ctr{position:fixed;bottom:17px;right:22px;font-size:13px;font-weight:700;color:#334d66;z-index:100}
+#sco{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center}
+#sco.show{display:flex}
+#scb{background:#1b2236;border-radius:18px;padding:30px 38px;max-width:460px;width:92%}
+#scb h3{font-size:18px;font-weight:900;color:#fff;margin-bottom:16px}
+.sk{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #1b2236;font-size:15px;color:#c6d4e4}
+.sk:last-child{border-bottom:none}
+.key{font-family:monospace;background:#131726;padding:2px 9px;border-radius:6px;color:#5cb8ff;font-size:13px}
+.scclose{margin-top:18px;background:#5cb8ff;color:#090c18;border:none;border-radius:10px;padding:9px 24px;font-size:15px;font-weight:700;cursor:pointer;width:100%}
+.qblock{background:#1b2236;border-radius:15px;padding:18px 22px;border-left:5px solid #b98cfa;min-width:0}
+.qnum{font-size:13px;font-weight:800;color:#b98cfa;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px}
+.qtext{font-size:15px;color:#e8edf5;font-weight:600;margin-bottom:11px;line-height:1.5}
+.qchoices{list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:5px 16px}
+.qchoices li{font-size:14px;color:#8aaabe;padding:2px 0;line-height:1.4}
+.qchoices li span{color:#b98cfa;font-weight:800;margin-right:4px}
+/* matching */
+.mrow{display:flex;align-items:flex-start;gap:14px;padding:8px 0;border-bottom:1px solid #1b2236;font-size:14px}
+.mrow:last-child{border-bottom:none}
+.mlet{font-weight:900;color:#ffaa5e;min-width:22px;flex-shrink:0;padding-top:1px}
+.mdesc{color:#c6d4e4;flex:1;line-height:1.5}
+.mterm{font-weight:700;color:#5cb8ff;min-width:180px;flex-shrink:0;font-size:13px;line-height:1.5}
+/* answer key */
+.akrow{display:flex;gap:12px;align-items:flex-start;background:#16281e;border-radius:12px;padding:10px 15px}
+.akrow.mt{background:#1e2010}
+.akn{font-size:15px;font-weight:900;color:#4ee3a0;min-width:26px;padding-top:1px}
+.akrow.mt .akn{color:#fbbf24}
+.aka{font-size:14px;font-weight:700;color:#4ee3a0}
+.akrow.mt .aka{color:#fbbf24}
+.akx{font-size:13px;color:#3d7a58;margin-top:2px;line-height:1.5}
+.akrow.mt .akx{color:#6a6020}
+.qqt{background:#1b2236;border-radius:14px;padding:20px 26px;border-left:5px solid #fbbf24;font-size:16px;line-height:1.75;color:#d6e2f0;font-style:italic}
+.qqt .qsrc{font-size:14px;color:#7592b2;font-style:normal;margin-top:8px;font-weight:600}
+.pill{display:inline-block;font-size:14px;font-weight:700;padding:4px 13px;border-radius:20px;margin:3px}
+.pill.b{background:#1a2e48;color:#5cb8ff}.pill.g{background:#162a1e;color:#4ee3a0}.pill.o{background:#381f10;color:#ffaa5e}.pill.p{background:#261840;color:#b98cfa}.pill.c{background:#0e2432;color:#22d3ee}.pill.r{background:#2a1010;color:#f87171}
+code{font-family:monospace;font-size:14px;background:#1b2236;padding:1px 7px;border-radius:5px;color:#5cb8ff}
+.tgiant{font-size:clamp(36px,5vw,66px);font-weight:900;line-height:1.06;letter-spacing:-1.5px}
+.note{background:#102038;border:1px solid #1e3a5a;border-radius:11px;padding:12px 16px;font-size:15px;color:#7ab8e0;line-height:1.65}
+.warn{background:#2a1a10;border:1px solid #7a4a20;border-radius:11px;padding:12px 16px;font-size:15px;color:#ffaa5e;line-height:1.65}
+/* AR type cards */
+.artype{background:#1b2236;border-radius:16px;padding:16px 18px;border-top:4px solid #5cb8ff;min-width:0}
+.artype.g{border-top-color:#4ee3a0}
+.artype.p{border-top-color:#b98cfa}
+.artype.o{border-top-color:#ffaa5e}
+.artype.r{border-top-color:#f87171}
+.artype.c{border-top-color:#22d3ee}
+.artype-num{font-size:12px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px;color:#4a6888}
+.artype-title{font-size:15px;font-weight:800;color:#fff;margin-bottom:8px}
+.artype-body{font-size:14px;color:#c6d4e4;line-height:1.55}
+/* sense pills */
+.sense{display:inline-flex;align-items:center;gap:6px;background:#1b2236;border-radius:10px;padding:8px 14px;font-size:14px;color:#c6d4e4}
+.sense-icon{font-size:18px}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<div id="ctr"></div>
+<div id="deck"></div>
+<div id="sco">
+  <div id="scb">
+    <h3>&#x2328;&#xFE0F; Keyboard Shortcuts</h3>
+    <div class="sk"><span>Next slide</span><span><span class="key">&rarr;</span> <span class="key">Right-click</span></span></div>
+    <div class="sk"><span>Previous slide</span><span><span class="key">&larr;</span> <span class="key">Mouse3</span></span></div>
+    <div class="sk"><span>First / Last</span><span><span class="key">Home</span> / <span class="key">End</span></span></div>
+    <div class="sk"><span>This help</span><span><span class="key">?</span></span></div>
+    <button class="scclose" onclick="document.getElementById('sco').classList.remove('show')">Close</button>
+  </div>
+</div>
+<script>
+var slides,cur,tot,busy;
+function initDeck(){slides=document.querySelectorAll('.sw');cur=0;tot=slides.length;busy=false;slides[0].classList.add('active');ui();}
+function ui(){document.getElementById('prog').style.width=((cur+1)/tot*100)+'%';document.getElementById('ctr').textContent=(cur+1)+' / '+tot;}
+function go(idx,dir){
+  if(busy||idx===cur||idx<0||idx>=tot)return;busy=true;
+  var pv=slides[cur],nx=slides[idx];
+  pv.classList.remove('active');pv.classList.add(dir===1?'xl':'xr');
+  nx.style.transform=dir===1?'translateX(40px)':'translateX(-40px)';nx.style.opacity='0';
+  nx.classList.add('active');
+  requestAnimationFrame(function(){requestAnimationFrame(function(){nx.style.transform='';nx.style.opacity='';});});
+  cur=idx;ui();setTimeout(function(){pv.classList.remove('xl','xr');busy=false;},380);
+}
+document.addEventListener('DOMContentLoaded',function(){initDeck();});
+document.addEventListener('keydown',function(e){
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')go(cur+1,1);
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(cur-1,-1);
+  else if(e.key==='Home')go(0,-1);
+  else if(e.key==='End')go(tot-1,1);
+  else if(e.key==='?')document.getElementById('sco').classList.toggle('show');
+  else if(e.key==='Escape')document.getElementById('sco').classList.remove('show');
+});
+document.addEventListener('mousedown',function(e){
+  if(e.button===2){e.preventDefault();e.stopImmediatePropagation();go(cur+1,1);}
+  else if(e.button===3){e.preventDefault();e.stopImmediatePropagation();go(cur-1,-1);}
+  else if(e.button===4){e.preventDefault();e.stopImmediatePropagation();go(cur+1,1);}
+},true);
+document.addEventListener('contextmenu',function(e){e.preventDefault();},true);
+document.addEventListener('auxclick',function(e){if(e.button!==0)e.preventDefault();},true);
+var tx=0;
+document.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;},{passive:true});
+document.addEventListener('touchend',function(e){var dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50)go(cur+(dx<0?1:-1),dx<0?1:-1);},{passive:true});
+</script>
+
+<!-- ══════════════════════ SLIDES ══════════════════════ -->
+
+<!-- 0 TITLE -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Module 16 &middot; ITE 380 Human Computer Interaction 2</div>
+  <div class="tgiant" style="margin-top:10px">Introduction<br>to <span class="ab">Augmented</span><br><span class="ag">Reality</span></div>
+  <div class="ssub" style="margin-top:14px">Blending the physical and digital worlds &mdash; AR definition, hardware, display types, and the 6 types of AR</div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:20px">
+    <span class="pill b">What is AR?</span>
+    <span class="pill g">AR vs VR</span>
+    <span class="pill o">Hardware &amp; Displays</span>
+    <span class="pill p">6 Types of AR</span>
+    <span class="pill c">Real-World Use Cases</span>
+  </div>
+  <div style="margin-top:22px;font-size:14px;color:#2e4560">Right-click or &rarr; to navigate &middot; Press ? for shortcuts</div>
+</div></div>
+
+<!-- 1 WHAT IS AR -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 1 &middot; Definition</div>
+  <div class="stitle">What Is <span class="ab">Augmented Reality</span>?</div>
+  <div class="ssub" style="margin-bottom:12px"><strong>Augmented Reality (AR)</strong> is an interactive experience that combines the real-world environment with computer-generated perceptual information.</div>
+  <div class="g2" style="margin-bottom:14px">
+    <div class="card">
+      <div class="ct">&#x1F9E0; Three Core Features of AR</div>
+      <div class="cb">
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+          <div style="display:flex;align-items:center;gap:10px;background:#0c1020;padding:10px 14px;border-radius:10px;border:1px solid #1b2236">
+            <span style="background:#1a2e48;color:#5cb8ff;font-weight:900;font-size:13px;padding:3px 10px;border-radius:6px;flex-shrink:0">1</span>
+            <span style="font-size:14px;color:#c6d4e4">A <strong style="color:#eef2fa">combination</strong> of the real and virtual worlds</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;background:#0c1020;padding:10px 14px;border-radius:10px;border:1px solid #1b2236">
+            <span style="background:#162a1e;color:#4ee3a0;font-weight:900;font-size:13px;padding:3px 10px;border-radius:6px;flex-shrink:0">2</span>
+            <span style="font-size:14px;color:#c6d4e4"><strong style="color:#eef2fa">Real-time interaction</strong> between the user and digital elements</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;background:#0c1020;padding:10px 14px;border-radius:10px;border:1px solid #1b2236">
+            <span style="background:#261840;color:#b98cfa;font-weight:900;font-size:13px;padding:3px 10px;border-radius:6px;flex-shrink:0">3</span>
+            <span style="font-size:14px;color:#c6d4e4"><strong style="color:#eef2fa">Accurate 3D registration</strong> of virtual and real objects</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card p">
+      <div class="ct">&#x1F321;&#xFE0F; AR Spans Multiple Senses</div>
+      <div class="cb">AR is not limited to visuals. It can span multiple sensory modalities:<br><br>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">
+        <div class="sense"><span class="sense-icon">&#x1F441;&#xFE0F;</span><span><strong>Visual</strong> &mdash; sight</span></div>
+        <div class="sense"><span class="sense-icon">&#x1F442;</span><span><strong>Auditory</strong> &mdash; hearing</span></div>
+        <div class="sense"><span class="sense-icon">&#x270B;</span><span><strong>Haptic</strong> &mdash; touch</span></div>
+        <div class="sense"><span class="sense-icon">&#x1F6B6;</span><span><strong>Somatosensory</strong> &mdash; body movement</span></div>
+        <div class="sense" style="grid-column:1/-1"><span class="sense-icon">&#x1F443;</span><span><strong>Olfactory</strong> &mdash; smell</span></div>
+      </div></div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card g">
+      <div class="ct">&#x2795; Constructive AR</div>
+      <div class="cb"><strong>Adds</strong> digital information to the natural environment &mdash; like placing a virtual couch in your living room or overlaying navigation arrows on a real street.</div>
+    </div>
+    <div class="card r">
+      <div class="ct">&#x2796; Destructive AR</div>
+      <div class="cb"><strong>Masks</strong> or replaces parts of the natural environment with virtual content &mdash; like replacing a billboard with a different advertisement.</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 2 AR vs VR -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 1 &middot; Key Distinction</div>
+  <div class="stitle"><span class="ab">AR</span> vs <span class="ap">VR</span> &mdash; What&#x27;s the Difference?</div>
+  <div class="ssub" style="margin-bottom:14px">These two technologies are often confused &mdash; but their relationship with the real world is fundamentally different.</div>
+  <div class="g2" style="margin-bottom:14px">
+    <div style="background:#101828;border-radius:16px;padding:22px 24px;border:2px solid #5cb8ff">
+      <div style="font-size:22px;margin-bottom:8px">&#x1F4F1;</div>
+      <div style="font-size:18px;font-weight:800;color:#5cb8ff;margin-bottom:10px">Augmented Reality (AR)</div>
+      <div style="font-size:15px;color:#c6d4e4;line-height:1.7"><strong style="color:#eef2fa">Enhances</strong> your current environment by overlaying digital elements on top of the real world.<br><br>You can still see and interact with your physical surroundings. Digital content is <em>added on top</em>.<br><br>
+      <span style="color:#4ee3a0;font-weight:700">Examples:</span> Snapchat filters, Pok&eacute;mon GO, IKEA Place</div>
+    </div>
+    <div style="background:#180e28;border-radius:16px;padding:22px 24px;border:2px solid #b98cfa">
+      <div style="font-size:22px;margin-bottom:8px">&#x1F3A7;</div>
+      <div style="font-size:18px;font-weight:800;color:#b98cfa;margin-bottom:10px">Virtual Reality (VR)</div>
+      <div style="font-size:15px;color:#c6d4e4;line-height:1.7"><strong style="color:#eef2fa">Replaces</strong> your real-world environment entirely with a fully simulated one.<br><br>You are completely immersed in a digital world and cannot see your physical surroundings.<br><br>
+      <span style="color:#f87171;font-weight:700">Examples:</span> Oculus Quest games, VR training simulations</div>
+    </div>
+  </div>
+  <div class="card o">
+    <div class="ct">&#x1F4D0; Also: Mixed Reality (MR)</div>
+    <div class="cb">MR goes beyond AR by allowing digital and physical objects to <strong>interact</strong> with each other in real-time. In AR, a virtual ball just floats. In MR, that virtual ball could <em>roll off a real table and bounce on the real floor</em>.</div>
+  </div>
+</div></div>
+
+<!-- 3 HARDWARE -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 2 &middot; Hardware</div>
+  <div class="stitle">AR <span class="ao">Hardware</span> Components</div>
+  <div class="ssub" style="margin-bottom:12px">AR systems require several hardware components working together to understand, track, and render the augmented world.</div>
+  <div class="g2" style="margin-bottom:14px">
+    <div class="card">
+      <div class="ct">&#x1F9B4; Core Foundational Hardware</div>
+      <div class="cb"><ul>
+        <li><strong>Processor</strong> &mdash; the brain that runs AR computations</li>
+        <li><strong>Display</strong> &mdash; where augmented content is shown to the user</li>
+        <li><strong>Sensors</strong> &mdash; cameras, GPS, accelerometers, compasses</li>
+        <li><strong>Input Devices</strong> &mdash; translate user actions into instructions</li>
+      </ul></div>
+    </div>
+    <div class="card g">
+      <div class="ct">&#x1F4F6; Sensors &amp; MEMS</div>
+      <div class="cb">Modern AR devices use <strong>MEMS</strong> (Microelectromechanical Systems) &mdash; tiny embedded sensors that include:<ul>
+        <li>Cameras for visual tracking</li>
+        <li>Accelerometers for motion detection</li>
+        <li>GPS for location awareness</li>
+        <li>Solid-state compasses for direction</li>
+      </ul>Together they enable <strong>6 Degrees of Freedom (6DoF)</strong> tracking.</div>
+    </div>
+  </div>
+  <div class="g3">
+    <div class="card p">
+      <div class="ct">&#x1F5A5;&#xFE0F; Computer</div>
+      <div class="cb">The &ldquo;brain&rdquo; of the system. Analyzes sensory data, synthesizes augmentations, and generates graphics &mdash; drastically changing how the user perceives the real world.</div>
+    </div>
+    <div class="card o">
+      <div class="ct">&#x1F4E1; Networking</div>
+      <div class="cb">AR often offloads heavy processing to distant machines (cloud). Requires strong network infrastructure to manage <strong>latency</strong> and <strong>bandwidth</strong>.</div>
+    </div>
+    <div class="card c">
+      <div class="ct">&#x1F3AE; Input Devices</div>
+      <div class="cb">Examples: speech recognition, gesture tracking, sensor-embedded wands, styluses, or gloves that translate physical actions into digital commands.</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 4 DISPLAY TYPES PT1 -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 2 &middot; Display Technologies (1 of 2)</div>
+  <div class="stitle">AR <span class="ab">Display</span> Hardware</div>
+  <div class="ssub" style="margin-bottom:12px">AR rendering can be achieved through various display methods, each suited to different applications.</div>
+  <div class="tw"><table>
+    <thead><tr><th>Display Type</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Head-Mounted Display (HMD)</td>
+        <td style="font-family:sans-serif">Worn on the forehead like a harness or helmet. Places images in both physical and virtual field of view. Uses 6DoF sensors to match virtual info to physical space as the user&#x27;s head moves.</td>
+      </tr>
+      <tr>
+        <td>Eyeglasses</td>
+        <td style="font-family:sans-serif">Resembles traditional eyewear. Intercepts the real-world view and re-displays augmented content through the eyepieces.</td>
+      </tr>
+      <tr>
+        <td>Head-Up Display (HUD)</td>
+        <td style="font-family:sans-serif">A transparent display presenting data without requiring the user to look away from their usual viewpoint. <strong>Origin:</strong> Developed in the 1950s for pilots to project flight data into their line of sight &mdash; keeping their &ldquo;heads up.&rdquo;</td>
+      </tr>
+      <tr>
+        <td>Contact Lenses</td>
+        <td style="font-family:sans-serif">Bionic lenses under development (patented by Steve Mann, 1999) to embed AR images, integrated circuitry, LEDs, and wireless communication directly onto the eye.</td>
+      </tr>
+    </tbody>
+  </table></div>
+</div></div>
+
+<!-- 5 DISPLAY TYPES PT2 -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 2 &middot; Display Technologies (2 of 2)</div>
+  <div class="stitle">AR <span class="ab">Display</span> Hardware <span style="font-size:22px;font-weight:400;color:#4a6888">continued</span></div>
+  <div class="tw" style="margin-bottom:14px"><table>
+    <thead><tr><th>Display Type</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Virtual Retinal Display (VRD)</td>
+        <td style="font-family:sans-serif">Under development at the University of Washington. Scans a display directly onto the retina of the viewer&#x27;s eye, producing bright, high-resolution images that appear to float in space.</td>
+      </tr>
+      <tr>
+        <td>Eyetap</td>
+        <td style="font-family:sans-serif">Also known as &ldquo;Generation-2 Glass.&rdquo; Captures rays of light passing through the center of the lens and substitutes computer-controlled light for real light.</td>
+      </tr>
+      <tr>
+        <td>Handheld</td>
+        <td style="font-family:sans-serif">Employs a small display that fits in the user&#x27;s hand &mdash; e.g., smartphones. Early handheld AR used fiducial markers; modern ones use GPS and MEMS sensors.</td>
+      </tr>
+      <tr>
+        <td>Projector Mapping</td>
+        <td style="font-family:sans-serif">Uses digital projectors to display graphical information on physical objects. The display is detached from users, allowing multiple people to view the augmented space simultaneously (collocated collaboration).</td>
+      </tr>
+    </tbody>
+  </table></div>
+  <div class="note">&#x1F4A1; <strong>Software Side:</strong> AR software uses <strong>Image Registration</strong> (computer vision + video tracking + visual odometry) to derive real-world coordinates. <strong>Anugograms</strong> are the computer-generated images used to create AR content &mdash; the science of making them is called <strong>Augography</strong>.</div>
+</div></div>
+
+<!-- 6 6 TYPES OVERVIEW -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 3 &middot; Types of AR</div>
+  <div class="stitle">The <span class="ag">6 Types</span> of Augmented Reality</div>
+  <div class="ssub" style="margin-bottom:14px">AR is not a one-size-fits-all technology. It is categorized into six distinct approaches based on how it interacts with the real world.</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;flex:1">
+    <div class="artype">
+      <div class="artype-num">Type 1</div>
+      <div class="artype-title ab">&#x1F3AF; Marker-Based</div>
+      <div class="artype-body">Uses <strong>image recognition</strong> to scan for specific markers (images or QR codes) and overlays 3D digital objects precisely on top of them.</div>
+    </div>
+    <div class="artype g">
+      <div class="artype-num">Type 2</div>
+      <div class="artype-title ag">&#x1F4F1; Markerless</div>
+      <div class="artype-body">Uses <strong>sensors</strong> (GPS, gyroscope, accelerometer) and computer vision instead of markers &mdash; works in nearly any location.</div>
+    </div>
+    <div class="artype p">
+      <div class="artype-num">Type 3</div>
+      <div class="artype-title ap">&#x1F4A1; Projection-Based</div>
+      <div class="artype-body">Projects immersive light onto flat surfaces to create 3D imagery. Uses <strong>SLAM</strong> to detect human interaction with the light.</div>
+    </div>
+    <div class="artype o">
+      <div class="artype-num">Type 4</div>
+      <div class="artype-title ao">&#x1F4CD; Location-Based</div>
+      <div class="artype-body">Uses the user&#x27;s <strong>GPS location</strong> to trigger digital content. Best known example: <strong>Pok&eacute;mon GO</strong> (2016).</div>
+    </div>
+    <div class="artype r">
+      <div class="artype-num">Type 5</div>
+      <div class="artype-title ar">&#x1F6CB;&#xFE0F; Overlay</div>
+      <div class="artype-body">Replaces the un-augmented view of an object with an <strong>enhanced virtual image</strong> of the same item with multiple visual perspectives.</div>
+    </div>
+    <div class="artype c">
+      <div class="artype-num">Type 6</div>
+      <div class="artype-title ac">&#x1F300; Contour-Based</div>
+      <div class="artype-body">Uses computer vision to <strong>outline contours</strong> of real objects. Excels in low-light situations &mdash; used in safe-driving applications.</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 7 TYPES DEEP DIVE 1-3 -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 3 &middot; AR Types Deep Dive</div>
+  <div class="stitle">Types <span class="ab">1 &ndash; 3</span> Explained</div>
+  <div style="display:flex;flex-direction:column;gap:12px;flex:1">
+    <div class="card">
+      <div class="ct">&#x1F3AF; Type 1 &mdash; Marker-Based AR</div>
+      <div class="cb"><strong>How it works:</strong> The app captures camera footage and scans for specific <strong>markers</strong> &mdash; images or QR codes. Once detected, it overlays a precise 3D digital object anchored to that marker&#x27;s position and orientation.<br><br>
+      <strong>Key trait:</strong> The virtual experience is tightly tied to a specific physical location. Move the marker, move the AR content.<br>
+      <strong>Connection to M11:</strong> The QR codes we generated in the QR Code Generator module are a foundational marker-based trigger technology!</div>
+    </div>
+    <div class="card g">
+      <div class="ct">&#x1F4F1; Type 2 &mdash; Markerless AR</div>
+      <div class="cb"><strong>How it works:</strong> Uses the device&#x27;s <strong>GPS, gyroscope, and accelerometer</strong> plus computer vision to understand the environment &mdash; no specific marker needed.<br><br>
+      <strong>Key trait:</strong> More flexible than marker-based. Can run complex algorithms to display useful content in virtually any location or setting.</div>
+    </div>
+    <div class="card p">
+      <div class="ct">&#x1F4A1; Type 3 &mdash; Projection-Based AR</div>
+      <div class="cb"><strong>How it works:</strong> Projects immersive light onto flat surfaces to create 3D imagery. Uses <strong>SLAM</strong> (Simultaneous Localization and Mapping) to detect when a human interacts with the projected light.<br><br>
+      <strong>Key trait:</strong> Commonly used to create holograms for business presentations or interactive entertainment. Multiple viewers can experience it simultaneously.</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 8 TYPES DEEP DIVE 4-6 -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Topic 3 &middot; AR Types Deep Dive</div>
+  <div class="stitle">Types <span class="ao">4 &ndash; 6</span> Explained</div>
+  <div style="display:flex;flex-direction:column;gap:12px;flex:1">
+    <div class="card o">
+      <div class="ct">&#x1F4CD; Type 4 &mdash; Location-Based AR</div>
+      <div class="cb"><strong>How it works:</strong> Maps the real-world environment and defines visual positions in the user&#x27;s geographic surroundings. When the device&#x27;s GPS detects a match with a mapped location, it superimposes digital imagery.<br><br>
+      <strong>Best-known example: Pok&eacute;mon GO (2016)</strong> &mdash; placed digital creatures in real-world parks and streets based on GPS location. Widely credited as the catalyst for mainstream AR adoption.</div>
+    </div>
+    <div class="card r">
+      <div class="ct">&#x1F6CB;&#xFE0F; Type 5 &mdash; Overlay AR</div>
+      <div class="cb"><strong>How it works:</strong> Replaces the un-augmented view of an object with an <strong>enhanced virtual image</strong> of the exact same item, often offering multiple visual perspectives.<br><br>
+      <strong>Real-world example:</strong> The <strong>Nextech</strong> product configurator lets customers change the color of a 3D product model or visualize how furniture fits in their own room before purchasing.</div>
+    </div>
+    <div class="card c">
+      <div class="ct">&#x1F300; Type 6 &mdash; Contour-Based AR (Outlining AR)</div>
+      <div class="cb"><strong>How it works:</strong> Leverages <strong>SLAM</strong> and advanced computer vision to outline the contours of physical objects and simulate realistic human silhouettes.<br><br>
+      <strong>Practical application:</strong> Excels in <strong>low-light situations</strong> &mdash; used in nighttime safe-driving apps to highlight pedestrians, deer, and hazards on dark roads long before headlights can reach them.</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 9 ANALOGIES -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Analogies &amp; Use Cases</div>
+  <div class="stitle">Making It <span class="ao">Real</span></div>
+  <div class="g2" style="flex:1">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card y">
+        <div class="ct">&#x1F4CC; Sticky Note Analogy &mdash; Marker-Based AR</div>
+        <div class="cb">Marker-based AR is like a high-tech sticky note. You place a specific pattern (the marker) on a desk. Your phone acts as a magnifying glass &mdash; whenever you point it at that note, a 3D animation pops out and stays attached to that exact spot.</div>
+      </div>
+      <div class="card g">
+        <div class="ct">&#x1F4F2; Weather App Analogy &mdash; Location-Based AR</div>
+        <div class="cb">Location-based AR is like a contextual weather app. When you walk into a specific neighborhood, your phone unlocks a new notification. In Pok&eacute;mon GO, that notification is a wild Pok&eacute;mon in your yard &mdash; in a tourism app, it would be historical facts hovering over a monument.</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card p">
+        <div class="ct">&#x1F6CB;&#xFE0F; Use Case 1 &mdash; Furniture Retail (Overlay AR)</div>
+        <div class="cb">Before buying a couch, a user opens the store&#x27;s app. The camera sees the empty living room and overlays a high-resolution 3D model of the couch. The user walks around to see exactly how the size, style, and color fit their actual space. <strong>(IKEA Place)</strong></div>
+      </div>
+      <div class="card r">
+        <div class="ct">&#x1F697; Use Case 2 &mdash; Nighttime Driving (Contour-Based AR)</div>
+        <div class="cb">A car manufacturer equips a vehicle with a heads-up display and infrared cameras. At night, contour-based AR highlights the silhouette of a deer or pedestrian on a dark road &mdash; making them visible to the driver <em>long before</em> headlights can reach them.</div>
+      </div>
+      <div class="card">
+        <div class="ct">&#x1F3AE; Use Case 3 &mdash; Pok&eacute;mon GO (Location-Based)</div>
+        <div class="cb">The 2016 phenomenon that brought AR to the mainstream &mdash; 500M+ downloads in its first year. Placed digital creatures in real-world parks and streets using GPS + camera. Proved AR could be mass-market.</div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 10 FAQ -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">FAQs</div>
+  <div class="stitle">Common Questions <span class="ao">Answered</span></div>
+  <div style="display:flex;flex-direction:column;gap:12px;flex:1">
+    <div class="card p">
+      <div class="ct">&#x2753; What are the most famous examples of AR?</div>
+      <div class="cb"><ul>
+        <li><strong>Pok&eacute;mon GO (2016)</strong> &mdash; widely considered the catalyst for mainstream AR adoption</li>
+        <li><strong>IKEA Place</strong> &mdash; visualize furniture in your home before purchasing</li>
+        <li><strong>Snapchat &amp; Instagram filters</strong> &mdash; face-tracking AR applying masks and effects in real-time</li>
+      </ul></div>
+    </div>
+    <div class="card g">
+      <div class="ct">&#x2753; What is AR primarily used for?</div>
+      <div class="cb">AR is used to either <strong>visually change natural environments</strong> (entertainment, simulation) or to <strong>provide additional useful information</strong> to the user. It seamlessly blends 3D digital components with real-world perception, enhancing decision-making and user engagement.</div>
+    </div>
+    <div class="card o">
+      <div class="ct">&#x2753; What is the difference between AR and Mixed Reality (MR)?</div>
+      <div class="cb">AR <em>overlays</em> digital content onto the physical world without knowing the room&#x27;s 3D geometry. <strong>MR</strong> goes further &mdash; digital and physical objects can <em>interact</em> in real-time. In MR, a virtual ball could actually roll off a real table and bounce on the floor.</div>
+    </div>
+    <div class="card">
+      <div class="ct">&#x2753; Do I always need special glasses to experience AR?</div>
+      <div class="cb"><strong>No.</strong> While specialized HMDs and smart glasses are used in industrial settings, the most common way people experience AR today is through the <strong>camera on their smartphone or tablet</strong> &mdash; no extra hardware needed.</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 11 KEY QUOTES / RECAP -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Key Quotes &amp; Takeaways</div>
+  <div class="stitle">Words Worth <span class="ay">Remembering</span></div>
+  <div style="display:flex;flex-direction:column;gap:14px;flex:1;justify-content:center">
+    <div class="qqt">A little progress each day adds up to big results.
+      <div class="qsrc">&mdash; Satya Nani &middot; quoted in Module 16</div></div>
+    <div class="qqt" style="border-left-color:#4ee3a0;font-style:normal">
+      <div style="font-size:13px;font-weight:800;color:#4ee3a0;letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px">Module 16 Key Takeaways</div>
+      <ul style="list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;font-size:15px">
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>AR <strong>enhances</strong> reality; VR <strong>replaces</strong> it entirely</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>AR spans visual, auditory, haptic, somatosensory &amp; olfactory senses</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>3 core AR features: combination, real-time, 3D registration</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>Hardware: HMD, HUD, Eyetap, VRD, Contact Lenses, Handheld</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>MEMS enables 6DoF tracking in modern AR devices</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>6 AR types: Marker, Markerless, Projection, Location, Overlay, Contour</li>
+      </ul>
+    </div>
+  </div>
+</div></div>
+
+<!-- 12 MCQ -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Skill-Building Check &middot; Part I &mdash; Multiple Choice</div>
+  <div class="stitle">Questions <span class="ap">1 &ndash; 5</span></div>
+  <div class="ssub" style="margin-bottom:12px">Read each statement carefully and choose the correct answer. Answers on the next slide.</div>
+  <div style="display:flex;flex-direction:column;gap:12px;flex:1">
+    <div class="qblock">
+      <div class="qnum">Question 1</div>
+      <div class="qtext">It is an interactive experience that combines the real world and computer-generated content.</div>
+      <ul class="qchoices"><li><span>a.</span>Augmented Reality</li><li><span>b.</span>Marker-Based Augmented Reality</li><li><span>c.</span>Overlay Augmented Reality</li><li><span>d.</span>Contour-Based Augmented Reality</li></ul>
+    </div>
+    <div class="qblock">
+      <div class="qnum">Question 2</div>
+      <div class="qtext">It maps the real-world environment and defines visual positions in your surroundings.</div>
+      <ul class="qchoices"><li><span>a.</span>Augmented Reality</li><li><span>b.</span>Marker-Based Augmented Reality</li><li><span>c.</span>Location-Based Augmented Reality</li><li><span>d.</span>Contour-Based Augmented Reality</li></ul>
+    </div>
+    <div class="qblock">
+      <div class="qnum">Question 3</div>
+      <div class="qtext">As its name suggests, this AR projects immersive light onto a flat surface to create 3D imagery.</div>
+      <ul class="qchoices"><li><span>a.</span>Augmented Reality</li><li><span>b.</span>Marker-Based Augmented Reality</li><li><span>c.</span>Location-Based Augmented Reality</li><li><span>d.</span>Projection-Based Augmented Reality</li></ul>
+    </div>
+    <div class="qblock">
+      <div class="qnum">Question 4</div>
+      <div class="qtext">It does not rely on any specific image to display its digital content, and can thus be used in nearly any location.</div>
+      <ul class="qchoices"><li><span>a.</span>Markerless Augmented Reality</li><li><span>b.</span>Marker-Based Augmented Reality</li><li><span>c.</span>Overlay Augmented Reality</li><li><span>d.</span>Projection-Based Augmented Reality</li></ul>
+    </div>
+    <div class="qblock">
+      <div class="qnum">Question 5</div>
+      <div class="qtext">It replaces the un-augmented view of an object with an enhanced virtual image of the same item, complete with multiple visual perspectives.</div>
+      <ul class="qchoices"><li><span>a.</span>Markerless Augmented Reality</li><li><span>b.</span>Marker-Based Augmented Reality</li><li><span>c.</span>Overlay Augmented Reality</li><li><span>d.</span>Projection-Based Augmented Reality</li></ul>
+    </div>
+  </div>
+</div></div>
+
+<!-- 13 MCQ ANSWERS -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Answer Key &middot; Part I</div>
+  <div class="stitle">MCQ <span class="ag">Answers</span></div>
+  <div style="display:flex;flex-direction:column;gap:8px;flex:1">
+    <div class="akrow"><div class="akn">1</div><div><div class="aka">a &mdash; Augmented Reality</div><div class="akx">The definition of AR itself: an interactive experience that combines the real world and computer-generated perceptual information across multiple sensory modalities.</div></div></div>
+    <div class="akrow"><div class="akn">2</div><div><div class="aka">c &mdash; Location-Based Augmented Reality</div><div class="akx">Location-based AR maps geographic surroundings and triggers digital content when the user&#x27;s GPS matches a mapped location. Best known example: Pok&eacute;mon GO.</div></div></div>
+    <div class="akrow"><div class="akn">3</div><div><div class="aka">d &mdash; Projection-Based Augmented Reality</div><div class="akx">Projection-based AR projects immersive light onto flat surfaces to create 3D imagery and uses SLAM to detect human interaction with the projected light.</div></div></div>
+    <div class="akrow"><div class="akn">4</div><div><div class="aka">a &mdash; Markerless Augmented Reality</div><div class="akx">Markerless AR uses GPS, gyroscope, and accelerometer sensors instead of physical markers, allowing it to work in virtually any location or setting.</div></div></div>
+    <div class="akrow"><div class="akn">5</div><div><div class="aka">c &mdash; Overlay Augmented Reality</div><div class="akx">Overlay AR replaces the un-augmented view of an item with an enhanced virtual image of that same item, often with multiple visual perspectives. Example: Nextech product configurator.</div></div></div>
+  </div>
+</div></div>
+
+<!-- 14 MATCHING -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Skill-Building Check &middot; Part II &mdash; Matching</div>
+  <div class="stitle">Match the <span class="ao">Hardware</span> Term</div>
+  <div class="ssub" style="margin-bottom:12px">Match the description in Column A with the correct hardware term in Column B.</div>
+  <div style="background:#1b2236;border-radius:14px;overflow:hidden;margin-bottom:12px">
+    <div style="display:grid;grid-template-columns:auto 1fr auto;gap:0;padding:10px 18px;background:#151b2c;border-bottom:1px solid #131726;font-size:12px;font-weight:700;color:#4a6888;letter-spacing:.7px;text-transform:uppercase">
+      <span>Key</span><span style="padding-left:10px">Column A &mdash; Description</span><span>Column B &mdash; Term</span>
+    </div>
+    <div style="padding:6px 18px">
+      <div class="mrow"><span class="mlet">E</span><span class="mdesc">Responsible for the graphics that go with augmented reality.</span><span class="mterm">A. Projector Mapping</span></div>
+      <div class="mrow"><span class="mlet">A</span><span class="mdesc">Makes use of digital projectors to display graphical information on physical objects.</span><span class="mterm">B. Eyetap</span></div>
+      <div class="mrow"><span class="mlet">B</span><span class="mdesc">Captures rays of light that would pass through the lens and substitutes synthetic computer-controlled light.</span><span class="mterm">C. Head-Mounted Display</span></div>
+      <div class="mrow"><span class="mlet">F</span><span class="mdesc">A transparent display that presents data without requiring the user to look away from their usual viewpoint.</span><span class="mterm">D. Virtual Retinal Display</span></div>
+      <div class="mrow"><span class="mlet">G</span><span class="mdesc">Used to display AR content on a projection surface like walls or glass panes.</span><span class="mterm">E. Computer</span></div>
+      <div class="mrow"><span class="mlet">C</span><span class="mdesc">A display device worn on the forehead, such as a harness or helmet-mounted display.</span><span class="mterm">F. Head-Up Display (HUD)</span></div>
+      <div class="mrow"><span class="mlet">D</span><span class="mdesc">A personal display device under development at the University of Washington&#x27;s Human Interface Technology Laboratory.</span><span class="mterm">G. Projector</span></div>
+      <div class="mrow"><span class="mlet">H</span><span class="mdesc">Employs a small display that fits in a user&#x27;s hand.</span><span class="mterm">H. Handheld</span></div>
+    </div>
+  </div>
+  <div class="note">&#x1F4AC; Answers are already shown as the key letters in the leftmost column. Review each match before checking the explanation slide.</div>
+</div></div>
+
+<!-- 15 CLOSING -->
+<div class="sw"><div class="slide" style="align-items:center;justify-content:center;text-align:center">
+  <div class="eyebrow" style="border-bottom:none">Module 16 &middot; Complete</div>
+  <div class="tgiant" style="font-size:clamp(34px,4.6vw,60px);margin-top:10px">The World is Your<br><span class="ab">Canvas</span>. <span class="ag">Augment</span> It.</div>
+  <div class="qqt" style="max-width:740px;text-align:left;border-left-color:#fbbf24;font-size:16px;margin-top:14px">
+    A little progress each day adds up to big results. AR started with pilots reading flight data on a cockpit HUD in the 1950s. Today it places Pok&eacute;mon in your backyard and furniture in your living room. Tomorrow? That&#x27;s up to you.
+    <div class="qsrc">&mdash; Satya Nani &middot; applied &#x1F680;</div>
+  </div>
+  <div class="g3" style="max-width:900px;margin-top:14px">
+    <div class="card" style="text-align:left"><div class="ct">Quick Summary</div><div class="cb" style="font-size:14px">AR = real world + digital overlay. VR = fully digital. MR = both interact. 6 types, 8 display hardware options.</div></div>
+    <div class="card g" style="text-align:left"><div class="ct">Try It</div><div class="cb" style="font-size:14px">Open Pok&eacute;mon GO, IKEA Place, or any Snapchat lens &mdash; you&#x27;re experiencing 3 different AR types firsthand.</div></div>
+    <div class="card p" style="text-align:left"><div class="ct">Connect to M11</div><div class="cb" style="font-size:14px">The QR codes you built in M11 are foundational marker-based triggers &mdash; the first step in a real AR pipeline.</div></div>
+  </div>
+  <div style="font-size:14px;color:#2e4560;margin-top:14px">Press <span style="color:#5cb8ff">Home</span> to restart &middot; <span style="color:#5cb8ff">?</span> for shortcuts</div>
+</div></div>
+
+</body>
+</html>
