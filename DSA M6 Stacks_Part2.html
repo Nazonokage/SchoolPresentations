@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Module 06 — Stacks: Peek, Underflow &amp; Applications</title>
+<style>
+  :root{
+    --bg:#0b0710;
+    --surface:#150f1e;
+    --surface-2:#1c1428;
+    --border:#2f2340;
+    --text:#f1ebfb;
+    --text-dim:#8f7fa8;
+    --accent:#a78bfa;       /* violet - PUSH / primary */
+    --accent-dim:#5b4a8a;
+    --accent-2:#fb923c;     /* amber-orange - POP / secondary */
+    --mc:#38bdf8;           /* sky - multiple choice */
+    --id:#f472b6;           /* pink - identification */
+    --out:#4ade80;          /* green - output guessing */
+    --warn:#fbbf24;
+    --danger:#fb7185;
+    --good:#4ade80;
+    --font-mono:'SF Mono','Cascadia Code','Consolas','Roboto Mono',monospace;
+    --font-sans:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    background:var(--bg);color:var(--text);
+    font-family:var(--font-sans);
+    overflow:hidden;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:
+      radial-gradient(ellipse at 12% 8%, rgba(167,139,250,0.06), transparent 55%),
+      radial-gradient(ellipse at 88% 92%, rgba(251,146,60,0.05), transparent 55%);
+  }
+  #progress-wrap{
+    position:fixed;top:0;left:0;right:0;height:5px;z-index:1000;
+    background:repeating-linear-gradient(90deg, var(--surface-2) 0, var(--surface-2) 16px, var(--border) 16px, var(--border) 18px);
+  }
+  #progress-bar{
+    height:100%;width:0%;
+    background:linear-gradient(90deg,var(--accent),var(--accent-2));
+    transition:width .35s ease;
+    box-shadow:0 0 10px rgba(167,139,250,.5);
+  }
+  #counter{
+    position:fixed;bottom:18px;right:22px;
+    font-family:var(--font-mono);font-size:12.5px;color:var(--accent);
+    background:var(--surface);border:1px solid var(--border);
+    padding:7px 13px;border-radius:6px;z-index:1000;letter-spacing:.03em;
+  }
+  #counter .lbl{color:var(--text-dim);margin-right:6px;}
+  #hint{
+    position:fixed;bottom:18px;left:22px;
+    font-family:var(--font-mono);font-size:11.5px;color:var(--text-dim);
+    z-index:1000;opacity:.75;
+  }
+  #deck{position:relative;width:100vw;height:100vh;z-index:1;}
+  .slide{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;
+    justify-content:center;align-items:center;
+    padding:60px 8vw;
+    opacity:0;pointer-events:none;
+    transform:translateX(24px);
+    transition:opacity .35s ease, transform .35s ease;
+    overflow:auto;
+  }
+  .slide.active{opacity:1;pointer-events:auto;transform:translateX(0);}
+  .slide.exit-left{transform:translateX(-24px);}
+  @media (prefers-reduced-motion: reduce){
+    .slide{transition:opacity .01s linear;transform:none !important;}
+  }
+  .slide-inner{width:100%;max-width:1220px;margin:0 auto;min-width:0;}
+  .eyebrow{
+    font-family:var(--font-mono);font-size:12.5px;letter-spacing:.08em;
+    color:var(--accent);text-transform:uppercase;
+    display:flex;align-items:center;gap:10px;margin-bottom:18px;
+  }
+  .eyebrow .frame{
+    background:var(--surface-2);border:1px solid var(--border);
+    border-bottom:2px solid var(--accent);color:var(--accent-2);
+    padding:4px 10px;border-radius:4px 4px 0 0;font-weight:700;
+  }
+  .eyebrow.mc{color:var(--mc);} .eyebrow.mc .frame{border-bottom-color:var(--mc);}
+  .eyebrow.id{color:var(--id);} .eyebrow.id .frame{border-bottom-color:var(--id);}
+  .eyebrow.out{color:var(--out);} .eyebrow.out .frame{border-bottom-color:var(--out);}
+  h1.title{
+    font-family:var(--font-mono);
+    font-size:clamp(30px,4vw,54px);
+    line-height:1.1;margin:0 0 18px 0;font-weight:800;letter-spacing:-.01em;
+  }
+  h2.title{
+    font-family:var(--font-mono);
+    font-size:clamp(23px,2.4vw,34px);
+    line-height:1.2;margin:0 0 20px 0;font-weight:750;letter-spacing:-.01em;
+  }
+  p.lead{font-size:clamp(15px,1.15vw,18px);line-height:1.65;color:var(--text-dim);max-width:900px;margin:0 0 8px 0;}
+  code{font-family:var(--font-mono);background:var(--surface-2);border:1px solid var(--border);
+    padding:1px 6px;border-radius:4px;color:var(--accent-2);font-size:.92em;}
+  b{color:var(--text);}
+
+  .cover-badges{display:flex;gap:10px;margin-top:26px;flex-wrap:wrap;}
+  .badge{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);
+    border:1px solid var(--border);border-radius:20px;padding:6px 14px;}
+
+  .recap-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:8px;}
+  .recap-grid > *{min-width:0;}
+  .recap-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+  .recap-item .k{font-family:var(--font-mono);font-size:13px;color:var(--accent);margin-bottom:6px;font-weight:700;}
+  .recap-item .v{font-size:14.5px;color:var(--text-dim);line-height:1.55;}
+
+  .two-col-lec{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:26px;align-items:start;}
+  .two-col-lec > *{min-width:0;}
+  .stack-lec{display:flex;flex-direction:column;gap:18px;}
+  .side-by-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;align-items:start;}
+  .side-by-side > *{min-width:0;text-align:center;}
+
+  .lec-table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:10px;}
+  .lec-table th,.lec-table td{border:1px solid var(--border);padding:8px 12px;text-align:left;}
+  .lec-table th{color:var(--accent);font-family:var(--font-mono);font-size:11.5px;
+    text-transform:uppercase;letter-spacing:.04em;background:var(--surface-2);}
+  .lec-table td{color:var(--text-dim);}
+  .lec-table td.hl{color:var(--text);font-weight:700;}
+
+  .lec-note{font-size:14px;color:var(--text-dim);margin-top:14px;line-height:1.55;
+    background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent-2);
+    border-radius:6px;padding:12px 16px;}
+  .lec-note b{color:var(--text);}
+  .lec-note.warn-note{border-left-color:var(--danger);}
+
+  /* ===== code blocks ===== */
+  .code-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    overflow:hidden;margin-top:10px;}
+  .code-top{display:flex;justify-content:space-between;align-items:center;
+    padding:8px 14px;background:var(--surface-2);border-bottom:1px solid var(--border);}
+  .code-lang{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);
+    text-transform:uppercase;letter-spacing:.06em;}
+  .copy-btn{font-family:var(--font-mono);font-size:11.5px;color:var(--text-dim);
+    background:var(--surface);border:1px solid var(--border);border-radius:5px;
+    padding:4px 10px;cursor:pointer;transition:all .2s ease;}
+  .copy-btn:hover{color:var(--accent);border-color:var(--accent-dim);}
+  .copy-btn.copied{color:var(--accent);border-color:var(--accent);}
+  .code-pre{margin:0;padding:14px 16px;max-height:320px;overflow:auto;
+    font-family:var(--font-mono);font-size:12.8px;line-height:1.6;}
+  .code-pre code{background:none;border:none;padding:0;color:var(--text);}
+  .tok-kw{color:var(--accent-2);}
+  .tok-str{color:#7dd3fc;}
+  .tok-com{color:var(--text-dim);font-style:italic;}
+  .tok-num{color:#c4b5fd;}
+  .tok-type{color:var(--accent);}
+
+  /* ===== stack diagrams ===== */
+  .stk-svg{width:100%;max-width:280px;height:auto;display:block;margin:6px auto 0;}
+  .stk-box{fill:var(--surface-2);stroke:var(--accent);stroke-width:2;}
+  .stk-box-top{stroke:var(--accent-2);stroke-width:3;}
+  .stk-box-dead{stroke:var(--danger);stroke-width:2.5;stroke-dasharray:5 4;}
+  .stk-box-empty{fill:var(--surface-2);stroke:var(--text-dim);stroke-width:2;stroke-dasharray:6 5;}
+  .stk-data{fill:var(--text);font-family:var(--font-mono);font-size:14px;font-weight:700;}
+  .stk-empty-label{fill:var(--text-dim);font-family:var(--font-mono);font-size:13px;font-style:italic;}
+  .stk-toplabel{fill:var(--accent-2);font-family:var(--font-mono);font-size:11.5px;font-weight:700;}
+  .stk-base-line{stroke:var(--border);stroke-width:3;}
+  .stk-warn{fill:var(--danger);font-family:var(--font-mono);font-size:12px;font-weight:700;}
+  .mem-caption{text-align:center;color:var(--text-dim);font-size:12.5px;margin-top:6px;
+    font-family:var(--font-mono);letter-spacing:.03em;}
+
+  /* ===== activity cards ===== */
+  .q-list{display:flex;flex-direction:column;gap:14px;margin-top:6px;}
+  .q-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+  .q-card .q-num{font-family:var(--font-mono);font-size:11.5px;color:var(--text-dim);margin-bottom:6px;letter-spacing:.04em;}
+  .q-card .q-text{font-size:15px;color:var(--text);margin-bottom:10px;font-weight:600;line-height:1.45;}
+  .opt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+  .opt-grid > *{min-width:0;}
+  .opt{font-size:13.5px;color:var(--text-dim);background:var(--surface-2);
+    border:1px solid var(--border);border-radius:6px;padding:8px 11px;line-height:1.4;}
+  .opt b{color:var(--text);margin-right:4px;}
+  .id-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--id);
+    border-radius:8px;padding:14px 18px;font-size:14.5px;color:var(--text-dim);line-height:1.5;}
+  .id-card .q-num{font-family:var(--font-mono);font-size:11px;color:var(--id);margin-bottom:5px;letter-spacing:.04em;}
+  .out-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--out);
+    border-radius:8px;padding:14px 16px;}
+  .out-card .q-num{font-family:var(--font-mono);font-size:11px;color:var(--out);margin-bottom:6px;letter-spacing:.04em;}
+  .out-card pre{margin:0;font-family:var(--font-mono);font-size:12.5px;line-height:1.55;color:var(--text);
+    background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;overflow-x:auto;}
+  .out-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:6px;}
+  .out-grid > *{min-width:0;}
+
+  /* ===== answers ===== */
+  .answers-scroll{max-height:64vh;overflow-y:auto;padding-right:8px;margin-top:10px;}
+  .ans-row{display:flex;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);}
+  .ans-row:last-child{border-bottom:none;}
+  .ans-num{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);min-width:34px;padding-top:2px;}
+  .ans-correct{font-weight:700;color:var(--accent);font-size:14.5px;}
+  .ans-out{font-weight:700;color:var(--out);font-family:var(--font-mono);font-size:13.5px;}
+  .ans-explain{font-size:13px;color:var(--text-dim);margin-top:4px;line-height:1.5;}
+  .ans-group-label{font-family:var(--font-mono);font-size:12px;color:var(--accent-2);
+    letter-spacing:.06em;text-transform:uppercase;margin:16px 0 4px 0;}
+  .ans-group-label:first-child{margin-top:0;}
+
+  /* ===== shortcuts modal ===== */
+  #shortcuts-modal{
+    position:fixed;inset:0;background:rgba(4,2,8,.72);z-index:2000;
+    display:flex;align-items:center;justify-content:center;
+    opacity:0;pointer-events:none;transition:opacity .2s ease;
+  }
+  #shortcuts-modal.show{opacity:1;pointer-events:auto;}
+  #shortcuts-modal .panel{background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;padding:28px 32px;max-width:460px;width:90%;}
+  #shortcuts-modal h3{margin:0 0 16px 0;font-family:var(--font-mono);color:var(--accent);font-size:16px;}
+  #shortcuts-modal .row{display:flex;justify-content:space-between;padding:7px 0;
+    border-bottom:1px solid var(--border);font-size:13.5px;color:var(--text-dim);}
+  #shortcuts-modal .row:last-child{border-bottom:none;}
+  #shortcuts-modal kbd{font-family:var(--font-mono);background:var(--surface-2);
+    border:1px solid var(--border);border-radius:4px;padding:2px 8px;color:var(--text);}
+
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+</style>
+</head>
+<body>
+
+<div id="progress-wrap"><div id="progress-bar"></div></div>
+<div id="counter"><span class="lbl">FRAME</span>00 / 00</div>
+<div id="hint">right-click / &rarr; next &nbsp;&middot;&nbsp; back-button / &larr; prev &nbsp;&middot;&nbsp; ? for help</div>
+
+<div id="shortcuts-modal">
+  <div class="panel">
+    <h3>Keyboard &amp; Mouse Shortcuts</h3>
+    <div class="row"><span>Next slide</span><span><kbd>&rarr;</kbd> or right-click</span></div>
+    <div class="row"><span>Previous slide</span><span><kbd>&larr;</kbd> or mouse back button</span></div>
+    <div class="row"><span>Also next slide</span><span>mouse forward button</span></div>
+    <div class="row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="row"><span>Toggle this panel</span><span><kbd>?</kbd></span></div>
+    <div class="row"><span>Close panel</span><span><kbd>Esc</kbd></span></div>
+    <div class="row"><span>Left-click</span><span>free for text &amp; buttons</span></div>
+  </div>
+</div>
+
+<div id="deck"></div>
+
+<script>
+/* ============ HELPERS ============ */
+function escHtml(s){
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+let codeBlockIdx = 0;
+const KEYWORDS = new Set(["public","private","protected","static","void","int","double","char",
+  "boolean","class","new","return","if","else","for","while","break","continue","this","null",
+  "true","false","import","extends","implements","final","long","short","byte","float","package",
+  "try","catch","finally","throw","interface","enum","switch","case","default","super","instanceof"]);
+
+function codeBlock(code, lang){
+  lang = lang || "java";
+  codeBlockIdx++;
+  const id = "code-" + codeBlockIdx;
+  const tokenRe = /(\/\/.*$)|(\/\*[\s\S]*?\*\/)|("(?:[^"\\]|\\.)*")|('(?:[^'\\]|\\.)*')|(\b\d+\.?\d*\b)|(\b[A-Za-z_][A-Za-z0-9_]*\b)/gm;
+  let out = "";
+  let last = 0;
+  let m;
+  while((m = tokenRe.exec(code)) !== null){
+    out += escHtml(code.slice(last, m.index));
+    const full = m[0], comment1 = m[1], comment2 = m[2], dstr = m[3], sstr = m[4], num = m[5], ident = m[6];
+    if(comment1 || comment2){
+      out += '<span class="tok-com">' + escHtml(full) + '</span>';
+    } else if(dstr || sstr){
+      out += '<span class="tok-str">' + escHtml(full) + '</span>';
+    } else if(num){
+      out += '<span class="tok-num">' + escHtml(full) + '</span>';
+    } else if(ident){
+      if(KEYWORDS.has(ident)){
+        out += '<span class="tok-kw">' + escHtml(full) + '</span>';
+      } else if(/^[A-Z]/.test(ident)){
+        out += '<span class="tok-type">' + escHtml(full) + '</span>';
+      } else {
+        out += escHtml(full);
+      }
+    }
+    last = tokenRe.lastIndex;
+  }
+  out += escHtml(code.slice(last));
+  return '<div class="code-wrap"><div class="code-top"><span class="code-lang">' + lang +
+    '</span><button class="copy-btn" onclick="copyCode(this,\'' + id + '\')">Copy</button></div>' +
+    '<pre class="code-pre"><code id="' + id + '">' + out + '</code></pre></div>';
+}
+
+function copyCode(btn, id){
+  const codeEl = document.getElementById(id);
+  const text = codeEl.textContent;
+  const done = () => {
+    const old = btn.textContent;
+    btn.textContent = "Copied!";
+    btn.classList.add("copied");
+    setTimeout(()=>{ btn.textContent = old || "Copy"; btn.classList.remove("copied"); }, 1400);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(done);
+  } else {
+    const ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); }catch(e){}
+    document.body.removeChild(ta);
+    done();
+  }
+}
+
+/* ============ VERTICAL STACK DIAGRAM GENERATOR ============ */
+function stackDiagram(items, opts){
+  opts = opts || {};
+  const boxW = 160, boxH = 50, gap = 6;
+  const n = items.length;
+  const topPad = 30, bottomPad = 34;
+  const svgH = topPad + Math.max(n,1) * (boxH+gap) + bottomPad;
+  const svgW = 300;
+  const baseX = (svgW - boxW) / 2;
+  let svg = '<svg class="stk-svg" viewBox="0 0 ' + svgW + ' ' + svgH + '" xmlns="http://www.w3.org/2000/svg">';
+
+  if(n === 0){
+    const y = svgH - bottomPad - boxH;
+    svg += '<rect x="' + baseX + '" y="' + y + '" width="' + boxW + '" height="' + boxH + '" rx="8" class="stk-box stk-box-empty"/>' +
+      '<text x="' + (svgW/2) + '" y="' + (y+boxH/2+6) + '" text-anchor="middle" class="stk-empty-label">empty</text>';
+  } else {
+    items.forEach((it, i) => {
+      const y = svgH - bottomPad - (i+1) * (boxH+gap) + gap;
+      const isTop = i === n - 1;
+      const label = typeof it === "string" ? it : it.label;
+      const dead = typeof it === "object" && it.dead;
+      const cls = dead ? "stk-box stk-box-dead" : (isTop ? "stk-box stk-box-top" : "stk-box");
+      svg += '<g><rect x="' + baseX + '" y="' + y + '" width="' + boxW + '" height="' + boxH + '" rx="8" class="' + cls + '"/>' +
+        '<text x="' + (svgW/2) + '" y="' + (y+boxH/2+6) + '" text-anchor="middle" class="stk-data">' + label + '</text></g>';
+      if(isTop && !opts.hideTopLabel){
+        svg += '<text x="' + (baseX+boxW+10) + '" y="' + (y+boxH/2+5) + '" class="stk-toplabel">&larr; TOP</text>';
+      }
+    });
+  }
+  svg += '<line x1="' + (baseX-10) + '" y1="' + (svgH-bottomPad+4) + '" x2="' + (baseX+boxW+10) + '" y2="' + (svgH-bottomPad+4) + '" class="stk-base-line"/>';
+
+  if(opts.warn){
+    svg += '<text x="' + (svgW/2) + '" y="' + (svgH-8) + '" text-anchor="middle" class="stk-warn">' + opts.warn + '</text>';
+  }
+  svg += '</svg>';
+  let out = svg;
+  if(opts.caption) out += '<div class="mem-caption">' + opts.caption + '</div>';
+  return out;
+}
+
+/* ============ STATIC SLIDES ============ */
+const slideCover = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="frame">FRAME 00</span> MODULE 06 &middot; DATA STRUCTURES</div>' +
+  '<h1 class="title">Stacks, Part 2</h1>' +
+  '<p class="lead">You already know push and pop. This time: <b>peek</b>, what happens when a stack runs empty (<b>underflow</b>), and the four everyday systems quietly built on nothing but push, pop, and peek.</p>' +
+  '<div class="cover-badges">' +
+    '<div class="badge">Prelims &middot; Module 06</div>' +
+    '<div class="badge">Java</div>' +
+    '<div class="badge">Lecture + Mini Project + Quiz</div>' +
+  '</div>' +
+'</div>';
+
+const slideInstructions = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="frame">FRAME 01</span> BEFORE YOU START</div>' +
+  '<h2 class="title">How this deck works</h2>' +
+  '<div class="recap-grid">' +
+    '<div class="recap-item"><div class="k">Part 1 &middot; Peek &amp; Underflow</div><div class="v">The one operation and one failure case that round out push/pop.</div></div>' +
+    '<div class="recap-item"><div class="k">Part 2 &middot; Applications</div><div class="v">Four real systems &mdash; the call stack, undo/redo, expression checking, and backtracking &mdash; all running on the same LIFO idea.</div></div>' +
+    '<div class="recap-item"><div class="k">Mini Project</div><div class="v">A working Balanced Brackets Checker, built entirely on a stack.</div></div>' +
+    '<div class="recap-item"><div class="k">Activities</div><div class="v">Multiple Choice, Identification, and Guess-the-Output &mdash; answers are on the very last slide.</div></div>' +
+  '</div>' +
+  '<p class="lead" style="margin-top:18px;">Navigate with <b>right-click</b> or <b>&rarr;</b> for next, mouse <b>back button</b> or <b>&larr;</b> for previous. Press <b>?</b> anytime for the full shortcut list.</p>' +
+'</div>';
+
+const slideObjectives = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="frame">FRAME 02</span> LEARNING OBJECTIVES</div>' +
+  '<h2 class="title">By the end of this module, you can&hellip;</h2>' +
+  '<div class="recap-grid">' +
+    '<div class="recap-item"><div class="k">01</div><div class="v">Identify peek (top) alongside push and pop as a core stack operation.</div></div>' +
+    '<div class="recap-item"><div class="k">02</div><div class="v">Explain what underflow is and why it happens.</div></div>' +
+    '<div class="recap-item"><div class="k">03</div><div class="v">Apply stacks to real computing problems: call stacks, undo/redo, expression evaluation, backtracking.</div></div>' +
+    '<div class="recap-item"><div class="k">04</div><div class="v">Trace stack operations step by step across a realistic scenario.</div></div>' +
+  '</div>' +
+'</div>';
+
+function sectionDivider(frame, tabLabel, big, sub){
+  return '<div class="slide-inner">' +
+    '<div class="eyebrow"><span class="frame">' + frame + '</span> ' + tabLabel + '</div>' +
+    '<h1 class="title">' + big + '</h1>' +
+    '<p class="lead">' + sub + '</p>' +
+  '</div>';
+}
+
+const slideQuickRecap = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="frame">FRAME 03</span> QUICK RECAP</div>' +
+  '<h2 class="title">Push &amp; Pop, in 10 Seconds</h2>' +
+  '<p class="lead">A stack follows <b>Last-In, First-Out (LIFO)</b>. <code>push()</code> adds to the top, <code>pop()</code> removes from the top. Access only ever happens at one end.</p>' +
+  stackDiagram(["Math","Science","English"], {caption:"English was pushed last, so it sits on TOP"}) +
+'</div>';
+
+const slidePeek = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="frame">FRAME 05</span> CONCEPT</div>' +
+  '<h2 class="title">Peek (a.k.a. Top)</h2>' +
+  '<p class="lead"><code>peek()</code> looks at the top element <b>without removing it</b>. The stack is completely unchanged afterward &mdash; useful whenever you need to check what\'s on top before deciding what to do next.</p>' +
+  '<div class="two-col-lec">' +
+    '<div>' +
+      codeBlock(
+'Stack<String> books = new Stack<>();\n' +
+'books.push("Math");\n' +
+'books.push("Science");\n' +
+'books.push("English");\n\n' +
+'String top = books.peek();\n' +
+'System.out.println(top);        // English\n' +
+'System.out.println(books.size()); // 3 -- unchanged!', "java") +
+      '<div class="lec-note"><b>peek() only looks.</b> Only <code>pop()</code> actually removes the top element.</div>' +
+    '</div>' +
+    '<div>' + stackDiagram(["Math","Science","English"], {caption:"peek() returns \u201cEnglish\u201d \u2014 nothing is removed"}) + '</div>' +
+  '</div>' +
+'</div>';
+
+const slideUnderflow = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="frame">FRAME 06</span> CONCEPT</div>' +
+  '<h2 class="title">Underflow</h2>' +
+  '<p class="lead"><b>Underflow</b> happens when you try to <code>pop()</code> or <code>peek()</code> a stack that has nothing in it. In Java\'s built-in <code>Stack</code> class, this throws an <code>EmptyStackException</code> &mdash; so always check first.</p>' +
+  '<div class="two-col-lec">' +
+    '<div>' +
+      codeBlock(
+'Stack<String> empty = new Stack<>();\n\n' +
+'if (!empty.isEmpty()) {\n' +
+'    empty.pop();\n' +
+'} else {\n' +
+'    System.out.println("Cannot pop - stack is empty (underflow)!");\n' +
+'}', "java") +
+      '<div class="lec-note warn-note"><b>Golden rule:</b> always call <code>isEmpty()</code> before <code>pop()</code> or <code>peek()</code> if you\'re not certain the stack has something in it.</div>' +
+    '</div>' +
+    '<div>' + stackDiagram([], {warn:"pop() on empty stack \u2192 Underflow!"}) + '</div>' +
+  '</div>' +
+'</div>';
+
+const slideCallStack = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="frame">FRAME 08</span> APPLICATION 1</div>' +
+  '<h2 class="title">The Call Stack (Function Calls)</h2>' +
+  '<p class="lead">Every time a method calls another method, the program pushes a new <b>stack frame</b>. When that call finishes, its frame pops off and control returns to whoever called it &mdash; pure LIFO.</p>' +
+  '<div class="two-col-lec">' +
+    '<div>' +
+      codeBlock(
+'int factorial(int n) {\n' +
+'    if (n == 0) return 1;\n' +
+'    return n * factorial(n - 1);\n' +
+'}\n\n' +
+'factorial(3);', "java") +
+      '<div class="lec-note"><b>This is exactly why</b> a recursive function with no base case crashes with a <i>stack overflow</i> &mdash; too many pushes, and the frames never get a chance to pop.</div>' +
+    '</div>' +
+    '<div class="side-by-side">' +
+      '<div>' + stackDiagram(["factorial(3)","factorial(2)","factorial(1)","factorial(0)"], {caption:"Growing: each call pushes a new frame"}) + '</div>' +
+      '<div>' + stackDiagram(["factorial(3)","factorial(2)","factorial(1)"], {caption:"factorial(0) returned 1 and popped off"}) + '</div>' +
+    '</div>' +
+  '</div>' +
+'</div>';
+
+const slideUndoRedo = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="frame">FRAME 09</span> APPLICATION 2</div>' +
+  '<h2 class="title">Undo / Redo</h2>' +
+  '<p class="lead">Every action you take gets <code>push()</code>ed onto an undo stack. Pressing <b>Ctrl+Z</b> simply <code>pop()</code>s the most recent one off and reverses it &mdash; which is exactly why undo always reverses your <i>last</i> action first, never your first.</p>' +
+  '<div class="two-col-lec">' +
+    '<div>' +
+      codeBlock(
+'Stack<String> undoStack = new Stack<>();\n' +
+'undoStack.push("Typed \'Hello\'");\n' +
+'undoStack.push("Made text Bold");\n' +
+'undoStack.push("Inserted Image");\n\n' +
+'String lastAction = undoStack.pop();\n' +
+'System.out.println("Undoing: " + lastAction);', "java") +
+    '</div>' +
+    '<div class="side-by-side">' +
+      '<div>' + stackDiagram(["Typed &#39;Hello&#39;","Made text Bold","Inserted Image"], {caption:"BEFORE undo"}) + '</div>' +
+      '<div>' + stackDiagram(["Typed &#39;Hello&#39;","Made text Bold"], {caption:"AFTER Ctrl+Z (Inserted Image undone)"}) + '</div>' +
+    '</div>' +
+  '</div>' +
+'</div>';
+
+const slideExprEval = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="frame">FRAME 10</span> APPLICATION 3</div>' +
+  '<h2 class="title">Expression Evaluation (Bracket Matching)</h2>' +
+  '<p class="lead">To check if brackets are balanced, push every opening bracket. On a closing bracket, pop and make sure it matches. If the stack ever runs dry on a closing bracket, or isn\'t empty at the very end, it\'s unbalanced.</p>' +
+  '<div class="two-col-lec">' +
+    '<div>' +
+      codeBlock(
+'boolean isBalanced(String expr) {\n' +
+'    Stack<Character> stack = new Stack<>();\n' +
+'    for (char c : expr.toCharArray()) {\n' +
+'        if (c == \'(\' || c == \'[\' || c == \'{\') {\n' +
+'            stack.push(c);\n' +
+'        } else if (c == \')\' || c == \']\' || c == \'}\') {\n' +
+'            if (stack.isEmpty()) return false; // underflow!\n' +
+'            char open = stack.pop();\n' +
+'            if (!matches(open, c)) return false;\n' +
+'        }\n' +
+'    }\n' +
+'    return stack.isEmpty();\n' +
+'}', "java") +
+    '</div>' +
+    '<div>' +
+      '<table class="lec-table">' +
+        '<tr><th>Char</th><th>Action</th><th>Stack after</th></tr>' +
+        '<tr><td>{</td><td>push</td><td class="hl">{</td></tr>' +
+        '<tr><td>[</td><td>push</td><td class="hl">{ [</td></tr>' +
+        '<tr><td>(</td><td>push</td><td class="hl">{ [ (</td></tr>' +
+        '<tr><td>)</td><td>pop, matches (</td><td class="hl">{ [</td></tr>' +
+        '<tr><td>]</td><td>pop, matches [</td><td class="hl">{</td></tr>' +
+        '<tr><td>&#125;</td><td>pop, matches {</td><td class="hl">(empty)</td></tr>' +
+      '</table>' +
+      '<div class="lec-note">Tracing <code>"{[()]}"</code> &mdash; the stack empties out exactly when the last bracket closes, so it\'s <b>balanced</b>.</div>' +
+    '</div>' +
+  '</div>' +
+'</div>';
+
+const slideBacktracking = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="frame">FRAME 11</span> APPLICATION 4</div>' +
+  '<h2 class="title">Backtracking</h2>' +
+  '<p class="lead">When solving a maze, a puzzle, or any "try this, and if it fails, go back" problem, each step taken gets pushed. Hit a dead end? <b>Backtrack</b> &mdash; pop the last step off and try a different move from where you popped back to.</p>' +
+  '<div class="side-by-side">' +
+    '<div>' + stackDiagram(["Start","Right","Right",{label:"Down (dead end)", dead:true}], {caption:"BEFORE \u2014 hit a dead end"}) + '</div>' +
+    '<div>' + stackDiagram(["Start","Right","Right"], {caption:"AFTER \u2014 popped the dead end, ready to try another direction"}) + '</div>' +
+  '</div>' +
+  '<div class="lec-note">This is the same idea behind solving Sudoku, N-Queens, or any puzzle where a wrong guess needs to be <i>undone</i> cleanly before trying the next option.</div>' +
+'</div>';
+
+const slideProjectCode = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="frame">FRAME 13</span> MINI PROJECT</div>' +
+  '<h2 class="title">Balanced Brackets Checker</h2>' +
+  '<p class="lead">A small, runnable program that puts bracket-matching (Application 3) to work as a real tool &mdash; the kind of thing a code editor uses to underline a missing bracket.</p>' +
+  codeBlock(
+'import java.util.Stack;\n\n' +
+'public class BracketChecker {\n\n' +
+'    static boolean matches(char open, char close) {\n' +
+'        return (open == \'(\' && close == \')\') ||\n' +
+'               (open == \'[\' && close == \']\') ||\n' +
+'               (open == \'{\' && close == \'}\');\n' +
+'    }\n\n' +
+'    static boolean isBalanced(String expr) {\n' +
+'        Stack<Character> stack = new Stack<>();\n' +
+'        for (char c : expr.toCharArray()) {\n' +
+'            if (c == \'(\' || c == \'[\' || c == \'{\') {\n' +
+'                stack.push(c);\n' +
+'            } else if (c == \')\' || c == \']\' || c == \'}\') {\n' +
+'                if (stack.isEmpty()) return false;\n' +
+'                char open = stack.pop();\n' +
+'                if (!matches(open, c)) return false;\n' +
+'            }\n' +
+'        }\n' +
+'        return stack.isEmpty();\n' +
+'    }\n\n' +
+'    public static void main(String[] args) {\n' +
+'        System.out.println(isBalanced("{[()]}"));\n' +
+'        System.out.println(isBalanced("{[(])}"));\n' +
+'        System.out.println(isBalanced("((()))"));\n' +
+'        System.out.println(isBalanced("(()"));\n' +
+'    }\n' +
+'}', "java") +
+'</div>';
+
+const slideProjectRun = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="frame">FRAME 14</span> MINI PROJECT</div>' +
+  '<h2 class="title">Running the Checker</h2>' +
+  '<div class="two-col-lec">' +
+    '<div>' +
+      '<div class="lec-note"><b>Console output:</b></div>' +
+      codeBlock(
+'true\n' +
+'false\n' +
+'true\n' +
+'false', "text") +
+    '</div>' +
+    '<div>' +
+      '<table class="lec-table">' +
+        '<tr><th>Input</th><th>Result</th><th>Why</th></tr>' +
+        '<tr><td><code>{[()]}</code></td><td class="hl">true</td><td>Every open bracket is closed in the right order</td></tr>' +
+        '<tr><td><code>{[(])}</code></td><td class="hl">false</td><td>The <code>]</code> tries to close a <code>(</code> &mdash; mismatch</td></tr>' +
+        '<tr><td><code>((()))</code></td><td class="hl">true</td><td>Perfectly nested, stack empties at the end</td></tr>' +
+        '<tr><td><code>(()</code></td><td class="hl">false</td><td>An open <code>(</code> is left on the stack &mdash; never closed</td></tr>' +
+      '</table>' +
+    '</div>' +
+  '</div>' +
+'</div>';
+
+/* ============ ACTIVITY DATA ============ */
+const mcQuestions = [
+  {q:"What does peek() do that pop() doesn\u2019t?",
+   opts:["Removes the top element","Adds a new element","Returns the top element without removing it","Empties the whole stack"]},
+  {q:"What is underflow?",
+   opts:["Pushing too many elements onto a stack","Trying to pop or peek from an empty stack","A stack that has grown too large","An array running out of index space"]},
+  {q:"Every time a function calls another function, what happens on the call stack?",
+   opts:["The previous function\u2019s frame is deleted","A new frame is pushed for the new call","Nothing changes","The whole stack is cleared"]},
+  {q:"In a text editor\u2019s Undo feature, which stack operation brings back the most recent action?",
+   opts:["push()","peek()","pop()","isEmpty()"]},
+  {q:"When checking if \u201c{[(])}\u201d is balanced using a stack, at which character does the check fail?",
+   opts:["The opening \u201c{\u201d","The opening \u201c[\u201d","The \u201c)\u201d \u2014 it doesn\u2019t match the \u201c[\u201d on top","The closing \u201c}\u201d"]}
+];
+const mcAnswers = [2,1,1,2,2];
+const mcExplain = [
+  "peek() (or top()) only looks at the top value; pop() is the one that actually removes it.",
+  "Underflow happens when you try to remove or inspect an element from a stack that has nothing left in it.",
+  "Each function call pushes a new stack frame; when that call returns, its frame is popped off.",
+  "Undo pops the most recently pushed action off the stack so it can be reversed.",
+  "After ( and [ are pushed, the ) shows up expecting to close (, but the actual top of the stack is [ \u2014 mismatch."
+];
+
+const idItems = [
+  {q:"The stack operation that returns the top element without removing it.", a:"Peek (or Top)"},
+  {q:"The error condition that occurs when popping or peeking an empty stack.", a:"Underflow"},
+  {q:"The structure that manages function calls and automatically follows LIFO order.", a:"The Call Stack"},
+  {q:"The stack-based technique used to check if brackets or parentheses are balanced.", a:"Expression Evaluation (Bracket Matching)"},
+  {q:"The problem-solving technique that undoes the last step upon hitting a dead end.", a:"Backtracking"}
+];
+
+const outQuestions = [
+  {code:'Stack<Integer> nums = new Stack<>();\nnums.push(10);\nnums.push(20);\nSystem.out.println(nums.peek());\nSystem.out.println(nums.size());',
+   ans:["20","2"], exp:"peek() returns 20 (the top) without removing it, so size() is still 2 right after."},
+  {code:'Stack<String> s = new Stack<>();\ns.push("A");\ns.push("B");\ns.pop();\nSystem.out.println(s.peek());',
+   ans:["A"], exp:"pop() removes \u201cB\u201d, leaving \u201cA\u201d as the new top, which is what peek() then reports."},
+  {code:'Stack<Integer> s = new Stack<>();\nSystem.out.println(s.isEmpty());\ns.push(5);\nSystem.out.println(s.isEmpty());',
+   ans:["true","false"], exp:"A freshly created stack starts empty (true); after one push, it\u2019s no longer empty (false)."},
+  {code:'String expr = "([)]";\n// push (, push [, then \')\' arrives\n// top is [ but ) expects ( -> mismatch\nSystem.out.println(isBalanced(expr));',
+   ans:["false"], exp:"When \')\' arrives, the top of the stack is \'[\', not \'(\' \u2014 an immediate mismatch, so the expression is unbalanced."},
+  {code:'int countDown(int n) {\n    if (n == 0) {\n        System.out.println("done");\n        return 0;\n    }\n    System.out.println("calling with " + n);\n    return countDown(n - 1);\n}\ncountDown(2);',
+   ans:["calling with 2","calling with 1","done"], exp:"Each recursive call pushes a new frame and prints before going deeper; the base case (n==0) prints \u201cdone\u201d once the stack stops growing."}
+];
+
+/* ============ ACTIVITY SLIDE BUILDERS ============ */
+function mcSlide(){
+  const cards = mcQuestions.map((q,i) => {
+    const opts = q.opts.map((o,j) => '<div class="opt"><b>' + String.fromCharCode(65+j) + ')</b>' + o + '</div>').join("");
+    return '<div class="q-card"><div class="q-num">QUESTION ' + (i+1) + ' / ' + mcQuestions.length + '</div>' +
+      '<div class="q-text">' + q.q + '</div><div class="opt-grid">' + opts + '</div></div>';
+  }).join("");
+  return '<div class="slide-inner"><div class="eyebrow mc"><span class="frame">FRAME 16</span> ACTIVITY &middot; MULTIPLE CHOICE</div>' +
+    '<h2 class="title">Multiple Choice</h2><p class="lead">Pick the single best answer for each. Answers are on the final slide.</p>' +
+    '<div class="q-list">' + cards + '</div></div>';
+}
+
+function idSlide(){
+  const cards = idItems.map((it,i) =>
+    '<div class="id-card"><div class="q-num">ITEM ' + (i+1) + ' / ' + idItems.length + '</div>' + it.q + '</div>'
+  ).join("");
+  return '<div class="slide-inner"><div class="eyebrow id"><span class="frame">FRAME 17</span> ACTIVITY &middot; IDENTIFICATION</div>' +
+    '<h2 class="title">Identification</h2><p class="lead">Name the concept being described. Answers are on the final slide.</p>' +
+    '<div class="q-list">' + cards + '</div></div>';
+}
+
+function outSlide(){
+  const cards = outQuestions.map((q,i) =>
+    '<div class="out-card"><div class="q-num">SNIPPET ' + (i+1) + ' / ' + outQuestions.length + '</div><pre>' + escHtml(q.code) + '</pre></div>'
+  ).join("");
+  return '<div class="slide-inner"><div class="eyebrow out"><span class="frame">FRAME 18</span> ACTIVITY &middot; GUESS THE OUTPUT</div>' +
+    '<h2 class="title">Guess the Output</h2><p class="lead">Trace each snippet and predict exactly what gets printed. Answers are on the final slide.</p>' +
+    '<div class="out-grid">' + cards + '</div></div>';
+}
+
+const slideRecap = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="frame">FRAME 19</span> RECAP</div>' +
+  '<h2 class="title">Before the Answer Key</h2>' +
+  '<div class="recap-grid">' +
+    '<div class="recap-item"><div class="k">Peek / Top</div><div class="v">Looks at the top element without removing it &mdash; the stack stays exactly the same.</div></div>' +
+    '<div class="recap-item"><div class="k">Underflow</div><div class="v">Popping or peeking an empty stack. Always check isEmpty() first.</div></div>' +
+    '<div class="recap-item"><div class="k">Call Stack</div><div class="v">Every function call pushes a frame; every return pops one &mdash; automatic LIFO.</div></div>' +
+    '<div class="recap-item"><div class="k">Undo / Redo</div><div class="v">Actions are pushed as they happen; undo simply pops the most recent one.</div></div>' +
+    '<div class="recap-item"><div class="k">Expression Evaluation</div><div class="v">Push opening brackets, pop and compare on closing ones &mdash; a clean way to catch mismatches.</div></div>' +
+    '<div class="recap-item"><div class="k">Backtracking</div><div class="v">Push each step taken; on a dead end, pop back to the last good decision and try again.</div></div>' +
+  '</div>' +
+'</div>';
+
+function answersSlide(){
+  const mcRows = mcQuestions.map((q,i) =>
+    '<div class="ans-row"><div class="ans-num">Q' + (i+1) + '</div><div>' +
+    '<span class="ans-correct">' + String.fromCharCode(65+mcAnswers[i]) + ') ' + q.opts[mcAnswers[i]] + '</span>' +
+    '<div class="ans-explain">' + mcExplain[i] + '</div></div></div>'
+  ).join("");
+  const idRows = idItems.map((it,i) =>
+    '<div class="ans-row"><div class="ans-num">I' + (i+1) + '</div><div>' +
+    '<span class="ans-correct">' + it.a + '</span>' +
+    '<div class="ans-explain">' + it.q + '</div></div></div>'
+  ).join("");
+  const outRows = outQuestions.map((q,i) =>
+    '<div class="ans-row"><div class="ans-num">S' + (i+1) + '</div><div>' +
+    '<span class="ans-out">' + q.ans.map(escHtml).join(" / ") + '</span>' +
+    '<div class="ans-explain">' + q.exp + '</div></div></div>'
+  ).join("");
+  return '<div class="slide-inner"><div class="eyebrow"><span class="frame">FRAME 20</span> ANSWER KEY</div>' +
+    '<h2 class="title">All Answers &amp; Explanations</h2>' +
+    '<div class="answers-scroll">' +
+      '<div class="ans-group-label">Multiple Choice</div>' + mcRows +
+      '<div class="ans-group-label">Identification</div>' + idRows +
+      '<div class="ans-group-label">Guess the Output</div>' + outRows +
+    '</div></div>';
+}
+
+/* ============ ASSEMBLE DECK ============ */
+const slides = [];
+slides.push(slideCover);
+slides.push(slideInstructions);
+slides.push(slideObjectives);
+slides.push(slideQuickRecap);
+slides.push(sectionDivider("FRAME 04","SECTION","Part 1 \u2014 Peek &amp; Underflow","The one operation and one failure mode that finish off the basic stack toolkit."));
+slides.push(slidePeek);
+slides.push(slideUnderflow);
+slides.push(sectionDivider("FRAME 07","SECTION","Part 2 \u2014 Real Applications","Four everyday systems, all quietly running on push, pop, and peek."));
+slides.push(slideCallStack);
+slides.push(slideUndoRedo);
+slides.push(slideExprEval);
+slides.push(slideBacktracking);
+slides.push(sectionDivider("FRAME 12","MINI PROJECT","Balanced Brackets Checker","A small, runnable program built directly on the bracket-matching application."));
+slides.push(slideProjectCode);
+slides.push(slideProjectRun);
+slides.push(sectionDivider("FRAME 15","SECTION","Activities","Multiple Choice, Identification, and Guess-the-Output \u2014 answers are on the final slide."));
+slides.push(mcSlide());
+slides.push(idSlide());
+slides.push(outSlide());
+slides.push(slideRecap);
+slides.push(answersSlide());
+
+/* ============ RENDER & NAVIGATION ============ */
+const deck = document.getElementById("deck");
+slides.forEach((html) => {
+  const div = document.createElement("div");
+  div.className = "slide";
+  div.innerHTML = html;
+  deck.appendChild(div);
+});
+const slideEls = Array.from(document.querySelectorAll(".slide"));
+let current = 0;
+
+function pad2(n){ return String(n).padStart(2,"0"); }
+
+function render(){
+  slideEls.forEach((el,i)=>{ el.classList.toggle("active", i===current); });
+  document.getElementById("counter").innerHTML =
+    '<span class="lbl">FRAME</span>' + pad2(current) + " / " + pad2(slideEls.length-1);
+  document.getElementById("progress-bar").style.width = (((current+1)/slideEls.length)*100)+"%";
+}
+function goTo(i){ current = Math.max(0, Math.min(slideEls.length-1, i)); render(); }
+function next(){ goTo(current+1); }
+function prev(){ goTo(current-1); }
+
+render();
+
+/* block the default context menu everywhere */
+document.addEventListener("contextmenu", (e) => { e.preventDefault(); }, true);
+
+/* mouse navigation: right-click = next, back-button = prev, forward-button = next */
+document.addEventListener("mousedown", (e) => {
+  const modal = document.getElementById("shortcuts-modal");
+  if(e.button === 2){
+    if(e.target.closest("button, a, input, textarea, select, .copy-btn")) return;
+    if(modal.classList.contains("show")){ modal.classList.remove("show"); return; }
+    e.preventDefault(); e.stopImmediatePropagation();
+    next();
+  } else if(e.button === 3){
+    e.preventDefault(); e.stopImmediatePropagation();
+    prev();
+  } else if(e.button === 4){
+    e.preventDefault(); e.stopImmediatePropagation();
+    next();
+  }
+}, true);
+
+window.addEventListener("auxclick", (e) => {
+  if(e.button === 3 || e.button === 4){ e.preventDefault(); e.stopImmediatePropagation(); }
+}, true);
+
+/* keyboard */
+document.addEventListener("keydown", (e) => {
+  const modal = document.getElementById("shortcuts-modal");
+  if(e.key === "?"){ modal.classList.toggle("show"); e.preventDefault(); return; }
+  if(modal.classList.contains("show")){
+    if(e.key === "Escape") modal.classList.remove("show");
+    return;
+  }
+  if(e.key === "ArrowRight"){ next(); }
+  else if(e.key === "ArrowLeft"){ prev(); }
+  else if(e.key === "Home"){ goTo(0); }
+  else if(e.key === "End"){ goTo(slideEls.length-1); }
+});
+
+/* swipe */
+let touchStartX = null;
+document.addEventListener("touchstart", (e) => { touchStartX = e.changedTouches[0].screenX; }, {passive:true});
+document.addEventListener("touchend", (e) => {
+  if(touchStartX === null) return;
+  const dx = e.changedTouches[0].screenX - touchStartX;
+  if(Math.abs(dx) > 50){ if(dx < 0) next(); else prev(); }
+  touchStartX = null;
+}, {passive:true});
+</script>
+</body>
+</html>

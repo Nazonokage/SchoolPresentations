@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Module 10 — Graphs</title>
+<style>
+  :root{
+    --bg:#050a0f;
+    --surface:#0b131a;
+    --surface-2:#101c26;
+    --border:#1c2f3d;
+    --text:#e8f6fb;
+    --text-dim:#5f8394;
+    --accent:#38bdf8;       /* sky - VERTEX / primary */
+    --accent-dim:#1c6a86;
+    --accent-2:#a3e635;     /* lime - EDGE / route / secondary */
+    --mc:#fb7185;           /* rose - multiple choice */
+    --id:#fbbf24;           /* amber - identification */
+    --out:#c084fc;          /* purple - guess the output */
+    --warn:#fbbf24;
+    --danger:#f43f5e;
+    --good:#a3e635;
+    --font-mono:'SF Mono','Cascadia Code','Consolas','Roboto Mono',monospace;
+    --font-sans:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    background:var(--bg);color:var(--text);
+    font-family:var(--font-sans);
+    overflow:hidden;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:
+      radial-gradient(ellipse at 12% 8%, rgba(56,189,248,0.06), transparent 55%),
+      radial-gradient(ellipse at 88% 92%, rgba(163,230,53,0.05), transparent 55%);
+  }
+  #progress-wrap{
+    position:fixed;top:0;left:0;right:0;height:5px;z-index:1000;
+    background:repeating-linear-gradient(90deg, var(--surface-2) 0, var(--surface-2) 16px, var(--border) 16px, var(--border) 18px);
+  }
+  #progress-bar{
+    height:100%;width:0%;
+    background:linear-gradient(90deg,var(--accent),var(--accent-2));
+    transition:width .35s ease;
+    box-shadow:0 0 10px rgba(56,189,248,.4);
+  }
+  #counter{
+    position:fixed;bottom:18px;right:22px;
+    font-family:var(--font-mono);font-size:12.5px;color:var(--accent);
+    background:var(--surface);border:1px solid var(--border);
+    padding:7px 13px;border-radius:6px;z-index:1000;letter-spacing:.03em;
+  }
+  #counter .lbl{color:var(--text-dim);margin-right:6px;}
+  #hint{
+    position:fixed;bottom:18px;left:22px;
+    font-family:var(--font-mono);font-size:11.5px;color:var(--text-dim);
+    z-index:1000;opacity:.75;
+  }
+  #deck{position:relative;width:100vw;height:100vh;z-index:1;}
+  .slide{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;
+    justify-content:center;align-items:center;
+    padding:60px 8vw;
+    opacity:0;pointer-events:none;
+    transform:translateX(24px);
+    transition:opacity .35s ease, transform .35s ease;
+    overflow:auto;
+  }
+  .slide.active{opacity:1;pointer-events:auto;transform:translateX(0);}
+  .slide.exit-left{transform:translateX(-24px);}
+  @media (prefers-reduced-motion: reduce){
+    .slide{transition:opacity .01s linear;transform:none !important;}
+  }
+  .slide-inner{width:100%;max-width:1240px;margin:0 auto;min-width:0;}
+  .eyebrow{
+    font-family:var(--font-mono);font-size:12.5px;letter-spacing:.08em;
+    color:var(--accent);text-transform:uppercase;
+    display:flex;align-items:center;gap:10px;margin-bottom:18px;
+  }
+  .eyebrow .v-tag{
+    background:var(--surface-2);border:1px solid var(--border);
+    border-bottom:2px solid var(--accent);color:var(--accent-2);
+    padding:4px 10px;border-radius:4px 4px 0 0;font-weight:700;
+  }
+  .eyebrow.mc{color:var(--mc);} .eyebrow.mc .v-tag{border-bottom-color:var(--mc);}
+  .eyebrow.id{color:var(--id);} .eyebrow.id .v-tag{border-bottom-color:var(--id);}
+  .eyebrow.out{color:var(--out);} .eyebrow.out .v-tag{border-bottom-color:var(--out);}
+  h1.title{
+    font-family:var(--font-mono);
+    font-size:clamp(30px,4vw,54px);
+    line-height:1.1;margin:0 0 18px 0;font-weight:800;letter-spacing:-.01em;
+  }
+  h2.title{
+    font-family:var(--font-mono);
+    font-size:clamp(25px,2.4vw,34px);
+    line-height:1.2;margin:0 0 20px 0;font-weight:750;letter-spacing:-.01em;
+  }
+  p.lead{font-size:clamp(15px,1.15vw,18px);line-height:1.65;color:var(--text-dim);max-width:920px;margin:0 0 8px 0;}
+  code{font-family:var(--font-mono);background:var(--surface-2);border:1px solid var(--border);
+    padding:1px 6px;border-radius:4px;color:var(--accent-2);font-size:.92em;}
+  b{color:var(--text);}
+
+  .cover-badges{display:flex;gap:10px;margin-top:26px;flex-wrap:wrap;}
+  .badge{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);
+    border:1px solid var(--border);border-radius:20px;padding:6px 14px;}
+
+  .recap-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:8px;}
+  .recap-grid > *{min-width:0;}
+  .recap-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+  .recap-item .k{font-family:var(--font-mono);font-size:13px;color:var(--accent);margin-bottom:6px;font-weight:700;}
+  .recap-item .v{font-size:15px;color:var(--text-dim);line-height:1.6;}
+
+  .two-col-lec{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:26px;align-items:start;}
+  .two-col-lec > *{min-width:0;}
+  .side-by-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;align-items:start;}
+  .side-by-side > *{min-width:0;text-align:center;}
+  .legend-row{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;margin-top:10px;}
+  .legend-item{display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11.5px;color:var(--text-dim);}
+  .legend-dot{width:12px;height:12px;border-radius:50%;display:inline-block;}
+
+  .lec-table{width:100%;border-collapse:collapse;font-size:15px;margin-top:10px;}
+  .lec-table th,.lec-table td{border:1px solid var(--border);padding:8px 12px;text-align:left;}
+  .lec-table th{color:var(--accent);font-family:var(--font-mono);font-size:11.5px;
+    text-transform:uppercase;letter-spacing:.04em;background:var(--surface-2);}
+  .lec-table td{color:var(--text-dim);}
+  .lec-table td.hl{color:var(--text);font-weight:700;}
+  .lec-table.matrix th, .lec-table.matrix td{text-align:center;padding:6px 10px;}
+
+  .lec-note{font-size:15px;color:var(--text-dim);margin-top:14px;line-height:1.6;
+    background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent-2);
+    border-radius:6px;padding:12px 16px;}
+  .lec-note b{color:var(--text);}
+
+  .scenario-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:8px;}
+  .scenario-grid > *{min-width:0;}
+  .scenario-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+  .scenario-card .k{font-family:var(--font-mono);font-size:12.5px;color:var(--accent-2);margin-bottom:6px;font-weight:700;}
+  .scenario-card .v{font-size:15px;color:var(--text-dim);line-height:1.6;}
+
+  .quote-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);
+    border-radius:8px;padding:18px 22px;font-size:16px;color:var(--text);font-style:italic;line-height:1.6;margin-bottom:14px;}
+
+  .closing-quote{font-size:19px;font-style:italic;color:var(--text);text-align:center;max-width:720px;
+    margin:18px auto 6px;line-height:1.6;}
+  .closing-sign{text-align:center;color:var(--text-dim);font-family:var(--font-mono);font-size:14px;margin-top:18px;}
+
+  /* ===== code blocks ===== */
+  .code-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    overflow:hidden;margin-top:10px;}
+  .code-top{display:flex;justify-content:space-between;align-items:center;
+    padding:8px 14px;background:var(--surface-2);border-bottom:1px solid var(--border);}
+  .code-lang{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);
+    text-transform:uppercase;letter-spacing:.06em;}
+  .copy-btn{font-family:var(--font-mono);font-size:11.5px;color:var(--text-dim);
+    background:var(--surface);border:1px solid var(--border);border-radius:5px;
+    padding:4px 10px;cursor:pointer;transition:all .2s ease;}
+  .copy-btn:hover{color:var(--accent);border-color:var(--accent-dim);}
+  .copy-btn.copied{color:var(--accent);border-color:var(--accent);}
+  .code-pre{margin:0;padding:14px 16px;max-height:320px;overflow:auto;
+    font-family:var(--font-mono);font-size:12.8px;line-height:1.6;}
+  .code-pre code{background:none;border:none;padding:0;color:var(--text);}
+  .tok-kw{color:var(--accent-2);}
+  .tok-str{color:#7dd3fc;}
+  .tok-com{color:var(--text-dim);font-style:italic;}
+  .tok-num{color:#c4b5fd;}
+  .tok-type{color:var(--accent);}
+
+  /* ===== graph diagrams ===== */
+  .graph-svg{width:100%;max-width:480px;height:auto;display:block;margin:10px auto 0;}
+  .graph-edge{stroke:var(--text-dim);stroke-width:2;}
+  .graph-arrow-head{fill:var(--accent-2);}
+  .graph-vertex{fill:var(--surface-2);stroke:var(--accent);stroke-width:2;}
+  .graph-label{fill:var(--text);font-family:var(--font-mono);font-size:13px;font-weight:700;}
+  .visit-badge{fill:var(--accent-2);stroke:var(--bg);stroke-width:1.5;}
+  .visit-num{fill:var(--bg);font-family:var(--font-mono);font-size:11px;font-weight:800;}
+  .mem-caption{text-align:center;color:var(--text-dim);font-size:12.5px;margin-top:8px;
+    font-family:var(--font-mono);letter-spacing:.03em;}
+  .seq-strip{font-family:var(--font-mono);font-size:15px;color:var(--accent-2);text-align:center;
+    letter-spacing:.05em;margin-top:6px;font-weight:700;}
+
+  /* ===== activity layout (2-col, odd centered) ===== */
+  .activity-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:6px;}
+  .activity-grid > *{min-width:0;}
+  .activity-centered{grid-column:1 / -1;max-width:560px;margin:0 auto;width:100%;}
+  .q-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+  .q-card .q-num{font-family:var(--font-mono);font-size:11.5px;color:var(--text-dim);margin-bottom:6px;letter-spacing:.04em;}
+  .q-card .q-text{font-size:15px;color:var(--text);margin-bottom:10px;font-weight:600;line-height:1.5;}
+  .opt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+  .opt-grid > *{min-width:0;}
+  .opt{font-size:15px;color:var(--text-dim);background:var(--surface-2);
+    border:1px solid var(--border);border-radius:6px;padding:8px 10px;line-height:1.4;}
+  .opt b{color:var(--text);margin-right:4px;}
+  .id-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--id);
+    border-radius:8px;padding:14px 18px;font-size:15px;color:var(--text-dim);line-height:1.55;height:100%;}
+  .id-card .q-num{font-family:var(--font-mono);font-size:11px;color:var(--id);margin-bottom:5px;letter-spacing:.04em;}
+  .code-activity-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:6px;}
+  .code-activity-grid > *{min-width:0;}
+  .code-activity-full{grid-column:1 / -1;}
+  .out-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--out);
+    border-radius:8px;padding:14px 16px;}
+  .out-card .q-num{font-family:var(--font-mono);font-size:11px;color:var(--out);margin-bottom:6px;letter-spacing:.04em;}
+  .out-card pre{margin:0;font-family:var(--font-mono);font-size:12px;line-height:1.5;color:var(--text);
+    background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:9px 11px;overflow-x:auto;}
+
+  /* ===== answers ===== */
+  .answers-scroll{max-height:64vh;overflow-y:auto;padding-right:8px;margin-top:10px;}
+  .ans-row{display:flex;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);}
+  .ans-row:last-child{border-bottom:none;}
+  .ans-num{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);min-width:34px;padding-top:2px;}
+  .ans-correct{font-weight:700;color:var(--accent);font-size:15px;}
+  .ans-out{font-weight:700;color:var(--out);font-family:var(--font-mono);font-size:13.5px;}
+  .ans-explain{font-size:15px;color:var(--text-dim);margin-top:4px;line-height:1.55;}
+  .ans-group-label{font-family:var(--font-mono);font-size:12px;color:var(--accent-2);
+    letter-spacing:.06em;text-transform:uppercase;margin:16px 0 4px 0;}
+  .ans-group-label:first-child{margin-top:0;}
+
+  /* ===== shortcuts modal ===== */
+  #shortcuts-modal{
+    position:fixed;inset:0;background:rgba(2,5,8,.72);z-index:2000;
+    display:flex;align-items:center;justify-content:center;
+    opacity:0;pointer-events:none;transition:opacity .2s ease;
+  }
+  #shortcuts-modal.show{opacity:1;pointer-events:auto;}
+  #shortcuts-modal .panel{background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;padding:28px 32px;max-width:460px;width:90%;}
+  #shortcuts-modal h3{margin:0 0 16px 0;font-family:var(--font-mono);color:var(--accent);font-size:16px;}
+  #shortcuts-modal .row{display:flex;justify-content:space-between;padding:7px 0;
+    border-bottom:1px solid var(--border);font-size:13.5px;color:var(--text-dim);}
+  #shortcuts-modal .row:last-child{border-bottom:none;}
+  #shortcuts-modal kbd{font-family:var(--font-mono);background:var(--surface-2);
+    border:1px solid var(--border);border-radius:4px;padding:2px 8px;color:var(--text);}
+
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+</style>
+</head>
+<body>
+
+<div id="progress-wrap"><div id="progress-bar"></div></div>
+<div id="counter"><span class="lbl">VERTEX</span>00 / 00</div>
+<div id="hint">right-click / &rarr; / Mouse4 next &nbsp;&middot;&nbsp; &larr; / Mouse3 prev &nbsp;&middot;&nbsp; ? for help</div>
+
+<div id="shortcuts-modal">
+  <div class="panel">
+    <h3>Keyboard &amp; Mouse Shortcuts</h3>
+    <div class="row"><span>Next slide</span><span><kbd>&rarr;</kbd>, right-click, or Mouse4</span></div>
+    <div class="row"><span>Previous slide</span><span><kbd>&larr;</kbd> or Mouse3</span></div>
+    <div class="row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="row"><span>Toggle this panel</span><span><kbd>?</kbd></span></div>
+    <div class="row"><span>Close panel</span><span><kbd>Esc</kbd></span></div>
+    <div class="row"><span>Left-click</span><span>free for text &amp; buttons</span></div>
+  </div>
+</div>
+
+<div id="deck"></div>
+
+<script>
+/* ============ HELPERS ============ */
+function escHtml(s){
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+let codeBlockIdx = 0;
+const KEYWORDS = new Set(["public","private","protected","static","void","int","double","char",
+  "boolean","class","new","return","if","else","for","while","break","continue","this","null",
+  "true","false","import","extends","implements","final","long","short","byte","float","package",
+  "try","catch","finally","throw","interface","enum","switch","case","default","super","instanceof"]);
+
+function codeBlock(code, lang){
+  lang = lang || "java";
+  codeBlockIdx++;
+  const id = "code-" + codeBlockIdx;
+  const tokenRe = /(\/\/.*$)|(\/\*[\s\S]*?\*\/)|("(?:[^"\\]|\\.)*")|('(?:[^'\\]|\\.)*')|(\b\d+\.?\d*\b)|(\b[A-Za-z_][A-Za-z0-9_]*\b)/gm;
+  let out = "";
+  let last = 0;
+  let m;
+  while((m = tokenRe.exec(code)) !== null){
+    out += escHtml(code.slice(last, m.index));
+    const full = m[0], comment1 = m[1], comment2 = m[2], dstr = m[3], sstr = m[4], num = m[5], ident = m[6];
+    if(comment1 || comment2){
+      out += '<span class="tok-com">' + escHtml(full) + '</span>';
+    } else if(dstr || sstr){
+      out += '<span class="tok-str">' + escHtml(full) + '</span>';
+    } else if(num){
+      out += '<span class="tok-num">' + escHtml(full) + '</span>';
+    } else if(ident){
+      if(KEYWORDS.has(ident)){
+        out += '<span class="tok-kw">' + escHtml(full) + '</span>';
+      } else if(/^[A-Z]/.test(ident)){
+        out += '<span class="tok-type">' + escHtml(full) + '</span>';
+      } else {
+        out += escHtml(full);
+      }
+    }
+    last = tokenRe.lastIndex;
+  }
+  out += escHtml(code.slice(last));
+  return '<div class="code-wrap"><div class="code-top"><span class="code-lang">' + lang +
+    '</span><button class="copy-btn" onclick="copyCode(this,\'' + id + '\')">Copy</button></div>' +
+    '<pre class="code-pre"><code id="' + id + '">' + out + '</code></pre></div>';
+}
+
+function copyCode(btn, id){
+  const codeEl = document.getElementById(id);
+  const text = codeEl.textContent;
+  const done = () => {
+    const old = btn.textContent;
+    btn.textContent = "Copied!";
+    btn.classList.add("copied");
+    setTimeout(()=>{ btn.textContent = old || "Copy"; btn.classList.remove("copied"); }, 1400);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(done);
+  } else {
+    const ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); }catch(e){}
+    document.body.removeChild(ta);
+    done();
+  }
+}
+
+/* ============ GRAPH DIAGRAM GENERATOR ============ */
+function graphDiagram(vertices, edges, opts){
+  opts = opts || {};
+  const r = opts.r || 24;
+  const w = opts.width || 460;
+  const h = opts.height || 300;
+  const vmap = {};
+  vertices.forEach(v => { vmap[v.id] = v; });
+
+  let svg = '<svg class="graph-svg" viewBox="0 0 ' + w + ' ' + h + '" xmlns="http://www.w3.org/2000/svg">' +
+    '<title>' + (opts.svgTitle || "Graph diagram of vertices and edges") + '</title>';
+
+  edges.forEach(e => {
+    const a = vmap[e.from], b = vmap[e.to];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+    const ux = dx/dist, uy = dy/dist;
+    const x1 = a.x + ux*r, y1 = a.y + uy*r;
+    const x2 = b.x - ux*r, y2 = b.y - uy*r;
+    svg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" class="graph-edge"/>';
+    if(e.directed){
+      const ah = 11;
+      const angle = Math.atan2(dy, dx);
+      const ax1 = x2 - ah*Math.cos(angle - Math.PI/7);
+      const ay1 = y2 - ah*Math.sin(angle - Math.PI/7);
+      const ax2 = x2 - ah*Math.cos(angle + Math.PI/7);
+      const ay2 = y2 - ah*Math.sin(angle + Math.PI/7);
+      svg += '<polygon points="' + x2 + ',' + y2 + ' ' + ax1 + ',' + ay1 + ' ' + ax2 + ',' + ay2 + '" class="graph-arrow-head"/>';
+    }
+  });
+
+  vertices.forEach(v => {
+    svg += '<circle cx="' + v.x + '" cy="' + v.y + '" r="' + r + '" class="graph-vertex"/>' +
+      '<text x="' + v.x + '" y="' + (v.y+5) + '" text-anchor="middle" class="graph-label">' + v.label + '</text>';
+    if(opts.visitOrder && opts.visitOrder[v.id] !== undefined){
+      const bx = v.x + r*0.72, by = v.y - r*0.72;
+      svg += '<circle cx="' + bx + '" cy="' + by + '" r="11" class="visit-badge"/>' +
+        '<text x="' + bx + '" y="' + (by+4) + '" text-anchor="middle" class="visit-num">' + opts.visitOrder[v.id] + '</text>';
+    }
+  });
+
+  svg += '</svg>';
+  let out = svg;
+  if(opts.caption) out += '<div class="mem-caption">' + opts.caption + '</div>';
+  if(opts.sequence) out += '<div class="seq-strip">' + opts.sequence + '</div>';
+  return out;
+}
+
+function legendRow(items){
+  return '<div class="legend-row">' + items.map(it =>
+    '<div class="legend-item"><span class="legend-dot" style="background:' + it.color + '"></span>' + it.label + '</div>'
+  ).join("") + '</div>';
+}
+
+/* ============ CANONICAL GRAPH USED THROUGHOUT THIS DECK ============ */
+const gVerts = [
+  {id:"A", label:"A", x:80,  y:70},
+  {id:"B", label:"B", x:240, y:50},
+  {id:"C", label:"C", x:80,  y:220},
+  {id:"D", label:"D", x:240, y:220},
+  {id:"E", label:"E", x:390, y:150},
+  {id:"F", label:"F", x:390, y:270}
+];
+const gEdges = [
+  {from:"A", to:"B"}, {from:"A", to:"C"},
+  {from:"B", to:"D"}, {from:"C", to:"D"},
+  {from:"D", to:"E"}, {from:"D", to:"F"},
+  {from:"E", to:"F"}
+];
+
+const triVerts = [
+  {id:"A", label:"A", x:150, y:50},
+  {id:"B", label:"B", x:280, y:200},
+  {id:"C", label:"C", x:20,  y:200}
+];
+
+/* ============ STATIC SLIDES ============ */
+const slideCover = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 00</span> MODULE 10 &middot; DATA STRUCTURES</div>' +
+  '<h1 class="title">Graphs</h1>' +
+  '<p class="lead">Think back to a tree: one root at the top, branches only flowing downward. A graph throws that rule out completely. Any point can connect to any other point, in any direction, and connections can even loop back around. This simple idea is what powers maps, social media, and the internet itself.</p>' +
+  '<div class="cover-badges">' +
+    '<div class="badge">Prelims &middot; Module 10</div>' +
+    '<div class="badge">Java</div>' +
+    '<div class="badge">Lecture + Mini Project + Quiz</div>' +
+  '</div>' +
+'</div>';
+
+const slideInstructions = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 01</span> BEFORE YOU START</div>' +
+  '<h2 class="title">How this deck works</h2>' +
+  '<div class="recap-grid">' +
+    '<div class="recap-item"><div class="k">Part 1 &middot; What Is a Graph?</div><div class="v">Vertices, edges, and the directed vs. undirected distinction.</div></div>' +
+    '<div class="recap-item"><div class="k">Part 2 &middot; Representing Graphs</div><div class="v">Adjacency matrix vs. adjacency list &mdash; two ways to store the same connections.</div></div>' +
+    '<div class="recap-item"><div class="k">Part 3 &middot; Traversal</div><div class="v">BFS and DFS, walked step by step on the exact same graph.</div></div>' +
+    '<div class="recap-item"><div class="k">Applications + Project + Activities</div><div class="v">Social networks, navigation, a working BFS explorer, then a full quiz.</div></div>' +
+  '</div>' +
+  '<p class="lead" style="margin-top:18px;">Navigate with <b>right-click</b>, <b>&rarr;</b>, or <b>Mouse4</b> for next; <b>&larr;</b> or <b>Mouse3</b> for previous. Press <b>?</b> anytime for the full shortcut list.</p>' +
+'</div>';
+
+const slideObjectives = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 02</span> LEARNING OBJECTIVES</div>' +
+  '<h2 class="title">By the end of this module, you can&hellip;</h2>' +
+  '<div class="recap-grid">' +
+    '<div class="recap-item"><div class="k">01</div><div class="v">Define a graph and identify its main components: vertices and edges.</div></div>' +
+    '<div class="recap-item"><div class="k">02</div><div class="v">Differentiate directed and undirected graphs.</div></div>' +
+    '<div class="recap-item"><div class="k">03</div><div class="v">Represent a graph using an adjacency matrix and an adjacency list.</div></div>' +
+    '<div class="recap-item"><div class="k">04</div><div class="v">Trace basic graph traversal algorithms: BFS and DFS.</div></div>' +
+  '</div>' +
+'</div>';
+
+function sectionDivider(tag, tabLabel, big, sub){
+  return '<div class="slide-inner">' +
+    '<div class="eyebrow"><span class="v-tag">' + tag + '</span> ' + tabLabel + '</div>' +
+    '<h1 class="title">' + big + '</h1>' +
+    '<p class="lead">' + sub + '</p>' +
+  '</div>';
+}
+
+const slideWhatIs = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 04</span> CONCEPT</div>' +
+  '<h2 class="title">What Is a Graph?</h2>' +
+  '<p class="lead">A graph is just a set of points with lines connecting some of them. That\u2019s it \u2014 no strict rules about levels or parents. The points are called <b>vertices</b> (or nodes), and the connecting lines are called <b>edges</b>. Unlike a tree, a graph has no required starting point, and its connections are allowed to loop back around and form a circle.</p>' +
+  graphDiagram(gVerts, gEdges, {svgTitle:"A graph with 6 vertices and 7 edges, including a cycle", caption:"6 vertices, 7 edges \u2014 notice the loop through D, E, and F"}) +
+'</div>';
+
+const slideDirectedUndirected = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 05</span> CONCEPT</div>' +
+  '<h2 class="title">Directed vs. Undirected</h2>' +
+  '<p class="lead">Picture a hallway between two rooms. If you can walk both directions, that\u2019s <b>undirected</b> &mdash; the connection works both ways, so A connects to B and B connects right back to A. Now picture a one-way street: you can only go from A to B, never the other way. That\u2019s a <b>directed</b> edge &mdash; it only allows travel in the direction it\u2019s pointing.</p>' +
+  '<div class="side-by-side">' +
+    '<div>' + graphDiagram(triVerts, [
+      {from:"A",to:"B"},{from:"B",to:"C"},{from:"C",to:"A"}
+    ], {width:300, height:250, svgTitle:"An undirected graph, edges work both ways", caption:"Undirected \u2014 you can travel either way along any edge"}) + '</div>' +
+    '<div>' + graphDiagram(triVerts, [
+      {from:"A",to:"B",directed:true},{from:"B",to:"C",directed:true},{from:"C",to:"A",directed:true}
+    ], {width:300, height:250, svgTitle:"A directed graph, edges only work one way", caption:"Directed \u2014 A leads to B, but B does NOT lead back to A"}) + '</div>' +
+  '</div>' +
+  '<div class="lec-note">Same three vertices, same triangle shape &mdash; but the arrows completely change what\u2019s reachable from where.</div>' +
+'</div>';
+
+const slideAdjMatrix = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 07</span> CONCEPT</div>' +
+  '<h2 class="title">Adjacency Matrix</h2>' +
+  '<p class="lead">Imagine a big spreadsheet where every row and every column is labeled with a vertex. To find out if two vertices are connected, you just look up the cell where their row and column meet: <code>1</code> means "yes, there\u2019s an edge here," <code>0</code> means "no connection." Checking a connection is instant this way &mdash; but the spreadsheet gets bigger and bigger the more vertices you add, even if most of them aren\u2019t connected to each other.</p>' +
+  '<table class="lec-table matrix">' +
+    '<tr><th></th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th></tr>' +
+    '<tr><th>A</th><td>0</td><td class="hl">1</td><td class="hl">1</td><td>0</td><td>0</td><td>0</td></tr>' +
+    '<tr><th>B</th><td class="hl">1</td><td>0</td><td>0</td><td class="hl">1</td><td>0</td><td>0</td></tr>' +
+    '<tr><th>C</th><td class="hl">1</td><td>0</td><td>0</td><td class="hl">1</td><td>0</td><td>0</td></tr>' +
+    '<tr><th>D</th><td>0</td><td class="hl">1</td><td class="hl">1</td><td>0</td><td class="hl">1</td><td class="hl">1</td></tr>' +
+    '<tr><th>E</th><td>0</td><td>0</td><td>0</td><td class="hl">1</td><td>0</td><td class="hl">1</td></tr>' +
+    '<tr><th>F</th><td>0</td><td>0</td><td>0</td><td class="hl">1</td><td class="hl">1</td><td>0</td></tr>' +
+  '</table>' +
+  '<div class="lec-note">This is the exact same graph from the last slide &mdash; just represented as a grid instead of a picture.</div>' +
+'</div>';
+
+const slideAdjList = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 08</span> CONCEPT</div>' +
+  '<h2 class="title">Adjacency List</h2>' +
+  '<p class="lead">Instead of a big spreadsheet, imagine each vertex just carries a small sticky note that lists its direct neighbors &mdash; nothing more. This uses way less space when a graph has a lot of vertices but each one only connects to a few others, which is exactly how most real-world networks look (most people aren\u2019t friends with everyone else, after all).</p>' +
+  codeBlock(
+'Map<String, List<String>> graph = new HashMap<>();\n' +
+'graph.put("A", Arrays.asList("B", "C"));\n' +
+'graph.put("B", Arrays.asList("A", "D"));\n' +
+'graph.put("C", Arrays.asList("A", "D"));\n' +
+'graph.put("D", Arrays.asList("B", "C", "E", "F"));\n' +
+'graph.put("E", Arrays.asList("D", "F"));\n' +
+'graph.put("F", Arrays.asList("D", "E"));', "java") +
+  '<div class="lec-note">Same graph, same connections &mdash; just stored as "who\u2019s directly next to me" instead of a full grid.</div>' +
+'</div>';
+
+const slideMatrixVsList = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 09</span> CONCEPT</div>' +
+  '<h2 class="title">Matrix vs. List</h2>' +
+  '<table class="lec-table">' +
+    '<tr><th>Aspect</th><th>Adjacency Matrix</th><th>Adjacency List</th></tr>' +
+    '<tr><td>Storage</td><td>Grid sized vertices &times; vertices</td><td>Only the actual connections</td></tr>' +
+    '<tr><td>"Are X and Y connected?"</td><td>Instant &mdash; check one cell</td><td>Scan X\u2019s neighbor list</td></tr>' +
+    '<tr><td>Best for</td><td>Small, densely connected graphs</td><td>Large graphs with relatively few edges</td></tr>' +
+  '</table>' +
+'</div>';
+
+const slideBFS = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 11</span> TRAVERSAL 1</div>' +
+  '<h2 class="title">Breadth-First Search (BFS)</h2>' +
+  '<p class="lead">Think of dropping a pebble in a pond: the ripples spread outward one ring at a time. BFS works the same way &mdash; it visits the starting vertex, then <b>every</b> vertex directly next to it, then everything one more step out, and so on. It keeps track of "who to visit next" using a <b>queue</b>, and it always remembers which vertices it has already visited so it never gets stuck going in circles.</p>' +
+  '<div class="two-col-lec">' +
+    '<div>' +
+      codeBlock(
+'void bfs(String start, Map<String, List<String>> graph) {\n' +
+'    Queue<String> queue = new LinkedList<>();\n' +
+'    Set<String> visited = new HashSet<>();\n\n' +
+'    queue.add(start);\n' +
+'    visited.add(start);\n\n' +
+'    while (!queue.isEmpty()) {\n' +
+'        String current = queue.poll();\n' +
+'        System.out.print(current + " ");\n\n' +
+'        for (String neighbor : graph.get(current)) {\n' +
+'            if (!visited.contains(neighbor)) {\n' +
+'                visited.add(neighbor);\n' +
+'                queue.add(neighbor);\n' +
+'            }\n' +
+'        }\n' +
+'    }\n' +
+'}', "java") +
+      '<div class="lec-note"><b>Great for:</b> finding the shortest path in a graph where every edge counts equally.</div>' +
+    '</div>' +
+    '<div>' + graphDiagram(gVerts, gEdges, {
+      svgTitle:"BFS visit order starting from A",
+      visitOrder:{A:1,B:2,C:3,D:4,E:5,F:6},
+      caption:"BFS from A \u2014 visits everything one \u2018level\u2019 away before going further",
+      sequence:"A \u2192 B \u2192 C \u2192 D \u2192 E \u2192 F"
+    }) + '</div>' +
+  '</div>' +
+'</div>';
+
+const slideDFS = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 12</span> TRAVERSAL 2</div>' +
+  '<h2 class="title">Depth-First Search (DFS)</h2>' +
+  '<p class="lead">Think of exploring a building by picking one hallway and following it as far as it goes &mdash; through every door, down every turn &mdash; before ever stepping back to try a different hallway. That\u2019s DFS: it commits to one path and goes as <b>deep</b> as it possibly can before backtracking. It keeps track of its path using a <b>stack</b> (or recursion, which quietly uses a stack behind the scenes), and just like BFS, it always remembers which vertices it has already visited.</p>' +
+  '<div class="two-col-lec">' +
+    '<div>' +
+      codeBlock(
+'void dfs(String current,\n' +
+'         Map<String, List<String>> graph,\n' +
+'         Set<String> visited) {\n' +
+'    visited.add(current);\n' +
+'    System.out.print(current + " ");\n\n' +
+'    for (String neighbor : graph.get(current)) {\n' +
+'        if (!visited.contains(neighbor)) {\n' +
+'            dfs(neighbor, graph, visited);\n' +
+'        }\n' +
+'    }\n' +
+'}', "java") +
+      '<div class="lec-note"><b>Great for:</b> exploring every possible path, like solving a maze.</div>' +
+    '</div>' +
+    '<div>' + graphDiagram(gVerts, gEdges, {
+      svgTitle:"DFS visit order starting from A",
+      visitOrder:{A:1,B:2,D:3,C:4,E:5,F:6},
+      caption:"DFS from A \u2014 dives all the way down one path before backtracking",
+      sequence:"A \u2192 B \u2192 D \u2192 C \u2192 E \u2192 F"
+    }) + '</div>' +
+  '</div>' +
+'</div>';
+
+const slideBfsVsDfs = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 13</span> COMPARE</div>' +
+  '<h2 class="title">Same Graph, Two Different Walks</h2>' +
+  '<div class="side-by-side">' +
+    '<div>' + graphDiagram(gVerts, gEdges, {width:400,height:280,
+      visitOrder:{A:1,B:2,C:3,D:4,E:5,F:6}, caption:"BFS", sequence:"A B C D E F"}) + '</div>' +
+    '<div>' + graphDiagram(gVerts, gEdges, {width:400,height:280,
+      visitOrder:{A:1,B:2,D:3,C:4,E:5,F:6}, caption:"DFS", sequence:"A B D C E F"}) + '</div>' +
+  '</div>' +
+  '<div class="lec-note">Both start at A and both eventually visit every vertex &mdash; but the <i>order</i> tells a completely different story about how the graph was explored.</div>' +
+'</div>';
+
+/* ============ DEEP DIVE: SECOND WORKED EXAMPLE (RUMOR / CAVE) ============ */
+const rumorVerts = [
+  {id:"A", label:"A", x:230, y:50},
+  {id:"B", label:"B", x:110, y:170},
+  {id:"C", label:"C", x:350, y:170},
+  {id:"D", label:"D", x:50,  y:290},
+  {id:"E", label:"E", x:190, y:290},
+  {id:"F", label:"F", x:350, y:290}
+];
+const rumorEdges = [
+  {from:"A", to:"B", directed:true},
+  {from:"A", to:"C", directed:true},
+  {from:"B", to:"D", directed:true},
+  {from:"B", to:"E", directed:true},
+  {from:"C", to:"F", directed:true}
+];
+
+const slideDeepDiveBfsIntro = sectionDivider("VERTEX 13b","DEEP DIVE","BFS \u2014 Spreading a Rumor","One more worked example, walked through in a lot more detail, using a party analogy.");
+
+const slideBfsMetaphor = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 13c</span> DEEP DIVE</div>' +
+  '<h2 class="title">The Rumor Spreads: BFS Step by Step</h2>' +
+  '<p class="lead">Imagine you\u2019re at a party. You tell a secret to <b>A</b> (yourself). A tells their direct friends, B and C \u2014 that\u2019s everyone one step away. Next, B and C tell their own friends, D, E, and F \u2014 everyone two steps away. Nobody hears the secret twice, and nobody jumps ahead to "two steps away" before "one step away" is finished. That\u2019s exactly how BFS moves through a graph: like ripples spreading out in a pond, one full ring at a time.</p>' +
+  graphDiagram(rumorVerts, rumorEdges, {
+    svgTitle:"A small graph used to trace BFS as a rumor spreading through friends",
+    visitOrder:{A:1,B:2,C:3,D:4,E:5,F:6},
+    caption:"BFS visit order \u2014 everyone 1 step away before anyone 2 steps away",
+    sequence:"A \u2192 B \u2192 C \u2192 D \u2192 E \u2192 F"
+  }) +
+  '<div class="recap-grid">' +
+    '<div class="recap-item"><div class="k">The Line (Queue)</div><div class="v">"Who\u2019s next?" First come, first served \u2014 just like lining up at a coffee shop.</div></div>' +
+    '<div class="recap-item"><div class="k">The Guest List (Visited Set)</div><div class="v">"Have we already told this person?" This stops the rumor from looping back and repeating forever.</div></div>' +
+  '</div>' +
+'</div>';
+
+const slideBfsFullCode = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 13d</span> DEEP DIVE</div>' +
+  '<h2 class="title">BFS in Java \u2014 Full Code</h2>' +
+  '<p class="lead">Here\u2019s the complete method. Don\u2019t worry about taking it all in at once \u2014 we\u2019ll walk through every piece right after this.</p>' +
+  codeBlock(
+'import java.util.*;\n\n' +
+'public class BFS {\n\n' +
+'    static List<String> bfs(String startNode, Map<String, List<String>> graph) {\n' +
+'        Set<String> visited = new HashSet<>();\n' +
+'        Queue<String> queue = new LinkedList<>();\n' +
+'        List<String> traversalOrder = new ArrayList<>();\n\n' +
+'        // Step 1: Push start node to queue & mark visited\n' +
+'        queue.add(startNode);\n' +
+'        visited.add(startNode);\n\n' +
+'        // Step 2: Keep going as long as people are in line\n' +
+'        while (!queue.isEmpty()) {\n' +
+'            // Step 3: Get the person at the front of the line\n' +
+'            String currentNode = queue.poll();\n' +
+'            traversalOrder.add(currentNode);\n\n' +
+'            // Step 4: Look at all their friends\n' +
+'            List<String> neighbors = graph.getOrDefault(currentNode, new ArrayList<>());\n' +
+'            for (String neighbor : neighbors) {\n' +
+'                // Step 5: If they haven\'t heard the rumor, put them in line!\n' +
+'                if (!visited.contains(neighbor)) {\n' +
+'                    visited.add(neighbor);\n' +
+'                    queue.add(neighbor);\n' +
+'                }\n' +
+'            }\n' +
+'        }\n\n' +
+'        return traversalOrder;\n' +
+'    }\n' +
+'}', "java") +
+'</div>';
+
+const slideBfsBreakdown = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 13e</span> DEEP DIVE</div>' +
+  '<h2 class="title">Line-by-Line: What\u2019s Actually Happening</h2>' +
+  '<table class="lec-table">' +
+    '<tr><th>Line</th><th>What it does</th></tr>' +
+    '<tr><td><code>visited</code>, <code>queue</code>, <code>traversalOrder</code></td><td>The guest list of who\u2019s heard it, the waiting line, and a notepad recording the order everyone was visited</td></tr>' +
+    '<tr><td><code>queue.add(startNode); visited.add(startNode);</code></td><td>Put A in line <i>and</i> mark A on the guest list right away, in the same breath</td></tr>' +
+    '<tr><td><code>while (!queue.isEmpty())</code></td><td>Keep going as long as at least one person is still waiting in line</td></tr>' +
+    '<tr><td><code>queue.poll()</code></td><td>Grabs the very first person out of the front of the line</td></tr>' +
+    '<tr><td><code>if (!visited.contains(neighbor))</code></td><td>Check each friend \u2014 if they haven\u2019t heard it yet, mark them visited and send them to the back of the line</td></tr>' +
+  '</table>' +
+  '<div class="lec-note"><b>Tracing the queue over time</b> (start at A):</div>' +
+  '<table class="lec-table">' +
+    '<tr><th>Step</th><th>Queue before</th><th>Visit</th><th>Queue after</th></tr>' +
+    '<tr><td>1</td><td>[A]</td><td class="hl">A</td><td>[B, C]</td></tr>' +
+    '<tr><td>2</td><td>[B, C]</td><td class="hl">B</td><td>[C, D, E]</td></tr>' +
+    '<tr><td>3</td><td>[C, D, E]</td><td class="hl">C</td><td>[D, E, F]</td></tr>' +
+    '<tr><td>4</td><td>[D, E, F]</td><td class="hl">D</td><td>[E, F]</td></tr>' +
+    '<tr><td>5</td><td>[E, F]</td><td class="hl">E</td><td>[F]</td></tr>' +
+    '<tr><td>6</td><td>[F]</td><td class="hl">F</td><td>[] (empty \u2014 loop ends)</td></tr>' +
+  '</table>' +
+'</div>';
+
+const slideBfsGoldenRule = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 13f</span> DEEP DIVE</div>' +
+  '<h2 class="title">Golden Rule: Mark It the Moment You Queue It</h2>' +
+  '<div class="quote-card">Always mark a vertex as <b>visited</b> at the exact same moment you add it to the queue \u2014 not later, when you finally pull it back out.</div>' +
+  '<p class="lead">If you wait until a vertex is <i>removed</i> from the queue to mark it visited, two different vertices could each check "has anyone visited this neighbor?" before either one gets the chance to actually mark it. The result: the same neighbor ends up added to the queue twice, and gets visited twice too.</p>' +
+'</div>';
+
+const slideDeepDiveDfsIntro = sectionDivider("VERTEX 13g","DEEP DIVE","DFS \u2014 Exploring a Cave","Same graph, same starting point \u2014 but a completely different way of walking through it.");
+
+const slideDfsMetaphor = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 13h</span> DEEP DIVE</div>' +
+  '<h2 class="title">The Cave Explorer: DFS Step by Step</h2>' +
+  '<p class="lead">Now picture walking into a cave with branching tunnels, flashlight in hand. You start at A. You see two tunnels \u2014 B and C \u2014 and you pick B. Standing at B, you see two more tunnels, D and E; you ignore E for now and dive straight down D. D turns out to be a dead end, so you <b>backtrack</b> to B and finally check E. Once B is fully explored, you backtrack all the way to A and head down the C tunnel instead.</p>' +
+  graphDiagram(rumorVerts, rumorEdges, {
+    svgTitle:"The same graph, this time traced with DFS",
+    visitOrder:{A:1,B:2,D:3,E:4,C:5,F:6},
+    caption:"DFS visit order \u2014 dive as deep as possible before backtracking",
+    sequence:"A \u2192 B \u2192 D \u2192 E \u2192 C \u2192 F"
+  }) +
+  '<div class="lec-note">DFS uses a <b>stack</b> to remember where it\u2019s been \u2014 usually hidden inside recursion, since every recursive call quietly uses Java\u2019s own call stack behind the scenes.</div>' +
+'</div>';
+
+const slideDfsFullCode = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 13i</span> DEEP DIVE</div>' +
+  '<h2 class="title">DFS in Java \u2014 Full Code</h2>' +
+  '<p class="lead">The easiest way to write DFS is with <b>recursion</b>: a method that calls itself. Here\u2019s the complete version, including the exact graph from the metaphor.</p>' +
+  codeBlock(
+'import java.util.*;\n\n' +
+'public class DFS {\n\n' +
+'    static Set<String> dfs(String node, Map<String, List<String>> graph, Set<String> visited) {\n' +
+'        // Step 1: Mark current node as visited\n' +
+'        visited.add(node);\n' +
+'        System.out.println("Visited: " + node);\n\n' +
+'        // Step 2: Grab the neighbors (B, C, etc.)\n' +
+'        List<String> neighbors = graph.getOrDefault(node, new ArrayList<>());\n\n' +
+'        // Step 3: Loop through each neighbor\n' +
+'        for (String neighbor : neighbors) {\n' +
+'            // Step 4: If we haven\'t been there, DIVE IN immediately!\n' +
+'            if (!visited.contains(neighbor)) {\n' +
+'                dfs(neighbor, graph, visited); // <-- calls ITSELF!\n' +
+'            }\n' +
+'        }\n' +
+'        return visited;\n' +
+'    }\n\n' +
+'    public static void main(String[] args) {\n' +
+'        Map<String, List<String>> graph = new HashMap<>();\n' +
+'        graph.put("A", Arrays.asList("B", "C"));\n' +
+'        graph.put("B", Arrays.asList("D", "E"));\n' +
+'        graph.put("C", Arrays.asList("F"));\n' +
+'        graph.put("D", new ArrayList<>());\n' +
+'        graph.put("E", new ArrayList<>());\n' +
+'        graph.put("F", new ArrayList<>());\n\n' +
+'        dfs("A", graph, new HashSet<>());\n' +
+'    }\n' +
+'}', "java") +
+'</div>';
+
+const slideDfsBreakdown = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 13j</span> DEEP DIVE</div>' +
+  '<h2 class="title">The Recursive Dive &amp; Backtracking</h2>' +
+  '<div class="two-col-lec">' +
+    '<div>' +
+      codeBlock(
+'if (!visited.contains(neighbor)) {\n' +
+'    dfs(neighbor, graph, visited);\n' +
+'}', "java") +
+      '<div class="lec-note"><b>The magic part:</b> the loop looks at B first. Is B visited? No \u2014 so instead of finishing the loop to check C, it pauses everything and calls <code>dfs(B)</code> right on the spot.</div>' +
+    '</div>' +
+    '<div class="recap-grid" style="grid-template-columns:1fr;">' +
+      '<div class="recap-item"><div class="k">Inside dfs(B)</div><div class="v">Marks B visited, looks at B\u2019s neighbors [D, E], then pauses again and calls dfs(D).</div></div>' +
+      '<div class="recap-item"><div class="k">Dead end at D</div><div class="v">D has no neighbors, so its loop finishes instantly and control returns straight back to B.</div></div>' +
+      '<div class="recap-item"><div class="k">Backtrack &amp; resume</div><div class="v">B resumes exactly where it paused, moving on to its next neighbor: E.</div></div>' +
+    '</div>' +
+  '</div>' +
+'</div>';
+
+const slideBfsDfsTraceCompare = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 13k</span> DEEP DIVE</div>' +
+  '<h2 class="title">Trace Comparison: BFS vs. DFS</h2>' +
+  '<p class="lead">Same graph, same starting vertex \u2014 but look at how differently each algorithm gets to "everyone visited."</p>' +
+  '<table class="lec-table">' +
+    '<tr><th>Algorithm</th><th>Order Visited</th><th>Strategy</th></tr>' +
+    '<tr><td class="hl">BFS (Queue)</td><td class="hl">A \u2192 B \u2192 C \u2192 D \u2192 E \u2192 F</td><td>Level by level (wide)</td></tr>' +
+    '<tr><td class="hl">DFS (Stack / Recursion)</td><td class="hl">A \u2192 B \u2192 D \u2192 E \u2192 C \u2192 F</td><td>Branch by branch (deep)</td></tr>' +
+  '</table>' +
+'</div>';
+
+const slideBfsDfsCheatSheet = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 13l</span> DEEP DIVE</div>' +
+  '<h2 class="title">Summary Cheat Sheet</h2>' +
+  '<div class="quote-card"><b>BFS (Queue \u2014 poll() / add()):</b> &ldquo;Let me check all my immediate neighbors before moving any deeper.&rdquo;</div>' +
+  '<div class="quote-card"><b>DFS (Recursion / Stack):</b> &ldquo;Let me follow this single path as deep as possible before turning back.&rdquo;</div>' +
+'</div>';
+
+const slideSocialNetworks = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 15</span> APPLICATION 1</div>' +
+  '<h2 class="title">Social Networks</h2>' +
+  '<p class="lead">On any social platform, every person is a vertex, and every connection between two people is an edge. A "friend" relationship goes both ways, so it\u2019s naturally <b>undirected</b>. But a "follow" is one-sided \u2014 you can follow a celebrity without them following you back \u2014 so that\u2019s a <b>directed</b> edge, pointing only from the follower to the person being followed.</p>' +
+  graphDiagram(triVerts, [
+    {from:"A",to:"B",directed:true},{from:"B",to:"C"},{from:"C",to:"A",directed:true}
+  ], {width:300,height:250, svgTitle:"Mixed follow and friend relationships in a small social network",
+      caption:"A follows B (one-way), but B and C are mutual friends (two-way)"}) +
+'</div>';
+
+const slideMapsNav = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 16</span> APPLICATION 2</div>' +
+  '<h2 class="title">Maps &amp; Navigation</h2>' +
+  '<p class="lead">On any road map, every intersection is a vertex, and every road connecting two intersections is an edge. A regular two-way street is undirected; a one-way street is directed. If every road takes the same effort to travel (no traffic, no distance weighting), BFS naturally finds the route with the <b>fewest turns</b> \u2014 the graph version of "the shortest way there."</p>' +
+  graphDiagram(gVerts, gEdges, {svgTitle:"A small road network between six intersections",
+    caption:"Same shape as our canonical graph \u2014 vertices are intersections, edges are roads"}) +
+'</div>';
+
+const slideKeyQuotes = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 17</span> KEY TAKEAWAYS</div>' +
+  '<h2 class="title">Worth Remembering</h2>' +
+  '<div class="quote-card">&ldquo;A graph doesn\u2019t care about hierarchy &mdash; only about connection.&rdquo;</div>' +
+  '<div class="quote-card">&ldquo;BFS asks &lsquo;who\u2019s nearby?&rsquo; DFS asks &lsquo;how far can I go?&rsquo;&rdquo;</div>' +
+  '<div class="quote-card">&ldquo;Visited isn\u2019t just a checkbox &mdash; it\u2019s what keeps a graph from looping forever.&rdquo;</div>' +
+'</div>';
+
+const slideProjectCode = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 18</span> MINI PROJECT</div>' +
+  '<h2 class="title">Graph Explorer</h2>' +
+  '<p class="lead">A small, runnable program that builds our canonical graph as an adjacency list, then runs BFS from A &mdash; proving the exact visit order traced earlier in this lesson.</p>' +
+  codeBlock(
+'import java.util.*;\n\n' +
+'public class GraphExplorer {\n' +
+'    public static void main(String[] args) {\n' +
+'        Map<String, List<String>> graph = new HashMap<>();\n' +
+'        graph.put("A", Arrays.asList("B", "C"));\n' +
+'        graph.put("B", Arrays.asList("A", "D"));\n' +
+'        graph.put("C", Arrays.asList("A", "D"));\n' +
+'        graph.put("D", Arrays.asList("B", "C", "E", "F"));\n' +
+'        graph.put("E", Arrays.asList("D", "F"));\n' +
+'        graph.put("F", Arrays.asList("D", "E"));\n\n' +
+'        System.out.print("BFS from A: ");\n' +
+'        bfs("A", graph);\n' +
+'    }\n\n' +
+'    static void bfs(String start, Map<String, List<String>> graph) {\n' +
+'        Queue<String> queue = new LinkedList<>();\n' +
+'        Set<String> visited = new HashSet<>();\n' +
+'        queue.add(start);\n' +
+'        visited.add(start);\n\n' +
+'        while (!queue.isEmpty()) {\n' +
+'            String current = queue.poll();\n' +
+'            System.out.print(current + " ");\n' +
+'            for (String neighbor : graph.get(current)) {\n' +
+'                if (!visited.contains(neighbor)) {\n' +
+'                    visited.add(neighbor);\n' +
+'                    queue.add(neighbor);\n' +
+'                }\n' +
+'            }\n' +
+'        }\n' +
+'    }\n' +
+'}', "java") +
+'</div>';
+
+const slideProjectRun = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 19</span> MINI PROJECT</div>' +
+  '<h2 class="title">Running the Explorer</h2>' +
+  '<div class="two-col-lec">' +
+    '<div>' +
+      '<div class="lec-note"><b>Console output:</b></div>' +
+      codeBlock('BFS from A: A B C D E F ', "text") +
+    '</div>' +
+    '<div class="lec-note">This matches the traced BFS order from earlier exactly: A, then its neighbors B and C, then D (reached through both of them), then E and F.</div>' +
+  '</div>' +
+'</div>';
+
+const slideRecap = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 20</span> RECAP</div>' +
+  '<h2 class="title">Before the Activities</h2>' +
+  '<div class="recap-grid">' +
+    '<div class="recap-item"><div class="k">Graph</div><div class="v">Vertices (points) connected by edges (connections) &mdash; no required hierarchy, cycles allowed.</div></div>' +
+    '<div class="recap-item"><div class="k">Directed / Undirected</div><div class="v">Directed edges only work one way; undirected edges work both ways.</div></div>' +
+    '<div class="recap-item"><div class="k">Adjacency Matrix</div><div class="v">A grid of 0s and 1s &mdash; instant lookup, more space.</div></div>' +
+    '<div class="recap-item"><div class="k">Adjacency List</div><div class="v">Each vertex keeps its own neighbor list &mdash; less space for sparse graphs.</div></div>' +
+    '<div class="recap-item"><div class="k">BFS</div><div class="v">Queue-based, level by level, good for shortest unweighted paths.</div></div>' +
+    '<div class="recap-item"><div class="k">DFS</div><div class="v">Stack/recursion-based, dives deep first, good for exploring every path.</div></div>' +
+  '</div>' +
+'</div>';
+
+const slideActivitiesIntro = sectionDivider("VERTEX 21","SECTION","Activities","Multiple Choice, Identification, and Guess-the-Output \u2014 answers are on the next-to-last slide.");
+
+/* ============ ACTIVITY DATA ============ */
+const mcQuestions = [
+  {q:"What are the two core components of a graph?",
+   opts:["Root and Leaf","Vertices and Edges","Push and Pop","Front and Rear"]},
+  {q:"In a directed graph, what does an edge from A to B mean?",
+   opts:["A and B are mutually connected","The connection only goes one way, from A to B","A and B are the same vertex","There is no relationship between A and B"]},
+  {q:"Which traversal explores as far as possible down one path before backtracking?",
+   opts:["BFS","DFS","In-order traversal","Linear search"]},
+  {q:"Which data structure does BFS rely on to explore level by level?",
+   opts:["Stack","Queue","Array","Tree"]},
+  {q:"Why must a graph traversal keep track of visited vertices?",
+   opts:["To make the code run faster automatically","To avoid revisiting the same vertex forever, especially in a graph with cycles","Because vertices can only be visited once ever, even across runs","It\u2019s optional and rarely needed"]}
+];
+const mcAnswers = [1,1,1,1,1];
+const mcExplain = [
+  "Every graph is built from vertices (the points/entities) and edges (the connections between them).",
+  "A directed edge only allows travel in the direction it points \u2014 A to B doesn\u2019t imply B to A.",
+  "DFS commits to one path and goes as deep as it can before backtracking to try another branch.",
+  "BFS uses a queue so it processes all neighbors at the current level before moving to the next level.",
+  "Without tracking visited vertices, a graph with a cycle would send the traversal into an endless loop."
+];
+
+const idItems = [
+  {q:"The points/entities in a graph.", a:"Vertices (Nodes)"},
+  {q:"The connections between vertices in a graph.", a:"Edges"},
+  {q:"A graph where edges only go one direction.", a:"Directed Graph"},
+  {q:"The traversal algorithm that uses a queue to explore level by level.", a:"Breadth-First Search (BFS)"},
+  {q:"The traversal algorithm that uses a stack (or recursion) to explore as deep as possible first.", a:"Depth-First Search (DFS)"}
+];
+
+const codeItems = [
+  {q:"Using our canonical graph, what visit order does bfs(\u201cA\u201d, graph) print?",
+   code:'queue.add("A"); visited.add("A");\n// process neighbors in list order: B, C, then D, then E, F\nbfs("A", graph);',
+   ans:["A B C D E F"], exp:"BFS visits A, then both of A\u2019s neighbors (B, C), then D (reached from B/C), then E and F."},
+  {q:"Using our canonical graph and alphabetical neighbor order, what visit order does dfs(\u201cA\u201d, ...) print?",
+   code:'dfs("A", graph, visited);\n// dives into B first, then B\'s unvisited neighbor D, then D\'s neighbors...',
+   ans:["A B D C E F"], exp:"DFS commits to A \u2192 B \u2192 D first, then backtracks to explore C from D, then continues to E and F."},
+  {q:"What does this print?",
+   code:'Set<String> visited = new HashSet<>();\nvisited.add("A");\nSystem.out.println(visited.contains("A"));\nSystem.out.println(visited.contains("Z"));',
+   ans:["true","false"], exp:"\u201cA\u201d was explicitly added to the set, so contains(\u201cA\u201d) is true. \u201cZ\u201d was never added, so contains(\u201cZ\u201d) is false."}
+];
+
+/* ============ ACTIVITY SLIDE BUILDERS ============ */
+function pairInGrid(items, renderFn){
+  let html = '<div class="activity-grid">';
+  items.forEach((it, i) => {
+    const isLastOdd = (items.length % 2 === 1) && (i === items.length - 1);
+    html += '<div' + (isLastOdd ? ' class="activity-centered"' : '') + '>' + renderFn(it, i) + '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function mcSlide(){
+  const cards = pairInGrid(mcQuestions, (q,i) => {
+    const opts = q.opts.map((o,j) => '<div class="opt"><b>' + String.fromCharCode(65+j) + ')</b>' + o + '</div>').join("");
+    return '<div class="q-card"><div class="q-num">QUESTION ' + (i+1) + ' / ' + mcQuestions.length + '</div>' +
+      '<div class="q-text">' + q.q + '</div><div class="opt-grid">' + opts + '</div></div>';
+  });
+  return '<div class="slide-inner"><div class="eyebrow mc"><span class="v-tag">VERTEX 22</span> ACTIVITY &middot; MULTIPLE CHOICE</div>' +
+    '<h2 class="title">Multiple Choice</h2><p class="lead">Pick the single best answer for each. Answers are on the next-to-last slide.</p>' +
+    cards + '</div>';
+}
+
+function idSlide(){
+  const cards = pairInGrid(idItems, (it,i) =>
+    '<div class="id-card"><div class="q-num">ITEM ' + (i+1) + ' / ' + idItems.length + '</div>' + it.q + '</div>'
+  );
+  return '<div class="slide-inner"><div class="eyebrow id"><span class="v-tag">VERTEX 23</span> ACTIVITY &middot; IDENTIFICATION</div>' +
+    '<h2 class="title">Identification</h2><p class="lead">Name the concept being described. Answers are on the next-to-last slide.</p>' +
+    cards + '</div>';
+}
+
+function codeSlide(){
+  let html = '<div class="code-activity-grid">';
+  codeItems.forEach((it,i) => {
+    const isLastOdd = (codeItems.length % 2 === 1) && (i === codeItems.length - 1);
+    html += '<div class="out-card' + (isLastOdd ? ' code-activity-full' : '') + '">' +
+      '<div class="q-num">SNIPPET ' + (i+1) + ' / ' + codeItems.length + '</div>' +
+      '<div class="q-text" style="font-size:15px;margin-bottom:8px;">' + it.q + '</div>' +
+      '<pre>' + escHtml(it.code) + '</pre></div>';
+  });
+  html += '</div>';
+  return '<div class="slide-inner"><div class="eyebrow out"><span class="v-tag">VERTEX 24</span> ACTIVITY &middot; GUESS THE OUTPUT</div>' +
+    '<h2 class="title">Guess the Output</h2><p class="lead">Trace each snippet against this lesson\u2019s canonical graph and predict exactly what gets printed. Answers are on the next-to-last slide.</p>' +
+    html + '</div>';
+}
+
+function answersSlide(){
+  const mcRows = mcQuestions.map((q,i) =>
+    '<div class="ans-row"><div class="ans-num">Q' + (i+1) + '</div><div>' +
+    '<span class="ans-correct">' + String.fromCharCode(65+mcAnswers[i]) + ') ' + q.opts[mcAnswers[i]] + '</span>' +
+    '<div class="ans-explain">' + mcExplain[i] + '</div></div></div>'
+  ).join("");
+  const idRows = idItems.map((it,i) =>
+    '<div class="ans-row"><div class="ans-num">I' + (i+1) + '</div><div>' +
+    '<span class="ans-correct">' + it.a + '</span>' +
+    '<div class="ans-explain">' + it.q + '</div></div></div>'
+  ).join("");
+  const codeRows = codeItems.map((q,i) =>
+    '<div class="ans-row"><div class="ans-num">C' + (i+1) + '</div><div>' +
+    '<span class="ans-out">' + q.ans.map(escHtml).join(" / ") + '</span>' +
+    '<div class="ans-explain">' + q.exp + '</div></div></div>'
+  ).join("");
+  return '<div class="slide-inner"><div class="eyebrow"><span class="v-tag">VERTEX 25</span> ANSWER KEY</div>' +
+    '<h2 class="title">All Answers &amp; Explanations</h2>' +
+    '<div class="answers-scroll">' +
+      '<div class="ans-group-label">Multiple Choice</div>' + mcRows +
+      '<div class="ans-group-label">Identification</div>' + idRows +
+      '<div class="ans-group-label">Guess the Output</div>' + codeRows +
+    '</div></div>';
+}
+
+const slideClosing = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="v-tag">VERTEX 26</span> CLOSING</div>' +
+  '<h2 class="title" style="text-align:center;">That\u2019s Graphs</h2>' +
+  '<div class="closing-quote">&ldquo;Every network you\u2019ve ever used &mdash; social, roads, the internet itself &mdash; is just vertices and edges wearing a different outfit.&rdquo;</div>' +
+  '<div class="closing-sign">Great work through Graphs &mdash; see you in the next module.</div>' +
+'</div>';
+
+/* ============ ASSEMBLE DECK ============ */
+const slides = [];
+slides.push(slideCover);
+slides.push(slideInstructions);
+slides.push(slideObjectives);
+slides.push(sectionDivider("VERTEX 03","SECTION","Part 1 \u2014 What Is a Graph?","Vertices, edges, and the one rule trees always enforced that graphs simply drop."));
+slides.push(slideWhatIs);
+slides.push(slideDirectedUndirected);
+slides.push(sectionDivider("VERTEX 06","SECTION","Part 2 \u2014 Representing Graphs","Two different ways to store the exact same set of connections."));
+slides.push(slideAdjMatrix);
+slides.push(slideAdjList);
+slides.push(slideMatrixVsList);
+slides.push(sectionDivider("VERTEX 10","SECTION","Part 3 \u2014 Traversal (BFS &amp; DFS)","Two ways to walk the same graph, with two very different personalities."));
+slides.push(slideBFS);
+slides.push(slideDFS);
+slides.push(slideBfsVsDfs);
+slides.push(slideDeepDiveBfsIntro);
+slides.push(slideBfsMetaphor);
+slides.push(slideBfsFullCode);
+slides.push(slideBfsBreakdown);
+slides.push(slideBfsGoldenRule);
+slides.push(slideDeepDiveDfsIntro);
+slides.push(slideDfsMetaphor);
+slides.push(slideDfsFullCode);
+slides.push(slideDfsBreakdown);
+slides.push(slideBfsDfsTraceCompare);
+slides.push(slideBfsDfsCheatSheet);
+slides.push(sectionDivider("VERTEX 14","SECTION","Real-World Applications","Two systems you already use daily, both quietly built on graphs."));
+slides.push(slideSocialNetworks);
+slides.push(slideMapsNav);
+slides.push(slideKeyQuotes);
+slides.push(sectionDivider("VERTEX 18b","MINI PROJECT","Graph Explorer","A small, runnable program that proves the BFS trace from this lesson."));
+slides.push(slideProjectCode);
+slides.push(slideProjectRun);
+slides.push(slideRecap);
+slides.push(slideActivitiesIntro);
+slides.push(mcSlide());
+slides.push(idSlide());
+slides.push(codeSlide());
+slides.push(answersSlide());
+slides.push(slideClosing);
+
+/* ============ RENDER & NAVIGATION ============ */
+const deck = document.getElementById("deck");
+slides.forEach((html) => {
+  const div = document.createElement("div");
+  div.className = "slide";
+  div.innerHTML = html;
+  deck.appendChild(div);
+});
+const slideEls = Array.from(document.querySelectorAll(".slide"));
+let current = 0;
+
+function pad2(n){ return String(n).padStart(2,"0"); }
+
+function render(){
+  slideEls.forEach((el,i)=>{ el.classList.toggle("active", i===current); });
+  document.getElementById("counter").innerHTML =
+    '<span class="lbl">VERTEX</span>' + pad2(current) + " / " + pad2(slideEls.length-1);
+  document.getElementById("progress-bar").style.width = (((current+1)/slideEls.length)*100)+"%";
+}
+function goTo(i){ current = Math.max(0, Math.min(slideEls.length-1, i)); render(); }
+function next(){ goTo(current+1); }
+function prev(){ goTo(current-1); }
+
+render();
+
+/* block the default context menu everywhere */
+document.addEventListener("contextmenu", (e) => { e.preventDefault(); }, true);
+
+/* mouse navigation: right-click / Mouse4 = next, Mouse3 = previous */
+document.addEventListener("mousedown", (e) => {
+  const modal = document.getElementById("shortcuts-modal");
+  if(e.button === 2){
+    if(e.target.closest("button, a, input, textarea, select, .copy-btn")) return;
+    if(modal.classList.contains("show")){ modal.classList.remove("show"); return; }
+    e.preventDefault(); e.stopImmediatePropagation();
+    next();
+  } else if(e.button === 3){
+    e.preventDefault(); e.stopImmediatePropagation();
+    prev();
+  } else if(e.button === 4){
+    e.preventDefault(); e.stopImmediatePropagation();
+    next();
+  }
+}, true);
+
+window.addEventListener("auxclick", (e) => {
+  if(e.button === 3 || e.button === 4){ e.preventDefault(); e.stopImmediatePropagation(); }
+}, true);
+
+/* keyboard */
+document.addEventListener("keydown", (e) => {
+  const modal = document.getElementById("shortcuts-modal");
+  if(e.key === "?"){ modal.classList.toggle("show"); e.preventDefault(); return; }
+  if(modal.classList.contains("show")){
+    if(e.key === "Escape") modal.classList.remove("show");
+    return;
+  }
+  if(e.key === "ArrowRight"){ next(); }
+  else if(e.key === "ArrowLeft"){ prev(); }
+  else if(e.key === "Home"){ goTo(0); }
+  else if(e.key === "End"){ goTo(slideEls.length-1); }
+});
+
+/* swipe */
+let touchStartX = null;
+document.addEventListener("touchstart", (e) => { touchStartX = e.changedTouches[0].screenX; }, {passive:true});
+document.addEventListener("touchend", (e) => {
+  if(touchStartX === null) return;
+  const dx = e.changedTouches[0].screenX - touchStartX;
+  if(Math.abs(dx) > 50){ if(dx < 0) next(); else prev(); }
+  touchStartX = null;
+}, {passive:true});
+</script>
+</body>
+</html>

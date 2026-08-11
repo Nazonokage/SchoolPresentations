@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Module 11 — Binary Search</title>
+<style>
+  :root{
+    --bg:#0a0805;
+    --surface:#151008;
+    --surface-2:#1d1710;
+    --border:#332615;
+    --text:#faf3ea;
+    --text-dim:#a08a6b;
+    --accent:#fb923c;       /* orange - TARGET / mid / primary */
+    --accent-dim:#8a4f1c;
+    --accent-2:#38bdf8;     /* sky - low/high pointers / secondary */
+    --mc:#c084fc;           /* purple - multiple choice */
+    --id:#4ade80;           /* green - identification */
+    --out:#f472b6;          /* pink - guess the output */
+    --warn:#fbbf24;
+    --danger:#f43f5e;
+    --good:#4ade80;
+    --font-mono:'SF Mono','Cascadia Code','Consolas','Roboto Mono',monospace;
+    --font-sans:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    background:var(--bg);color:var(--text);
+    font-family:var(--font-sans);
+    overflow:hidden;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:
+      radial-gradient(ellipse at 12% 8%, rgba(251,146,60,0.06), transparent 55%),
+      radial-gradient(ellipse at 88% 92%, rgba(56,189,248,0.05), transparent 55%);
+  }
+  #progress-wrap{
+    position:fixed;top:0;left:0;right:0;height:5px;z-index:1000;
+    background:repeating-linear-gradient(90deg, var(--surface-2) 0, var(--surface-2) 16px, var(--border) 16px, var(--border) 18px);
+  }
+  #progress-bar{
+    height:100%;width:0%;
+    background:linear-gradient(90deg,var(--accent),var(--accent-2));
+    transition:width .35s ease;
+    box-shadow:0 0 10px rgba(251,146,60,.4);
+  }
+  #counter{
+    position:fixed;bottom:18px;right:22px;
+    font-family:var(--font-mono);font-size:12.5px;color:var(--accent);
+    background:var(--surface);border:1px solid var(--border);
+    padding:7px 13px;border-radius:6px;z-index:1000;letter-spacing:.03em;
+  }
+  #counter .lbl{color:var(--text-dim);margin-right:6px;}
+  #hint{
+    position:fixed;bottom:18px;left:22px;
+    font-family:var(--font-mono);font-size:11.5px;color:var(--text-dim);
+    z-index:1000;opacity:.75;
+  }
+  #deck{position:relative;width:100vw;height:100vh;z-index:1;}
+  .slide{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;
+    justify-content:center;align-items:center;
+    padding:60px 8vw;
+    opacity:0;pointer-events:none;
+    transform:translateX(24px);
+    transition:opacity .35s ease, transform .35s ease;
+    overflow:auto;
+  }
+  .slide.active{opacity:1;pointer-events:auto;transform:translateX(0);}
+  .slide.exit-left{transform:translateX(-24px);}
+  @media (prefers-reduced-motion: reduce){
+    .slide{transition:opacity .01s linear;transform:none !important;}
+  }
+  .slide-inner{width:100%;max-width:1240px;margin:0 auto;min-width:0;}
+  .eyebrow{
+    font-family:var(--font-mono);font-size:12.5px;letter-spacing:.08em;
+    color:var(--accent);text-transform:uppercase;
+    display:flex;align-items:center;gap:10px;margin-bottom:18px;
+  }
+  .eyebrow .scan-tag{
+    background:var(--surface-2);border:1px solid var(--border);
+    border-bottom:2px solid var(--accent);color:var(--accent-2);
+    padding:4px 10px;border-radius:4px 4px 0 0;font-weight:700;
+  }
+  .eyebrow.mc{color:var(--mc);} .eyebrow.mc .scan-tag{border-bottom-color:var(--mc);}
+  .eyebrow.id{color:var(--id);} .eyebrow.id .scan-tag{border-bottom-color:var(--id);}
+  .eyebrow.out{color:var(--out);} .eyebrow.out .scan-tag{border-bottom-color:var(--out);}
+  h1.title{
+    font-family:var(--font-mono);
+    font-size:clamp(30px,4vw,54px);
+    line-height:1.1;margin:0 0 18px 0;font-weight:800;letter-spacing:-.01em;
+  }
+  h2.title{
+    font-family:var(--font-mono);
+    font-size:clamp(25px,2.4vw,34px);
+    line-height:1.2;margin:0 0 20px 0;font-weight:750;letter-spacing:-.01em;
+  }
+  p.lead{font-size:clamp(15px,1.15vw,18px);line-height:1.65;color:var(--text-dim);max-width:920px;margin:0 0 8px 0;}
+  code{font-family:var(--font-mono);background:var(--surface-2);border:1px solid var(--border);
+    padding:1px 6px;border-radius:4px;color:var(--accent-2);font-size:.92em;}
+  b{color:var(--text);}
+
+  .cover-badges{display:flex;gap:10px;margin-top:26px;flex-wrap:wrap;}
+  .badge{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);
+    border:1px solid var(--border);border-radius:20px;padding:6px 14px;}
+
+  .recap-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:8px;}
+  .recap-grid > *{min-width:0;}
+  .recap-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+  .recap-item .k{font-family:var(--font-mono);font-size:13px;color:var(--accent);margin-bottom:6px;font-weight:700;}
+  .recap-item .v{font-size:15px;color:var(--text-dim);line-height:1.6;}
+
+  .two-col-lec{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:26px;align-items:start;}
+  .two-col-lec > *{min-width:0;}
+  .side-by-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;align-items:start;}
+  .side-by-side > *{min-width:0;text-align:center;}
+
+  .lec-table{width:100%;border-collapse:collapse;font-size:15px;margin-top:10px;}
+  .lec-table th,.lec-table td{border:1px solid var(--border);padding:8px 12px;text-align:left;}
+  .lec-table th{color:var(--accent);font-family:var(--font-mono);font-size:11.5px;
+    text-transform:uppercase;letter-spacing:.04em;background:var(--surface-2);}
+  .lec-table td{color:var(--text-dim);}
+  .lec-table td.hl{color:var(--text);font-weight:700;}
+
+  .lec-note{font-size:15px;color:var(--text-dim);margin-top:14px;line-height:1.6;
+    background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent-2);
+    border-radius:6px;padding:12px 16px;}
+  .lec-note b{color:var(--text);}
+  .lec-note.warn-note{border-left-color:var(--danger);}
+
+  .scenario-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:8px;}
+  .scenario-grid > *{min-width:0;}
+  .scenario-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+  .scenario-card .k{font-family:var(--font-mono);font-size:12.5px;color:var(--accent-2);margin-bottom:6px;font-weight:700;}
+  .scenario-card .v{font-size:15px;color:var(--text-dim);line-height:1.6;}
+
+  .quote-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);
+    border-radius:8px;padding:18px 22px;font-size:16px;color:var(--text);font-style:italic;line-height:1.6;margin-bottom:14px;}
+
+  .closing-quote{font-size:19px;font-style:italic;color:var(--text);text-align:center;max-width:720px;
+    margin:18px auto 6px;line-height:1.6;}
+  .closing-sign{text-align:center;color:var(--text-dim);font-family:var(--font-mono);font-size:14px;margin-top:18px;}
+
+  /* ===== code blocks ===== */
+  .code-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    overflow:hidden;margin-top:10px;}
+  .code-top{display:flex;justify-content:space-between;align-items:center;
+    padding:8px 14px;background:var(--surface-2);border-bottom:1px solid var(--border);}
+  .code-lang{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);
+    text-transform:uppercase;letter-spacing:.06em;}
+  .copy-btn{font-family:var(--font-mono);font-size:11.5px;color:var(--text-dim);
+    background:var(--surface);border:1px solid var(--border);border-radius:5px;
+    padding:4px 10px;cursor:pointer;transition:all .2s ease;}
+  .copy-btn:hover{color:var(--accent);border-color:var(--accent-dim);}
+  .copy-btn.copied{color:var(--accent);border-color:var(--accent);}
+  .code-pre{margin:0;padding:14px 16px;max-height:320px;overflow:auto;
+    font-family:var(--font-mono);font-size:12.8px;line-height:1.6;}
+  .code-pre code{background:none;border:none;padding:0;color:var(--text);}
+  .tok-kw{color:var(--accent-2);}
+  .tok-str{color:#7dd3fc;}
+  .tok-com{color:var(--text-dim);font-style:italic;}
+  .tok-num{color:#c4b5fd;}
+  .tok-type{color:var(--accent);}
+
+  /* ===== array diagrams ===== */
+  .arr-svg{width:100%;max-width:640px;height:auto;display:block;margin:16px auto 0;}
+  .arr-box{fill:var(--surface-2);stroke:var(--accent-2);stroke-width:2;}
+  .arr-box-elim{stroke:var(--text-dim);stroke-dasharray:4 3;opacity:.4;}
+  .arr-box-mid{stroke:var(--accent);stroke-width:3;}
+  .arr-box-found{stroke:var(--good);stroke-width:3;}
+  .arr-box-danger{stroke:var(--danger);stroke-width:3;stroke-dasharray:4 3;}
+  .arr-data{fill:var(--text);font-family:var(--font-mono);font-size:15px;font-weight:700;}
+  .arr-index{fill:var(--text-dim);font-family:var(--font-mono);font-size:10.5px;}
+  .arr-ptr-label{font-family:var(--font-mono);font-size:11px;font-weight:700;}
+  .arr-ptr-low{fill:var(--accent-2);}
+  .arr-ptr-high{fill:var(--accent-2);}
+  .arr-ptr-mid{fill:var(--accent);}
+  .arr-ptr-line{stroke:var(--text-dim);stroke-width:1.5;stroke-dasharray:2 2;}
+  .mem-caption{text-align:center;color:var(--text-dim);font-size:12.5px;margin-top:8px;
+    font-family:var(--font-mono);letter-spacing:.03em;}
+
+  /* ===== activity layout (2-col, odd centered) ===== */
+  .activity-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:6px;}
+  .activity-grid > *{min-width:0;}
+  .activity-centered{grid-column:1 / -1;max-width:560px;margin:0 auto;width:100%;}
+  .q-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+  .q-card .q-num{font-family:var(--font-mono);font-size:11.5px;color:var(--text-dim);margin-bottom:6px;letter-spacing:.04em;}
+  .q-card .q-text{font-size:15px;color:var(--text);margin-bottom:10px;font-weight:600;line-height:1.5;}
+  .opt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+  .opt-grid > *{min-width:0;}
+  .opt{font-size:15px;color:var(--text-dim);background:var(--surface-2);
+    border:1px solid var(--border);border-radius:6px;padding:8px 10px;line-height:1.45;}
+  .opt b{color:var(--text);margin-right:4px;}
+  .id-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--id);
+    border-radius:8px;padding:14px 18px;font-size:15px;color:var(--text-dim);line-height:1.55;height:100%;}
+  .id-card .q-num{font-family:var(--font-mono);font-size:11px;color:var(--id);margin-bottom:5px;letter-spacing:.04em;}
+  .code-activity-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:6px;}
+  .code-activity-grid > *{min-width:0;}
+  .code-activity-full{grid-column:1 / -1;}
+  .out-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--out);
+    border-radius:8px;padding:14px 16px;}
+  .out-card .q-num{font-family:var(--font-mono);font-size:11px;color:var(--out);margin-bottom:6px;letter-spacing:.04em;}
+  .out-card pre{margin:0;font-family:var(--font-mono);font-size:12px;line-height:1.5;color:var(--text);
+    background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:9px 11px;overflow-x:auto;}
+
+  /* ===== answers ===== */
+  .answers-scroll{max-height:64vh;overflow-y:auto;padding-right:8px;margin-top:10px;}
+  .ans-row{display:flex;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);}
+  .ans-row:last-child{border-bottom:none;}
+  .ans-num{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);min-width:34px;padding-top:2px;}
+  .ans-correct{font-weight:700;color:var(--accent);font-size:15px;}
+  .ans-out{font-weight:700;color:var(--out);font-family:var(--font-mono);font-size:14px;}
+  .ans-explain{font-size:15px;color:var(--text-dim);margin-top:4px;line-height:1.55;}
+  .ans-group-label{font-family:var(--font-mono);font-size:12px;color:var(--accent-2);
+    letter-spacing:.06em;text-transform:uppercase;margin:16px 0 4px 0;}
+  .ans-group-label:first-child{margin-top:0;}
+
+  /* ===== shortcuts modal ===== */
+  #shortcuts-modal{
+    position:fixed;inset:0;background:rgba(4,3,1,.72);z-index:2000;
+    display:flex;align-items:center;justify-content:center;
+    opacity:0;pointer-events:none;transition:opacity .2s ease;
+  }
+  #shortcuts-modal.show{opacity:1;pointer-events:auto;}
+  #shortcuts-modal .panel{background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;padding:28px 32px;max-width:460px;width:90%;}
+  #shortcuts-modal h3{margin:0 0 16px 0;font-family:var(--font-mono);color:var(--accent);font-size:16px;}
+  #shortcuts-modal .row{display:flex;justify-content:space-between;padding:7px 0;
+    border-bottom:1px solid var(--border);font-size:13.5px;color:var(--text-dim);}
+  #shortcuts-modal .row:last-child{border-bottom:none;}
+  #shortcuts-modal kbd{font-family:var(--font-mono);background:var(--surface-2);
+    border:1px solid var(--border);border-radius:4px;padding:2px 8px;color:var(--text);}
+
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+</style>
+</head>
+<body>
+
+<div id="progress-wrap"><div id="progress-bar"></div></div>
+<div id="counter"><span class="lbl">SCAN</span>00 / 00</div>
+<div id="hint">right-click / &rarr; / Mouse4 next &nbsp;&middot;&nbsp; &larr; / Mouse3 prev &nbsp;&middot;&nbsp; ? for help</div>
+
+<div id="shortcuts-modal">
+  <div class="panel">
+    <h3>Keyboard &amp; Mouse Shortcuts</h3>
+    <div class="row"><span>Next slide</span><span><kbd>&rarr;</kbd>, right-click, or Mouse4</span></div>
+    <div class="row"><span>Previous slide</span><span><kbd>&larr;</kbd> or Mouse3</span></div>
+    <div class="row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="row"><span>Toggle this panel</span><span><kbd>?</kbd></span></div>
+    <div class="row"><span>Close panel</span><span><kbd>Esc</kbd></span></div>
+    <div class="row"><span>Left-click</span><span>free for text &amp; buttons</span></div>
+  </div>
+</div>
+
+<div id="deck"></div>
+
+<script>
+/* ============ HELPERS ============ */
+function escHtml(s){
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+let codeBlockIdx = 0;
+const KEYWORDS = new Set(["public","private","protected","static","void","int","double","char",
+  "boolean","class","new","return","if","else","for","while","break","continue","this","null",
+  "true","false","import","extends","implements","final","long","short","byte","float","package",
+  "try","catch","finally","throw","interface","enum","switch","case","default","super","instanceof"]);
+
+function codeBlock(code, lang){
+  lang = lang || "java";
+  codeBlockIdx++;
+  const id = "code-" + codeBlockIdx;
+  const tokenRe = /(\/\/.*$)|(\/\*[\s\S]*?\*\/)|("(?:[^"\\]|\\.)*")|('(?:[^'\\]|\\.)*')|(\b\d+\.?\d*\b)|(\b[A-Za-z_][A-Za-z0-9_]*\b)/gm;
+  let out = "";
+  let last = 0;
+  let m;
+  while((m = tokenRe.exec(code)) !== null){
+    out += escHtml(code.slice(last, m.index));
+    const full = m[0], comment1 = m[1], comment2 = m[2], dstr = m[3], sstr = m[4], num = m[5], ident = m[6];
+    if(comment1 || comment2){
+      out += '<span class="tok-com">' + escHtml(full) + '</span>';
+    } else if(dstr || sstr){
+      out += '<span class="tok-str">' + escHtml(full) + '</span>';
+    } else if(num){
+      out += '<span class="tok-num">' + escHtml(full) + '</span>';
+    } else if(ident){
+      if(KEYWORDS.has(ident)){
+        out += '<span class="tok-kw">' + escHtml(full) + '</span>';
+      } else if(/^[A-Z]/.test(ident)){
+        out += '<span class="tok-type">' + escHtml(full) + '</span>';
+      } else {
+        out += escHtml(full);
+      }
+    }
+    last = tokenRe.lastIndex;
+  }
+  out += escHtml(code.slice(last));
+  return '<div class="code-wrap"><div class="code-top"><span class="code-lang">' + lang +
+    '</span><button class="copy-btn" onclick="copyCode(this,\'' + id + '\')">Copy</button></div>' +
+    '<pre class="code-pre"><code id="' + id + '">' + out + '</code></pre></div>';
+}
+
+function copyCode(btn, id){
+  const codeEl = document.getElementById(id);
+  const text = codeEl.textContent;
+  const done = () => {
+    const old = btn.textContent;
+    btn.textContent = "Copied!";
+    btn.classList.add("copied");
+    setTimeout(()=>{ btn.textContent = old || "Copy"; btn.classList.remove("copied"); }, 1400);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(done);
+  } else {
+    const ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); }catch(e){}
+    document.body.removeChild(ta);
+    done();
+  }
+}
+
+/* ============ ARRAY / BINARY SEARCH DIAGRAM GENERATOR ============ */
+function arrayDiagram(values, opts){
+  opts = opts || {};
+  const boxW = 62, boxH = 54, gap = 6;
+  const n = values.length;
+  const startX = 34;
+  const y = 72;
+  const totalW = startX*2 + n*boxW + Math.max(0,n-1)*gap;
+  const svgH = 172;
+
+  let svg = '<svg class="arr-svg" viewBox="0 0 ' + totalW + ' ' + svgH + '" xmlns="http://www.w3.org/2000/svg">' +
+    '<title>' + (opts.svgTitle || "Sorted array with binary search low, mid, and high pointers") + '</title>';
+
+  values.forEach((v, i) => {
+    const x = startX + i * (boxW + gap);
+    const outside = (opts.low !== undefined && i < opts.low) || (opts.high !== undefined && i > opts.high);
+    let cls = "arr-box";
+    if(opts.dangerIdx === i){
+      cls = "arr-box arr-box-danger";
+    } else if(opts.foundIdx === i){
+      cls = "arr-box arr-box-found";
+    } else if(i === opts.mid){
+      cls = "arr-box arr-box-mid";
+    } else if(outside){
+      cls = "arr-box arr-box-elim";
+    }
+
+    svg += '<rect x="' + x + '" y="' + y + '" width="' + boxW + '" height="' + boxH + '" rx="8" class="' + cls + '"/>' +
+      '<text x="' + (x+boxW/2) + '" y="' + (y+boxH/2+6) + '" text-anchor="middle" class="arr-data">' + v + '</text>' +
+      '<text x="' + (x+boxW/2) + '" y="' + (y+boxH+18) + '" text-anchor="middle" class="arr-index">' + i + '</text>';
+
+    if(i === opts.low){
+      svg += '<text x="' + (x+boxW/2) + '" y="' + (y-30) + '" text-anchor="middle" class="arr-ptr-label arr-ptr-low">low</text>' +
+        '<line x1="' + (x+boxW/2) + '" y1="' + (y-24) + '" x2="' + (x+boxW/2) + '" y2="' + (y-4) + '" class="arr-ptr-line"/>';
+    }
+    if(i === opts.high){
+      svg += '<text x="' + (x+boxW/2) + '" y="' + (y-48) + '" text-anchor="middle" class="arr-ptr-label arr-ptr-high">high</text>' +
+        '<line x1="' + (x+boxW/2) + '" y1="' + (y-42) + '" x2="' + (x+boxW/2) + '" y2="' + (y-4) + '" class="arr-ptr-line"/>';
+    }
+    if(i === opts.mid){
+      svg += '<text x="' + (x+boxW/2) + '" y="' + (y-10) + '" text-anchor="middle" class="arr-ptr-label arr-ptr-mid">mid</text>';
+    }
+  });
+
+  svg += '</svg>';
+  let out = svg;
+  if(opts.caption) out += '<div class="mem-caption">' + opts.caption + '</div>';
+  return out;
+}
+
+/* ============ CANONICAL SORTED ARRAY USED THROUGHOUT THIS DECK ============ */
+const sortedArr = [3, 8, 15, 22, 34, 45, 56, 67, 78, 90];
+
+/* ============ STATIC SLIDES ============ */
+const slideCover = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="scan-tag">SCAN 00</span> MODULE 11 &middot; SEARCHING ALGORITHMS</div>' +
+  '<h1 class="title">Binary Search</h1>' +
+  '<p class="lead">Linear Search checks every box, one at a time. Binary Search is smarter about it &mdash; but only if you make it one promise first: the data has to be sorted. Break that promise, and the whole trick falls apart.</p>' +
+  '<div class="cover-badges">' +
+    '<div class="badge">Prelims &middot; Module 11</div>' +
+    '<div class="badge">Java</div>' +
+    '<div class="badge">Lecture + Mini Project + Quiz</div>' +
+  '</div>' +
+'</div>';
+
+const slideInstructions = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="scan-tag">SCAN 01</span> BEFORE YOU START</div>' +
+  '<h2 class="title">How this deck works</h2>' +
+  '<div class="recap-grid">' +
+    '<div class="recap-item"><div class="k">Part 1 &middot; The Requirement</div><div class="v">Why Binary Search needs sorted data, and what breaks if you skip that step.</div></div>' +
+    '<div class="recap-item"><div class="k">Part 2 &middot; How It Works</div><div class="v">The same 10-number array, traced step by step until the target is found.</div></div>' +
+    '<div class="recap-item"><div class="k">Part 3 &middot; Code &amp; Comparison</div><div class="v">The full Java method, plus a head-to-head against Linear Search.</div></div>' +
+    '<div class="recap-item"><div class="k">Mini Project + Activities</div><div class="v">A working ID lookup tool, then Multiple Choice, Identification, and Guess-the-Output.</div></div>' +
+  '</div>' +
+  '<p class="lead" style="margin-top:18px;">Navigate with <b>right-click</b>, <b>&rarr;</b>, or <b>Mouse4</b> for next; <b>&larr;</b> or <b>Mouse3</b> for previous. Press <b>?</b> anytime for the full shortcut list.</p>' +
+'</div>';
+
+const slideObjectives = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="scan-tag">SCAN 02</span> LEARNING OBJECTIVES</div>' +
+  '<h2 class="title">By the end of this module, you can&hellip;</h2>' +
+  '<div class="recap-grid">' +
+    '<div class="recap-item"><div class="k">01</div><div class="v">Explain why Binary Search requires the data to already be sorted.</div></div>' +
+    '<div class="recap-item"><div class="k">02</div><div class="v">Trace the exact steps Binary Search takes to find (or rule out) a target value.</div></div>' +
+    '<div class="recap-item"><div class="k">03</div><div class="v">Write a basic iterative Binary Search in Java.</div></div>' +
+    '<div class="recap-item"><div class="k">04</div><div class="v">Compare Binary Search against Linear Search and know when each one fits.</div></div>' +
+  '</div>' +
+'</div>';
+
+function sectionDivider(tag, tabLabel, big, sub){
+  return '<div class="slide-inner">' +
+    '<div class="eyebrow"><span class="scan-tag">' + tag + '</span> ' + tabLabel + '</div>' +
+    '<h1 class="title">' + big + '</h1>' +
+    '<p class="lead">' + sub + '</p>' +
+  '</div>';
+}
+
+const slideQuickRecap = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="scan-tag">SCAN 03</span> QUICK RECAP</div>' +
+  '<h2 class="title">Linear Search, in 10 Seconds</h2>' +
+  '<p class="lead">Linear Search checks elements one by one, from the start, until it finds the target or runs out of elements. It works on <b>any</b> list, sorted or not &mdash; but in the worst case, it has to check every single item.</p>' +
+  arrayDiagram(sortedArr, {svgTitle:"A row of numbers being checked one at a time", caption:"Linear Search: check index 0, then 1, then 2 \u2014 no shortcuts"}) +
+'</div>';
+
+const slideSortedRequirement = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="scan-tag">SCAN 05</span> CONCEPT</div>' +
+  '<h2 class="title">The One Requirement: Sorted Data</h2>' +
+  '<p class="lead">Binary Search makes a bet every single step: <i>"the target, if it exists, must be on this side, because everything is in order."</i> That bet only pays off if the data really is sorted from smallest to largest. On a sorted array, comparing the target to the middle instantly tells you which half to ignore.</p>' +
+  arrayDiagram(sortedArr, {low:0, high:9, mid:4, svgTitle:"A correctly sorted array ready for Binary Search", caption:"Sorted ascending \u2014 everything left of mid is smaller, everything right is bigger. The bet is safe."}) +
+'</div>';
+
+const slideUnsortedBreaks = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="scan-tag">SCAN 06</span> CONCEPT</div>' +
+  '<h2 class="title">What Happens If It Isn\u2019t Sorted?</h2>' +
+  '<p class="lead">Take the same idea, but scramble the order first. Searching for <b>45</b>: the middle value is 56, and 45 is smaller than 56 &mdash; so a normal Binary Search would eliminate the whole right half. But look closely at where 45 actually is.</p>' +
+  arrayDiagram([34, 8, 56, 3, 90, 45], {low:0, high:5, mid:2, dangerIdx:5,
+    svgTitle:"An unsorted array where binary search wrongly eliminates the target",
+    caption:"45 (smaller than mid) is sitting in the half we just threw away!"}) +
+  '<div class="lec-note warn-note"><b>The bet failed.</b> Because the array wasn\u2019t sorted, "smaller than mid" didn\u2019t mean "must be on the left" &mdash; and the algorithm eliminated the exact half holding the answer.</div>' +
+'</div>';
+
+const slideCoreIdea = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="scan-tag">SCAN 08</span> CONCEPT</div>' +
+  '<h2 class="title">The Core Idea</h2>' +
+  '<p class="lead">Think of flipping through a dictionary. You don\u2019t start at page 1 &mdash; you open to roughly the middle, check if your word comes before or after, and jump straight to the correct half. Binary Search does exactly this: check the middle, throw away the half that can\u2019t contain the target, and repeat on what\u2019s left.</p>' +
+  '<div class="recap-grid">' +
+    '<div class="recap-item"><div class="k">low &amp; high</div><div class="v">Two pointers marking the current search range &mdash; they start at the array\u2019s first and last index.</div></div>' +
+    '<div class="recap-item"><div class="k">mid</div><div class="v">The midpoint of the current range: <code>mid = (low + high) / 2</code>.</div></div>' +
+    '<div class="recap-item"><div class="k">Compare &amp; eliminate</div><div class="v">If the target is smaller than arr[mid], move high left. If bigger, move low right.</div></div>' +
+    '<div class="recap-item"><div class="k">Repeat until&hellip;</div><div class="v">The target is found, or low crosses past high (meaning it isn\u2019t in the array at all).</div></div>' +
+  '</div>' +
+'</div>';
+
+const slideStep1 = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="scan-tag">SCAN 09</span> WORKED EXAMPLE</div>' +
+  '<h2 class="title">Step 1: Searching for 45</h2>' +
+  '<p class="lead">Start with the full array. low = 0, high = 9, so mid = (0 + 9) / 2 = <b>4</b>, pointing at the value <b>34</b>.</p>' +
+  arrayDiagram(sortedArr, {low:0, high:9, mid:4, svgTitle:"First comparison in the binary search trace", caption:"45 > 34, so the target must be somewhere to the right"}) +
+  '<div class="lec-note">Since 45 is <b>bigger</b> than 34, everything at or before index 4 can be safely eliminated. New range: low = 5, high = 9.</div>' +
+'</div>';
+
+const slideStep2 = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="scan-tag">SCAN 10</span> WORKED EXAMPLE</div>' +
+  '<h2 class="title">Step 2: Narrowing In</h2>' +
+  '<p class="lead">New range: low = 5, high = 9. mid = (5 + 9) / 2 = <b>7</b>, pointing at the value <b>67</b>.</p>' +
+  arrayDiagram(sortedArr, {low:5, high:9, mid:7, svgTitle:"Second comparison in the binary search trace", caption:"45 < 67, so the target must be somewhere to the left"}) +
+  '<div class="lec-note">Since 45 is <b>smaller</b> than 67, everything at or after index 7 can be eliminated. New range: low = 5, high = 6.</div>' +
+'</div>';
+
+const slideStep3 = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="scan-tag">SCAN 11</span> WORKED EXAMPLE</div>' +
+  '<h2 class="title">Step 3: Found It!</h2>' +
+  '<p class="lead">New range: low = 5, high = 6. mid = (5 + 6) / 2 = <b>5</b>, pointing at the value <b>45</b>.</p>' +
+  arrayDiagram(sortedArr, {low:5, high:6, mid:5, foundIdx:5, svgTitle:"Binary search finds the target", caption:"45 == 45 \u2014 found at index 5!"}) +
+  '<div class="lec-note"><b>Just 3 comparisons</b> to find 45 in a 10-element array. Linear Search would have needed to check 6 elements one by one to reach the same answer.</div>' +
+'</div>';
+
+const slideFullTrace = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="scan-tag">SCAN 12</span> WORKED EXAMPLE</div>' +
+  '<h2 class="title">The Full Trace</h2>' +
+  '<table class="lec-table">' +
+    '<tr><th>Step</th><th>low</th><th>high</th><th>mid</th><th>arr[mid]</th><th>Compare to 45</th><th>Result</th></tr>' +
+    '<tr><td>1</td><td>0</td><td>9</td><td>4</td><td>34</td><td>45 &gt; 34</td><td>Search right &mdash; low = 5</td></tr>' +
+    '<tr><td>2</td><td>5</td><td>9</td><td>7</td><td>67</td><td>45 &lt; 67</td><td>Search left &mdash; high = 6</td></tr>' +
+    '<tr><td>3</td><td>5</td><td>6</td><td>5</td><td>45</td><td>45 == 45</td><td class="hl">Found at index 5!</td></tr>' +
+  '</table>' +
+'</div>';
+
+const slideCode = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="scan-tag">SCAN 14</span> CODE</div>' +
+  '<h2 class="title">Binary Search in Java</h2>' +
+  '<div class="two-col-lec">' +
+    '<div>' +
+      codeBlock(
+'int binarySearch(int[] arr, int target) {\n' +
+'    int low = 0;\n' +
+'    int high = arr.length - 1;\n\n' +
+'    while (low <= high) {\n' +
+'        int mid = (low + high) / 2;\n\n' +
+'        if (arr[mid] == target) {\n' +
+'            return mid;\n' +
+'        } else if (target < arr[mid]) {\n' +
+'            high = mid - 1;\n' +
+'        } else {\n' +
+'            low = mid + 1;\n' +
+'        }\n' +
+'    }\n' +
+'    return -1;\n' +
+'}', "java") +
+    '</div>' +
+    '<div class="lec-note">Every part of this method matches the trace from the last few slides: <code>while (low &lt;= high)</code> keeps going as long as there\u2019s still a valid range, and the <code>if / else if / else</code> block is exactly the "compare and eliminate half" step. <code>-1</code> means the loop ran out of range without ever finding a match.</div>' +
+  '</div>' +
+'</div>';
+
+const slideComparison = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="scan-tag">SCAN 15</span> CONCEPT</div>' +
+  '<h2 class="title">Linear Search vs. Binary Search</h2>' +
+  '<table class="lec-table">' +
+    '<tr><th>Aspect</th><th>Linear Search</th><th>Binary Search</th></tr>' +
+    '<tr><td>Data requirement</td><td>None &mdash; works on any list</td><td>Must already be sorted</td></tr>' +
+    '<tr><td>How it moves</td><td>One element at a time, from the start</td><td>Jumps to the middle, eliminates half each time</td></tr>' +
+    '<tr><td>Comparisons for our 10-item example</td><td>Up to 10</td><td>Just 3</td></tr>' +
+    '<tr><td>Best fit for</td><td>Small or frequently-changing lists</td><td>Large lists that are already sorted (or worth sorting once)</td></tr>' +
+  '</table>' +
+'</div>';
+
+const slideScenarios = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="scan-tag">SCAN 16</span> REAL-LIFE SCENARIOS</div>' +
+  '<h2 class="title">Where You\u2019ve Already Seen This</h2>' +
+  '<div class="scenario-grid">' +
+    '<div class="scenario-card"><div class="k">Dictionary &amp; Phone Books</div><div class="v">You flip to roughly the middle, check if your word comes before or after, and jump straight there &mdash; never reading page by page.</div></div>' +
+    '<div class="scenario-card"><div class="k">"Guess the Number" Games</div><div class="v">Every "higher or lower" hint from the game host is exactly one binary search comparison, cutting the range in half.</div></div>' +
+    '<div class="scenario-card"><div class="k">Library Catalogs</div><div class="v">Books shelved by call number let staff jump to roughly the right shelf instead of scanning the entire library.</div></div>' +
+    '<div class="scenario-card"><div class="k">Sorted Contact Lists</div><div class="v">Scrolling a phone\u2019s alphabetized contacts and tapping a letter jumps you straight there, instead of scrolling from A.</div></div>' +
+  '</div>' +
+'</div>';
+
+const slideKeyQuotes = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="scan-tag">SCAN 17</span> KEY TAKEAWAYS</div>' +
+  '<h2 class="title">Worth Remembering</h2>' +
+  '<div class="quote-card">&ldquo;Binary Search doesn\u2019t search harder &mdash; it searches smarter, by throwing away exactly the half that can\u2019t matter.&rdquo;</div>' +
+  '<div class="quote-card">&ldquo;Sorted data is the price of admission. Skip that step, and the shortcut disappears.&rdquo;</div>' +
+  '<div class="quote-card">&ldquo;Every &lsquo;higher or lower&rsquo; guess is Binary Search, whether you know its name or not.&rdquo;</div>' +
+'</div>';
+
+const slideProjectCode = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="scan-tag">SCAN 19</span> MINI PROJECT</div>' +
+  '<h2 class="title">Student ID Lookup</h2>' +
+  '<p class="lead">A small, runnable program that searches a sorted list of student IDs &mdash; once for an ID that exists, and once for one that doesn\u2019t, to prove both outcomes work correctly.</p>' +
+  codeBlock(
+'public class StudentIdLookup {\n\n' +
+'    static int binarySearch(int[] ids, int target) {\n' +
+'        int low = 0;\n' +
+'        int high = ids.length - 1;\n\n' +
+'        while (low <= high) {\n' +
+'            int mid = (low + high) / 2;\n\n' +
+'            if (ids[mid] == target) {\n' +
+'                return mid;\n' +
+'            } else if (target < ids[mid]) {\n' +
+'                high = mid - 1;\n' +
+'            } else {\n' +
+'                low = mid + 1;\n' +
+'            }\n' +
+'        }\n' +
+'        return -1;\n' +
+'    }\n\n' +
+'    public static void main(String[] args) {\n' +
+'        int[] studentIds = {1002, 1015, 1023, 1031, 1044, 1056, 1067, 1078, 1089, 1099};\n\n' +
+'        System.out.println(binarySearch(studentIds, 1067));\n' +
+'        System.out.println(binarySearch(studentIds, 1500));\n' +
+'    }\n' +
+'}', "java") +
+'</div>';
+
+const slideProjectRun = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="scan-tag">SCAN 20</span> MINI PROJECT</div>' +
+  '<h2 class="title">Running the Lookup</h2>' +
+  '<div class="two-col-lec">' +
+    '<div>' +
+      '<div class="lec-note"><b>Console output:</b></div>' +
+      codeBlock('6\n-1', "text") +
+    '</div>' +
+    '<div class="lec-note"><b>1067</b> is at index <b>6</b> in the sorted array, so the first search returns 6. <b>1500</b> was never in the list at all, so the second search runs out of range and correctly returns <b>-1</b>.</div>' +
+  '</div>' +
+'</div>';
+
+const slideRecap = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="scan-tag">SCAN 21</span> RECAP</div>' +
+  '<h2 class="title">Before the Activities</h2>' +
+  '<div class="recap-grid">' +
+    '<div class="recap-item"><div class="k">The requirement</div><div class="v">Binary Search only works on sorted data &mdash; that\u2019s the whole trade.</div></div>' +
+    '<div class="recap-item"><div class="k">The core move</div><div class="v">Compare the target to the middle element, then eliminate the half that can\u2019t contain it.</div></div>' +
+    '<div class="recap-item"><div class="k">low / high / mid</div><div class="v">low and high mark the current range; mid is always its midpoint.</div></div>' +
+    '<div class="recap-item"><div class="k">The payoff</div><div class="v">3 comparisons found 45 in a 10-element array, instead of up to 10 with Linear Search.</div></div>' +
+    '<div class="recap-item"><div class="k">The risk</div><div class="v">Unsorted data breaks the core assumption &mdash; comparing to mid stops being trustworthy.</div></div>' +
+    '<div class="recap-item"><div class="k">Not found</div><div class="v">When low crosses past high, the loop ends and the search returns -1.</div></div>' +
+  '</div>' +
+'</div>';
+
+const slideActivitiesIntro = sectionDivider("SCAN 22","SECTION","Activities","Multiple Choice, Identification, and Guess-the-Output \u2014 answers are on the next-to-last slide.");
+
+/* ============ ACTIVITY DATA ============ */
+const mcQuestions = [
+  {q:"What is the one requirement Binary Search has that Linear Search doesn\u2019t?",
+   opts:["The array must be an integer array","The data must already be sorted","The array must have an even number of elements","The target must be the largest value"]},
+  {q:"What does Binary Search do with the middle element on each step?",
+   opts:["Deletes it","Compares it to the target and decides which half to eliminate","Adds it to a queue","Moves it to the front of the array"]},
+  {q:"If the target is smaller than the middle element, what happens next?",
+   opts:["Search continues in the right half","Search continues in the left half","The search stops immediately, target not found","The whole array is rescanned"]},
+  {q:"Why does running Binary Search on unsorted data give unreliable results?",
+   opts:["It will always crash the program","Comparing to the middle no longer reliably tells you which half the target is in","Unsorted arrays cannot be stored in Java","It only works on Strings, not numbers"]},
+  {q:"In our 10-element example searching for 45, how many comparisons did Binary Search need?",
+   opts:["10","1","3","5"]}
+];
+const mcAnswers = [1,1,1,1,2];
+const mcExplain = [
+  "Binary Search\u2019s whole strategy depends on knowing which half of the array to eliminate \u2014 that only works if the data is sorted.",
+  "Comparing the target to the middle element is how Binary Search decides whether to eliminate the left half or the right half.",
+  "Sorted ascending order means everything left of mid is smaller, so a smaller target must be hiding there.",
+  "Without a guaranteed order, a smaller-or-larger comparison against the middle can\u2019t reliably tell you which half holds the target.",
+  "Just 3 comparisons (against 34, then 67, then 45) found the target in a 10-element array."
+];
+
+const idItems = [
+  {q:"The requirement Binary Search has before it can be used at all.", a:"The data must be sorted"},
+  {q:"The index that marks the current middle of the search range.", a:"mid"},
+  {q:"The two boundary pointers that define the current search range.", a:"low and high"},
+  {q:"The searching algorithm that repeatedly eliminates half of the remaining data.", a:"Binary Search"},
+  {q:"The searching algorithm that checks every element one by one and also works on unsorted data.", a:"Linear Search"}
+];
+
+const outQuestions = [
+  {code:'int[] arr = {3, 8, 15, 22, 34, 45, 56, 67, 78, 90};\nint low = 0, high = arr.length - 1;\nint mid = (low + high) / 2;\nSystem.out.println(mid);\nSystem.out.println(arr[mid]);',
+   ans:["4","34"], exp:"With low=0 and high=9, mid = (0+9)/2 = 4 (integer division), and arr[4] is 34."},
+  {code:'int low = 5, high = 9;\nint mid = (low + high) / 2;\nSystem.out.println(mid);',
+   ans:["7"], exp:"(5+9)/2 = 14/2 = 7 \u2014 this is exactly the second-step mid from this lesson\u2019s trace."},
+  {code:'int[] arr = {3, 8, 15, 22, 34, 45, 56, 67, 78, 90};\nint result = binarySearch(arr, 100);\nSystem.out.println(result);',
+   ans:["-1"], exp:"100 never appears in the array, so low eventually crosses past high and the method returns -1, the standard \u201cnot found\u201d signal."}
+];
+
+/* ============ ACTIVITY SLIDE BUILDERS ============ */
+function pairInGrid(items, renderFn){
+  let html = '<div class="activity-grid">';
+  items.forEach((it, i) => {
+    const isLastOdd = (items.length % 2 === 1) && (i === items.length - 1);
+    html += '<div' + (isLastOdd ? ' class="activity-centered"' : '') + '>' + renderFn(it, i) + '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function mcSlide(){
+  const cards = pairInGrid(mcQuestions, (q,i) => {
+    const opts = q.opts.map((o,j) => '<div class="opt"><b>' + String.fromCharCode(65+j) + ')</b>' + o + '</div>').join("");
+    return '<div class="q-card"><div class="q-num">QUESTION ' + (i+1) + ' / ' + mcQuestions.length + '</div>' +
+      '<div class="q-text">' + q.q + '</div><div class="opt-grid">' + opts + '</div></div>';
+  });
+  return '<div class="slide-inner"><div class="eyebrow mc"><span class="scan-tag">SCAN 23</span> ACTIVITY &middot; MULTIPLE CHOICE</div>' +
+    '<h2 class="title">Multiple Choice</h2><p class="lead">Pick the single best answer for each. Answers are on the next-to-last slide.</p>' +
+    cards + '</div>';
+}
+
+function idSlide(){
+  const cards = pairInGrid(idItems, (it,i) =>
+    '<div class="id-card"><div class="q-num">ITEM ' + (i+1) + ' / ' + idItems.length + '</div>' + it.q + '</div>'
+  );
+  return '<div class="slide-inner"><div class="eyebrow id"><span class="scan-tag">SCAN 24</span> ACTIVITY &middot; IDENTIFICATION</div>' +
+    '<h2 class="title">Identification</h2><p class="lead">Name the concept being described. Answers are on the next-to-last slide.</p>' +
+    cards + '</div>';
+}
+
+function outSlide(){
+  let html = '<div class="code-activity-grid">';
+  outQuestions.forEach((q,i) => {
+    const isLastOdd = (outQuestions.length % 2 === 1) && (i === outQuestions.length - 1);
+    html += '<div class="out-card' + (isLastOdd ? ' code-activity-full' : '') + '">' +
+      '<div class="q-num">SNIPPET ' + (i+1) + ' / ' + outQuestions.length + '</div>' +
+      '<pre>' + escHtml(q.code) + '</pre></div>';
+  });
+  html += '</div>';
+  return '<div class="slide-inner"><div class="eyebrow out"><span class="scan-tag">SCAN 25</span> ACTIVITY &middot; GUESS THE OUTPUT</div>' +
+    '<h2 class="title">Guess the Output</h2><p class="lead">Trace each snippet against this lesson\u2019s sorted array and predict exactly what gets printed. Answers are on the next-to-last slide.</p>' +
+    html + '</div>';
+}
+
+function answersSlide(){
+  const mcRows = mcQuestions.map((q,i) =>
+    '<div class="ans-row"><div class="ans-num">Q' + (i+1) + '</div><div>' +
+    '<span class="ans-correct">' + String.fromCharCode(65+mcAnswers[i]) + ') ' + q.opts[mcAnswers[i]] + '</span>' +
+    '<div class="ans-explain">' + mcExplain[i] + '</div></div></div>'
+  ).join("");
+  const idRows = idItems.map((it,i) =>
+    '<div class="ans-row"><div class="ans-num">I' + (i+1) + '</div><div>' +
+    '<span class="ans-correct">' + it.a + '</span>' +
+    '<div class="ans-explain">' + it.q + '</div></div></div>'
+  ).join("");
+  const outRows = outQuestions.map((q,i) =>
+    '<div class="ans-row"><div class="ans-num">S' + (i+1) + '</div><div>' +
+    '<span class="ans-out">' + q.ans.map(escHtml).join(" / ") + '</span>' +
+    '<div class="ans-explain">' + q.exp + '</div></div></div>'
+  ).join("");
+  return '<div class="slide-inner"><div class="eyebrow"><span class="scan-tag">SCAN 26</span> ANSWER KEY</div>' +
+    '<h2 class="title">All Answers &amp; Explanations</h2>' +
+    '<div class="answers-scroll">' +
+      '<div class="ans-group-label">Multiple Choice</div>' + mcRows +
+      '<div class="ans-group-label">Identification</div>' + idRows +
+      '<div class="ans-group-label">Guess the Output</div>' + outRows +
+    '</div></div>';
+}
+
+const slideClosing = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="scan-tag">SCAN 27</span> CLOSING</div>' +
+  '<h2 class="title" style="text-align:center;">That\u2019s Binary Search</h2>' +
+  '<div class="closing-quote">&ldquo;Every sorted list is a shortcut waiting to be taken \u2014 Binary Search is just the map.&rdquo;</div>' +
+  '<div class="closing-sign">Nice work through Binary Search &mdash; see you in the next module.</div>' +
+'</div>';
+
+/* ============ ASSEMBLE DECK ============ */
+const slides = [];
+slides.push(slideCover);
+slides.push(slideInstructions);
+slides.push(slideObjectives);
+slides.push(slideQuickRecap);
+slides.push(sectionDivider("SCAN 04","SECTION","Part 1 \u2014 The Sorted-Data Requirement","Binary Search makes one promise to itself every step. Here\u2019s what happens if that promise is broken."));
+slides.push(slideSortedRequirement);
+slides.push(slideUnsortedBreaks);
+slides.push(sectionDivider("SCAN 07","SECTION","Part 2 \u2014 How Binary Search Works","The exact same array, traced step by step until the target turns up."));
+slides.push(slideCoreIdea);
+slides.push(slideStep1);
+slides.push(slideStep2);
+slides.push(slideStep3);
+slides.push(slideFullTrace);
+slides.push(sectionDivider("SCAN 13","SECTION","Part 3 \u2014 Code &amp; Comparison","The full Java method, and how it stacks up against Linear Search."));
+slides.push(slideCode);
+slides.push(slideComparison);
+slides.push(slideScenarios);
+slides.push(slideKeyQuotes);
+slides.push(sectionDivider("SCAN 18","MINI PROJECT","Student ID Lookup","A small, runnable program proving both the found and not-found cases."));
+slides.push(slideProjectCode);
+slides.push(slideProjectRun);
+slides.push(slideRecap);
+slides.push(slideActivitiesIntro);
+slides.push(mcSlide());
+slides.push(idSlide());
+slides.push(outSlide());
+slides.push(answersSlide());
+slides.push(slideClosing);
+
+/* ============ RENDER & NAVIGATION ============ */
+const deck = document.getElementById("deck");
+slides.forEach((html) => {
+  const div = document.createElement("div");
+  div.className = "slide";
+  div.innerHTML = html;
+  deck.appendChild(div);
+});
+const slideEls = Array.from(document.querySelectorAll(".slide"));
+let current = 0;
+
+function pad2(n){ return String(n).padStart(2,"0"); }
+
+function render(){
+  slideEls.forEach((el,i)=>{ el.classList.toggle("active", i===current); });
+  document.getElementById("counter").innerHTML =
+    '<span class="lbl">SCAN</span>' + pad2(current) + " / " + pad2(slideEls.length-1);
+  document.getElementById("progress-bar").style.width = (((current+1)/slideEls.length)*100)+"%";
+}
+function goTo(i){ current = Math.max(0, Math.min(slideEls.length-1, i)); render(); }
+function next(){ goTo(current+1); }
+function prev(){ goTo(current-1); }
+
+render();
+
+/* block the default context menu everywhere */
+document.addEventListener("contextmenu", (e) => { e.preventDefault(); }, true);
+
+/* mouse navigation: right-click / Mouse4 = next, Mouse3 = previous */
+document.addEventListener("mousedown", (e) => {
+  const modal = document.getElementById("shortcuts-modal");
+  if(e.button === 2){
+    if(e.target.closest("button, a, input, textarea, select, .copy-btn")) return;
+    if(modal.classList.contains("show")){ modal.classList.remove("show"); return; }
+    e.preventDefault(); e.stopImmediatePropagation();
+    next();
+  } else if(e.button === 3){
+    e.preventDefault(); e.stopImmediatePropagation();
+    prev();
+  } else if(e.button === 4){
+    e.preventDefault(); e.stopImmediatePropagation();
+    next();
+  }
+}, true);
+
+window.addEventListener("auxclick", (e) => {
+  if(e.button === 3 || e.button === 4){ e.preventDefault(); e.stopImmediatePropagation(); }
+}, true);
+
+/* keyboard */
+document.addEventListener("keydown", (e) => {
+  const modal = document.getElementById("shortcuts-modal");
+  if(e.key === "?"){ modal.classList.toggle("show"); e.preventDefault(); return; }
+  if(modal.classList.contains("show")){
+    if(e.key === "Escape") modal.classList.remove("show");
+    return;
+  }
+  if(e.key === "ArrowRight"){ next(); }
+  else if(e.key === "ArrowLeft"){ prev(); }
+  else if(e.key === "Home"){ goTo(0); }
+  else if(e.key === "End"){ goTo(slideEls.length-1); }
+});
+
+/* swipe */
+let touchStartX = null;
+document.addEventListener("touchstart", (e) => { touchStartX = e.changedTouches[0].screenX; }, {passive:true});
+document.addEventListener("touchend", (e) => {
+  if(touchStartX === null) return;
+  const dx = e.changedTouches[0].screenX - touchStartX;
+  if(Math.abs(dx) > 50){ if(dx < 0) next(); else prev(); }
+  touchStartX = null;
+}, {passive:true});
+</script>
+</body>
+</html>

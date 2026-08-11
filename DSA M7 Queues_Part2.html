@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Module 07 — Queues: Front, Circular &amp; Applications</title>
+<style>
+  :root{
+    --bg:#06090b;
+    --surface:#0d1416;
+    --surface-2:#131b1e;
+    --border:#1f2c30;
+    --text:#eaf6f4;
+    --text-dim:#6f8f8c;
+    --accent:#2dd4bf;       /* teal - FRONT / primary */
+    --accent-dim:#1a6b60;
+    --accent-2:#fb7185;     /* coral - REAR / secondary */
+    --mc:#facc15;           /* amber - multiple choice */
+    --id:#c084fc;           /* purple - identification */
+    --out:#38bdf8;          /* sky - output guessing */
+    --warn:#fbbf24;
+    --danger:#f43f5e;
+    --good:#2dd4bf;
+    --font-mono:'SF Mono','Cascadia Code','Consolas','Roboto Mono',monospace;
+    --font-sans:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    background:var(--bg);color:var(--text);
+    font-family:var(--font-sans);
+    overflow:hidden;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:
+      radial-gradient(ellipse at 12% 10%, rgba(45,212,191,0.06), transparent 55%),
+      radial-gradient(ellipse at 88% 90%, rgba(251,113,133,0.05), transparent 55%);
+  }
+  #progress-wrap{
+    position:fixed;top:0;left:0;right:0;height:5px;z-index:1000;
+    background:repeating-linear-gradient(90deg, var(--surface-2) 0, var(--surface-2) 16px, var(--border) 16px, var(--border) 18px);
+  }
+  #progress-bar{
+    height:100%;width:0%;
+    background:linear-gradient(90deg,var(--accent),var(--accent-2));
+    transition:width .35s ease;
+    box-shadow:0 0 10px rgba(45,212,191,.5);
+  }
+  #counter{
+    position:fixed;bottom:18px;right:22px;
+    font-family:var(--font-mono);font-size:12.5px;color:var(--accent);
+    background:var(--surface);border:1px solid var(--border);
+    padding:7px 13px;border-radius:6px;z-index:1000;letter-spacing:.03em;
+  }
+  #counter .lbl{color:var(--text-dim);margin-right:6px;}
+  #hint{
+    position:fixed;bottom:18px;left:22px;
+    font-family:var(--font-mono);font-size:11.5px;color:var(--text-dim);
+    z-index:1000;opacity:.75;
+  }
+  #deck{position:relative;width:100vw;height:100vh;z-index:1;}
+  .slide{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;
+    justify-content:center;align-items:center;
+    padding:60px 8vw;
+    opacity:0;pointer-events:none;
+    transform:translateX(24px);
+    transition:opacity .35s ease, transform .35s ease;
+    overflow:auto;
+  }
+  .slide.active{opacity:1;pointer-events:auto;transform:translateX(0);}
+  .slide.exit-left{transform:translateX(-24px);}
+  @media (prefers-reduced-motion: reduce){
+    .slide{transition:opacity .01s linear;transform:none !important;}
+  }
+  .slide-inner{width:100%;max-width:1220px;margin:0 auto;min-width:0;}
+  .eyebrow{
+    font-family:var(--font-mono);font-size:12.5px;letter-spacing:.08em;
+    color:var(--accent);text-transform:uppercase;
+    display:flex;align-items:center;gap:10px;margin-bottom:18px;
+  }
+  .eyebrow .ticket{
+    background:var(--surface-2);border:1px solid var(--border);
+    border-bottom:2px solid var(--accent);color:var(--accent-2);
+    padding:4px 10px;border-radius:4px 4px 0 0;font-weight:700;
+  }
+  .eyebrow.mc{color:var(--mc);} .eyebrow.mc .ticket{border-bottom-color:var(--mc);}
+  .eyebrow.id{color:var(--id);} .eyebrow.id .ticket{border-bottom-color:var(--id);}
+  .eyebrow.out{color:var(--out);} .eyebrow.out .ticket{border-bottom-color:var(--out);}
+  h1.title{
+    font-family:var(--font-mono);
+    font-size:clamp(30px,4vw,54px);
+    line-height:1.1;margin:0 0 18px 0;font-weight:800;letter-spacing:-.01em;
+  }
+  h2.title{
+    font-family:var(--font-mono);
+    font-size:clamp(23px,2.4vw,34px);
+    line-height:1.2;margin:0 0 20px 0;font-weight:750;letter-spacing:-.01em;
+  }
+  p.lead{font-size:clamp(15px,1.15vw,18px);line-height:1.65;color:var(--text-dim);max-width:900px;margin:0 0 8px 0;}
+  code{font-family:var(--font-mono);background:var(--surface-2);border:1px solid var(--border);
+    padding:1px 6px;border-radius:4px;color:var(--accent-2);font-size:.92em;}
+  b{color:var(--text);}
+
+  .cover-badges{display:flex;gap:10px;margin-top:26px;flex-wrap:wrap;}
+  .badge{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);
+    border:1px solid var(--border);border-radius:20px;padding:6px 14px;}
+
+  .recap-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:8px;}
+  .recap-grid > *{min-width:0;}
+  .recap-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+  .recap-item .k{font-family:var(--font-mono);font-size:13px;color:var(--accent);margin-bottom:6px;font-weight:700;}
+  .recap-item .v{font-size:14.5px;color:var(--text-dim);line-height:1.55;}
+
+  .two-col-lec{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:26px;align-items:start;}
+  .two-col-lec > *{min-width:0;}
+  .stack-lec{display:flex;flex-direction:column;gap:18px;}
+  .side-by-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;align-items:start;}
+  .side-by-side > *{min-width:0;text-align:center;}
+
+  .lec-table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:10px;}
+  .lec-table th,.lec-table td{border:1px solid var(--border);padding:8px 12px;text-align:left;}
+  .lec-table th{color:var(--accent);font-family:var(--font-mono);font-size:11.5px;
+    text-transform:uppercase;letter-spacing:.04em;background:var(--surface-2);}
+  .lec-table td{color:var(--text-dim);}
+  .lec-table td.hl{color:var(--text);font-weight:700;}
+
+  .lec-note{font-size:14px;color:var(--text-dim);margin-top:14px;line-height:1.55;
+    background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent-2);
+    border-radius:6px;padding:12px 16px;}
+  .lec-note b{color:var(--text);}
+
+  /* ===== code blocks ===== */
+  .code-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    overflow:hidden;margin-top:10px;}
+  .code-top{display:flex;justify-content:space-between;align-items:center;
+    padding:8px 14px;background:var(--surface-2);border-bottom:1px solid var(--border);}
+  .code-lang{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);
+    text-transform:uppercase;letter-spacing:.06em;}
+  .copy-btn{font-family:var(--font-mono);font-size:11.5px;color:var(--text-dim);
+    background:var(--surface);border:1px solid var(--border);border-radius:5px;
+    padding:4px 10px;cursor:pointer;transition:all .2s ease;}
+  .copy-btn:hover{color:var(--accent);border-color:var(--accent-dim);}
+  .copy-btn.copied{color:var(--accent);border-color:var(--accent);}
+  .code-pre{margin:0;padding:14px 16px;max-height:320px;overflow:auto;
+    font-family:var(--font-mono);font-size:12.8px;line-height:1.6;}
+  .code-pre code{background:none;border:none;padding:0;color:var(--text);}
+  .tok-kw{color:var(--accent-2);}
+  .tok-str{color:#7dd3fc;}
+  .tok-com{color:var(--text-dim);font-style:italic;}
+  .tok-num{color:#c4b5fd;}
+  .tok-type{color:var(--accent);}
+
+  /* ===== queue diagrams ===== */
+  .q-svg{width:100%;max-width:520px;height:auto;display:block;margin:14px auto 0;}
+  .q-box{fill:var(--surface-2);stroke:var(--accent);stroke-width:2;}
+  .q-box-wasted{fill:var(--surface-2);stroke:var(--text-dim);stroke-width:1.5;stroke-dasharray:4 3;opacity:.55;}
+  .q-box-empty{fill:var(--surface-2);stroke:var(--border);stroke-width:1.5;stroke-dasharray:3 3;opacity:.45;}
+  .q-data{fill:var(--text);font-family:var(--font-mono);font-size:13px;font-weight:700;}
+  .q-front-label{fill:var(--accent);font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.04em;}
+  .q-rear-label{fill:var(--accent-2);font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.04em;}
+  .q-arrow-line{stroke:var(--text-dim);stroke-width:2;}
+  .q-arrow-head-front{fill:var(--accent);}
+  .q-arrow-head-rear{fill:var(--accent-2);}
+  .q-ring-guide{stroke:var(--border);stroke-width:1.5;stroke-dasharray:3 4;}
+  .q-wrap-arrow{stroke:var(--accent-2);stroke-width:2;stroke-dasharray:5 4;}
+  .q-slot{fill:var(--surface-2);stroke:var(--accent);stroke-width:2;}
+  .q-slot-wasted{stroke:var(--text-dim);stroke-dasharray:4 3;opacity:.5;}
+  .q-slot-empty{stroke:var(--border);stroke-dasharray:3 3;opacity:.4;}
+  .mem-caption{text-align:center;color:var(--text-dim);font-size:12.5px;margin-top:6px;
+    font-family:var(--font-mono);letter-spacing:.03em;}
+
+  /* ===== activity cards ===== */
+  .q-list{display:flex;flex-direction:column;gap:14px;margin-top:6px;}
+  .q-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+  .q-card .q-num{font-family:var(--font-mono);font-size:11.5px;color:var(--text-dim);margin-bottom:6px;letter-spacing:.04em;}
+  .q-card .q-text{font-size:15px;color:var(--text);margin-bottom:10px;font-weight:600;line-height:1.45;}
+  .opt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+  .opt-grid > *{min-width:0;}
+  .opt{font-size:13.5px;color:var(--text-dim);background:var(--surface-2);
+    border:1px solid var(--border);border-radius:6px;padding:8px 11px;line-height:1.4;}
+  .opt b{color:var(--text);margin-right:4px;}
+  .id-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--id);
+    border-radius:8px;padding:14px 18px;font-size:14.5px;color:var(--text-dim);line-height:1.5;}
+  .id-card .q-num{font-family:var(--font-mono);font-size:11px;color:var(--id);margin-bottom:5px;letter-spacing:.04em;}
+  .out-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--out);
+    border-radius:8px;padding:14px 16px;}
+  .out-card .q-num{font-family:var(--font-mono);font-size:11px;color:var(--out);margin-bottom:6px;letter-spacing:.04em;}
+  .out-card pre{margin:0;font-family:var(--font-mono);font-size:12.5px;line-height:1.55;color:var(--text);
+    background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;overflow-x:auto;}
+  .out-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:6px;}
+  .out-grid > *{min-width:0;}
+
+  /* ===== answers ===== */
+  .answers-scroll{max-height:64vh;overflow-y:auto;padding-right:8px;margin-top:10px;}
+  .ans-row{display:flex;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);}
+  .ans-row:last-child{border-bottom:none;}
+  .ans-num{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);min-width:34px;padding-top:2px;}
+  .ans-correct{font-weight:700;color:var(--accent);font-size:14.5px;}
+  .ans-out{font-weight:700;color:var(--out);font-family:var(--font-mono);font-size:13.5px;}
+  .ans-explain{font-size:13px;color:var(--text-dim);margin-top:4px;line-height:1.5;}
+  .ans-group-label{font-family:var(--font-mono);font-size:12px;color:var(--accent-2);
+    letter-spacing:.06em;text-transform:uppercase;margin:16px 0 4px 0;}
+  .ans-group-label:first-child{margin-top:0;}
+
+  /* ===== shortcuts modal ===== */
+  #shortcuts-modal{
+    position:fixed;inset:0;background:rgba(2,5,6,.72);z-index:2000;
+    display:flex;align-items:center;justify-content:center;
+    opacity:0;pointer-events:none;transition:opacity .2s ease;
+  }
+  #shortcuts-modal.show{opacity:1;pointer-events:auto;}
+  #shortcuts-modal .panel{background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;padding:28px 32px;max-width:460px;width:90%;}
+  #shortcuts-modal h3{margin:0 0 16px 0;font-family:var(--font-mono);color:var(--accent);font-size:16px;}
+  #shortcuts-modal .row{display:flex;justify-content:space-between;padding:7px 0;
+    border-bottom:1px solid var(--border);font-size:13.5px;color:var(--text-dim);}
+  #shortcuts-modal .row:last-child{border-bottom:none;}
+  #shortcuts-modal kbd{font-family:var(--font-mono);background:var(--surface-2);
+    border:1px solid var(--border);border-radius:4px;padding:2px 8px;color:var(--text);}
+
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+</style>
+</head>
+<body>
+
+<div id="progress-wrap"><div id="progress-bar"></div></div>
+<div id="counter"><span class="lbl">NOW SERVING</span>#00 / #00</div>
+<div id="hint">right-click / &rarr; next &nbsp;&middot;&nbsp; back-button / &larr; prev &nbsp;&middot;&nbsp; ? for help</div>
+
+<div id="shortcuts-modal">
+  <div class="panel">
+    <h3>Keyboard &amp; Mouse Shortcuts</h3>
+    <div class="row"><span>Next slide</span><span><kbd>&rarr;</kbd> or right-click</span></div>
+    <div class="row"><span>Previous slide</span><span><kbd>&larr;</kbd> or mouse back button</span></div>
+    <div class="row"><span>Also next slide</span><span>mouse forward button</span></div>
+    <div class="row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="row"><span>Toggle this panel</span><span><kbd>?</kbd></span></div>
+    <div class="row"><span>Close panel</span><span><kbd>Esc</kbd></span></div>
+    <div class="row"><span>Left-click</span><span>free for text &amp; buttons</span></div>
+  </div>
+</div>
+
+<div id="deck"></div>
+
+<script>
+/* ============ HELPERS ============ */
+function escHtml(s){
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+let codeBlockIdx = 0;
+const KEYWORDS = new Set(["public","private","protected","static","void","int","double","char",
+  "boolean","class","new","return","if","else","for","while","break","continue","this","null",
+  "true","false","import","extends","implements","final","long","short","byte","float","package",
+  "try","catch","finally","throw","interface","enum","switch","case","default","super","instanceof"]);
+
+function codeBlock(code, lang){
+  lang = lang || "java";
+  codeBlockIdx++;
+  const id = "code-" + codeBlockIdx;
+  const tokenRe = /(\/\/.*$)|(\/\*[\s\S]*?\*\/)|("(?:[^"\\]|\\.)*")|('(?:[^'\\]|\\.)*')|(\b\d+\.?\d*\b)|(\b[A-Za-z_][A-Za-z0-9_]*\b)/gm;
+  let out = "";
+  let last = 0;
+  let m;
+  while((m = tokenRe.exec(code)) !== null){
+    out += escHtml(code.slice(last, m.index));
+    const full = m[0], comment1 = m[1], comment2 = m[2], dstr = m[3], sstr = m[4], num = m[5], ident = m[6];
+    if(comment1 || comment2){
+      out += '<span class="tok-com">' + escHtml(full) + '</span>';
+    } else if(dstr || sstr){
+      out += '<span class="tok-str">' + escHtml(full) + '</span>';
+    } else if(num){
+      out += '<span class="tok-num">' + escHtml(full) + '</span>';
+    } else if(ident){
+      if(KEYWORDS.has(ident)){
+        out += '<span class="tok-kw">' + escHtml(full) + '</span>';
+      } else if(/^[A-Z]/.test(ident)){
+        out += '<span class="tok-type">' + escHtml(full) + '</span>';
+      } else {
+        out += escHtml(full);
+      }
+    }
+    last = tokenRe.lastIndex;
+  }
+  out += escHtml(code.slice(last));
+  return '<div class="code-wrap"><div class="code-top"><span class="code-lang">' + lang +
+    '</span><button class="copy-btn" onclick="copyCode(this,\'' + id + '\')">Copy</button></div>' +
+    '<pre class="code-pre"><code id="' + id + '">' + out + '</code></pre></div>';
+}
+
+function copyCode(btn, id){
+  const codeEl = document.getElementById(id);
+  const text = codeEl.textContent;
+  const done = () => {
+    const old = btn.textContent;
+    btn.textContent = "Copied!";
+    btn.classList.add("copied");
+    setTimeout(()=>{ btn.textContent = old || "Copy"; btn.classList.remove("copied"); }, 1400);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(done);
+  } else {
+    const ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); }catch(e){}
+    document.body.removeChild(ta);
+    done();
+  }
+}
+
+/* ============ QUEUE DIAGRAM GENERATORS ============ */
+function boxRowDiagram(items, opts){
+  opts = opts || {};
+  const boxW = 92, boxH = 60, gap = 8;
+  const n = items.length;
+  const startX = 44;
+  const y = 62;
+  const totalW = startX*2 + n*boxW + Math.max(0,n-1)*gap;
+  const svgH = 152;
+  let svg = '<svg class="q-svg" viewBox="0 0 ' + totalW + ' ' + svgH + '" xmlns="http://www.w3.org/2000/svg">';
+
+  items.forEach((it, i) => {
+    const x = startX + i * (boxW + gap);
+    let cls = "q-box";
+    if(it.state === "wasted") cls = "q-box q-box-wasted";
+    else if(it.state === "empty") cls = "q-box q-box-empty";
+    svg += '<rect x="' + x + '" y="' + y + '" width="' + boxW + '" height="' + boxH + '" rx="8" class="' + cls + '"/>';
+    if(it.label){
+      svg += '<text x="' + (x+boxW/2) + '" y="' + (y+boxH/2+6) + '" text-anchor="middle" class="q-data">' + it.label + '</text>';
+    }
+    if(i === opts.frontIdx){
+      svg += '<text x="' + (x+boxW/2) + '" y="' + (y-16) + '" text-anchor="middle" class="q-front-label">FRONT</text>' +
+        '<line x1="' + (x+boxW/2) + '" y1="' + (y-9) + '" x2="' + (x+boxW/2) + '" y2="' + (y-2) + '" class="q-arrow-line"/>' +
+        '<polygon points="' + (x+boxW/2-5) + ',' + (y-9) + ' ' + (x+boxW/2+5) + ',' + (y-9) + ' ' + (x+boxW/2) + ',' + (y-1) + '" class="q-arrow-head-front"/>';
+    }
+    if(i === opts.rearIdx){
+      svg += '<text x="' + (x+boxW/2) + '" y="' + (y+boxH+30) + '" text-anchor="middle" class="q-rear-label">REAR</text>' +
+        '<line x1="' + (x+boxW/2) + '" y1="' + (y+boxH+16) + '" x2="' + (x+boxW/2) + '" y2="' + (y+boxH+3) + '" class="q-arrow-line"/>' +
+        '<polygon points="' + (x+boxW/2-5) + ',' + (y+boxH+16) + ' ' + (x+boxW/2+5) + ',' + (y+boxH+16) + ' ' + (x+boxW/2) + ',' + (y+boxH+22) + '" class="q-arrow-head-rear"/>';
+    }
+  });
+  svg += '</svg>';
+  let out = svg;
+  if(opts.caption) out += '<div class="mem-caption">' + opts.caption + '</div>';
+  return out;
+}
+
+function ringQueueDiagram(items, opts){
+  opts = opts || {};
+  const n = items.length;
+  const cx = 165, cy = 155, r = 100, slotR = 32;
+  const svgW = 330, svgH = 320;
+  let svg = '<svg class="q-svg" viewBox="0 0 ' + svgW + ' ' + svgH + '" xmlns="http://www.w3.org/2000/svg">';
+  svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" class="q-ring-guide" fill="none"/>';
+
+  const positions = [];
+  for(let i = 0; i < n; i++){
+    const angle = -90 + i * (360 / n);
+    const rad = angle * Math.PI / 180;
+    positions.push({ x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) });
+  }
+
+  if(n > 1){
+    svg += '<path d="M ' + positions[n-1].x + ' ' + positions[n-1].y + ' A ' + r + ' ' + r + ' 0 0 1 ' +
+      positions[0].x + ' ' + positions[0].y + '" class="q-wrap-arrow" fill="none"/>';
+  }
+
+  items.forEach((it, i) => {
+    const p = positions[i];
+    let cls = "q-slot";
+    if(it.state === "wasted") cls = "q-slot q-slot-wasted";
+    else if(it.state === "empty") cls = "q-slot q-slot-empty";
+    svg += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + slotR + '" class="' + cls + '"/>';
+    if(it.label){
+      svg += '<text x="' + p.x + '" y="' + (p.y+5) + '" text-anchor="middle" class="q-data">' + it.label + '</text>';
+    }
+    if(i === opts.frontIdx){
+      svg += '<text x="' + p.x + '" y="' + (p.y-slotR-12) + '" text-anchor="middle" class="q-front-label">FRONT</text>';
+    }
+    if(i === opts.rearIdx){
+      svg += '<text x="' + p.x + '" y="' + (p.y+slotR+22) + '" text-anchor="middle" class="q-rear-label">REAR</text>';
+    }
+  });
+  svg += '</svg>';
+  let out = svg;
+  if(opts.caption) out += '<div class="mem-caption">' + opts.caption + '</div>';
+  return out;
+}
+
+/* ============ STATIC SLIDES ============ */
+const slideCover = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="ticket">#00</span> MODULE 07 &middot; DATA STRUCTURES</div>' +
+  '<h1 class="title">Queues, Part 2</h1>' +
+  '<p class="lead">You already know enqueue and dequeue. This time: <b>front/peek</b>, why a plain queue quietly wastes space, how a <b>circular queue</b> fixes it, and the two systems running on your computer right now that are secretly just queues.</p>' +
+  '<div class="cover-badges">' +
+    '<div class="badge">Prelims &middot; Module 07</div>' +
+    '<div class="badge">Java</div>' +
+    '<div class="badge">Lecture + Mini Project + Quiz</div>' +
+  '</div>' +
+'</div>';
+
+const slideInstructions = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="ticket">#01</span> BEFORE YOU START</div>' +
+  '<h2 class="title">How this deck works</h2>' +
+  '<div class="recap-grid">' +
+    '<div class="recap-item"><div class="k">Part 1 &middot; Front &amp; Queue Types</div><div class="v">peek()/front(), then linear vs. circular queues and why the difference matters.</div></div>' +
+    '<div class="recap-item"><div class="k">Part 2 &middot; Applications</div><div class="v">CPU scheduling and printer spooling &mdash; two real systems built on plain FIFO queues.</div></div>' +
+    '<div class="recap-item"><div class="k">Mini Project</div><div class="v">A working Print Queue Simulator, combining peek, poll, and isEmpty.</div></div>' +
+    '<div class="recap-item"><div class="k">Activities</div><div class="v">Multiple Choice, Identification, and Guess-the-Output &mdash; answers are on the very last slide.</div></div>' +
+  '</div>' +
+  '<p class="lead" style="margin-top:18px;">Navigate with <b>right-click</b> or <b>&rarr;</b> for next, mouse <b>back button</b> or <b>&larr;</b> for previous. Press <b>?</b> anytime for the full shortcut list.</p>' +
+'</div>';
+
+const slideObjectives = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="ticket">#02</span> LEARNING OBJECTIVES</div>' +
+  '<h2 class="title">By the end of this module, you can&hellip;</h2>' +
+  '<div class="recap-grid">' +
+    '<div class="recap-item"><div class="k">01</div><div class="v">Identify front/peek alongside enqueue and dequeue as a core queue operation.</div></div>' +
+    '<div class="recap-item"><div class="k">02</div><div class="v">Differentiate between a linear queue and a circular queue.</div></div>' +
+    '<div class="recap-item"><div class="k">03</div><div class="v">Apply queues to real computing scenarios: CPU scheduling and printer spooling.</div></div>' +
+    '<div class="recap-item"><div class="k">04</div><div class="v">Trace queue operations step by step, including circular wrap-around.</div></div>' +
+  '</div>' +
+'</div>';
+
+function sectionDivider(ticket, tabLabel, big, sub){
+  return '<div class="slide-inner">' +
+    '<div class="eyebrow"><span class="ticket">' + ticket + '</span> ' + tabLabel + '</div>' +
+    '<h1 class="title">' + big + '</h1>' +
+    '<p class="lead">' + sub + '</p>' +
+  '</div>';
+}
+
+const slideQuickRecap = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="ticket">#03</span> QUICK RECAP</div>' +
+  '<h2 class="title">Enqueue &amp; Dequeue, in 10 Seconds</h2>' +
+  '<p class="lead">A queue follows <b>First-In, First-Out (FIFO)</b>. <code>enqueue()</code> (or <code>add()</code>) joins at the rear, <code>dequeue()</code> (or <code>poll()</code>) leaves from the front &mdash; just like a line at a counter.</p>' +
+  boxRowDiagram([{label:"Alice"},{label:"Bob"},{label:"Charlie"}], {frontIdx:0, rearIdx:2, caption:"Alice arrived first, so she\u2019s FRONT and gets served first"}) +
+'</div>';
+
+const slideFrontPeek = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="ticket">#05</span> CONCEPT</div>' +
+  '<h2 class="title">Front / Peek</h2>' +
+  '<p class="lead"><code>peek()</code> (Java\u2019s <code>Queue</code> also has <code>element()</code>) looks at the front element <b>without removing it</b> &mdash; the line stays exactly the same, you\u2019re just checking who\u2019s up next.</p>' +
+  '<div class="two-col-lec">' +
+    '<div>' +
+      codeBlock(
+'Queue<String> customers = new LinkedList<>();\n' +
+'customers.add("Alice");\n' +
+'customers.add("Bob");\n' +
+'customers.add("Charlie");\n\n' +
+'String next = customers.peek();\n' +
+'System.out.println(next);          // Alice\n' +
+'System.out.println(customers.size()); // 3 -- unchanged!', "java") +
+      '<div class="lec-note"><b>peek() only looks.</b> Only <code>poll()</code> (or <code>remove()</code>) actually removes the front element.</div>' +
+    '</div>' +
+    '<div>' + boxRowDiagram([{label:"Alice"},{label:"Bob"},{label:"Charlie"}], {frontIdx:0, rearIdx:2, caption:"peek() returns \u201cAlice\u201d \u2014 nobody leaves the line"}) + '</div>' +
+  '</div>' +
+'</div>';
+
+const slideLinearQueue = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="ticket">#06</span> CONCEPT</div>' +
+  '<h2 class="title">Linear Queue &mdash; The Wasted-Space Problem</h2>' +
+  '<p class="lead">A queue built on a fixed-size array only ever moves its rear pointer <b>forward</b>. Once rear reaches the last slot, the queue reports "full" &mdash; even if slots at the front are sitting empty after being served.</p>' +
+  boxRowDiagram(
+    [{state:"wasted",label:"A"},{state:"wasted",label:"B"},{state:"wasted",label:"C"},{label:"D"},{label:"E"}],
+    {frontIdx:3, rearIdx:4, caption:"A, B, C already served (wasted slots) \u2014 but rear is stuck at slot 4, so the array is still \u201cfull\u201d"}
+  ) +
+  '<div class="lec-note">Three whole slots are free, yet a plain linear queue has no way to reuse them.</div>' +
+'</div>';
+
+const slideCircularQueue = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="ticket">#07</span> CONCEPT</div>' +
+  '<h2 class="title">Circular Queue &mdash; Reusing the Space</h2>' +
+  '<p class="lead">A circular queue treats the last slot as if it connects back to slot 0. When rear needs to move past the end, it wraps around (using modulo) and reuses whatever\u2019s been freed there.</p>' +
+  '<div class="two-col-lec">' +
+    '<div>' +
+      codeBlock(
+'int enqueue(int[] queue, int rear, int capacity, int value) {\n' +
+'    int newRear = (rear + 1) % capacity;\n' +
+'    queue[newRear] = value;\n' +
+'    return newRear;\n' +
+'}', "java") +
+      '<div class="lec-note"><b>The trick is <code>% capacity</code>.</b> Once rear reaches the last index, adding 1 and wrapping with modulo sends it right back to 0.</div>' +
+    '</div>' +
+    '<div>' + ringQueueDiagram(
+      [{label:"F"},{label:"G"},{state:"empty"},{label:"D"},{label:"E"}],
+      {frontIdx:3, rearIdx:1, caption:"F and G wrapped around into slots 0 &amp; 1 \u2014 the space served by A, B, C is reused"}
+    ) + '</div>' +
+  '</div>' +
+'</div>';
+
+const slideComparison = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="ticket">#07b</span> CONCEPT</div>' +
+  '<h2 class="title">Linear vs. Circular Queue</h2>' +
+  '<table class="lec-table">' +
+    '<tr><th>Aspect</th><th>Linear Queue</th><th>Circular Queue</th></tr>' +
+    '<tr><td>Rear movement</td><td>Only forward</td><td>Wraps back to index 0</td></tr>' +
+    '<tr><td>Freed space</td><td>Wasted once passed</td><td>Reused automatically</td></tr>' +
+    '<tr><td>Implementation</td><td>Simple</td><td>Slightly more logic (modulo)</td></tr>' +
+    '<tr><td>Good fit for</td><td>Short-lived, one-shot queues</td><td>Long-running queues (buffers, schedulers)</td></tr>' +
+  '</table>' +
+'</div>';
+
+const slideCPUScheduling = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="ticket">#09</span> APPLICATION 1</div>' +
+  '<h2 class="title">CPU Scheduling</h2>' +
+  '<p class="lead">Programs waiting for CPU time sit in a <b>ready queue</b>. In simple First-Come-First-Served scheduling, the CPU just keeps dequeuing the front process and running it &mdash; the exact same pattern as any line at a counter.</p>' +
+  '<div class="two-col-lec">' +
+    '<div>' +
+      codeBlock(
+'Queue<String> readyQueue = new LinkedList<>();\n' +
+'readyQueue.add("P1");\n' +
+'readyQueue.add("P2");\n' +
+'readyQueue.add("P3");\n\n' +
+'while (!readyQueue.isEmpty()) {\n' +
+'    String current = readyQueue.poll();\n' +
+'    System.out.println("CPU is now running: " + current);\n' +
+'}', "java") +
+    '</div>' +
+    '<div>' + boxRowDiagram([{label:"P1"},{label:"P2"},{label:"P3"}], {frontIdx:0, rearIdx:2, caption:"P1 has been waiting longest, so it runs first"}) + '</div>' +
+  '</div>' +
+'</div>';
+
+const slidePrinterSpooling = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="ticket">#10</span> APPLICATION 2</div>' +
+  '<h2 class="title">Printer Spooling</h2>' +
+  '<p class="lead">When several documents get sent to one printer, they line up in a <b>print queue (spool)</b> so they come out in the exact order they were submitted &mdash; not the order the printer "feels like."</p>' +
+  '<div class="two-col-lec">' +
+    '<div>' +
+      codeBlock(
+'Queue<String> printQueue = new LinkedList<>();\n' +
+'printQueue.add("Resume.pdf");\n' +
+'printQueue.add("Report.docx");\n' +
+'printQueue.add("Photo.png");\n\n' +
+'while (!printQueue.isEmpty()) {\n' +
+'    String job = printQueue.poll();\n' +
+'    System.out.println("Printing: " + job);\n' +
+'}', "java") +
+    '</div>' +
+    '<div>' + boxRowDiagram([{label:"Resume"},{label:"Report"},{label:"Photo"}], {frontIdx:0, rearIdx:2, caption:"Resume.pdf was sent first, so it prints first"}) + '</div>' +
+  '</div>' +
+'</div>';
+
+const slideProjectCode = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="ticket">#12</span> MINI PROJECT</div>' +
+  '<h2 class="title">Print Queue Simulator</h2>' +
+  '<p class="lead">A small, runnable program that puts printer spooling (Application 2) to work &mdash; using <code>peek()</code> to preview what\u2019s next, then <code>poll()</code> to actually print each job in order.</p>' +
+  codeBlock(
+'import java.util.LinkedList;\n' +
+'import java.util.Queue;\n\n' +
+'public class PrintQueueSimulator {\n' +
+'    public static void main(String[] args) {\n' +
+'        Queue<String> printQueue = new LinkedList<>();\n' +
+'        printQueue.add("Resume.pdf");\n' +
+'        printQueue.add("Report.docx");\n' +
+'        printQueue.add("Photo.png");\n\n' +
+'        System.out.println("Up next: " + printQueue.peek());\n\n' +
+'        while (!printQueue.isEmpty()) {\n' +
+'            String job = printQueue.poll();\n' +
+'            System.out.println("Printing: " + job);\n' +
+'        }\n\n' +
+'        System.out.println("Queue empty: " + printQueue.isEmpty());\n' +
+'    }\n' +
+'}', "java") +
+'</div>';
+
+const slideProjectRun = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="ticket">#13</span> MINI PROJECT</div>' +
+  '<h2 class="title">Running the Simulator</h2>' +
+  '<div class="two-col-lec">' +
+    '<div>' +
+      '<div class="lec-note"><b>Console output:</b></div>' +
+      codeBlock(
+'Up next: Resume.pdf\n' +
+'Printing: Resume.pdf\n' +
+'Printing: Report.docx\n' +
+'Printing: Photo.png\n' +
+'Queue empty: true', "text") +
+    '</div>' +
+    '<div class="lec-note">Notice <code>peek()</code> told us <b>"Resume.pdf"</b> was up next <i>before</i> anything was printed &mdash; the queue wasn\u2019t touched until the loop started calling <code>poll()</code>.</div>' +
+  '</div>' +
+'</div>';
+
+/* ============ ACTIVITY DATA ============ */
+const mcQuestions = [
+  {q:"What does peek() (or front()) do in a queue?",
+   opts:["Removes the front element","Adds a new element to the rear","Returns the front element without removing it","Empties the whole queue"]},
+  {q:"In a linear queue, what problem can occur even when several front slots are empty?",
+   opts:["The queue automatically resizes itself","You still can\u2019t enqueue once rear has reached the last physical slot","Dequeue stops working entirely","The queue turns into a stack"]},
+  {q:"How does a circular queue solve the linear queue\u2019s wasted-space problem?",
+   opts:["By deleting old data automatically","By wrapping the rear pointer back to slot 0 once space frees up there","By doubling its capacity every time","By using two separate queues"]},
+  {q:"In simple FIFO CPU scheduling, which waiting process runs next?",
+   opts:["The process that arrived most recently","The process that has been waiting the longest","A random process","Whichever process needs the least memory"]},
+  {q:"What ensures a printer prints documents in the same order they were sent?",
+   opts:["A Stack (LIFO)","A Queue (FIFO)","A Linked List traversal","Recursion"]}
+];
+const mcAnswers = [2,1,1,1,1];
+const mcExplain = [
+  "peek() (or front()) only looks at the front element; it never removes anything from the queue.",
+  "In a linear queue, rear only ever moves forward \u2014 once it hits the last slot, the queue reports \u201cfull\u201d even if earlier slots are empty.",
+  "A circular queue wraps rear back to index 0 (using modulo) once a spot frees up there, reusing space instead of wasting it.",
+  "FIFO means whoever has been in the queue the longest (the front) gets served first.",
+  "Printers rely on a FIFO print queue (spooler) so jobs come out in the exact order they were submitted."
+];
+
+const idItems = [
+  {q:"The queue operation that returns the front element without removing it.", a:"Front (or Peek)"},
+  {q:"The queue type where rear can\u2019t wrap back around, wasting freed-up space.", a:"Linear Queue"},
+  {q:"The queue type where rear wraps back to index 0 once space frees up.", a:"Circular Queue"},
+  {q:"The queue-based technique operating systems use to decide which waiting process runs next.", a:"CPU Scheduling"},
+  {q:"The queue-based system that ensures documents print in the order they were sent.", a:"Printer Spooling"}
+];
+
+const outQuestions = [
+  {code:'Queue<Integer> q = new LinkedList<>();\nq.add(10);\nq.add(20);\nSystem.out.println(q.peek());\nSystem.out.println(q.size());',
+   ans:["10","2"], exp:"peek() returns 10 (the front) without removing it, so size() is still 2 right after."},
+  {code:'Queue<String> q = new LinkedList<>();\nq.add("A");\nq.add("B");\nq.poll();\nSystem.out.println(q.peek());',
+   ans:["B"], exp:"poll() removes \u201cA\u201d, leaving \u201cB\u201d as the new front, which is what peek() then reports."},
+  {code:'Queue<Integer> q = new LinkedList<>();\nSystem.out.println(q.isEmpty());\nq.add(5);\nSystem.out.println(q.isEmpty());',
+   ans:["true","false"], exp:"A freshly created queue starts empty (true); after one add(), it\u2019s no longer empty (false)."},
+  {code:'Queue<String> jobs = new LinkedList<>();\njobs.add("Print1");\njobs.add("Print2");\njobs.add("Print3");\nwhile (!jobs.isEmpty()) {\n    System.out.println(jobs.poll());\n}',
+   ans:["Print1","Print2","Print3"], exp:"poll() always removes the current front, so the jobs print in the exact order they were added \u2014 FIFO."},
+  {code:'int rear = 4;\nint capacity = 5;\nint newRear = (rear + 1) % capacity;\nSystem.out.println(newRear);',
+   ans:["0"], exp:"(4 + 1) % 5 = 5 % 5 = 0 \u2014 this is exactly the wrap-around math a circular queue uses to reuse slot 0."}
+];
+
+/* ============ ACTIVITY SLIDE BUILDERS ============ */
+function mcSlide(){
+  const cards = mcQuestions.map((q,i) => {
+    const opts = q.opts.map((o,j) => '<div class="opt"><b>' + String.fromCharCode(65+j) + ')</b>' + o + '</div>').join("");
+    return '<div class="q-card"><div class="q-num">QUESTION ' + (i+1) + ' / ' + mcQuestions.length + '</div>' +
+      '<div class="q-text">' + q.q + '</div><div class="opt-grid">' + opts + '</div></div>';
+  }).join("");
+  return '<div class="slide-inner"><div class="eyebrow mc"><span class="ticket">#16</span> ACTIVITY &middot; MULTIPLE CHOICE</div>' +
+    '<h2 class="title">Multiple Choice</h2><p class="lead">Pick the single best answer for each. Answers are on the final slide.</p>' +
+    '<div class="q-list">' + cards + '</div></div>';
+}
+
+function idSlide(){
+  const cards = idItems.map((it,i) =>
+    '<div class="id-card"><div class="q-num">ITEM ' + (i+1) + ' / ' + idItems.length + '</div>' + it.q + '</div>'
+  ).join("");
+  return '<div class="slide-inner"><div class="eyebrow id"><span class="ticket">#17</span> ACTIVITY &middot; IDENTIFICATION</div>' +
+    '<h2 class="title">Identification</h2><p class="lead">Name the concept being described. Answers are on the final slide.</p>' +
+    '<div class="q-list">' + cards + '</div></div>';
+}
+
+function outSlide(){
+  const cards = outQuestions.map((q,i) =>
+    '<div class="out-card"><div class="q-num">SNIPPET ' + (i+1) + ' / ' + outQuestions.length + '</div><pre>' + escHtml(q.code) + '</pre></div>'
+  ).join("");
+  return '<div class="slide-inner"><div class="eyebrow out"><span class="ticket">#18</span> ACTIVITY &middot; GUESS THE OUTPUT</div>' +
+    '<h2 class="title">Guess the Output</h2><p class="lead">Trace each snippet and predict exactly what gets printed. Answers are on the final slide.</p>' +
+    '<div class="out-grid">' + cards + '</div></div>';
+}
+
+const slideRecap = '<div class="slide-inner">' +
+  '<div class="eyebrow"><span class="ticket">#19</span> RECAP</div>' +
+  '<h2 class="title">Before the Answer Key</h2>' +
+  '<div class="recap-grid">' +
+    '<div class="recap-item"><div class="k">Front / Peek</div><div class="v">Looks at the front element without removing it &mdash; the queue stays exactly the same.</div></div>' +
+    '<div class="recap-item"><div class="k">Linear Queue</div><div class="v">Rear only moves forward, so served slots at the front go to waste once passed.</div></div>' +
+    '<div class="recap-item"><div class="k">Circular Queue</div><div class="v">Rear wraps back to index 0 using modulo, reusing freed slots automatically.</div></div>' +
+    '<div class="recap-item"><div class="k">CPU Scheduling</div><div class="v">A ready queue of waiting processes &mdash; FIFO decides who gets the CPU next.</div></div>' +
+    '<div class="recap-item"><div class="k">Printer Spooling</div><div class="v">A print queue that guarantees documents come out in submission order.</div></div>' +
+    '<div class="recap-item"><div class="k">Same pattern everywhere</div><div class="v">Enqueue, dequeue, and peek quietly run all of the above &mdash; just with different labels on the boxes.</div></div>' +
+  '</div>' +
+'</div>';
+
+function answersSlide(){
+  const mcRows = mcQuestions.map((q,i) =>
+    '<div class="ans-row"><div class="ans-num">Q' + (i+1) + '</div><div>' +
+    '<span class="ans-correct">' + String.fromCharCode(65+mcAnswers[i]) + ') ' + q.opts[mcAnswers[i]] + '</span>' +
+    '<div class="ans-explain">' + mcExplain[i] + '</div></div></div>'
+  ).join("");
+  const idRows = idItems.map((it,i) =>
+    '<div class="ans-row"><div class="ans-num">I' + (i+1) + '</div><div>' +
+    '<span class="ans-correct">' + it.a + '</span>' +
+    '<div class="ans-explain">' + it.q + '</div></div></div>'
+  ).join("");
+  const outRows = outQuestions.map((q,i) =>
+    '<div class="ans-row"><div class="ans-num">S' + (i+1) + '</div><div>' +
+    '<span class="ans-out">' + q.ans.map(escHtml).join(" / ") + '</span>' +
+    '<div class="ans-explain">' + q.exp + '</div></div></div>'
+  ).join("");
+  return '<div class="slide-inner"><div class="eyebrow"><span class="ticket">#20</span> ANSWER KEY</div>' +
+    '<h2 class="title">All Answers &amp; Explanations</h2>' +
+    '<div class="answers-scroll">' +
+      '<div class="ans-group-label">Multiple Choice</div>' + mcRows +
+      '<div class="ans-group-label">Identification</div>' + idRows +
+      '<div class="ans-group-label">Guess the Output</div>' + outRows +
+    '</div></div>';
+}
+
+/* ============ ASSEMBLE DECK ============ */
+const slides = [];
+slides.push(slideCover);
+slides.push(slideInstructions);
+slides.push(slideObjectives);
+slides.push(slideQuickRecap);
+slides.push(sectionDivider("#04","SECTION","Part 1 \u2014 Front &amp; Queue Types","peek()/front(), then why a plain queue wastes space and how a circular queue reuses it."));
+slides.push(slideFrontPeek);
+slides.push(slideLinearQueue);
+slides.push(slideCircularQueue);
+slides.push(slideComparison);
+slides.push(sectionDivider("#08","SECTION","Part 2 \u2014 Real Applications","Two systems running right now on your computer, both quietly built on FIFO queues."));
+slides.push(slideCPUScheduling);
+slides.push(slidePrinterSpooling);
+slides.push(sectionDivider("#11","MINI PROJECT","Print Queue Simulator","A small, runnable program built directly on the printer spooling application."));
+slides.push(slideProjectCode);
+slides.push(slideProjectRun);
+slides.push(sectionDivider("#15","SECTION","Activities","Multiple Choice, Identification, and Guess-the-Output \u2014 answers are on the final slide."));
+slides.push(mcSlide());
+slides.push(idSlide());
+slides.push(outSlide());
+slides.push(slideRecap);
+slides.push(answersSlide());
+
+/* ============ RENDER & NAVIGATION ============ */
+const deck = document.getElementById("deck");
+slides.forEach((html) => {
+  const div = document.createElement("div");
+  div.className = "slide";
+  div.innerHTML = html;
+  deck.appendChild(div);
+});
+const slideEls = Array.from(document.querySelectorAll(".slide"));
+let current = 0;
+
+function pad2(n){ return String(n).padStart(2,"0"); }
+
+function render(){
+  slideEls.forEach((el,i)=>{ el.classList.toggle("active", i===current); });
+  document.getElementById("counter").innerHTML =
+    '<span class="lbl">NOW SERVING</span>#' + pad2(current) + " / #" + pad2(slideEls.length-1);
+  document.getElementById("progress-bar").style.width = (((current+1)/slideEls.length)*100)+"%";
+}
+function goTo(i){ current = Math.max(0, Math.min(slideEls.length-1, i)); render(); }
+function next(){ goTo(current+1); }
+function prev(){ goTo(current-1); }
+
+render();
+
+/* block the default context menu everywhere */
+document.addEventListener("contextmenu", (e) => { e.preventDefault(); }, true);
+
+/* mouse navigation: right-click = next, back-button = prev, forward-button = next */
+document.addEventListener("mousedown", (e) => {
+  const modal = document.getElementById("shortcuts-modal");
+  if(e.button === 2){
+    if(e.target.closest("button, a, input, textarea, select, .copy-btn")) return;
+    if(modal.classList.contains("show")){ modal.classList.remove("show"); return; }
+    e.preventDefault(); e.stopImmediatePropagation();
+    next();
+  } else if(e.button === 3){
+    e.preventDefault(); e.stopImmediatePropagation();
+    prev();
+  } else if(e.button === 4){
+    e.preventDefault(); e.stopImmediatePropagation();
+    next();
+  }
+}, true);
+
+window.addEventListener("auxclick", (e) => {
+  if(e.button === 3 || e.button === 4){ e.preventDefault(); e.stopImmediatePropagation(); }
+}, true);
+
+/* keyboard */
+document.addEventListener("keydown", (e) => {
+  const modal = document.getElementById("shortcuts-modal");
+  if(e.key === "?"){ modal.classList.toggle("show"); e.preventDefault(); return; }
+  if(modal.classList.contains("show")){
+    if(e.key === "Escape") modal.classList.remove("show");
+    return;
+  }
+  if(e.key === "ArrowRight"){ next(); }
+  else if(e.key === "ArrowLeft"){ prev(); }
+  else if(e.key === "Home"){ goTo(0); }
+  else if(e.key === "End"){ goTo(slideEls.length-1); }
+});
+
+/* swipe */
+let touchStartX = null;
+document.addEventListener("touchstart", (e) => { touchStartX = e.changedTouches[0].screenX; }, {passive:true});
+document.addEventListener("touchend", (e) => {
+  if(touchStartX === null) return;
+  const dx = e.changedTouches[0].screenX - touchStartX;
+  if(Math.abs(dx) > 50){ if(dx < 0) next(); else prev(); }
+  touchStartX = null;
+}, {passive:true});
+</script>
+</body>
+</html>

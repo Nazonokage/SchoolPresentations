@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DSA · module 2 · type casting · deep dive</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0e14;
+      --surface: #10151d;
+      --surface-2: #171e28;
+      --border: #262e3a;
+      --border-soft: #1c2430;
+      --text: #eef2f6;
+      --text-dim: #b0bcc9;
+      --text-faint: #7c8797;
+      --blue: #58a6ff;
+      --purple: #bc8cff;
+      --orange: #ffa657;
+      --green: #7ee787;
+      --grad: linear-gradient(120deg, #58a6ff 0%, #bc8cff 100%);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    ::selection { background: rgba(88,166,255,0.28); color: #fff; }
+    body {
+      background: var(--bg);
+      font-family: 'Inter', 'SF Mono', 'JetBrains Mono', monospace;
+      height: 100vh;
+      overflow: hidden;
+      color: var(--text);
+    }
+    .presentation {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background:
+        radial-gradient(ellipse 900px 500px at 15% -5%, rgba(88,166,255,0.07), transparent 60%),
+        radial-gradient(ellipse 700px 500px at 100% 100%, rgba(188,140,255,0.06), transparent 60%),
+        var(--bg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ---------- editor chrome: window + tab strip ---------- */
+    .editor-chrome {
+      flex-shrink: 0;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      z-index: 70;
+    }
+    .window-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.9rem 0.35rem;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot.red { background: #ff5f56; }
+    .dot.yellow { background: #ffbd2e; }
+    .dot.green { background: #27c93f; }
+    .window-title {
+      margin-left: 0.6rem;
+      font-size: 0.7rem;
+      color: var(--text-faint);
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.02em;
+    }
+    .info-hint {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      background: rgba(88,166,255,0.08);
+      border: 1px solid rgba(88,166,255,0.22);
+      padding: 0.22rem 0.6rem 0.22rem 0.5rem;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+    .info-hint:hover { background: rgba(88,166,255,0.15); color: var(--text); }
+    .info-hint .info-icon {
+      width: 15px; height: 15px;
+      border-radius: 50%;
+      background: var(--blue);
+      color: #0a0e14;
+      font-weight: 700;
+      font-size: 0.62rem;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .info-panel {
+      position: fixed;
+      top: 46px;
+      right: 16px;
+      z-index: 90;
+      width: 280px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.9rem 1rem;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.5);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.78rem;
+      line-height: 1.6;
+      color: var(--text-dim);
+      display: none;
+    }
+    .info-panel.open { display: block; }
+    .info-panel h4 {
+      font-size: 0.8rem;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+      font-weight: 600;
+    }
+    .info-panel ul { padding-left: 1.1rem; margin: 0; }
+    .info-panel li { margin-bottom: 0.3rem; }
+    .info-panel .close-x {
+      position: absolute;
+      top: 0.55rem; right: 0.7rem;
+      cursor: pointer;
+      color: var(--text-faint);
+      font-size: 0.9rem;
+      line-height: 1;
+    }
+    .info-panel .close-x:hover { color: var(--text); }
+    .tab-strip {
+      display: flex;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tab-strip::-webkit-scrollbar { display: none; }
+    .tab {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.42rem 0.9rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.66rem;
+      color: var(--text-faint);
+      background: transparent;
+      border-right: 1px solid var(--border-soft);
+      cursor: pointer;
+      white-space: nowrap;
+      position: relative;
+      transition: color 0.2s ease, background 0.2s ease;
+    }
+    .tab:hover { color: var(--text-dim); background: rgba(255,255,255,0.02); }
+    .tab .dotstate { width: 6px; height: 6px; border-radius: 50%; background: var(--text-faint); flex-shrink: 0; }
+    .tab.active {
+      color: var(--text);
+      background: var(--bg);
+    }
+    .tab.active .dotstate { background: var(--blue); box-shadow: 0 0 6px rgba(88,166,255,0.8); }
+    .tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--grad);
+    }
+
+    .slides-container {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+    }
+    .slide {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      padding: 1.6rem 2.6rem 3rem 2.6rem;
+      overflow-y: auto;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease, transform 0.35s ease;
+      transform: scale(0.98) translateY(10px);
+      background: var(--bg);
+      scroll-behavior: smooth;
+      display: flex;
+      flex-direction: column;
+    }
+    .slide.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1) translateY(0);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .slide { transition: opacity 0.1s ease; transform: none; }
+      .slide.active { transform: none; }
+    }
+
+    .slide-header {
+      margin-bottom: 1.1rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.55rem;
+      flex-shrink: 0;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .eyebrow {
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--blue);
+      background: rgba(88,166,255,0.1);
+      display: inline-block;
+      padding: 0.18rem 0.7rem;
+      border-radius: 20px;
+      margin-bottom: 0.35rem;
+      border: 1px solid rgba(88,166,255,0.25);
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+    }
+    .slide-title {
+      font-size: 1.7rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--text);
+      line-height: 1.2;
+      font-family: 'Inter', sans-serif;
+    }
+    .slide-index-mark {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--text-faint);
+      flex-shrink: 0;
+      padding-bottom: 0.15rem;
+    }
+    .slide-body {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+      min-height: 0;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 1rem;
+      align-items: stretch;
+    }
+    .grid-2-equal {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 1rem;
+      align-items: stretch;
+      flex: 1;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      box-shadow: 0 1px 0 rgba(255,255,255,0.02) inset, 0 6px 16px rgba(0,0,0,0.35);
+      min-width: 0;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      display: flex;
+      flex-direction: column;
+      transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .card:hover {
+      border-color: #364152;
+      transform: translateY(-1px);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 10px 24px rgba(0,0,0,0.45);
+    }
+    .card h3 {
+      font-size: 0.94rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.55rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.32rem;
+      letter-spacing: -0.01em;
+      flex-shrink: 0;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .card p, .card li, .card div { color: var(--text-dim); line-height: 1.68; font-size: 0.88rem; }
+    .card strong { color: var(--text); font-weight: 600; }
+    .card ul { padding-left: 1.15rem; margin: 0.2rem 0; }
+    .card li { margin-bottom: 0.15rem; }
+    .code-block {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      background: #080b10;
+      border-radius: 8px;
+      padding: 0.6rem 0.85rem;
+      display: block;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border: 1px solid var(--border);
+      color: var(--text);
+      overflow-x: auto;
+      line-height: 1.55;
+      margin: 0.2rem 0;
+    }
+    .code-block span.keyword { color: #ff7b72; }
+    .code-block span.string { color: #a5d6ff; }
+    .code-block span.comment { color: var(--text-faint); font-style: italic; }
+    .code-block span.function { color: var(--purple); }
+    .code-block span.class { color: var(--orange); }
+    .code-block span.number { color: #79c0ff; }
+    .code-block span.operator { color: #ff7b72; }
+    .code-block span.annotation { color: #f0883e; }
+    .code-block span.variable { color: var(--orange); }
+    .tag {
+      background: var(--surface-2);
+      color: var(--text-dim);
+      padding: 0.1rem 0.55rem;
+      border-radius: 12px;
+      font-size: 0.64rem;
+      letter-spacing: 0.03em;
+      border: 1px solid var(--border);
+      display: inline-block;
+      margin-right: 0.2rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .highlight-box {
+      background: #080b10;
+      border-radius: 8px;
+      padding: 0.45rem 0.8rem;
+      border: 1px solid var(--border);
+      border-left: 2px solid var(--blue);
+      margin-top: 0.25rem;
+      font-size: 0.75rem;
+    }
+    .mini-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.32rem 0.8rem;
+      font-size: 0.7rem;
+    }
+    .mini-grid .label { color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.66rem; }
+    .mini-grid .value { color: var(--text-dim); }
+
+    /* ---------- status bar (bottom, vscode-style) ---------- */
+    .status-bar {
+      flex-shrink: 0;
+      height: 26px;
+      background: var(--grad);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 0.9rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.62rem;
+      color: #0a0e14;
+      font-weight: 600;
+      z-index: 60;
+      letter-spacing: 0.01em;
+    }
+    .status-left, .status-right { display: flex; align-items: center; gap: 0.9rem; }
+    .status-progress-track {
+      width: 120px;
+      height: 4px;
+      background: rgba(10,14,20,0.28);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .status-progress-fill {
+      height: 100%;
+      background: #0a0e14;
+      width: 0%;
+      transition: width 0.25s ease;
+    }
+    .dots-nav { display: flex; gap: 0.3rem; align-items: center; }
+    .dots-nav .navdot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: rgba(10,14,20,0.35);
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+    .dots-nav .navdot.active { background: #0a0e14; transform: scale(1.5); }
+
+    .slide::-webkit-scrollbar { width: 5px; }
+    .slide::-webkit-scrollbar-track { background: var(--bg); }
+    .slide::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+    .slide { scrollbar-width: thin; }
+
+    @media (max-width: 700px) {
+      .slide { padding: 1rem 1rem 3.2rem 1rem; }
+      .grid-2, .grid-2-equal { grid-template-columns: 1fr; gap: 0.6rem; }
+      .slide-title { font-size: 1.25rem; }
+      .card { padding: 0.75rem 0.95rem; }
+      .status-progress-track { width: 60px; }
+      .window-title { display: none; }
+      .info-hint span:not(.info-icon) { display: none; }
+      .info-hint { padding: 0.22rem; }
+      .info-panel { width: calc(100vw - 32px); right: 16px; }
+    }
+  </style>
+</head>
+<body>
+<div class="presentation" id="app">
+
+  <div class="editor-chrome">
+    <div class="window-bar">
+      <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+      <span class="window-title">dsa-module-2 — type-casting-deep-dive</span>
+      <div class="info-hint" id="infoHint"><span class="info-icon">i</span> how this works</div>
+    </div>
+    <div class="info-panel" id="infoPanel">
+      <span class="close-x" id="infoClose">&times;</span>
+      <h4>This deck looks like a code editor on purpose</h4>
+      <ul>
+        <li><strong>Tabs above</strong> = slides. Each one is named like a real file — click any tab to jump straight there.</li>
+        <li><strong>Bar below</strong> shows which "file" (slide) you're on and how far through the deck you are.</li>
+        <li><strong>Move around</strong> with → / ← arrow keys, or just click anywhere on a slide to go forward.</li>
+      </ul>
+    </div>
+    <div class="tab-strip" id="tabStrip">
+      <div class="tab active" data-index="0"><span class="dotstate"></span>intro.md</div>
+      <div class="tab" data-index="1"><span class="dotstate"></span>HelloWorld.cpp</div>
+      <div class="tab" data-index="2"><span class="dotstate"></span>TypeCast.java</div>
+      <div class="tab" data-index="3"><span class="dotstate"></span>Module2.java</div>
+      <div class="tab" data-index="4"><span class="dotstate"></span>Widening.java</div>
+      <div class="tab" data-index="5"><span class="dotstate"></span>Narrowing.java</div>
+      <div class="tab" data-index="6"><span class="dotstate"></span>Promotion.java</div>
+      <div class="tab" data-index="7"><span class="dotstate"></span>languages.md</div>
+      <div class="tab" data-index="8"><span class="dotstate"></span>review.md</div>
+    </div>
+  </div>
+
+  <div class="slides-container" id="slidesContainer">
+    <!-- slide 1: module 2 intro -->
+    <div class="slide active" data-index="0">
+      <div class="slide-header">
+        <div><span class="eyebrow">module 2 · type casting</span><div class="slide-title">data conversion &amp; primitives</div></div>
+        <div class="slide-index-mark">01 / 09</div>
+      </div>
+      <div class="slide-body">
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.1rem;"><span class="tag">Java</span><span class="tag">C++</span><span class="tag">widening</span><span class="tag">narrowing</span></div>
+        <div class="grid-2">
+          <div class="card"><h3>📦 data structure</h3><p>specialized format for organizing, processing, retrieving and storing data.</p><ul><li>lists · arrays · stacks · queues</li></ul></div>
+          <div class="card"><h3>⚙️ algorithm</h3><p>tool to resolve problems of data. <br> <span style="color:var(--text-faint);">“art of organizing data”</span></p></div>
+        </div>
+        <div class="card"><h3>🧠 why type casting matters</h3><p>“Studying data structure without knowing primitive types is perilous.” <br> <span style="color:var(--text-faint);">— e.g. Cash Register: int → double conversion required.</span></p></div>
+      </div>
+    </div>
+    <!-- slide 2: organize data + hello world -->
+    <div class="slide" data-index="1">
+      <div class="slide-header">
+        <div><span class="eyebrow">organizing data</span><div class="slide-title">how data is structured</div></div>
+        <div class="slide-index-mark">02 / 09</div>
+      </div>
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="card"><h3>📋 common structures</h3><ul><li><strong>list</strong> — elements of one type</li><li><strong>array</strong> — indexed elements</li><li><strong>stack</strong> — LIFO</li><li><strong>queue</strong> — FIFO</li></ul></div>
+          <div class="card"><h3>💬 “Hello World” as data</h3><p>string is a data type — organized to match program requirements.</p><div class="code-block" style="font-size:0.7rem;"><span class="keyword">#include</span> &lt;iostream&gt;
+<span class="keyword">using namespace</span> std;
+
+<span class="keyword">int</span> <span class="function">main</span>() {
+    <span class="class">string</span> msg = <span class="string">"Hello World"</span>;
+    std::cout &lt;&lt; msg &lt;&lt; endl;
+    <span class="keyword">return</span> <span class="number">0</span>;
+}</div></div>
+        </div>
+        <div style="color:var(--text-faint);font-size:0.74rem;border-top:1px solid var(--border);padding-top:0.3rem;">data structures frame information so machines and humans can better understand it.</div>
+      </div>
+    </div>
+    <!-- slide 3: type casting overview + diagram -->
+    <div class="slide" data-index="2">
+      <div class="slide-header">
+        <div><span class="eyebrow">type casting</span><div class="slide-title">conversion · int → String / double</div></div>
+        <div class="slide-index-mark">03 / 09</div>
+      </div>
+      <div class="slide-body">
+        <div style="display:flex; align-items:center; justify-content:center; gap:0.6rem; flex-wrap:wrap; background:#080b10; padding:0.5rem 0.8rem; border-radius:12px; border:1px solid var(--border); font-size:0.75rem;">
+          <span style="background:var(--surface-2);padding:0.12rem 0.8rem;border-radius:6px;border:1px solid var(--border);color:var(--blue);">int</span>
+          <span style="color:var(--text-faint);">⟶</span>
+          <span style="color:var(--text-dim);">valueOf() / toString()</span>
+          <span style="color:var(--text-faint);">⟶</span>
+          <span style="background:var(--surface-2);padding:0.12rem 0.8rem;border-radius:6px;border:1px solid var(--border);color:#a5d6ff;">String</span>
+          <span style="color:var(--border);margin:0 0.3rem;">|</span>
+          <span style="background:var(--surface-2);padding:0.12rem 0.8rem;border-radius:6px;border:1px solid var(--border);color:var(--blue);">int</span>
+          <span style="color:var(--text-faint);">⟶</span>
+          <span style="color:var(--text-dim);">implicit / explicit</span>
+          <span style="color:var(--text-faint);">⟶</span>
+          <span style="background:var(--surface-2);padding:0.12rem 0.8rem;border-radius:6px;border:1px solid var(--border);color:var(--purple);">double</span>
+        </div>
+        <div class="grid-2">
+          <div class="card"><h3>🔁 int → String</h3><ul><li><code>String.valueOf(i)</code></li><li><code>Integer.toString(i)</code></li><li>concatenation changes behavior</li></ul></div>
+          <div class="card"><h3>📈 int → double</h3><ul><li>implicit (widening) — no cast needed</li><li>explicit — using wrapper class</li><li>double has wider range</li></ul></div>
+        </div>
+      </div>
+    </div>
+    <!-- slide 4: int to String detailed -->
+    <div class="slide" data-index="3">
+      <div class="slide-header">
+        <div><span class="eyebrow">java · conversion</span><div class="slide-title">int → String (valueOf / toString)</div></div>
+        <div class="slide-index-mark">04 / 09</div>
+      </div>
+      <div class="slide-body">
+        <div class="grid-2-equal">
+          <div class="card"><h3>☕ code sample</h3>
+            <div class="code-block" style="font-size:0.7rem;"><span class="keyword">public class</span> <span class="class">Module2</span> {
+  <span class="keyword">public static void</span> <span class="function">main</span>(<span class="class">String</span> args[]) {
+    <span class="keyword">int</span> i = <span class="number">100</span>;
+    <span class="class">String</span> s = <span class="class">String</span>.<span class="function">valueOf</span>(i);
+    <span class="class">String</span> t = <span class="class">Integer</span>.<span class="function">toString</span>(i);
+    
+    <span class="class">System</span>.out.println(i + <span class="number">100</span>); <span class="comment">// 200</span>
+    <span class="class">System</span>.out.println(s + <span class="number">100</span>); <span class="comment">// "100100"</span>
+    <span class="class">System</span>.out.println(t + <span class="number">50</span>);  <span class="comment">// "10050"</span>
+  }
+}</div>
+            <div style="margin-top:0.2rem;color:var(--text-faint);font-size:0.74rem;">+ operator: binary plus vs. string concatenation</div>
+          </div>
+          <div class="card"><h3>🧪 output breakdown</h3>
+            <div class="mini-grid">
+              <span class="label">expression</span><span class="label">result</span>
+              <span class="value"><code>i + 100</code></span><span class="value">200 (numeric)</span>
+              <span class="value"><code>s + 100</code></span><span class="value">"100100" (string)</span>
+              <span class="value"><code>t + 50</code></span><span class="value">"10050" (string)</span>
+              <span class="value"><code>String.valueOf(i)</code></span><span class="value">"100"</span>
+              <span class="value"><code>Integer.toString(i)</code></span><span class="value">"100"</span>
+            </div>
+            <div class="highlight-box"><span class="tag">note</span> both methods return a <span style="color:#a5d6ff;">String</span> representation</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- slide 5: int to double (implicit & explicit) -->
+    <div class="slide" data-index="4">
+      <div class="slide-header">
+        <div><span class="eyebrow">java · widening</span><div class="slide-title">int → double (implicit / explicit)</div></div>
+        <div class="slide-index-mark">05 / 09</div>
+      </div>
+      <div class="slide-body">
+        <div class="grid-2-equal">
+          <div class="card"><h3>📈 implicit conversion</h3>
+            <div class="code-block" style="font-size:0.7rem;"><span class="keyword">public class</span> <span class="class">Module2_1</span> {
+  <span class="keyword">public static void</span> <span class="function">main</span>(<span class="class">String</span> args[]) {
+    <span class="keyword">int</span> num1 = <span class="number">201</span>;
+    <span class="keyword">double</span> d_num1 = num1; <span class="comment">// automatic widening</span>
+    
+    <span class="class">System</span>.out.println(<span class="string">"double: "</span> + d_num1);
+  }
+}</div>
+            <div style="margin-top:0.2rem;color:var(--text-faint);font-size:0.74rem;">no explicit cast needed — double has larger range</div>
+          </div>
+          <div class="card"><h3>⚙️ explicit conversion</h3>
+            <div class="code-block" style="font-size:0.7rem;"><span class="keyword">public class</span> <span class="class">Module2_2</span> {
+  <span class="keyword">public static void</span> <span class="function">main</span>(<span class="class">String</span> args[]) {
+    <span class="keyword">int</span> num = <span class="number">42</span>;
+    <span class="keyword">double</span> d = (<span class="keyword">double</span>) num; <span class="comment">// explicit cast</span>
+    <span class="class">Double</span> wrapped = <span class="class">Double</span>.<span class="function">valueOf</span>(num);
+    
+    <span class="class">System</span>.out.println(<span class="string">"cast: "</span> + d);
+    <span class="class">System</span>.out.println(<span class="string">"wrapper: "</span> + wrapped);
+  }
+}</div>
+            <div style="margin-top:0.2rem;color:var(--text-faint);font-size:0.74rem;">explicit cast <span class="tag">(double)</span> or <span class="tag">Double.valueOf()</span></div>
+          </div>
+        </div>
+        <div class="card" style="flex-shrink:0;padding:0.45rem 1rem;"><h3 style="margin-bottom:0.15rem;">🔍 when to use</h3>
+          <div style="display:flex; flex-wrap:wrap; gap:0.5rem; font-size:0.7rem;">
+            <div><span class="tag">implicit</span> safe, automatic, no data loss</div>
+            <div><span class="tag">explicit</span> required when narrowing (double → int) or for clarity</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- slide 6: more samples - explicit narrowing, overflow, char -->
+    <div class="slide" data-index="5">
+      <div class="slide-header">
+        <div><span class="eyebrow">more samples</span><div class="slide-title">narrowing · overflow · char</div></div>
+        <div class="slide-index-mark">06 / 09</div>
+      </div>
+      <div class="slide-body">
+        <div class="grid-2-equal">
+          <div class="card"><h3>⚠️ narrowing (double → int)</h3>
+            <div class="code-block" style="font-size:0.7rem;"><span class="keyword">public class</span> <span class="class">Narrowing</span> {
+  <span class="keyword">public static void</span> <span class="function">main</span>(<span class="class">String</span> args[]) {
+    <span class="keyword">double</span> pi = <span class="number">3.14159</span>;
+    <span class="keyword">int</span> intPi = (<span class="keyword">int</span>) pi; <span class="comment">// explicit cast required</span>
+    <span class="class">System</span>.out.println(intPi); <span class="comment">// 3 (truncated)</span>
+  }
+}</div>
+            <div style="font-size:0.74rem;color:var(--text-faint);">🔸 fractional part lost — data truncation</div>
+          </div>
+          <div class="card"><h3>💥 overflow / underflow</h3>
+            <div class="code-block" style="font-size:0.7rem;"><span class="keyword">public class</span> <span class="class">Overflow</span> {
+  <span class="keyword">public static void</span> <span class="function">main</span>(<span class="class">String</span> args[]) {
+    <span class="keyword">int</span> big = <span class="number">2_000_000_000</span>;
+    <span class="keyword">int</span> overflow = big * <span class="number">2</span>; <span class="comment">// wraps around</span>
+    <span class="class">System</span>.out.println(overflow); <span class="comment">// -294967296</span>
+    
+    <span class="keyword">long</span> safe = (<span class="keyword">long</span>) big * <span class="number">2</span>; <span class="comment">// cast before multiplication</span>
+    <span class="class">System</span>.out.println(safe); <span class="comment">// 4000000000</span>
+  }
+}</div>
+            <div style="font-size:0.74rem;color:var(--text-faint);">🔸 cast to larger type <span class="tag">(long)</span> before operation</div>
+          </div>
+        </div>
+        <div class="card" style="flex-shrink:0;padding:0.45rem 1rem;">
+          <h3 style="margin-bottom:0.15rem;">🔤 char ↔ int conversion</h3>
+          <div class="code-block" style="font-size:0.7rem;"><span class="keyword">char</span> c = <span class="string">'A'</span>;
+<span class="keyword">int</span> ascii = (<span class="keyword">int</span>) c;        <span class="comment">// 65</span>
+<span class="keyword">char</span> back = (<span class="keyword">char</span>) (ascii + <span class="number">1</span>); <span class="comment">// 'B'</span>
+<span class="class">System</span>.out.println(ascii + <span class="string">" → "</span> + back);</div>
+        </div>
+      </div>
+    </div>
+    <!-- slide 7: mixed type arithmetic & promotion -->
+    <div class="slide" data-index="6">
+      <div class="slide-header">
+        <div><span class="eyebrow">type promotion</span><div class="slide-title">mixed-type arithmetic</div></div>
+        <div class="slide-index-mark">07 / 09</div>
+      </div>
+      <div class="slide-body">
+        <div class="grid-2-equal">
+          <div class="card"><h3>🧮 automatic promotion</h3>
+            <div class="code-block" style="font-size:0.7rem;"><span class="keyword">public class</span> <span class="class">Promotion</span> {
+  <span class="keyword">public static void</span> <span class="function">main</span>(<span class="class">String</span> args[]) {
+    <span class="keyword">byte</span> b = <span class="number">10</span>;
+    <span class="keyword">int</span> i = <span class="number">5</span>;
+    <span class="keyword">double</span> d = <span class="number">2.5</span>;
+    
+    <span class="comment">// b + i → int, then + d → double</span>
+    <span class="keyword">double</span> result = b + i + d;
+    <span class="class">System</span>.out.println(result); <span class="comment">// 17.5</span>
+    
+    <span class="comment">// byte + byte → int (must cast back)</span>
+    <span class="keyword">byte</span> b1 = <span class="number">10</span>, b2 = <span class="number">20</span>;
+    <span class="keyword">byte</span> sum = (<span class="keyword">byte</span>) (b1 + b2); <span class="comment">// explicit cast needed</span>
+  }
+}</div>
+          </div>
+          <div class="card"><h3>📊 promotion rules</h3>
+            <ul style="font-size:0.75rem;">
+              <li><strong>byte, short, char</strong> → <strong>int</strong> when operated</li>
+              <li>if either operand is <strong>long</strong> → result is <strong>long</strong></li>
+              <li>if either operand is <strong>float</strong> → result is <strong>float</strong></li>
+              <li>if either operand is <strong>double</strong> → result is <strong>double</strong></li>
+            </ul>
+            <div class="highlight-box" style="margin-top:0.35rem;">
+              <span class="tag">rule</span> binary numeric promotion: convert to the largest type
+            </div>
+          </div>
+        </div>
+        <div class="card" style="flex-shrink:0;padding:0.4rem 1rem;font-size:0.7rem;text-align:center;color:var(--text-faint);">
+          ⚡ always be aware of the type before arithmetic — cast early to avoid surprises
+        </div>
+      </div>
+    </div>
+    <!-- slide 8: languages for DSA -->
+    <div class="slide" data-index="7">
+      <div class="slide-header">
+        <div><span class="eyebrow">languages</span><div class="slide-title">C++ · Java · Python</div></div>
+        <div class="slide-index-mark">08 / 09</div>
+      </div>
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="card"><h3>⚙️ C++</h3><ul><li>low-level, compiled</li><li>communicates well with registers</li><li>procedural + OOP</li><li>game consoles, OS, browsers</li></ul></div>
+          <div class="card"><h3>☕ Java</h3><ul><li>high-level, OOP</li><li>rich built-in packages: <span class="tag">ArrayList</span> <span class="tag">Stack</span> <span class="tag">Queue</span> <span class="tag">LinkedList</span></li><li>“no need to invent the wheel”</li></ul></div>
+        </div>
+        <div class="card"><h3>🐍 Python / Ruby</h3><p>high-level, readable syntax, but have abstractions for common data structures. <br> <span style="color:var(--text-faint);">“Best way to learn DSA is C++ or Java — syntactically similar.”</span></p></div>
+      </div>
+    </div>
+    <!-- slide 9: review reminder + closing -->
+    <div class="slide" data-index="8">
+      <div class="slide-header">
+        <div><span class="eyebrow">review</span><div class="slide-title">remember your primitives</div></div>
+        <div class="slide-index-mark">09 / 09</div>
+      </div>
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="card"><h3>📚 data literals &amp; primitives</h3><ul><li>int, double, float, char, boolean</li><li>String (reference type)</li><li>type casting changes behavior</li><li>widening (implicit) vs narrowing (explicit)</li></ul><div class="highlight-box" style="margin-top:0.35rem;"><span class="tag">reminder</span> check Programming 1 &amp; 2 modules</div></div>
+          <div class="card"><h3>🎯 dream · practice</h3><p>“Pursuing your dream to become a software engineer is useless if you don’t practice your brain to write code independently.”</p><div style="margin-top:0.3rem;color:var(--text-faint);font-size:0.74rem;">— fork code? good. write from scratch? better.</div></div>
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:0.35rem;color:var(--text-faint);font-size:0.74rem;text-align:center;">module 2 · type casting · data conversion · next: arrays &amp; collections</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-left">
+      <span id="statusFile">intro.md</span>
+      <div class="dots-nav" id="dotsNav"></div>
+    </div>
+    <div class="status-right">
+      <div class="status-progress-track"><div class="status-progress-fill" id="progressFill"></div></div>
+      <span id="slideCounter">1 / 9</span>
+      <span class="hide-mobile">Java · UTF-8</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const slides = document.querySelectorAll('.slide');
+    const tabs = document.querySelectorAll('.tab');
+    const total = slides.length;
+    let current = 0;
+    const progressFill = document.getElementById('progressFill');
+    const counter = document.getElementById('slideCounter');
+    const statusFile = document.getElementById('statusFile');
+    const dotsNav = document.getElementById('dotsNav');
+    const fileNames = Array.from(tabs).map(t => t.textContent.trim());
+
+    for (let i = 0; i < total; i++) {
+      const d = document.createElement('div');
+      d.className = 'navdot' + (i === 0 ? ' active' : '');
+      d.dataset.index = i;
+      d.addEventListener('click', (e) => { e.stopPropagation(); updateSlide(i); });
+      dotsNav.appendChild(d);
+    }
+    const navdots = dotsNav.querySelectorAll('.navdot');
+
+    function updateSlide(index) {
+      if (index < 0) index = 0;
+      if (index >= total) index = total - 1;
+      if (index === current && slides[current].classList.contains('active')) return;
+      slides.forEach(s => s.classList.remove('active'));
+      slides[index].classList.add('active');
+      tabs.forEach(t => t.classList.remove('active'));
+      tabs[index].classList.add('active');
+      navdots.forEach(d => d.classList.remove('active'));
+      navdots[index].classList.add('active');
+      current = index;
+      progressFill.style.width = ((current + 1) / total * 100) + '%';
+      counter.textContent = (current + 1) + ' / ' + total;
+      statusFile.textContent = fileNames[current];
+    }
+
+    function goNext() { if (current < total - 1) updateSlide(current + 1); }
+    function goPrev() { if (current > 0) updateSlide(current - 1); }
+    function goHome() { updateSlide(0); }
+    function goEnd() { updateSlide(total - 1); }
+
+    const infoHint = document.getElementById('infoHint');
+    const infoPanel = document.getElementById('infoPanel');
+    const infoClose = document.getElementById('infoClose');
+    infoHint.addEventListener('click', (e) => {
+      e.stopPropagation();
+      infoPanel.classList.toggle('open');
+    });
+    infoClose.addEventListener('click', (e) => {
+      e.stopPropagation();
+      infoPanel.classList.remove('open');
+    });
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        e.stopPropagation();
+        updateSlide(parseInt(tab.dataset.index, 10));
+      });
+    });
+
+    document.getElementById('slidesContainer').addEventListener('click', function() {
+      goNext();
+    });
+
+    document.addEventListener('keydown', function(e) {
+      const key = e.key;
+      if (key === 'ArrowRight' || key === 'ArrowDown' || key === ' ') {
+        e.preventDefault();
+        goNext();
+      } else if (key === 'ArrowLeft' || key === 'ArrowUp') {
+        e.preventDefault();
+        goPrev();
+      } else if (key === 'Home') {
+        e.preventDefault();
+        goHome();
+      } else if (key === 'End') {
+        e.preventDefault();
+        goEnd();
+      }
+    });
+
+    updateSlide(0);
+  })();
+</script>
+</body>
+</html>

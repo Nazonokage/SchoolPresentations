@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DSA Summative Test — Prelims</title>
+<style>
+  :root{
+    --bg:#0a0e14;
+    --surface:#11161f;
+    --surface-2:#171e29;
+    --border:#232c3a;
+    --text:#e9eef4;
+    --text-dim:#8a96a8;
+    --accent:#5eead4;      /* terminal cyan - primary */
+    --accent-dim:#2e6f66;
+    --mc:#8ab4ff;           /* periwinkle - MC section */
+    --out:#ffab70;          /* soft coral - output section */
+    --warn:#f5c451;
+    --danger:#ff6b6b;
+    --good:#5eead4;
+    --font-mono: 'SF Mono','Cascadia Code','Consolas','Roboto Mono',monospace;
+    --font-sans: -apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    background:var(--bg);color:var(--text);
+    font-family:var(--font-sans);
+    overflow:hidden;
+  }
+  body{cursor:pointer;}
+  #progress-wrap{
+    position:fixed;top:0;left:0;right:0;height:4px;
+    background:var(--surface-2);z-index:1000;
+  }
+  #progress-bar{
+    height:100%;width:0%;
+    background:linear-gradient(90deg,var(--accent),var(--mc));
+    transition:width .35s ease;
+  }
+  #counter{
+    position:fixed;bottom:18px;right:22px;
+    font-family:var(--font-mono);font-size:13px;color:var(--text-dim);
+    background:var(--surface);border:1px solid var(--border);
+    padding:6px 12px;border-radius:6px;z-index:1000;
+    letter-spacing:.03em;
+  }
+  #hint{
+    position:fixed;bottom:18px;left:22px;
+    font-family:var(--font-mono);font-size:12px;color:var(--text-dim);
+    z-index:1000;opacity:.7;
+  }
+  #deck{
+    position:relative;width:100vw;height:100vh;
+  }
+  .slide{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;
+    justify-content:center;align-items:center;
+    padding:64px 8vw;
+    opacity:0;pointer-events:none;
+    transform:translateX(24px);
+    transition:opacity .35s ease, transform .35s ease;
+    overflow:auto;
+  }
+  .slide.active{
+    opacity:1;pointer-events:auto;transform:translateX(0);
+  }
+  .slide.exit-left{transform:translateX(-24px);}
+  @media (prefers-reduced-motion: reduce){
+    .slide{transition:opacity .01s linear;transform:none !important;}
+  }
+  .slide-inner{
+    width:100%;max-width:1180px;margin:0 auto;
+    min-width:0;
+  }
+  .eyebrow{
+    font-family:var(--font-mono);font-size:13px;letter-spacing:.08em;
+    color:var(--accent);text-transform:uppercase;
+    display:flex;align-items:center;gap:10px;margin-bottom:18px;
+  }
+  .eyebrow .tab{
+    background:var(--surface-2);border:1px solid var(--border);
+    border-bottom:2px solid var(--accent);
+    padding:4px 10px;border-radius:4px 4px 0 0;
+  }
+  .eyebrow.mc{color:var(--mc);}
+  .eyebrow.mc .tab{border-bottom-color:var(--mc);}
+  .eyebrow.out{color:var(--out);}
+  .eyebrow.out .tab{border-bottom-color:var(--out);}
+  h1.title{
+    font-size:clamp(32px,4.4vw,58px);
+    line-height:1.08;margin:0 0 18px 0;font-weight:800;
+    letter-spacing:-.01em;
+  }
+  h2.title{
+    font-size:clamp(25px,2.6vw,36px);
+    line-height:1.2;margin:0 0 22px 0;font-weight:750;
+    letter-spacing:-.01em;
+  }
+  p.lead{font-size:17px;line-height:1.6;color:var(--text-dim);max-width:760px;}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;width:100%;}
+  .grid2 > *{min-width:0;}
+  .card{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:10px;padding:22px 24px;min-width:0;
+  }
+  .q-card{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:10px;padding:24px 26px;
+    display:flex;flex-direction:column;gap:14px;min-width:0;
+  }
+  .q-num{
+    font-family:var(--font-mono);font-size:12px;color:var(--text-dim);
+    letter-spacing:.05em;
+  }
+  .q-text{font-size:17px;font-weight:650;line-height:1.45;}
+  .options{display:flex;flex-direction:column;gap:8px;margin-top:4px;}
+  .opt{
+    display:flex;gap:10px;align-items:flex-start;
+    font-size:14.5px;color:var(--text);
+    background:var(--surface-2);border:1px solid var(--border);
+    border-radius:7px;padding:9px 12px;line-height:1.4;
+  }
+  .opt b{color:var(--mc);font-family:var(--font-mono);font-size:13px;flex-shrink:0;}
+  .single-q{max-width:820px;margin:0 auto;}
+  .single-q .q-text{font-size:19px;}
+  pre.code{
+    background:#0d1117;border:1px solid var(--border);border-radius:8px;
+    padding:16px 18px;font-family:var(--font-mono);font-size:13.5px;
+    line-height:1.55;overflow-x:auto;position:relative;margin:0;min-width:0;
+  }
+  .code-wrap{position:relative;min-width:0;}
+  .copy-btn{
+    position:absolute;top:8px;right:8px;
+    font-family:var(--font-mono);font-size:11px;color:var(--text-dim);
+    background:var(--surface-2);border:1px solid var(--border);
+    border-radius:5px;padding:4px 9px;cursor:pointer;
+    transition:color .15s, border-color .15s;
+  }
+  .copy-btn:hover{color:var(--text);border-color:var(--accent);}
+  .copy-btn.copied{color:var(--good);border-color:var(--good);}
+  .tok-kw{color:#ff7b9c;}
+  .tok-str{color:#a5d6a7;}
+  .tok-num{color:#ffcb6b;}
+  .tok-com{color:#5c6773;font-style:italic;}
+  .tok-pre{color:#82aaff;}
+  .prompt-line{
+    font-family:var(--font-mono);font-size:13.5px;color:var(--out);
+    margin-top:10px;
+  }
+  .recap-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;width:100%;}
+  .recap-item{
+    background:var(--surface);border:1px solid var(--border);border-radius:9px;
+    padding:16px 18px;min-width:0;
+  }
+  .recap-item .k{font-family:var(--font-mono);font-size:12px;color:var(--accent);margin-bottom:6px;}
+  .recap-item .v{font-size:14px;color:var(--text-dim);line-height:1.5;}
+  .answers-scroll{
+    max-height:68vh;overflow-y:auto;padding-right:6px;width:100%;
+  }
+  .ans-row{
+    display:grid;grid-template-columns:52px minmax(0,1fr);gap:14px;
+    padding:11px 0;border-bottom:1px solid var(--border);
+    font-size:13.5px;align-items:start;
+  }
+  .ans-row:last-child{border-bottom:none;}
+  .ans-num{font-family:var(--font-mono);color:var(--accent);font-weight:700;}
+  .ans-correct{color:var(--good);font-weight:700;}
+  .ans-explain{color:var(--text-dim);margin-top:3px;}
+  .ans-out{color:var(--out);font-family:var(--font-mono);font-weight:700;}
+  #shortcuts-modal{
+    position:fixed;inset:0;background:rgba(5,8,12,.72);
+    display:none;align-items:center;justify-content:center;z-index:2000;
+  }
+  #shortcuts-modal.show{display:flex;}
+  .modal-box{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;padding:28px 32px;max-width:420px;width:90%;
+  }
+  .modal-box h3{margin-top:0;font-size:19px;}
+  .modal-box .row{display:flex;justify-content:space-between;font-size:14px;padding:7px 0;border-bottom:1px solid var(--border);color:var(--text-dim);}
+  .modal-box .row:last-child{border-bottom:none;}
+  .modal-box kbd{
+    background:var(--surface-2);border:1px solid var(--border);
+    border-radius:5px;padding:2px 8px;font-family:var(--font-mono);color:var(--text);
+  }
+  .cover-badges{display:flex;gap:10px;margin-top:26px;flex-wrap:wrap;}
+  .badge{
+    font-family:var(--font-mono);font-size:12px;color:var(--text-dim);
+    border:1px solid var(--border);border-radius:20px;padding:6px 14px;
+  }
+  .lec-table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:12px;}
+  .lec-table th,.lec-table td{border:1px solid var(--border);padding:7px 12px;text-align:left;}
+  .lec-table th{color:var(--accent);font-family:var(--font-mono);font-size:11.5px;
+    text-transform:uppercase;letter-spacing:.04em;background:var(--surface-2);}
+  .lec-table td{color:var(--text-dim);}
+  .lec-table td b, .lec-table td.hl{color:var(--text);font-weight:700;}
+  .lec-flow{font-family:var(--font-mono);font-size:13.5px;line-height:1.85;color:var(--text-dim);
+    background:var(--surface);border:1px solid var(--border);border-radius:8px;
+    padding:16px 20px;white-space:pre;overflow-x:auto;}
+  .lec-note{font-size:14px;color:var(--text-dim);margin-top:12px;line-height:1.55;}
+  .lec-note b{color:var(--text);}
+  .two-col-lec{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;}
+  .two-col-lec > *{min-width:0;}
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+</style>
+</head>
+<body>
+
+<div id="progress-wrap"><div id="progress-bar"></div></div>
+<div id="counter">1 / 1</div>
+<div id="hint">press ? for shortcuts</div>
+<div id="deck"></div>
+
+<div id="shortcuts-modal">
+  <div class="modal-box">
+    <h3>Keyboard shortcuts</h3>
+    <div class="row"><span>Next slide</span><span><kbd>→</kbd> / click</span></div>
+    <div class="row"><span>Previous slide</span><span><kbd>←</kbd></span></div>
+    <div class="row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="row"><span>Mouse back / forward</span><span>side buttons</span></div>
+    <div class="row"><span>Close this panel</span><span><kbd>Esc</kbd> / <kbd>?</kbd></span></div>
+  </div>
+</div>
+
+<script>
+/* ============ SOURCE DATA ============ */
+
+const mcQuestions = [
+  {q:"What best describes the difference between a data structure and an algorithm?",
+   opts:["A data structure solves problems; an algorithm stores data.",
+         "A data structure organizes/stores data; an algorithm is the steps used to solve a problem with that data.",
+         "They are two names for the same concept.",
+         "An algorithm only exists in low-level languages like C++."]},
+  {q:"Which data structure operates on a Last-In, First-Out (LIFO) basis?",
+   opts:["Queue","Array","Stack","Linked List"]},
+  {q:"Which data structure operates on a First-In, First-Out (FIFO) basis?",
+   opts:["Stack","Queue","Array","Recursion"]},
+  {q:"Which of these is an example of implicit (widening) conversion?",
+   opts:["double d = 9.99; int i = (int) d;","int i = 201; double d = i;","String s = String.valueOf(100);","char c = (char)(65 + 1);"]},
+  {q:"What is the main risk of an explicit (narrowing) conversion?",
+   opts:["It automatically rounds decimals up.","It can throw a compile-time error.","It can lose data precision, such as decimal places.","It only works with String objects."]},
+  {q:"Which of these correctly converts a primitive int into a String in Java?",
+   opts:["(String) i","i.toString()","String.valueOf(i)","str(i)"]},
+  {q:"In Bubble Sort, what does the \u201cmayPabago\u201d (change flag) optimize?",
+   opts:["It sorts descending instead of ascending.","It lets the algorithm stop early once no swaps occur during a pass, since that means the array is already sorted.","It reduces the array size by half each pass.","It removes duplicate values automatically."]},
+  {q:"Every recursive function needs which two essential parts?",
+   opts:["A loop and a counter.","A base case and a recursive case.","An array and an index.","A constructor and a destructor."]},
+  {q:"What happens if a recursive function never reaches its base case?",
+   opts:["It automatically returns 0.","The compiler fixes it at runtime.","It causes a stack overflow / crash.","It becomes an infinite loop but keeps using the same stack frame."]},
+  {q:"Which of the following is NOT one of the defining characteristics of a true algorithm?",
+   opts:["Unambiguous / Clarity","Finiteness","Feasibility","Object-Oriented"]},
+  {q:"In Java, what is the correct way to compare the contents of two String objects?",
+   opts:["Using ==","Using .equals()","Using .compare()","Using !="]},
+  {q:"In the main method signature public static void main(String[] args), what does \u201cstatic\u201d mean?",
+   opts:["The method can only run once.","The method is callable without creating an object of the class.","The method returns a static (constant) value.","The method is private to the class."]},
+  {q:"In Java\u2019s binary numeric promotion rule, if one operand in an expression is a double, what is the resulting type?",
+   opts:["int","float","double","byte"]}
+];
+const mcAnswers = [1,2,1,1,2,2,1,1,2,3,1,1,2]; // 0-indexed
+const mcExplain = [
+ "Data structures hold/organize data; algorithms are the steps that solve a problem using it.",
+ "Stack = LIFO, like a spring-loaded plate dispenser \u2014 last plate placed is first removed.",
+ "Queue = FIFO, like a cinema line \u2014 first to arrive is first served.",
+ "int \u2192 double is automatic widening; no data is lost, so it's implicit.",
+ "Narrowing forces a bigger type into a smaller one, risking loss of decimal precision.",
+ "String.valueOf(i) converts a primitive directly into a String object.",
+ "The flag detects when no swaps occurred during a pass, letting the loop break out early once the array is already sorted.",
+ "A base case stops the recursion; the recursive case breaks the problem down further.",
+ "Without a base case, calls stack infinitely until memory runs out \u2014 a stack overflow.",
+ "Clarity, Independence, defined Input/Output, Finiteness, and Feasibility are the 5 traits \u2014 OOP isn't one of them.",
+ ".equals() compares String contents; == compares object references.",
+ "static means the method belongs to the class itself, callable without instantiating an object.",
+ "Per binary numeric promotion, if either operand is double, the whole expression promotes to double."
+];
+
+const outQuestions = [
+ {code:`int simpleInt = 201;
+double implicitDouble = simpleInt;
+System.out.println("Implicit Double: " + implicitDouble);`, lang:"java",
+  ans:["Implicit Double: 201.0"], exp:"int widens to double automatically \u2014 a .0 is appended."},
+ {code:`double precisePrice = 99.99;
+int truncatedPrice = (int) precisePrice;
+System.out.println("Truncated Int: " + truncatedPrice);`, lang:"java",
+  ans:["Truncated Int: 99"], exp:"Narrowing cast truncates (does not round) the decimal part."},
+ {code:`double pi = 3.14159;
+int intPi = (int) pi;
+System.out.println(intPi);`, lang:"java",
+  ans:["3"], exp:"Casting double to int drops everything after the decimal point."},
+ {code:`int[] luckyNumbers = {7, 13, 21, 42};
+System.out.println("First element: " + luckyNumbers[0]);`, lang:"java",
+  ans:["First element: 7"], exp:"Arrays are zero-indexed, so index 0 is the first element, 7."},
+ {code:`int x = 100;
+int y = 200;
+System.out.println(Math.max(x, y));
+System.out.println(Math.min(x, y));`, lang:"java",
+  ans:["200","100"], exp:"Math.max returns the larger value, Math.min the smaller."},
+ {code:`int a, b, c;
+a = 80;
+b = 80;
+c = a + b;
+System.out.println("Value of c is" + " " + c);`, lang:"java",
+  ans:["Value of c is 160"], exp:"c = 80 + 80 = 160, concatenated onto the string."},
+ {code:`int myInt = 7;
+double shoeSize = 9.5;
+System.out.println(myInt * shoeSize);`, lang:"java",
+  ans:["66.5"], exp:"int * double promotes to double: 7 * 9.5 = 66.5."},
+ {code:`String myName = "John";
+System.out.println(myName.length());
+System.out.println(myName.toUpperCase());`, lang:"java",
+  ans:["4","JOHN"], exp:"\"John\" has 4 characters; toUpperCase() capitalizes all letters."},
+ {code:`int i = 100;
+String s = String.valueOf(i);
+System.out.println(i + 100);
+System.out.println(s + 100);`, lang:"java",
+  ans:["200","100100"], exp:"i+100 is arithmetic (200); s+100 is text concatenation (\"100100\")."},
+ {code:`int big = 2_000_000_000;
+int overflow = big * 2;
+System.out.println(overflow);`, lang:"java",
+  ans:["-294967296"], exp:"Result exceeds int's max range and wraps around (integer overflow)."},
+ {code:`char c = 'A';
+int ascii = (int) c;
+char back = (char) (ascii + 1);
+System.out.println(ascii);
+System.out.println(back);`, lang:"java",
+  ans:["65","B"], exp:"'A' is ASCII 65; adding 1 and casting back to char gives 'B'."},
+ {code:`byte b = 10;
+int i = 5;
+double d = 2.5;
+double result = b + i + d;
+System.out.println(result);`, lang:"java",
+  ans:["17.5"], exp:"byte+int promotes to int (15), then +double promotes the whole expression to double."},
+ {code:`int i = 100;
+string s = to_string(i);
+cout << i + 100 << endl;
+cout << s + "100" << endl;`, lang:"cpp",
+  ans:["200","100100"], exp:"Same logic as Java: arithmetic addition vs. string concatenation."},
+ {code:`String magbilangPabalik(int n) {
+  if (n == 0) return "Tapos na!";
+  return magbilangPabalik(n - 1);
+}
+// Called as:
+System.out.println(magbilangPabalik(3));`, lang:"java",
+  ans:["Tapos na!"], exp:"Recursion counts down 3\u21922\u21921\u21920; base case (n==0) returns the final string."},
+ {code:`String name = "John";
+if (name.equals("John")) {
+  System.out.println("This guy is awesome!");
+} else if (name.equals("Larry")) {
+  System.out.println("This guy is okay, I guess.");
+} else {
+  System.out.println("I don't know this guy at all.");
+}`, lang:"java",
+  ans:["This guy is awesome!"], exp:"name.equals(\"John\") is true, so the first branch executes."}
+];
+
+/* ============ SINGLE-PASS TOKENIZER ============ */
+const KEYWORDS = "public|private|protected|static|void|class|int|double|float|long|short|byte|char|boolean|String|string|if|else|for|while|do|return|new|true|false|null|import|package|break|continue|switch|case|default|try|catch|finally|throw|this|super|extends|implements|interface|enum|final|abstract|using|namespace|struct|const|unsigned|signed|template|typename|auto|vector|ArrayList";
+const TOKEN_RE = new RegExp(
+  "(//.*)" +                              // 1 comment
+  "|(\"(?:[^\"\\\\]|\\\\.)*\")" +          // 2 string
+  "|('(?:[^'\\\\]|\\\\.)*')" +             // 3 char
+  "|(#\\w+(?:\\s*<[^>]*>)?)" +             // 4 preprocessor
+  "|(\\b\\d[\\d_]*\\.?\\d*\\b)" +          // 5 number
+  "|(\\b(?:" + KEYWORDS + ")\\b)",         // 6 keyword
+  "g"
+);
+function escHtml(s){
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+function highlight(code){
+  let out = "";
+  let last = 0;
+  let m;
+  TOKEN_RE.lastIndex = 0;
+  while((m = TOKEN_RE.exec(code)) !== null){
+    out += escHtml(code.slice(last, m.index));
+    if(m[1]) out += '<span class="tok-com">'+escHtml(m[1])+'</span>';
+    else if(m[2]) out += '<span class="tok-str">'+escHtml(m[2])+'</span>';
+    else if(m[3]) out += '<span class="tok-str">'+escHtml(m[3])+'</span>';
+    else if(m[4]) out += '<span class="tok-pre">'+escHtml(m[4])+'</span>';
+    else if(m[5]) out += '<span class="tok-num">'+escHtml(m[5])+'</span>';
+    else if(m[6]) out += '<span class="tok-kw">'+escHtml(m[6])+'</span>';
+    last = TOKEN_RE.lastIndex;
+  }
+  out += escHtml(code.slice(last));
+  return out;
+}
+let codeBlockCounter = 0;
+function codeBlock(code, lang){
+  codeBlockCounter++;
+  const id = "cb"+codeBlockCounter;
+  const encoded = encodeURIComponent(code);
+  return `<div class="code-wrap">
+    <button class="copy-btn" data-code="${encoded}" onclick="copyCode(this)">Copy</button>
+    <pre class="code" id="${id}"><code>${highlight(code)}</code></pre>
+  </div>`;
+}
+function copyCode(btn){
+  const text = decodeURIComponent(btn.getAttribute("data-code"));
+  navigator.clipboard.writeText(text).then(()=>{
+    btn.textContent = "Copied \u2713";
+    btn.classList.add("copied");
+    setTimeout(()=>{btn.textContent="Copy";btn.classList.remove("copied");}, 1400);
+  }).catch(()=>{
+    btn.textContent = "Failed";
+    setTimeout(()=>{btn.textContent="Copy";}, 1400);
+  });
+}
+
+/* ============ SLIDE BUILDERS ============ */
+const letters = ["A","B","C","D"];
+
+function mcCard(qObj, num){
+  const opts = qObj.opts.map((o,i)=>`<div class="opt"><b>${letters[i]})</b><span>${o}</span></div>`).join("");
+  return `<div class="q-card">
+    <div class="q-num">QUESTION ${num} / 13</div>
+    <div class="q-text">${qObj.q}</div>
+    <div class="options">${opts}</div>
+  </div>`;
+}
+
+function mcPairSlide(i1, i2, eyebrowLabel){
+  const c1 = mcCard(mcQuestions[i1], i1+1);
+  const c2 = i2!=null ? mcCard(mcQuestions[i2], i2+1) : "";
+  const gridClass = i2!=null ? "grid2" : "";
+  return `<div class="slide-inner">
+    <div class="eyebrow mc"><span class="tab">MultipleChoice.test</span> ${eyebrowLabel}</div>
+    <div class="${gridClass}" style="${i2==null?'max-width:640px;margin:0 auto;':''}">${c1}${c2}</div>
+  </div>`;
+}
+
+function outSlideSingle(q, num){
+  const answers = q.ans.map(a=>`<div class="prompt-line">&gt; ${escHtml(a)}</div>`).join("");
+  return `<div class="slide-inner single-q">
+    <div class="eyebrow out"><span class="tab">Output_Q${num}.log</span> GUESS THE OUTPUT ${num} / 15</div>
+    <div class="q-card">
+      <div class="q-text">What does this code print?</div>
+      ${codeBlock(q.code, q.lang)}
+    </div>
+  </div>`;
+}
+
+function outSlidePair(qA, numA, qB, numB){
+  const cardA = `<div class="q-card"><div class="q-num">OUTPUT ${numA} / 15</div><div class="q-text">What does this print?</div>${codeBlock(qA.code, qA.lang)}</div>`;
+  const cardB = `<div class="q-card"><div class="q-num">OUTPUT ${numB} / 15</div><div class="q-text">What does this print?</div>${codeBlock(qB.code, qB.lang)}</div>`;
+  return `<div class="slide-inner">
+    <div class="eyebrow out"><span class="tab">Output_Q${numA}-${numB}.log</span> GUESS THE OUTPUT</div>
+    <div class="grid2">${cardA}${cardB}</div>
+  </div>`;
+}
+
+/* ============ STATIC SLIDES ============ */
+const slideCover = `<div class="slide-inner">
+  <div class="eyebrow"><span class="tab">exam_session.run</span> IT 30 &middot; DSA PRELIMS</div>
+  <h1 class="title">Summative Test</h1>
+  <p class="lead">Covers Modules 1&ndash;3: foundations &amp; memory, primitive conversions &amp; language nuances, sorting &amp; recursion, and algorithm design in Java &amp; C++. Starts with a quick lecture walkthrough, then 13 Multiple Choice + 15 Guess-the-Output questions.</p>
+  <div class="cover-badges">
+    <div class="badge">28 test items total</div>
+    <div class="badge">Java &amp; C++</div>
+    <div class="badge">No calculators needed</div>
+  </div>
+</div>`;
+
+const slideInstructions = `<div class="slide-inner">
+  <div class="eyebrow"><span class="tab">README.md</span> BEFORE YOU START</div>
+  <h2 class="title">How this test works</h2>
+  <div class="recap-grid">
+    <div class="recap-item"><div class="k">01 &middot; Lecture</div><div class="v">A short walkthrough of arrays, stacks, queues, and loops with fresh examples &mdash; a warm-up before the graded portion.</div></div>
+    <div class="recap-item"><div class="k">02 &middot; Multiple Choice</div><div class="v">13 questions, 2 per slide. Choose the single best answer. Correct answers are not shown until the end.</div></div>
+    <div class="recap-item"><div class="k">03 &middot; Guess the Output</div><div class="v">15 code snippets in Java or C++. Trace the code in your head (or on paper) and predict exactly what gets printed.</div></div>
+    <div class="recap-item"><div class="k">04 &middot; Navigation</div><div class="v">Click anywhere, use &larr; / &rarr;, or your mouse's side buttons to move between slides. Press <b>?</b> for the full shortcut list.</div></div>
+    <div class="recap-item"><div class="k">05 &middot; Answer Key</div><div class="v">All 28 test answers with short explanations are on the final two slides &mdash; no peeking until you've answered!</div></div>
+  </div>
+</div>`;
+
+function sectionDivider(tabName, big, sub){
+  return `<div class="slide-inner">
+    <div class="eyebrow"><span class="tab">${tabName}</span> SECTION</div>
+    <h1 class="title">${big}</h1>
+    <p class="lead">${sub}</p>
+  </div>`;
+}
+
+/* ============ LECTURE SLIDES (before the graded test) ============ */
+
+const slideLectureIntro = sectionDivider(
+  "lecture.md",
+  "Lecture \u2014 Practice Program",
+  "One more walkthrough before the timed test starts: arrays, stacks, queues, and loops \u2014 explained line by line with brand-new examples. Good beginner program because it touches four core concepts: Arrays, Stack (LIFO), Queue (FIFO), and Loops &amp; Conditions."
+);
+
+const slideLectureArray = `<div class="slide-inner">
+  <div class="eyebrow"><span class="tab">ReverseScores.java</span> LECTURE &middot; ARRAYS</div>
+  <h2 class="title">1. Reverse an Array</h2>
+  <p class="lead">Imagine you have the scores of four students, and you want to print them from last to first.</p>
+  <div class="two-col-lec">
+    <div>
+      ${codeBlock(`public static void ReverseScores() {
+    int[] scores = {80, 90, 75, 100};
+    for(int i = scores.length - 1; i >= 0; i--) {
+        System.out.println(scores[i]);
+    }
+}`, "java")}
+      <div class="lec-note"><b>scores.length</b> = 4, and arrays start at index <b>0</b> &mdash; so the last index is <b>4 - 1 = 3</b>. That's why the loop starts at <code>i = 3</code> and counts down with <code>i--</code>.</div>
+    </div>
+    <div>
+      <table class="lec-table">
+        <tr><th>Index</th><th>Value</th></tr>
+        <tr><td>0</td><td>80</td></tr>
+        <tr><td>1</td><td>90</td></tr>
+        <tr><td>2</td><td>75</td></tr>
+        <tr><td>3</td><td>100</td></tr>
+      </table>
+      <table class="lec-table" style="margin-top:16px;">
+        <tr><th>Iteration</th><th>i</th><th>Output</th></tr>
+        <tr><td>1st</td><td>3</td><td class="hl">100</td></tr>
+        <tr><td>2nd</td><td>2</td><td class="hl">75</td></tr>
+        <tr><td>3rd</td><td>1</td><td class="hl">90</td></tr>
+        <tr><td>4th</td><td>0</td><td class="hl">80</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="lec-note">This top-to-bottom index countdown is called <b>reverse traversal</b>.</div>
+</div>`;
+
+const slideLectureStack = `<div class="slide-inner">
+  <div class="eyebrow"><span class="tab">BookStack.java</span> LECTURE &middot; STACK (LIFO)</div>
+  <h2 class="title">2. Stack \u2014 Last In, First Out</h2>
+  <p class="lead">Think of a stack of books &mdash; you can only remove the <b>top</b> book. That's LIFO.</p>
+  <div class="two-col-lec">
+    <div>
+      ${codeBlock(`public static void BookStack(){
+    Stack<String> books = new Stack<>();
+    books.push("Math");
+    books.push("Science");
+    books.push("English");
+    System.out.println(books);
+    books.pop();
+    System.out.println(books);
+}`, "java")}
+    </div>
+    <div>
+      <table class="lec-table">
+        <tr><th>Line</th><th>Stack state</th></tr>
+        <tr><td>new Stack&lt;&gt;()</td><td>[]</td></tr>
+        <tr><td>push("Math")</td><td>[Math]</td></tr>
+        <tr><td>push("Science")</td><td>[Math, Science]</td></tr>
+        <tr><td>push("English")</td><td class="hl">[Math, Science, English]</td></tr>
+        <tr><td>pop()</td><td>removes <b>English</b> (the top)</td></tr>
+        <tr><td>println(books)</td><td class="hl">[Math, Science]</td></tr>
+      </table>
+      <div class="lec-note">English was on top, so it's the first one <b>popped</b> off &mdash; classic <b>LIFO</b>.</div>
+    </div>
+  </div>
+</div>`;
+
+const slideLectureQueue = `<div class="slide-inner">
+  <div class="eyebrow"><span class="tab">CustomerQueue.java</span> LECTURE &middot; QUEUE (FIFO)</div>
+  <h2 class="title">3. Queue \u2014 First In, First Out</h2>
+  <p class="lead">Imagine customers waiting in line &mdash; the <b>first</b> person in line gets served first. That's FIFO.</p>
+  <div class="two-col-lec">
+    <div>
+      ${codeBlock(`public static void CustomerQueue(){
+    Queue<String> customers = new LinkedList<>();
+    customers.add("Alice");
+    customers.add("Bob");
+    customers.add("Charlie");
+    System.out.println(customers);
+    customers.poll();
+    System.out.println(customers);
+}`, "java")}
+    </div>
+    <div>
+      <table class="lec-table">
+        <tr><th>Line</th><th>Queue state</th></tr>
+        <tr><td>new LinkedList&lt;&gt;()</td><td>[]</td></tr>
+        <tr><td>add("Alice")</td><td>[Alice]</td></tr>
+        <tr><td>add("Bob")</td><td>[Alice, Bob]</td></tr>
+        <tr><td>add("Charlie")</td><td class="hl">[Alice, Bob, Charlie]</td></tr>
+        <tr><td>poll()</td><td>removes <b>Alice</b> (the front)</td></tr>
+        <tr><td>println(customers)</td><td class="hl">[Bob, Charlie]</td></tr>
+      </table>
+      <div class="lec-note">Alice joined first, so she's the first one to <b>leave</b> &mdash; classic <b>FIFO</b>.</div>
+    </div>
+  </div>
+</div>`;
+
+const slideLectureOdd = `<div class="slide-inner">
+  <div class="eyebrow"><span class="tab">OddNumbers.java</span> LECTURE &middot; LOOPS &amp; CONDITIONS</div>
+  <h2 class="title">4. Finding Odd Numbers</h2>
+  <p class="lead">Instead of even numbers, let's print the <b>odd</b> ones using the modulo operator <code>%</code>.</p>
+  <div class="two-col-lec">
+    <div>
+      ${codeBlock(`public static void OddNumbers(){
+    int[] numbers = {10, 15, 22, 31, 40, 55};
+    for(int i = 0; i < numbers.length; i++){
+        if(numbers[i] % 2 != 0){
+            System.out.println(numbers[i] + " is odd");
+        }
+    }
+}`, "java")}
+    </div>
+    <div>
+      <table class="lec-table">
+        <tr><th>Value</th><th>value % 2</th><th>Result</th></tr>
+        <tr><td>10</td><td>0</td><td>even &mdash; skip</td></tr>
+        <tr><td>15</td><td>1</td><td class="hl">15 is odd</td></tr>
+        <tr><td>22</td><td>0</td><td>even &mdash; skip</td></tr>
+        <tr><td>31</td><td>1</td><td class="hl">31 is odd</td></tr>
+        <tr><td>40</td><td>0</td><td>even &mdash; skip</td></tr>
+        <tr><td>55</td><td>1</td><td class="hl">55 is odd</td></tr>
+      </table>
+    </div>
+  </div>
+</div>`;
+
+const slideLectureMain = `<div class="slide-inner">
+  <div class="eyebrow"><span class="tab">Main.java</span> LECTURE &middot; PUTTING IT TOGETHER</div>
+  <h2 class="title">5. How main() Works</h2>
+  <p class="lead">Think of <code>main()</code> as the <b>program manager</b> &mdash; it decides which methods run, and in what order.</p>
+  <div class="two-col-lec">
+    <div>
+      ${codeBlock(`public static void main(String[] args){
+    ReverseScores();
+    BookStack();
+    CustomerQueue();
+    OddNumbers();
+}`, "java")}
+    </div>
+    <div class="lec-flow">Program Starts
+     |
+     v
+ReverseScores()
+     |
+     v
+BookStack()
+     |
+     v
+CustomerQueue()
+     |
+     v
+OddNumbers()
+     |
+     v
+Program Ends</div>
+  </div>
+</div>`;
+
+const slideLectureCheatSheet = `<div class="slide-inner">
+  <div class="eyebrow"><span class="tab">cheatsheet.md</span> LECTURE &middot; QUICK REFERENCE</div>
+  <h2 class="title">Beginner Cheat Sheet</h2>
+  <table class="lec-table">
+    <tr><th>Concept</th><th>What it does</th><th>Example</th></tr>
+    <tr><td><code>int[]</code></td><td>Stores multiple numbers</td><td>{10,20,30}</td></tr>
+    <tr><td><code>length</code></td><td>Counts elements in an array</td><td>scores.length</td></tr>
+    <tr><td><code>for</code></td><td>Repeats code</td><td>Print every array element</td></tr>
+    <tr><td><code>i++</code></td><td>Moves forward</td><td>0 &rarr; 1 &rarr; 2 &rarr; 3</td></tr>
+    <tr><td><code>i--</code></td><td>Moves backward</td><td>3 &rarr; 2 &rarr; 1 &rarr; 0</td></tr>
+    <tr><td><code>%</code></td><td>Finds the remainder after division</td><td>7 % 2 = 1</td></tr>
+    <tr><td><code>== 0</code></td><td>Checks if a number is even</td><td>8 % 2 == 0</td></tr>
+    <tr><td><code>!= 0</code></td><td>Checks if a number is odd</td><td>5 % 2 != 0</td></tr>
+    <tr><td><code>Stack.push()</code></td><td>Adds an item to the top</td><td>Stack of books</td></tr>
+    <tr><td><code>Stack.pop()</code></td><td>Removes the top item</td><td>Remove the last book</td></tr>
+    <tr><td><code>Queue.add()</code></td><td>Adds an item to the end</td><td>Person joins a line</td></tr>
+    <tr><td><code>Queue.poll()</code></td><td>Removes the first item</td><td>First customer is served</td></tr>
+  </table>
+  <div class="lec-note"><b>Try it yourself:</b> build one program that reverses a 6-grade array, stores names in a Stack and pops the last one, stores classroom numbers in a Queue and polls the first one, then loops through the grades printing only those <b>75 or higher</b>.</div>
+</div>`;
+
+const slideRecap = `<div class="slide-inner">
+  <div class="eyebrow"><span class="tab">recap.md</span> QUICK RECAP</div>
+  <h2 class="title">Before you check your answers</h2>
+  <div class="recap-grid">
+    <div class="recap-item"><div class="k">Data Structures</div><div class="v">Arrays (indexed, fixed size), Linked Lists (pointer-linked), Stacks (LIFO), Queues (FIFO).</div></div>
+    <div class="recap-item"><div class="k">Type Conversion</div><div class="v">Implicit widening is automatic and safe (small&rarr;big). Explicit narrowing is manual and risks losing precision (big&rarr;small).</div></div>
+    <div class="recap-item"><div class="k">Sorting</div><div class="v">Bubble Sort compares adjacent pairs and swaps them; a change-flag lets it stop early once a pass finds no swaps (already sorted).</div></div>
+    <div class="recap-item"><div class="k">Recursion</div><div class="v">Needs a base case + recursive case. Missing a base case causes a stack overflow.</div></div>
+    <div class="recap-item"><div class="k">Algorithm Traits</div><div class="v">Unambiguous, independent of language, defined input/output, finite, and feasible.</div></div>
+    <div class="recap-item"><div class="k">Java Basics</div><div class="v">Use .equals() for String comparison, not ==. static means callable without an object instance.</div></div>
+  </div>
+</div>`;
+
+function answersMCSlide(){
+  const rows = mcQuestions.map((q,i)=>{
+    return `<div class="ans-row">
+      <div class="ans-num">Q${i+1}</div>
+      <div><span class="ans-correct">${letters[mcAnswers[i]]}) ${q.opts[mcAnswers[i]]}</span>
+      <div class="ans-explain">${mcExplain[i]}</div></div>
+    </div>`;
+  }).join("");
+  return `<div class="slide-inner">
+    <div class="eyebrow mc"><span class="tab">answers_mc.key</span> ANSWER KEY &middot; PART I</div>
+    <h2 class="title">Multiple Choice &mdash; Answers</h2>
+    <div class="answers-scroll">${rows}</div>
+  </div>`;
+}
+
+function answersOutSlide(){
+  const rows = outQuestions.map((q,i)=>{
+    const ansStr = q.ans.map(a=>escHtml(a)).join(" &nbsp;/&nbsp; ");
+    return `<div class="ans-row">
+      <div class="ans-num">Q${i+1}</div>
+      <div><span class="ans-out">${ansStr}</span>
+      <div class="ans-explain">${q.exp}</div></div>
+    </div>`;
+  }).join("");
+  return `<div class="slide-inner">
+    <div class="eyebrow out"><span class="tab">answers_output.key</span> ANSWER KEY &middot; PART II</div>
+    <h2 class="title">Guess the Output &mdash; Answers</h2>
+    <div class="answers-scroll">${rows}</div>
+  </div>`;
+}
+
+/* ============ ASSEMBLE DECK ============ */
+const slides = [];
+slides.push(slideCover);
+slides.push(slideInstructions);
+slides.push(slideLectureIntro);
+slides.push(slideLectureArray);
+slides.push(slideLectureStack);
+slides.push(slideLectureQueue);
+slides.push(slideLectureOdd);
+slides.push(slideLectureMain);
+slides.push(slideLectureCheatSheet);
+slides.push(sectionDivider("part1.mc","Part I &mdash; Multiple Choice","13 questions on data structures, type casting, sorting, recursion, and algorithm design. Pick the single best answer for each."));
+
+// MC pairs: (0,1)(2,3)(4,5)(6,7)(8,9)(10,11)(12,13)(14,null)
+for(let i=0;i<mcQuestions.length;i+=2){
+  const i2 = (i+1<mcQuestions.length) ? i+1 : null;
+  slides.push(mcPairSlide(i, i2, `Q${i+1}${i2!=null?'-'+(i2+1):''} of 13`));
+}
+
+slides.push(sectionDivider("part2.output","Part II &mdash; Guess the Output","15 Java &amp; C++ snippets pulled straight from the modules. Trace each one carefully \u2014 watch for casting, overflow, and concatenation traps."));
+
+// Output slides: pairs (0,1)(2,3)(4,5)(6,7) then singles 8..14
+outSlidePairIdx = [[0,1],[2,3],[4,5],[6,7]];
+for(const [a,b] of outSlidePairIdx){
+  slides.push(outSlidePair(outQuestions[a], a+1, outQuestions[b], b+1));
+}
+for(let i=8;i<outQuestions.length;i++){
+  slides.push(outSlideSingle(outQuestions[i], i+1));
+}
+
+slides.push(slideRecap);
+slides.push(answersMCSlide());
+slides.push(answersOutSlide());
+
+/* ============ RENDER & NAVIGATION ============ */
+const deck = document.getElementById("deck");
+slides.forEach((html, idx)=>{
+  const div = document.createElement("div");
+  div.className = "slide";
+  div.innerHTML = html;
+  deck.appendChild(div);
+});
+const slideEls = Array.from(document.querySelectorAll(".slide"));
+let current = 0;
+
+function render(){
+  slideEls.forEach((el,i)=>{
+    el.classList.toggle("active", i===current);
+  });
+  document.getElementById("counter").textContent = (current+1)+" / "+slideEls.length;
+  document.getElementById("progress-bar").style.width = (((current+1)/slideEls.length)*100)+"%";
+}
+function goTo(i){
+  current = Math.max(0, Math.min(slideEls.length-1, i));
+  render();
+}
+function next(){ goTo(current+1); }
+function prev(){ goTo(current-1); }
+
+render();
+
+/* click-anywhere-except-interactive navigation */
+document.addEventListener("click", (e)=>{
+  if(e.target.closest("button, a, input, textarea, select, .copy-btn, #shortcuts-modal")) return;
+  if(document.getElementById("shortcuts-modal").classList.contains("show")) return;
+  next();
+});
+
+/* keyboard */
+document.addEventListener("keydown", (e)=>{
+  const modal = document.getElementById("shortcuts-modal");
+  if(e.key === "?"){
+    modal.classList.toggle("show");
+    e.preventDefault();
+    return;
+  }
+  if(modal.classList.contains("show")){
+    if(e.key === "Escape") modal.classList.remove("show");
+    return;
+  }
+  if(e.key === "ArrowRight"){ next(); }
+  else if(e.key === "ArrowLeft"){ prev(); }
+  else if(e.key === "Home"){ goTo(0); }
+  else if(e.key === "End"){ goTo(slideEls.length-1); }
+});
+
+/* mouse side buttons: back(3)/forward(4) */
+window.addEventListener("mousedown", (e)=>{
+  if(e.button === 3){
+    e.preventDefault(); e.stopImmediatePropagation();
+    prev();
+  } else if(e.button === 4){
+    e.preventDefault(); e.stopImmediatePropagation();
+    next();
+  }
+}, true);
+window.addEventListener("auxclick", (e)=>{
+  if(e.button === 3 || e.button === 4){
+    e.preventDefault(); e.stopImmediatePropagation();
+  }
+}, true);
+
+/* swipe */
+let touchStartX = null;
+document.addEventListener("touchstart", (e)=>{
+  touchStartX = e.changedTouches[0].screenX;
+}, {passive:true});
+document.addEventListener("touchend", (e)=>{
+  if(touchStartX === null) return;
+  const dx = e.changedTouches[0].screenX - touchStartX;
+  if(Math.abs(dx) > 50){
+    if(dx < 0) next(); else prev();
+  }
+  touchStartX = null;
+}, {passive:true});
+</script>
+</body>
+</html>

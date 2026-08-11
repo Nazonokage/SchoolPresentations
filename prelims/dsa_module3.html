@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DSA · module 3 · algorithms · deep dive</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0e14;
+      --surface: #10151d;
+      --surface-2: #171e28;
+      --border: #262e3a;
+      --border-soft: #1c2430;
+      --text: #eef2f6;
+      --text-dim: #b0bcc9;
+      --text-faint: #7c8797;
+      --blue: #58a6ff;
+      --purple: #bc8cff;
+      --orange: #ffa657;
+      --green: #7ee787;
+      --grad: linear-gradient(120deg, #58a6ff 0%, #bc8cff 100%);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    ::selection { background: rgba(88,166,255,0.28); color: #fff; }
+    body {
+      background: var(--bg);
+      font-family: 'Inter', 'SF Mono', 'JetBrains Mono', monospace;
+      height: 100vh;
+      overflow: hidden;
+      color: var(--text);
+    }
+    .presentation {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background:
+        radial-gradient(ellipse 900px 500px at 15% -5%, rgba(88,166,255,0.07), transparent 60%),
+        radial-gradient(ellipse 700px 500px at 100% 100%, rgba(188,140,255,0.06), transparent 60%),
+        var(--bg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ---------- editor chrome: window + tab strip ---------- */
+    .editor-chrome {
+      flex-shrink: 0;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      z-index: 70;
+    }
+    .window-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.9rem 0.35rem;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot.red { background: #ff5f56; }
+    .dot.yellow { background: #ffbd2e; }
+    .dot.green { background: #27c93f; }
+    .window-title {
+      margin-left: 0.6rem;
+      font-size: 0.7rem;
+      color: var(--text-faint);
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.02em;
+    }
+    .info-hint {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      background: rgba(88,166,255,0.08);
+      border: 1px solid rgba(88,166,255,0.22);
+      padding: 0.22rem 0.6rem 0.22rem 0.5rem;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+    .info-hint:hover { background: rgba(88,166,255,0.15); color: var(--text); }
+    .info-hint .info-icon {
+      width: 15px; height: 15px;
+      border-radius: 50%;
+      background: var(--blue);
+      color: #0a0e14;
+      font-weight: 700;
+      font-size: 0.62rem;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .info-panel {
+      position: fixed;
+      top: 46px;
+      right: 16px;
+      z-index: 90;
+      width: 280px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.9rem 1rem;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.5);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.78rem;
+      line-height: 1.6;
+      color: var(--text-dim);
+      display: none;
+    }
+    .info-panel.open { display: block; }
+    .info-panel h4 {
+      font-size: 0.8rem;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+      font-weight: 600;
+    }
+    .info-panel ul { padding-left: 1.1rem; margin: 0; }
+    .info-panel li { margin-bottom: 0.3rem; }
+    .info-panel .close-x {
+      position: absolute;
+      top: 0.55rem; right: 0.7rem;
+      cursor: pointer;
+      color: var(--text-faint);
+      font-size: 0.9rem;
+      line-height: 1;
+    }
+    .info-panel .close-x:hover { color: var(--text); }
+    .tab-strip {
+      display: flex;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tab-strip::-webkit-scrollbar { display: none; }
+    .tab {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.42rem 0.9rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.66rem;
+      color: var(--text-faint);
+      background: transparent;
+      border-right: 1px solid var(--border-soft);
+      cursor: pointer;
+      white-space: nowrap;
+      position: relative;
+      transition: color 0.2s ease, background 0.2s ease;
+    }
+    .tab:hover { color: var(--text-dim); background: rgba(255,255,255,0.02); }
+    .tab .dotstate { width: 6px; height: 6px; border-radius: 50%; background: var(--text-faint); flex-shrink: 0; }
+    .tab.active {
+      color: var(--text);
+      background: var(--bg);
+    }
+    .tab.active .dotstate { background: var(--blue); box-shadow: 0 0 6px rgba(88,166,255,0.8); }
+    .tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--grad);
+    }
+
+    .slides-container {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+    }
+    .slide {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      padding: 1.6rem 2.6rem 3rem 2.6rem;
+      overflow-y: auto;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease, transform 0.35s ease;
+      transform: scale(0.98) translateY(10px);
+      background: var(--bg);
+      scroll-behavior: smooth;
+      display: flex;
+      flex-direction: column;
+    }
+    .slide.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1) translateY(0);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .slide { transition: opacity 0.1s ease; transform: none; }
+      .slide.active { transform: none; }
+    }
+
+    .slide-header {
+      margin-bottom: 1.1rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.55rem;
+      flex-shrink: 0;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .eyebrow {
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--blue);
+      background: rgba(88,166,255,0.1);
+      display: inline-block;
+      padding: 0.18rem 0.7rem;
+      border-radius: 20px;
+      margin-bottom: 0.35rem;
+      border: 1px solid rgba(88,166,255,0.25);
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+    }
+    .slide-title {
+      font-size: 1.7rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--text);
+      line-height: 1.2;
+      font-family: 'Inter', sans-serif;
+    }
+    .slide-index-mark {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--text-faint);
+      flex-shrink: 0;
+      padding-bottom: 0.15rem;
+    }
+    .slide-body {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+      min-height: 0;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 1rem;
+      align-items: stretch;
+    }
+    .grid-2-equal {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 1rem;
+      align-items: stretch;
+      flex: 1;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      box-shadow: 0 1px 0 rgba(255,255,255,0.02) inset, 0 6px 16px rgba(0,0,0,0.35);
+      min-width: 0;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      display: flex;
+      flex-direction: column;
+      transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .card:hover {
+      border-color: #364152;
+      transform: translateY(-1px);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 10px 24px rgba(0,0,0,0.45);
+    }
+    .card h3 {
+      font-size: 0.94rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.55rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.32rem;
+      letter-spacing: -0.01em;
+      flex-shrink: 0;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .card p, .card li, .card div { color: var(--text-dim); line-height: 1.68; font-size: 0.88rem; }
+    .card strong { color: var(--text); font-weight: 600; }
+    .card ul, .card ol { padding-left: 1.15rem; margin: 0.2rem 0; }
+    .card li { margin-bottom: 0.15rem; }
+    .code-block {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      background: #080b10;
+      border-radius: 8px;
+      padding: 0.6rem 0.85rem;
+      display: block;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border: 1px solid var(--border);
+      color: var(--text);
+      overflow-x: auto;
+      line-height: 1.55;
+      margin: 0.2rem 0;
+    }
+    .code-block span.keyword { color: #ff7b72; }
+    .code-block span.string { color: #a5d6ff; }
+    .code-block span.comment { color: var(--text-faint); font-style: italic; }
+    .code-block span.function { color: var(--purple); }
+    .code-block span.class { color: var(--orange); }
+    .code-block span.number { color: #79c0ff; }
+    .code-block span.operator { color: #ff7b72; }
+    .code-block span.annotation { color: #f0883e; }
+    .code-block span.variable { color: var(--orange); }
+    .tag {
+      background: var(--surface-2);
+      color: var(--text-dim);
+      padding: 0.1rem 0.55rem;
+      border-radius: 12px;
+      font-size: 0.64rem;
+      letter-spacing: 0.03em;
+      border: 1px solid var(--border);
+      display: inline-block;
+      margin-right: 0.2rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .highlight-box {
+      background: #080b10;
+      border-radius: 8px;
+      padding: 0.45rem 0.8rem;
+      border: 1px solid var(--border);
+      border-left: 2px solid var(--blue);
+      margin-top: 0.25rem;
+      font-size: 0.75rem;
+    }
+    .mini-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.32rem 0.8rem;
+      font-size: 0.7rem;
+    }
+    .mini-grid .label { color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.66rem; }
+    .mini-grid .value { color: var(--text-dim); }
+
+    /* ---------- pseudocode / step list ---------- */
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .step-row {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      background: #080b10;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.45rem 0.8rem;
+    }
+    .step-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.62rem;
+      color: #0a0e14;
+      background: var(--grad);
+      border-radius: 6px;
+      padding: 0.15rem 0.5rem;
+      flex-shrink: 0;
+      font-weight: 700;
+    }
+    .step-text { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--text); }
+    .step-text b { color: var(--blue); }
+
+    /* ---------- status bar (bottom, vscode-style) ---------- */
+    .status-bar {
+      flex-shrink: 0;
+      height: 26px;
+      background: var(--grad);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 0.9rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.62rem;
+      color: #0a0e14;
+      font-weight: 600;
+      z-index: 60;
+      letter-spacing: 0.01em;
+    }
+    .status-left, .status-right { display: flex; align-items: center; gap: 0.9rem; }
+    .status-progress-track {
+      width: 120px;
+      height: 4px;
+      background: rgba(10,14,20,0.28);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .status-progress-fill {
+      height: 100%;
+      background: #0a0e14;
+      width: 0%;
+      transition: width 0.25s ease;
+    }
+    .dots-nav { display: flex; gap: 0.3rem; align-items: center; }
+    .dots-nav .navdot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: rgba(10,14,20,0.35);
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+    .dots-nav .navdot.active { background: #0a0e14; transform: scale(1.5); }
+
+    .slide::-webkit-scrollbar { width: 5px; }
+    .slide::-webkit-scrollbar-track { background: var(--bg); }
+    .slide::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+    .slide { scrollbar-width: thin; }
+
+    @media (max-width: 700px) {
+      .slide { padding: 1rem 1rem 3.2rem 1rem; }
+      .grid-2, .grid-2-equal { grid-template-columns: 1fr; gap: 0.6rem; }
+      .slide-title { font-size: 1.25rem; }
+      .card { padding: 0.75rem 0.95rem; }
+      .status-progress-track { width: 60px; }
+      .window-title { display: none; }
+      .info-hint span:not(.info-icon) { display: none; }
+      .info-hint { padding: 0.22rem; }
+      .info-panel { width: calc(100vw - 32px); right: 16px; }
+    }
+  </style>
+</head>
+<body>
+<div class="presentation" id="app">
+
+  <div class="editor-chrome">
+    <div class="window-bar">
+      <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+      <span class="window-title">dsa-module-3 — algorithms-deep-dive</span>
+      <div class="info-hint" id="infoHint"><span class="info-icon">i</span> how this works</div>
+    </div>
+    <div class="info-panel" id="infoPanel">
+      <span class="close-x" id="infoClose">&times;</span>
+      <h4>This deck looks like a code editor on purpose</h4>
+      <ul>
+        <li><strong>Tabs above</strong> = slides. Each one is named like a real file — click any tab to jump straight there.</li>
+        <li><strong>Bar below</strong> shows which "file" (slide) you're on and how far through the deck you are.</li>
+        <li><strong>Move around</strong> with → / ← arrow keys, or just click anywhere on a slide to go forward.</li>
+      </ul>
+    </div>
+    <div class="tab-strip" id="tabStrip">
+      <div class="tab active" data-index="0"><span class="dotstate"></span>intro.md</div>
+      <div class="tab" data-index="1"><span class="dotstate"></span>characteristics.md</div>
+      <div class="tab" data-index="2"><span class="dotstate"></span>AddTwoNumbers.algo</div>
+      <div class="tab" data-index="3"><span class="dotstate"></span>Module3.java</div>
+      <div class="tab" data-index="4"><span class="dotstate"></span>MathExpr.md</div>
+      <div class="tab" data-index="5"><span class="dotstate"></span>MathMethods.md</div>
+      <div class="tab" data-index="6"><span class="dotstate"></span>Module3_1.java</div>
+      <div class="tab" data-index="7"><span class="dotstate"></span>Module3_2.java</div>
+      <div class="tab" data-index="8"><span class="dotstate"></span>activities.md</div>
+    </div>
+  </div>
+
+  <div class="slides-container" id="slidesContainer">
+    <!-- slide 1: intro -->
+    <div class="slide active" data-index="0">
+      <div class="slide-header">
+        <div><span class="eyebrow">module 3 · algorithms</span><div class="slide-title">how Facebook's algorithm decides what you see</div></div>
+        <div class="slide-index-mark">01 / 09</div>
+      </div>
+      <div class="slide-body">
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.1rem;"><span class="tag">algorithms</span><span class="tag">data structures</span><span class="tag">engagement ranking</span></div>
+        <div class="grid-2">
+          <div class="card"><h3>📱 the Facebook feed</h3><p>every post gets evaluated, then shown in an order based on <strong>engagement</strong> — not the time it was posted. that ranking is the algorithm at work.</p></div>
+          <div class="card"><h3>⚙️ algorithm vs. data structure</h3><p>an <strong>algorithm</strong> is a tool to resolve a problem with data. a <strong>data structure</strong> is the art of organizing that data in the first place.</p></div>
+        </div>
+        <div class="card"><h3>📦 what is a data structure?</h3><p>a specialized format for organizing, processing, retrieving, and storing data — arranged to suit a specific purpose so it's easy to access and work with.</p></div>
+      </div>
+    </div>
+    <!-- slide 2: characteristics of an algorithm -->
+    <div class="slide" data-index="1">
+      <div class="slide-header">
+        <div><span class="eyebrow">algorithm design</span><div class="slide-title">characteristics of an algorithm</div></div>
+        <div class="slide-index-mark">02 / 09</div>
+      </div>
+      <div class="slide-body">
+        <p style="color:var(--text-dim);font-size:0.85rem;">not every procedure counts as an algorithm — it needs to check these boxes:</p>
+        <div class="grid-2">
+          <div class="card"><h3>🎯 clarity &amp; direction</h3><ul>
+            <li><strong>unambiguous</strong> — every step, input, and output has exactly one meaning</li>
+            <li><strong>independent</strong> — the steps stand on their own, not tied to any one programming language</li>
+          </ul></div>
+          <div class="card"><h3>🔄 inputs &amp; outputs</h3><ul>
+            <li><strong>input</strong> — 0 or more well-defined inputs</li>
+            <li><strong>output</strong> — 1 or more well-defined outputs, matching what's expected</li>
+          </ul></div>
+        </div>
+        <div class="grid-2">
+          <div class="card"><h3>⏱️ finiteness</h3><p>the algorithm must terminate after a <strong>finite number of steps</strong> — it can't run forever.</p></div>
+          <div class="card"><h3>✅ feasibility</h3><p>it must be achievable with the resources you actually have available.</p></div>
+        </div>
+      </div>
+    </div>
+    <!-- slide 3: algorithm writing example (pseudocode) -->
+    <div class="slide" data-index="2">
+      <div class="slide-header">
+        <div><span class="eyebrow">algorithm writing</span><div class="slide-title">add two numbers — step by step</div></div>
+        <div class="slide-index-mark">03 / 09</div>
+      </div>
+      <div class="slide-body">
+        <div class="card" style="flex-shrink:0;padding:0.6rem 1rem;"><h3 style="margin-bottom:0.3rem;">🧩 problem</h3><p>design an algorithm to add two numbers and display the result.</p></div>
+        <div class="card">
+          <h3>📝 pseudocode</h3>
+          <div class="step-list">
+            <div class="step-row"><span class="step-num">01</span><span class="step-text">START</span></div>
+            <div class="step-row"><span class="step-num">02</span><span class="step-text">Declare three integers <b>a</b>, <b>b</b> &amp; <b>c</b></span></div>
+            <div class="step-row"><span class="step-num">03</span><span class="step-text">Define values of <b>a</b> &amp; <b>b</b></span></div>
+            <div class="step-row"><span class="step-num">04</span><span class="step-text">Add values of <b>a</b> &amp; <b>b</b></span></div>
+            <div class="step-row"><span class="step-num">05</span><span class="step-text">Store output of Step 4 to <b>c</b></span></div>
+            <div class="step-row"><span class="step-num">06</span><span class="step-text">Print <b>c</b></span></div>
+            <div class="step-row"><span class="step-num">07</span><span class="step-text">STOP</span></div>
+          </div>
+        </div>
+        <div style="color:var(--text-faint);font-size:0.72rem;border-top:1px solid var(--border);padding-top:0.3rem;">the algorithm follows chronological order — each step depends on the one before it.</div>
+      </div>
+    </div>
+    <!-- slide 4: Module3.java -->
+    <div class="slide" data-index="3">
+      <div class="slide-header">
+        <div><span class="eyebrow">java · implementation</span><div class="slide-title">translating the algorithm to code</div></div>
+        <div class="slide-index-mark">04 / 09</div>
+      </div>
+      <div class="slide-body">
+        <div class="grid-2-equal">
+          <div class="card"><h3>☕ Module3.java</h3>
+            <div class="code-block"><span class="keyword">public class</span> <span class="class">Module3</span> {
+    <span class="keyword">public static void</span> <span class="function">main</span>(<span class="class">String</span> args[]) {
+        <span class="keyword">int</span> a, b, c;
+        a = <span class="number">80</span>;
+        b = <span class="number">80</span>;
+        c = a + b;
+        <span class="class">System</span>.out.println(<span class="string">"Value of c is"</span> + <span class="string">" "</span> + c);
+    }
+}</div>
+            <div style="margin-top:0.2rem;color:var(--text-faint);font-size:0.72rem;">run it in the online Java Jdoodle compiler and check the output.</div>
+          </div>
+          <div class="card"><h3>🔗 step → code mapping</h3>
+            <div class="mini-grid">
+              <span class="label">pseudocode</span><span class="label">java line</span>
+              <span class="value">declare a, b, c</span><span class="value"><code>int a, b, c;</code></span>
+              <span class="value">define a &amp; b</span><span class="value"><code>a = 80; b = 80;</code></span>
+              <span class="value">add a &amp; b</span><span class="value"><code>c = a + b;</code></span>
+              <span class="value">print c</span><span class="value"><code>System.out.println(...)</code></span>
+            </div>
+            <div class="highlight-box"><span class="tag">tip</span> spot your primitive types &amp; math operators — they're the building blocks of every data structure you'll write</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- slide 5: math expressions -->
+    <div class="slide" data-index="4">
+      <div class="slide-header">
+        <div><span class="eyebrow">math in java</span><div class="slide-title">expressions &amp; operands</div></div>
+        <div class="slide-index-mark">05 / 09</div>
+      </div>
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="card"><h3>➗ what's a math expression?</h3><p>a combination of one or more operators: <span class="tag">+</span><span class="tag">-</span><span class="tag">*</span><span class="tag">/</span><span class="tag">%</span><span class="tag">&amp;&amp;</span><span class="tag">||</span></p><p style="margin-top:0.3rem;">the result comes from the <strong>operands</strong> — which might be numbers, but can also be characters, strings, or booleans.</p></div>
+          <div class="card"><h3>🧩 methods vs. functions</h3><p>a <strong>method</strong> is a block of code that only runs when it's called. you can pass data into it as <strong>parameters</strong>.</p><p style="margin-top:0.3rem;color:var(--text-faint);">methods exist so you can define code once and reuse it — instead of writing the same logic over and over.</p></div>
+        </div>
+        <div class="card" style="flex-shrink:0;padding:0.5rem 1rem;"><h3 style="margin-bottom:0.2rem;">📚 where these live</h3><p>Java ships a built-in <span class="tag">Math</span> class packed with ready-made methods — no need to write your own for the common stuff.</p></div>
+      </div>
+    </div>
+    <!-- slide 6: java math methods -->
+    <div class="slide" data-index="5">
+      <div class="slide-header">
+        <div><span class="eyebrow">java.lang.Math</span><div class="slide-title">built-in math methods</div></div>
+        <div class="slide-index-mark">06 / 09</div>
+      </div>
+      <div class="slide-body">
+        <div class="card">
+          <h3>🧮 the essentials</h3>
+          <div class="mini-grid">
+            <span class="label">method</span><span class="label">what it does</span>
+            <span class="value"><code>Math.max(x, y)</code></span><span class="value">highest number between x and y</span>
+            <span class="value"><code>Math.min(x, y)</code></span><span class="value">lowest number between x and y</span>
+            <span class="value"><code>Math.sqrt(x)</code></span><span class="value">square root of x</span>
+            <span class="value"><code>Math.abs(x)</code></span><span class="value">absolute (positive) value of x</span>
+            <span class="value"><code>Math.random()</code></span><span class="value">random number, 0.0 (incl.) to 1.0 (excl.)</span>
+          </div>
+        </div>
+        <div class="highlight-box" style="flex-shrink:0;"><span class="tag">note</span> these all live on the <span style="color:var(--orange);">Math</span> class — call them as <code>Math.methodName(...)</code></div>
+      </div>
+    </div>
+    <!-- slide 7: Module3_1.java -->
+    <div class="slide" data-index="6">
+      <div class="slide-header">
+        <div><span class="eyebrow">java · example</span><div class="slide-title">finding the highest value</div></div>
+        <div class="slide-index-mark">07 / 09</div>
+      </div>
+      <div class="slide-body">
+        <div class="grid-2-equal">
+          <div class="card"><h3>☕ Module3_1.java</h3>
+            <div class="code-block"><span class="keyword">public class</span> <span class="class">Module3_1</span> {
+    <span class="keyword">public static void</span> <span class="function">main</span>(<span class="class">String</span> args[]) {
+        <span class="keyword">int</span> x = <span class="number">100</span>;
+        <span class="keyword">int</span> y = <span class="number">200</span>;
+
+        <span class="class">System</span>.out.println(<span class="string">"Maximum data is = "</span> + <span class="string">" "</span> + <span class="class">Math</span>.<span class="function">max</span>(x, y));
+        <span class="class">System</span>.out.println(<span class="string">"----------------------------------------"</span>);
+        <span class="class">System</span>.out.println(<span class="string">"Minimum data is = "</span> + <span class="string">" "</span> + <span class="class">Math</span>.<span class="function">min</span>(x, y));
+    }
+}</div>
+          </div>
+          <div class="card"><h3>🧪 output breakdown</h3>
+            <div class="mini-grid">
+              <span class="label">expression</span><span class="label">result</span>
+              <span class="value"><code>Math.max(x, y)</code></span><span class="value">200</span>
+              <span class="value"><code>Math.min(x, y)</code></span><span class="value">100</span>
+            </div>
+            <div class="highlight-box"><span class="tag">note</span> x and y never change — <span style="color:#a5d6ff;">Math.max</span> / <span style="color:#a5d6ff;">min</span> just compare and return</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- slide 8: Module3_2.java custom method -->
+    <div class="slide" data-index="7">
+      <div class="slide-header">
+        <div><span class="eyebrow">faq · custom methods</span><div class="slide-title">can I write my own method?</div></div>
+        <div class="slide-index-mark">08 / 09</div>
+      </div>
+      <div class="slide-body">
+        <div class="grid-2-equal">
+          <div class="card"><h3>☕ Module3_2.java</h3>
+            <div class="code-block"><span class="keyword">public class</span> <span class="class">Module3_1</span> {
+    <span class="keyword">public static void</span> <span class="function">main</span>(<span class="class">String</span> args[]) {
+        <span class="keyword">int</span> x = <span class="number">100</span>;
+        <span class="keyword">int</span> y = <span class="number">200</span>;
+
+        <span class="class">System</span>.out.println(<span class="string">"Using the defined method -&gt; max_data"</span>);
+        <span class="keyword">int</span> result = <span class="function">max_data</span>(x, y);
+        <span class="class">System</span>.out.println(<span class="string">"Max data is + "</span> + <span class="string">" "</span> + result);
+    }
+
+    <span class="keyword">static int</span> <span class="function">max_data</span>(<span class="keyword">int</span> n1, <span class="keyword">int</span> n2) {
+        <span class="keyword">if</span> (n1 > n2) {
+            <span class="keyword">return</span> n1;
+        } <span class="keyword">else</span> {
+            <span class="keyword">return</span> n2;
+        }
+    }
+}</div>
+          </div>
+          <div class="card"><h3>🔬 anatomy of a method</h3><ul>
+            <li><code>static int</code> — return type: gives back a whole number</li>
+            <li><code>max_data(int n1, int n2)</code> — name + parameters it accepts</li>
+            <li><code>if / else</code> — decides which value to hand back</li>
+            <li><code>return</code> — sends the result to whoever called it</li>
+          </ul>
+          <div class="highlight-box"><span class="tag">yes</span> you can absolutely write your own — this is exactly how <span style="color:#a5d6ff;">Math.max()</span> works under the hood</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- slide 9: skill-building activities -->
+    <div class="slide" data-index="8">
+      <div class="slide-header">
+        <div><span class="eyebrow">activity · review</span><div class="slide-title">your turn: build the algorithm</div></div>
+        <div class="slide-index-mark">09 / 09</div>
+      </div>
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="card"><h3>✍️ drills</h3><ol>
+            <li>write a pseudocode (plain-English algorithm) that finds the max between <code>num1 = 5</code> and <code>num2 = 2</code>, then prints it.</li>
+            <li>convert that algorithm into a Java program in Jdoodle.</li>
+          </ol></div>
+          <div class="card"><h3>❓ can I write my own method?</h3><p><strong>yes</strong> — see <span class="tag">Module3_2.java</span> for a full working example with a custom <code>max_data</code> method.</p></div>
+        </div>
+        <div class="card" style="flex-shrink:0;padding:0.45rem 1rem;"><h3 style="margin-bottom:0.15rem;">📋 checking your work</h3><p>check your answers against the Key to Corrections at the end of the SAS, and write your score on your paper.</p></div>
+        <div style="border-top:1px solid var(--border);padding-top:0.35rem;color:var(--text-faint);font-size:0.65rem;text-align:center;">module 3 · algorithms · math methods · next: composing &amp; submitting to Ser Joshua</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-left">
+      <span id="statusFile">intro.md</span>
+      <div class="dots-nav" id="dotsNav"></div>
+    </div>
+    <div class="status-right">
+      <div class="status-progress-track"><div class="status-progress-fill" id="progressFill"></div></div>
+      <span id="slideCounter">1 / 9</span>
+      <span class="hide-mobile">Java · UTF-8</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const slides = document.querySelectorAll('.slide');
+    const tabs = document.querySelectorAll('.tab');
+    const total = slides.length;
+    let current = 0;
+    const progressFill = document.getElementById('progressFill');
+    const counter = document.getElementById('slideCounter');
+    const statusFile = document.getElementById('statusFile');
+    const dotsNav = document.getElementById('dotsNav');
+    const fileNames = Array.from(tabs).map(t => t.textContent.trim());
+
+    for (let i = 0; i < total; i++) {
+      const d = document.createElement('div');
+      d.className = 'navdot' + (i === 0 ? ' active' : '');
+      d.dataset.index = i;
+      d.addEventListener('click', (e) => { e.stopPropagation(); updateSlide(i); });
+      dotsNav.appendChild(d);
+    }
+    const navdots = dotsNav.querySelectorAll('.navdot');
+
+    function updateSlide(index) {
+      if (index < 0) index = 0;
+      if (index >= total) index = total - 1;
+      if (index === current && slides[current].classList.contains('active')) return;
+      slides.forEach(s => s.classList.remove('active'));
+      slides[index].classList.add('active');
+      tabs.forEach(t => t.classList.remove('active'));
+      tabs[index].classList.add('active');
+      navdots.forEach(d => d.classList.remove('active'));
+      navdots[index].classList.add('active');
+      current = index;
+      progressFill.style.width = ((current + 1) / total * 100) + '%';
+      counter.textContent = (current + 1) + ' / ' + total;
+      statusFile.textContent = fileNames[current];
+    }
+
+    function goNext() { if (current < total - 1) updateSlide(current + 1); }
+    function goPrev() { if (current > 0) updateSlide(current - 1); }
+    function goHome() { updateSlide(0); }
+    function goEnd() { updateSlide(total - 1); }
+
+    const infoHint = document.getElementById('infoHint');
+    const infoPanel = document.getElementById('infoPanel');
+    const infoClose = document.getElementById('infoClose');
+    infoHint.addEventListener('click', (e) => {
+      e.stopPropagation();
+      infoPanel.classList.toggle('open');
+    });
+    infoClose.addEventListener('click', (e) => {
+      e.stopPropagation();
+      infoPanel.classList.remove('open');
+    });
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        e.stopPropagation();
+        updateSlide(parseInt(tab.dataset.index, 10));
+      });
+    });
+
+    document.getElementById('slidesContainer').addEventListener('click', function() {
+      goNext();
+    });
+
+    document.addEventListener('keydown', function(e) {
+      const key = e.key;
+      if (key === 'ArrowRight' || key === 'ArrowDown' || key === ' ') {
+        e.preventDefault();
+        goNext();
+      } else if (key === 'ArrowLeft' || key === 'ArrowUp') {
+        e.preventDefault();
+        goPrev();
+      } else if (key === 'Home') {
+        e.preventDefault();
+        goHome();
+      } else if (key === 'End') {
+        e.preventDefault();
+        goEnd();
+      }
+    });
+
+    updateSlide(0);
+  })();
+</script>
+</body>
+</html>
