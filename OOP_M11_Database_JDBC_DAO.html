@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Module 11 — Database Integration &amp; Persistence: JDBC, PDO &amp; the DAO Pattern</title>
+<style>
+  :root{
+    --bg:#11131a;
+    --bg-2:#161925;
+    --panel:#181c28;
+    --panel-2:#1e2331;
+    --line: rgba(230,234,245,0.12);
+    --line-strong: rgba(230,234,245,0.24);
+    --text:#eef0f8;
+    --text-dim:#9aa0b4;
+    --accent:#5ec8dc;
+    --accent-soft:#48a3b5;
+    --java:#ef8354;
+    --java-soft:#c96a41;
+    --php:#8892d4;
+    --php-soft:#6d76b8;
+    --rose:#e2726a;
+    --green:#8bd17c;
+    --code-bg:#0b0d13;
+    --code-keyword:#eab676;
+    --code-string:#8bd17c;
+    --code-number:#7ec6e6;
+    --code-type:#c9a8e6;
+    --code-var:#f0a868;
+    --code-comment:#5d6478;
+    --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --mono: SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; height:100%; }
+  body{
+    background:
+      radial-gradient(ellipse at 10% -10%, rgba(239,131,84,0.09), transparent 45%),
+      radial-gradient(ellipse at 100% 110%, rgba(136,146,212,0.10), transparent 45%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .deck{ position:relative; width:100vw; height:100vh; }
+
+  .slide{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    padding: clamp(20px, 3vh, 46px) clamp(24px, 5vw, 92px);
+    opacity:0;
+    transform: translateX(28px);
+    transition: opacity .35s ease, transform .35s ease;
+    pointer-events:none;
+    overflow-y:auto;
+  }
+  .slide.active{ opacity:1; transform:translateX(0); pointer-events:auto; z-index:2; }
+  .slide.enter-left{ transform:translateX(-28px); opacity:0; }
+  .slide.exit-left{ transform:translateX(-28px); opacity:0; }
+  .slide.exit-right{ transform:translateX(28px); opacity:0; }
+
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition:none !important; transform:none !important; }
+  }
+
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--mono); letter-spacing:.14em; text-transform:uppercase;
+    font-size:clamp(12px,1.05vw,14px); color:var(--accent);
+    margin-bottom: 10px; padding-bottom:7px;
+    border-bottom: 1px dashed var(--line-strong);
+    width:fit-content;
+  }
+  .eyebrow::before{ content:"◆"; font-size:9px; }
+
+  h1.slide-title{
+    font-family:var(--serif); font-weight:700;
+    font-size: clamp(25px, 3.3vw, 48px);
+    line-height:1.14;
+    margin: 0 0 8px 0;
+    color:var(--text);
+  }
+  .subtitle{
+    font-size: clamp(15px, 1.2vw, 18px);
+    color:var(--text-dim);
+    margin: 0 0 16px 0;
+    max-width:920px;
+    line-height:1.55;
+  }
+
+  .slide-body{ flex:1; min-height:0; display:flex; flex-direction:column; }
+
+  /* ---------- TITLE ---------- */
+  .title-wrap{ height:100%; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:16px; max-width:1160px; }
+  .brew-badge{ display:flex; align-items:center; gap:12px; padding:9px 18px; border:1px solid var(--line); border-radius:999px; background:var(--panel); font-family:var(--mono); font-size:13px; color:var(--accent); letter-spacing:.06em; }
+  .title-main{ font-family:var(--serif); font-weight:700; font-size:clamp(32px,4.8vw,64px); line-height:1.08; letter-spacing:-0.01em; }
+  .title-main .j{ color:var(--java); }
+  .title-main .p{ color:var(--php); }
+  .title-sub{ font-size:clamp(16px,1.4vw,19px); color:var(--text-dim); max-width:780px; line-height:1.55; }
+  .title-stats{ display:flex; gap:14px; margin-top:6px; flex-wrap:wrap; }
+  .stat-chip{ border:1px solid var(--line); background:var(--panel-2); border-radius:12px; padding:11px 18px; min-width:150px; }
+  .stat-chip .num{ font-family:var(--serif); font-size:26px; color:var(--accent); font-weight:700; }
+  .stat-chip .lbl{ font-size:13px; color:var(--text-dim); margin-top:2px; }
+  .bridge-illo{ position:absolute; right:clamp(10px,4vw,80px); top:50%; transform:translateY(-50%); width:min(28vw,340px); opacity:.95; }
+
+  /* ---------- GRIDS ---------- */
+  .grid-2{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vw,22px); flex:1; min-height:0; }
+  .grid-2x2{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); grid-template-rows: repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vw,20px); flex:1; min-height:0; }
+  @media (max-width:900px){ .grid-2, .grid-2x2{ grid-template-columns: minmax(0,1fr); } }
+
+  /* ---------- LANGUAGE-CODED PANELS (signature element) ---------- */
+  .lang-panel{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 18px; display:flex; flex-direction:column; gap:8px; min-width:0; border-left:4px solid var(--line-strong); }
+  .lang-panel.java{ border-left-color:var(--java); }
+  .lang-panel.php{ border-left-color:var(--php); }
+  .lang-tag{ font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; padding:2px 10px; border-radius:999px; width:fit-content; }
+  .lang-tag.java{ color:var(--java); border:1px solid var(--java-soft); }
+  .lang-tag.php{ color:var(--php); border:1px solid var(--php-soft); }
+
+  .block-card{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 20px; min-width:0; display:flex; flex-direction:column; gap:8px; }
+  .block-card h3{ margin:0; font-family:var(--serif); font-size:18px; color:var(--accent); }
+  .block-card h3 .tag{ font-family:var(--mono); font-size:11px; color:var(--php); border:1px solid var(--line); border-radius:999px; padding:2px 8px; margin-left:8px; vertical-align:middle; }
+  .block-card p{ margin:0; font-size:14.5px; color:var(--text-dim); line-height:1.6; }
+  .block-card ul{ margin:4px 0 0; padding-left:18px; font-size:14.5px; color:var(--text-dim); line-height:1.65; }
+  .block-card ul li b{ color:var(--text); }
+
+  /* ---------- CODE ---------- */
+  .code-block{ background:var(--code-bg); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .code-header{ display:flex; align-items:center; justify-content:space-between; padding:7px 12px; background:var(--panel-2); border-bottom:1px solid var(--line); font-family:var(--mono); font-size:12px; color:var(--text-dim); }
+  .copy-btn{ font-family:var(--sans); font-size:12px; color:var(--text); background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:4px 10px; cursor:pointer; transition:background .15s ease, color .15s ease; }
+  .copy-btn:hover{ background:var(--accent); color:#11131a; border-color:var(--accent); }
+  .copy-btn.copied{ background:var(--green); color:#11131a; border-color:var(--green); }
+  pre.codepre{ margin:0; padding:10px 14px; max-height:50vh; overflow:auto; font-family:var(--mono); font-size:clamp(12px,.92vw,14px); line-height:1.55; }
+  code .tok-keyword{ color:var(--code-keyword); }
+  code .tok-string{ color:var(--code-string); }
+  code .tok-number{ color:var(--code-number); }
+  code .tok-type{ color:var(--code-type); }
+  code .tok-var{ color:var(--code-var); }
+  code .tok-comment{ color:var(--code-comment); font-style:italic; }
+  code .tok-tag{ color:var(--php); font-weight:700; }
+
+  .output-prompt{ display:flex; align-items:center; gap:10px; font-size:14px; color:var(--text-dim); margin-top:8px; }
+  .output-prompt input{ flex:1; border:none; border-bottom:1px dashed var(--line); background:transparent; color:var(--text); font-family:var(--mono); font-size:14px; padding:4px 6px; }
+  .output-prompt input:focus{ outline:none; border-bottom-color:var(--accent); }
+
+  .go-grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vw,20px); flex:1; min-height:0; }
+  .go-grid.solo{ grid-template-columns:minmax(0,1fr); }
+  @media (max-width:900px){ .go-grid{ grid-template-columns:minmax(0,1fr); } }
+  .go-card{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 18px; display:flex; flex-direction:column; gap:8px; min-width:0; }
+  .go-card .qnum{ font-family:var(--mono); font-size:12px; color:var(--accent); letter-spacing:.06em; }
+
+  /* ---------- DIAGRAM ---------- */
+  .diagram-wrap{ display:flex; align-items:center; justify-content:center; flex:1; }
+
+  /* ---------- TABLES ---------- */
+  table.cmp{ width:100%; border-collapse:collapse; font-size:14.5px; }
+  table.cmp th, table.cmp td{ text-align:left; padding:10px 14px; border-bottom:1px solid var(--line); vertical-align:top; }
+  table.cmp th{ font-family:var(--mono); font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--accent); border-bottom:1px solid var(--line-strong); }
+  table.cmp td b{ color:var(--text); }
+  table.cmp tr:last-child td{ border-bottom:none; }
+  table.cmp td.java-col{ color:var(--java); font-family:var(--mono); }
+  table.cmp td.php-col{ color:var(--php); font-family:var(--mono); }
+  .spec-card{ position:relative; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 20px; }
+
+  /* ---------- MCQ ---------- */
+  .mcq-grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vh,18px); flex:1; min-height:0; }
+  .mcq-grid.odd-last > :last-child{ grid-column: 1 / -1; max-width:640px; margin:0 auto; width:100%; }
+  @media (max-width:900px){ .mcq-grid{ grid-template-columns:minmax(0,1fr); } .mcq-grid.odd-last > :last-child{ max-width:none; } }
+  .mcq-card{ position:relative; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 20px; }
+  .mcq-card .qnum{ font-family:var(--mono); font-size:12px; color:var(--accent); letter-spacing:.08em; }
+  .mcq-card .qtext{ font-size:clamp(15px,1.1vw,17.5px); font-weight:600; margin:6px 0 10px; line-height:1.4; }
+  .mcq-opts{ display:flex; flex-direction:column; gap:6px; font-size:14.5px; color:var(--text-dim); }
+  .mcq-opts div{ display:flex; gap:8px; }
+  .mcq-opts b{ color:var(--accent); min-width:18px; }
+
+  /* ---------- QUOTES ---------- */
+  .quote-wrap{ flex:1; display:flex; flex-direction:column; justify-content:center; gap:26px; max-width:1100px; }
+  .quote-block{ position:relative; padding-left:28px; }
+  .quote-block::before{ content:"“"; position:absolute; left:-6px; top:-18px; font-family:var(--serif); font-size:64px; color:var(--accent); opacity:.6; }
+  .quote-block p{ font-family:var(--serif); font-size:clamp(17px,1.9vw,24px); line-height:1.5; margin:0 0 8px; color:var(--text); }
+  .quote-block span{ font-family:var(--mono); font-size:13px; color:var(--php); }
+
+  /* ---------- ANSWER KEY ---------- */
+  .ans-scroll{ flex:1; min-height:0; overflow-y:auto; padding-right:8px; }
+  .ans-block{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 18px; margin-bottom:12px; break-inside:avoid; }
+  .ans-block h4{ margin:0 0 6px 0; font-family:var(--mono); font-size:14px; color:var(--accent); }
+  .ans-block p{ margin:0; font-size:14.5px; color:var(--text-dim); line-height:1.6; }
+  .ans-block p b{ color:var(--text); }
+
+  /* ---------- CLOSING ---------- */
+  .closing-wrap{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:22px; }
+  .closing-wrap .final-quote{ font-family:var(--serif); font-size:clamp(20px,2.4vw,32px); max-width:900px; line-height:1.5; color:var(--text); }
+  .closing-wrap .final-msg{ font-size:16px; color:var(--text-dim); max-width:680px; line-height:1.6; }
+
+  /* ---------- CHROME ---------- */
+  .progress-track{ position:fixed; top:0; left:0; right:0; height:4px; background:rgba(255,255,255,0.06); z-index:50; }
+  .progress-fill{ height:100%; background:linear-gradient(90deg, var(--java), var(--php)); width:0%; transition:width .3s ease; }
+  .counter{ position:fixed; bottom:16px; right:20px; z-index:50; font-family:var(--mono); font-size:13px; color:var(--text-dim); background:rgba(0,0,0,0.35); border:1px solid var(--line); border-radius:999px; padding:6px 14px; backdrop-filter: blur(4px); }
+  .hint{ position:fixed; bottom:16px; left:20px; z-index:50; font-family:var(--mono); font-size:12px; color:var(--text-dim); background:rgba(0,0,0,0.35); border:1px solid var(--line); border-radius:999px; padding:6px 14px; }
+
+  .overlay{ position:fixed; inset:0; background:rgba(6,7,12,0.75); backdrop-filter: blur(3px); display:flex; align-items:center; justify-content:center; z-index:100; opacity:0; pointer-events:none; transition:opacity .2s ease; }
+  .overlay.show{ opacity:1; pointer-events:auto; }
+  .overlay-panel{ background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:28px 32px; max-width:520px; width:90%; }
+  .overlay-panel h2{ margin:0 0 14px 0; font-family:var(--serif); color:var(--accent); font-size:22px; }
+  .overlay-panel .row{ display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--line); font-size:14px; color:var(--text-dim); }
+  .overlay-panel .row:last-child{ border-bottom:none; }
+  .overlay-close{ margin-top:16px; width:100%; padding:10px; border-radius:8px; border:1px solid var(--line); background:var(--accent); color:#11131a; font-weight:600; cursor:pointer; font-family:var(--sans); font-size:14px; }
+  kbd{ display:inline-block; font-family:var(--mono); font-size:13px; background:var(--panel-2); border:1px solid var(--line); border-bottom-width:2px; border-radius:6px; padding:2px 8px; color:var(--text); }
+
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb{ background:var(--panel-2); border-radius:8px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+</style>
+</head>
+<body>
+
+<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+<div class="counter" id="counter">1 / 32</div>
+<div class="hint">Right-click or → for next · press ? for help</div>
+
+<div class="deck" id="deck">
+
+  <!-- 0: TITLE -->
+  <section class="slide" data-index="0">
+    <div class="title-wrap">
+      <div class="brew-badge">MODULE 11 · JOURNEY'S END, DATA'S BEGINNING</div>
+      <div class="title-main">Database Integration<br>&amp; Persistence</div>
+      <div class="title-sub">This is the bridge we've been building toward since Module 9: your Java (and PHP) programs finally talking to a real, persistent database. JDBC, PreparedStatements, and the DAO pattern — the tools that keep data safe, organized, and separate from your business logic.</div>
+      <div class="title-stats">
+        <div class="stat-chip"><div class="num">5</div><div class="lbl">CRUD DAO Methods</div></div>
+        <div class="stat-chip"><div class="num">14+</div><div class="lbl">Worked Examples</div></div>
+        <div class="stat-chip"><div class="num">3</div><div class="lbl">Skill Checks</div></div>
+      </div>
+    </div>
+    <svg class="bridge-illo" viewBox="0 0 320 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Illustration of a Java class icon and a PHP class icon both connected by arrows down into a single cylindrical database icon, representing both languages persisting data into the same database">
+      <rect x="20" y="20" width="90" height="50" rx="8" fill="#181c28" stroke="#ef8354" stroke-width="3"/>
+      <text x="65" y="50" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="13" fill="#ef8354">JAVA</text>
+      <rect x="210" y="20" width="90" height="50" rx="8" fill="#181c28" stroke="#8892d4" stroke-width="3"/>
+      <text x="255" y="50" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="13" fill="#8892d4">PHP</text>
+      <path d="M70 70 Q90 130 155 165" fill="none" stroke="#ef8354" stroke-width="3"/>
+      <path d="M255 70 Q220 130 165 165" fill="none" stroke="#8892d4" stroke-width="3"/>
+      <ellipse cx="160" cy="175" rx="46" ry="16" fill="none" stroke="#8bd17c" stroke-width="3"/>
+      <path d="M114 175 v30 a46 16 0 0 0 92 0 v-30" fill="none" stroke="#8bd17c" stroke-width="3"/>
+      <text x="160" y="233" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="11" fill="#8bd17c">MySQL</text>
+    </svg>
+  </section>
+
+  <!-- 1: ROADMAP -->
+  <section class="slide" data-index="1">
+    <div class="eyebrow">Lesson Preview</div>
+    <h1 class="slide-title">Where We're Headed</h1>
+    <p class="subtitle">Modern backend applications separate database persistence logic from business logic. That single idea drives everything in this module.</p>
+    <div class="slide-body">
+      <div class="grid-2x2">
+        <div class="block-card">
+          <h3>🔌 Connecting to a Database</h3>
+          <p>Java's JDBC and PHP's PDO — two APIs, one job: opening a safe, reusable connection to MySQL.</p>
+        </div>
+        <div class="block-card">
+          <h3>🗂️ The DAO Pattern</h3>
+          <p>A full <code>User</code> model, <code>UserDAO</code> interface, and <code>UserDAOImpl</code> — built in Java, then in PHP.</p>
+        </div>
+        <div class="block-card">
+          <h3>🛡️ SQL Injection Defense</h3>
+          <p>Why raw string concatenation is dangerous, and how <code>PreparedStatement</code> shuts the door on it.</p>
+        </div>
+        <div class="block-card">
+          <h3>✅ Skill Check</h3>
+          <p>Multiple choice, guess-the-output across both languages, and two DAO coding problems — 15 points total.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2: JDBC VS PDO -->
+  <section class="slide" data-index="2">
+    <div class="eyebrow">Section A · Persistence Across Languages</div>
+    <h1 class="slide-title">CRUD, in Two Languages</h1>
+    <p class="subtitle">Relational database integration lets a backend application <b style="color:var(--text)">C</b>reate, <b style="color:var(--text)">R</b>ead, <b style="color:var(--text)">U</b>pdate, and <b style="color:var(--text)">D</b>elete persistent data.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="lang-panel java">
+          <div class="lang-tag java">Java — JDBC</div>
+          <p><b style="color:var(--text)">Java Database Connectivity</b> is a standard Java API defining how an application connects to and interacts with relational databases like MySQL or PostgreSQL, through a driver.</p>
+        </div>
+        <div class="lang-panel php">
+          <div class="lang-tag php">PHP — PDO</div>
+          <p><b style="color:var(--text)">PHP Data Objects</b> is a lean, consistent interface for accessing databases in PHP — one API, many possible database engines underneath.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3: DAO CONCEPT DIAGRAM -->
+  <section class="slide" data-index="3">
+    <div class="eyebrow">Section A.2 · The DAO Pattern</div>
+    <h1 class="slide-title">Why Separate Data Access at All?</h1>
+    <p class="subtitle">The Data Access Object pattern isolates raw database interaction logic from your core business logic.</p>
+    <div class="slide-body diagram-wrap">
+      <svg viewBox="0 0 720 160" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Diagram showing three boxes connected left to right: Business Logic Layer, then Data Access Object DAO, then Database MySQL or PostgreSQL, with double-headed arrows between each showing the flow of requests and data" style="width:100%; max-width:760px; height:auto; margin:0 auto;">
+        <rect x="10" y="45" width="200" height="70" rx="10" fill="#181c28" stroke="#5ec8dc" stroke-width="2.5"/>
+        <text x="110" y="75" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="12" fill="#5ec8dc">Business Logic</text>
+        <text x="110" y="93" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="12" fill="#5ec8dc">Layer</text>
+
+        <line x1="215" y1="80" x2="255" y2="80" stroke="#9aa0b4" stroke-width="2"/>
+        <polygon points="255,80 243,74 243,86" fill="#9aa0b4"/>
+        <polygon points="215,80 227,74 227,86" fill="#9aa0b4"/>
+
+        <rect x="260" y="45" width="200" height="70" rx="10" fill="#181c28" stroke="#ef8354" stroke-width="2.5"/>
+        <text x="360" y="75" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="12" fill="#ef8354">Data Access Object</text>
+        <text x="360" y="93" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="12" fill="#ef8354">(DAO)</text>
+
+        <line x1="465" y1="80" x2="505" y2="80" stroke="#9aa0b4" stroke-width="2"/>
+        <polygon points="505,80 493,74 493,86" fill="#9aa0b4"/>
+        <polygon points="465,80 477,74 477,86" fill="#9aa0b4"/>
+
+        <rect x="510" y="45" width="200" height="70" rx="10" fill="#181c28" stroke="#8bd17c" stroke-width="2.5"/>
+        <text x="610" y="75" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="12" fill="#8bd17c">Database</text>
+        <text x="610" y="93" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="12" fill="#8bd17c">(MySQL / PostgreSQL)</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- 4: DAO BENEFITS -->
+  <section class="slide" data-index="4">
+    <div class="eyebrow">Core Benefits</div>
+    <h1 class="slide-title">What the DAO Pattern Buys You</h1>
+    <div class="slide-body">
+      <div class="grid-2x2">
+        <div class="block-card" style="grid-column: span 1;">
+          <h3 style="font-size:17px;">🔗 Decoupling</h3>
+          <p>Changes to SQL queries or table schemas don't break the application's business logic — the DAO absorbs the change.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">🧹 Maintainability</h3>
+          <p>SQL queries live in one centralized place — inside DAO classes — instead of scattered across the codebase.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">🛡️ Security</h3>
+          <p>Centralizing data access makes it far easier to enforce strict parameter sanitization via <code>PreparedStatement</code>, every single time.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">🔁 Familiar Shape</h3>
+          <p>Notice the pattern: an interface (<code>UserDAO</code>) defines <i>what</i>, a concrete class (<code>UserDAOImpl</code>) defines <i>how</i> — exactly the interface habit from Modules 9–10.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5: CONNECTING - JAVA -->
+  <section class="slide" data-index="5">
+    <div class="eyebrow">Section B.1 · Connecting to the Database</div>
+    <h1 class="slide-title">DatabaseConnection.java — JDBC</h1>
+    <p class="subtitle">Java's <code>try-with-resources</code> statement automatically closes connections, statements, and result sets to prevent connection leaks.</p>
+    <div class="slide-body">
+      <div class="code-block">
+        <div class="code-header"><span>DatabaseConnection.java</span><button class="copy-btn" data-target="code1">Copy</button></div>
+        <pre class="codepre"><code id="code1"></code></pre>
+      </div>
+      <script type="text/plain" data-target="code1">package com.example.db;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
+public class DatabaseConnection {
+    private static final String URL = "jdbc:mysql://localhost:3306/app_db";
+    private static final String USER = "root";
+    private static final String PASSWORD = "password123";
+
+    public static Connection getConnection() throws SQLException {
+        return DriverManager.getConnection(URL, USER, PASSWORD);
+    }
+}</script>
+    </div>
+  </section>
+
+  <!-- 6: CONNECTING - PHP -->
+  <section class="slide" data-index="6">
+    <div class="eyebrow">Section B.1 · Connecting to the Database</div>
+    <h1 class="slide-title">DatabaseConnection.php — PDO</h1>
+    <p class="subtitle">PDO wraps the connection details into a single configured object, with error handling turned on by default.</p>
+    <div class="slide-body">
+      <div class="code-block">
+        <div class="code-header"><span>DatabaseConnection.php</span><button class="copy-btn" data-target="code2">Copy</button></div>
+        <pre class="codepre"><code id="code2"></code></pre>
+      </div>
+      <script type="text/plain" data-target="code2">&lt;?php
+class DatabaseConnection {
+    private static string $dsn = "mysql:host=localhost;dbname=app_db;charset=utf8mb4";
+    private static string $user = "root";
+    private static string $password = "password123";
+
+    public static function getConnection(): PDO {
+        return new PDO(self::$dsn, self::$user, self::$password, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+        ]);
+    }
+}
+?&gt;</script>
+    </div>
+  </section>
+
+  <!-- 7: TRY-WITH-RESOURCES -->
+  <section class="slide" data-index="7">
+    <div class="eyebrow">Going Further</div>
+    <h1 class="slide-title"><code>try-with-resources</code> &amp; <code>AutoCloseable</code></h1>
+    <p class="subtitle">Database connections are expensive and limited — forgetting to close one is a classic source of production bugs.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="block-card">
+          <h3 style="font-size:17px;">The Old, Risky Way</h3>
+          <div class="code-block">
+            <div class="code-header"><span>manual-close.java</span><button class="copy-btn" data-target="code3">Copy</button></div>
+            <pre class="codepre"><code id="code3"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code3">Connection conn = null;
+try {
+    conn = DatabaseConnection.getConnection();
+    // ... use conn ...
+} catch (SQLException e) {
+    e.printStackTrace();
+} finally {
+    if (conn != null) {
+        try { conn.close(); } catch (SQLException e2) {}
+    }
+}
+// Verbose, and easy to forget the finally block entirely.</script>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">The Modern, Safe Way</h3>
+          <div class="code-block">
+            <div class="code-header"><span>try-with-resources.java</span><button class="copy-btn" data-target="code4">Copy</button></div>
+            <pre class="codepre"><code id="code4"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code4">try (Connection conn = DatabaseConnection.getConnection();
+     PreparedStatement stmt = conn.prepareStatement(sql)) {
+    // ... use conn and stmt ...
+} catch (SQLException e) {
+    e.printStackTrace();
+}
+// Both conn and stmt close automatically here —
+// even if an exception was thrown.</script>
+        </div>
+      </div>
+      <div class="block-card" style="margin-top:12px;">
+        <p style="margin:0;">Anything listed inside the parentheses of <code>try (...)</code> must implement <code>AutoCloseable</code> — <code>Connection</code>, <code>PreparedStatement</code>, and <code>ResultSet</code> all qualify. Think of it like an automatic door closer: you never have to remember to shut it behind you.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8: MODEL CLASS -->
+  <section class="slide" data-index="8">
+    <div class="eyebrow">Section B.2 · The DAO Pattern in Practice</div>
+    <h1 class="slide-title">The Model: User.java</h1>
+    <p class="subtitle">A model class is a plain data container — the shape of one row in the <code>users</code> table.</p>
+    <div class="slide-body">
+      <div class="code-block">
+        <div class="code-header"><span>User.java</span><button class="copy-btn" data-target="code5">Copy</button></div>
+        <pre class="codepre"><code id="code5"></code></pre>
+      </div>
+      <script type="text/plain" data-target="code5">package com.example.model;
+
+public class User {
+    private int id;
+    private String name;
+    private String email;
+
+    public User(int id, String name, String email) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+    }
+
+    // Overloaded constructor — for new users that don't have an id yet
+    public User(String name, String email) {
+        this.name = name;
+        this.email = email;
+    }
+
+    public int getId() { return id; }
+    public String getName() { return name; }
+    public String getEmail() { return email; }
+}</script>
+    </div>
+  </section>
+
+  <!-- 9: DAO INTERFACE -->
+  <section class="slide" data-index="9">
+    <div class="eyebrow">Section B.2 · The DAO Pattern in Practice</div>
+    <h1 class="slide-title">The Contract: UserDAO.java</h1>
+    <p class="subtitle">Remember interfaces from Modules 9–10? Here's their real-world payoff: <code>UserDAO</code> defines <i>what</i> operations exist, with zero commitment to <i>how</i> they're implemented.</p>
+    <div class="slide-body">
+      <div class="code-block">
+        <div class="code-header"><span>UserDAO.java</span><button class="copy-btn" data-target="code6">Copy</button></div>
+        <pre class="codepre"><code id="code6"></code></pre>
+      </div>
+      <script type="text/plain" data-target="code6">package com.example.dao;
+
+import com.example.model.User;
+import java.util.List;
+
+public interface UserDAO {
+    void addUser(User user);
+    User getUserById(int id);
+    List<User> getAllUsers();
+    boolean updateUser(User user);
+    boolean deleteUser(int id);
+}</script>
+    </div>
+  </section>
+
+  <!-- 10: DAO IMPL - CREATE/READ -->
+  <section class="slide" data-index="10">
+    <div class="eyebrow">Worked Example</div>
+    <h1 class="slide-title">UserDAOImpl.java — Create &amp; Read One</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>addUser() + getUserById()</span><button class="copy-btn" data-target="code7">Copy</button></div>
+          <pre class="codepre" style="max-height:56vh;"><code id="code7"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code7">@Override
+public void addUser(User user) {
+    String sql = "INSERT INTO users (name, email) VALUES (?, ?)";
+    try (Connection conn = DatabaseConnection.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+        stmt.setString(1, user.getName());
+        stmt.setString(2, user.getEmail());
+        stmt.executeUpdate();
+        System.out.println("User added successfully.");
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+}
+
+@Override
+public User getUserById(int id) {
+    String sql = "SELECT * FROM users WHERE id = ?";
+    try (Connection conn = DatabaseConnection.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+        stmt.setInt(1, id);
+        try (ResultSet rs = stmt.executeQuery()) {
+            if (rs.next()) {
+                return new User(rs.getInt("id"), rs.getString("name"), rs.getString("email"));
+            }
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+    return null;
+}</script>
+
+        <div class="block-card">
+          <h3 style="font-size:17px;">🔍 Reading This Code</h3>
+          <ul>
+            <li><code>?</code> placeholders mark where values go — <code>stmt.setString(1, ...)</code> fills the <b>1st</b> placeholder (parameter indices are <b style="color:var(--text)">1-based</b>, not 0-based!)</li>
+            <li><code>executeUpdate()</code> is for statements that change data — INSERT, UPDATE, DELETE</li>
+            <li><code>executeQuery()</code> is for SELECT — it returns a <code>ResultSet</code> you can read from</li>
+            <li><code>rs.next()</code> moves to the first/next row and returns <code>true</code> if one exists</li>
+            <li><code>rs.getInt("id")</code> / <code>rs.getString("name")</code> pull values out by column name</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11: DAO IMPL - READ ALL -->
+  <section class="slide" data-index="11">
+    <div class="eyebrow">Worked Example</div>
+    <h1 class="slide-title">UserDAOImpl.java — Read All</h1>
+    <p class="subtitle">Iterating a <code>ResultSet</code> is like flipping through index cards one at a time.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>getAllUsers()</span><button class="copy-btn" data-target="code8">Copy</button></div>
+          <pre class="codepre"><code id="code8"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code8">@Override
+public List<User> getAllUsers() {
+    List<User> users = new ArrayList<>();
+    String sql = "SELECT * FROM users";
+    try (Connection conn = DatabaseConnection.getConnection();
+         Statement stmt = conn.createStatement();
+         ResultSet rs = stmt.executeQuery(sql)) {
+
+        while (rs.next()) {
+            users.add(new User(rs.getInt("id"), rs.getString("name"), rs.getString("email")));
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+    return users;
+}</script>
+
+        <div class="block-card">
+          <h3 style="font-size:17px;">🔍 One Row at a Time</h3>
+          <ul>
+            <li><code>while (rs.next())</code> keeps looping as long as there's another row — this is the standard pattern for reading multiple results</li>
+            <li>Each loop iteration builds one new <code>User</code> object and adds it to the list</li>
+            <li>Notice this uses a plain <code>Statement</code>, not <code>PreparedStatement</code> — there are no user-supplied values to protect here, since the query has no placeholders</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12: DAO IMPL - UPDATE/DELETE -->
+  <section class="slide" data-index="12">
+    <div class="eyebrow">Worked Example</div>
+    <h1 class="slide-title">UserDAOImpl.java — Update &amp; Delete</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>updateUser() + deleteUser()</span><button class="copy-btn" data-target="code9">Copy</button></div>
+          <pre class="codepre" style="max-height:56vh;"><code id="code9"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code9">@Override
+public boolean updateUser(User user) {
+    String sql = "UPDATE users SET name = ?, email = ? WHERE id = ?";
+    try (Connection conn = DatabaseConnection.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+        stmt.setString(1, user.getName());
+        stmt.setString(2, user.getEmail());
+        stmt.setInt(3, user.getId());
+        return stmt.executeUpdate() > 0;
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+    return false;
+}
+
+@Override
+public boolean deleteUser(int id) {
+    String sql = "DELETE FROM users WHERE id = ?";
+    try (Connection conn = DatabaseConnection.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+        stmt.setInt(1, id);
+        return stmt.executeUpdate() > 0;
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+    return false;
+}</script>
+
+        <div class="block-card">
+          <h3 style="font-size:17px;">🔍 Reading the Return Value</h3>
+          <ul>
+            <li><code>executeUpdate()</code> returns an <code>int</code> — the number of rows affected</li>
+            <li><code>&gt; 0</code> means at least one row actually changed — a clean way to confirm success or failure without a separate query</li>
+            <li>Both methods place the row identifier (<code>id</code>) in the <b>last</b> placeholder, matching the order it appears in the SQL string</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13: SQL INJECTION DANGER -->
+  <section class="slide" data-index="13">
+    <div class="eyebrow">Section B.3 · Security Warning</div>
+    <h1 class="slide-title">SQL Injection: Seeing the Danger</h1>
+    <p class="subtitle">Never concatenate user input directly into a raw SQL string. Let's see exactly why.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="lang-panel java">
+          <div class="lang-tag java">❌ Vulnerable — Java</div>
+          <div class="code-block">
+            <div class="code-header"><span>vulnerable.java</span><button class="copy-btn" data-target="code10">Copy</button></div>
+            <pre class="codepre"><code id="code10"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code10">String userInput = "' OR '1'='1";
+String query = "SELECT * FROM users WHERE username = '"
+    + userInput + "'";
+System.out.println(query);
+// SELECT * FROM users WHERE username = '' OR '1'='1'</script>
+        </div>
+        <div class="lang-panel php">
+          <div class="lang-tag php">❌ Vulnerable — PHP</div>
+          <div class="code-block">
+            <div class="code-header"><span>vulnerable.php</span><button class="copy-btn" data-target="code11">Copy</button></div>
+            <pre class="codepre"><code id="code11"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code11">&lt;?php
+$userInput = "' OR '1'='1";
+$query = "SELECT * FROM users WHERE username = '"
+    . $userInput . "'";
+echo $query;
+// SELECT * FROM users WHERE username = '' OR '1'='1'
+?&gt;</script>
+        </div>
+      </div>
+      <div class="block-card" style="margin-top:12px;">
+        <p style="margin:0;"><b style="color:var(--rose)">What just happened:</b> the attacker's input didn't just fill in a name — it rewrote the query's logic. <code>'1'='1'</code> is always true, so this query could return <i>every user in the table</i>, or bypass a login check entirely.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14: SQL INJECTION FIX -->
+  <section class="slide" data-index="14">
+    <div class="eyebrow">The Fix</div>
+    <h1 class="slide-title">PreparedStatement Shuts the Door</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="block-card">
+          <h3 style="font-size:17px;">✅ Secure — Parameterized</h3>
+          <div class="code-block">
+            <div class="code-header"><span>secure.java</span><button class="copy-btn" data-target="code12">Copy</button></div>
+            <pre class="codepre"><code id="code12"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code12">String query = "SELECT * FROM users WHERE username = ?";
+PreparedStatement stmt = connection.prepareStatement(query);
+stmt.setString(1, userInput); // index is 1-based
+ResultSet rs = stmt.executeQuery();
+// userInput is ALWAYS treated as plain data —
+// never as part of the query's structure.</script>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">Why This Works</h3>
+          <p>A <code>PreparedStatement</code> sends the query's <i>structure</i> to the database first, fully locked in. Only afterward does it send the values to slot into each <code>?</code>. There's no way for a value to "break out" and rewrite the query — it's like a fill-in-the-blank form, not an open text field someone can scribble new instructions onto.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15: GUIDED DRILL - JAVA -->
+  <section class="slide" data-index="15">
+    <div class="eyebrow">Section C · Guided Drill</div>
+    <h1 class="slide-title">MainApp.java — Full CRUD Workflow</h1>
+    <p class="subtitle">Execute Create, Read, Update, and Read-All operations on a user system using the DAO architecture.</p>
+    <div class="slide-body">
+      <div class="code-block">
+        <div class="code-header"><span>MainApp.java</span><button class="copy-btn" data-target="code13">Copy</button></div>
+        <pre class="codepre" style="max-height:60vh;"><code id="code13"></code></pre>
+      </div>
+      <script type="text/plain" data-target="code13">package com.example.app;
+
+import com.example.dao.UserDAO;
+import com.example.dao.UserDAOImpl;
+import com.example.model.User;
+
+public class MainApp {
+    public static void main(String[] args) {
+        UserDAO userDAO = new UserDAOImpl();
+
+        // 1. Create
+        User newUser = new User("Jane Doe", "jane@example.com");
+        userDAO.addUser(newUser);
+
+        // 2. Read
+        User fetchedUser = userDAO.getUserById(1);
+        if (fetchedUser != null) {
+            System.out.println("Fetched User: " + fetchedUser.getName()
+                + " (" + fetchedUser.getEmail() + ")");
+        }
+
+        // 3. Update
+        if (fetchedUser != null) {
+            User updatedUser = new User(fetchedUser.getId(), "Jane Smith", "janesmith@example.com");
+            userDAO.updateUser(updatedUser);
+        }
+
+        // 4. Read All
+        System.out.println("All Users:");
+        userDAO.getAllUsers().forEach(u -> System.out.println("- " + u.getName()));
+    }
+}</script>
+    </div>
+  </section>
+
+  <!-- 16: GUIDED DRILL PART 2 - PHP -->
+  <section class="slide" data-index="16">
+    <div class="eyebrow">Guided Drill · Part 2</div>
+    <h1 class="slide-title">Translating UserDAO to PHP (PDO)</h1>
+    <p class="subtitle">Same contract, same shape — Java's <code>PreparedStatement</code> becomes PDO's <code>prepare()</code> + <code>execute()</code>.</p>
+    <div class="slide-body">
+      <div class="code-block">
+        <div class="code-header"><span>UserDAOImpl.php</span><button class="copy-btn" data-target="code14">Copy</button></div>
+        <pre class="codepre" style="max-height:56vh;"><code id="code14"></code></pre>
+      </div>
+      <script type="text/plain" data-target="code14">&lt;?php
+interface UserDAO {
+    public function addUser(User $user): void;
+    public function getUserById(int $id): ?User;
+    public function getAllUsers(): array;
+}
+
+class UserDAOImpl implements UserDAO {
+    public function addUser(User $user): void {
+        $sql = "INSERT INTO users (name, email) VALUES (?, ?)";
+        $stmt = DatabaseConnection::getConnection()->prepare($sql);
+        $stmt->execute([$user->getName(), $user->getEmail()]);
+        echo "User added successfully.\n";
+    }
+
+    public function getUserById(int $id): ?User {
+        $sql = "SELECT * FROM users WHERE id = ?";
+        $stmt = DatabaseConnection::getConnection()->prepare($sql);
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+        return $row ? new User($row['id'], $row['name'], $row['email']) : null;
+    }
+
+    public function getAllUsers(): array {
+        $sql = "SELECT * FROM users";
+        $stmt = DatabaseConnection::getConnection()->query($sql);
+        $users = [];
+        foreach ($stmt as $row) {
+            $users[] = new User($row['id'], $row['name'], $row['email']);
+        }
+        return $users;
+    }
+}
+?&gt;</script>
+      <div class="block-card" style="margin-top:12px;">
+        <p style="margin:0;"><b style="color:var(--text)">The pattern still holds:</b> an interface defines the contract, a concrete class implements it, and <code>?</code> placeholders (filled via the <code>execute([...])</code> array) keep every value safely parameterized — PDO's version of the exact same defense.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 17: CHEAT SHEET -->
+  <section class="slide" data-index="17">
+    <div class="eyebrow">Reference Table</div>
+    <h1 class="slide-title">Java JDBC vs. PHP PDO — Cheat Sheet</h1>
+    <div class="slide-body">
+      <div class="spec-card">
+        <table class="cmp">
+          <tr><th>Concept</th><th>Java (JDBC)</th><th>PHP (PDO)</th></tr>
+          <tr><td><b>Get a connection</b></td><td class="java-col">DriverManager.getConnection(...)</td><td class="php-col">new PDO($dsn, $user, $pass)</td></tr>
+          <tr><td><b>Prepared query</b></td><td class="java-col">conn.prepareStatement(sql)</td><td class="php-col">$pdo-&gt;prepare($sql)</td></tr>
+          <tr><td><b>Bind + run (SELECT)</b></td><td class="java-col">stmt.setString(1,v); stmt.executeQuery()</td><td class="php-col">$stmt-&gt;execute([$v])</td></tr>
+          <tr><td><b>Run (INSERT/UPDATE/DELETE)</b></td><td class="java-col">stmt.executeUpdate()</td><td class="php-col">$stmt-&gt;execute([...])</td></tr>
+          <tr><td><b>Read one row</b></td><td class="java-col">rs.next(); rs.getString("col")</td><td class="php-col">$stmt-&gt;fetch()</td></tr>
+          <tr><td><b>Read all rows</b></td><td class="java-col">while (rs.next()) { ... }</td><td class="php-col">foreach ($stmt as $row) { ... }</td></tr>
+          <tr><td><b>Auto-close resources</b></td><td class="java-col">try-with-resources</td><td class="php-col">garbage collected automatically</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 18: ANALOGIES -->
+  <section class="slide" data-index="18">
+    <div class="eyebrow">Making It Stick</div>
+    <h1 class="slide-title">Real-Life Analogies</h1>
+    <div class="slide-body">
+      <div class="grid-2x2">
+        <div class="block-card">
+          <h3 style="font-size:17px;">DAO Pattern <span class="tag">restaurant kitchen</span></h3>
+          <p>The waiter (business logic) never cooks — they just place an order with the kitchen (DAO). The kitchen's recipes can change completely without the waiter's script changing at all.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">PreparedStatement <span class="tag">fill-in-the-blank form</span></h3>
+          <p>The form's structure is fixed and printed. You can only write inside the blanks — you can't scribble new instructions into the margins that change what the form does.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">try-with-resources <span class="tag">automatic door closer</span></h3>
+          <p>You never have to remember to shut it behind you — it closes itself the moment you leave the room, even if you left in a hurry (an exception).</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">ResultSet.next() <span class="tag">flipping index cards</span></h3>
+          <p>One card at a time, front to back — <code>next()</code> flips to the next card and tells you whether there was one left to flip to.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 19: FAQ -->
+  <section class="slide" data-index="19">
+    <div class="eyebrow">Section E · Wrap-Up</div>
+    <h1 class="slide-title">Frequently Asked Questions</h1>
+    <div class="slide-body">
+      <div class="grid-2x2">
+        <div class="block-card">
+          <h3 style="font-size:16px;">What is the DAO pattern, and why use it?</h3>
+          <p>It provides a unified interface between application logic and persistence storage. Encapsulating SQL inside DAO classes means schema changes don't ripple into business logic.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:16px;">executeQuery() vs. executeUpdate()?</h3>
+          <p><code>executeQuery()</code> is for SELECT statements, returning a <code>ResultSet</code>. <code>executeUpdate()</code> is for INSERT/UPDATE/DELETE, returning an <code>int</code> row count.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:16px;">How does try-with-resources prevent leaks?</h3>
+          <p>It automatically closes any <code>AutoCloseable</code> resource — <code>Connection</code>, <code>PreparedStatement</code>, <code>ResultSet</code> — at the end of the block, even if an exception occurs.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:16px;">What exactly is a ResultSet?</h3>
+          <p>A cursor over the rows a query returned. Call <code>rs.next()</code> to advance one row at a time, then <code>rs.getInt("col")</code> / <code>rs.getString("col")</code> to read that row's values.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 20: RECAP -->
+  <section class="slide" data-index="20">
+    <div class="eyebrow">Before the Skill Check</div>
+    <h1 class="slide-title">Recap</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="block-card">
+          <h3 style="font-size:17px;">Connecting &amp; Structuring</h3>
+          <ul>
+            <li>JDBC (Java) and PDO (PHP) both open a connection to a relational database through a driver</li>
+            <li><code>try-with-resources</code> auto-closes <code>Connection</code>, <code>PreparedStatement</code>, and <code>ResultSet</code></li>
+            <li>The DAO pattern: a model (<code>User</code>), an interface (<code>UserDAO</code>), and an implementation (<code>UserDAOImpl</code>)</li>
+          </ul>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">Reading, Writing &amp; Staying Safe</h3>
+          <ul>
+            <li><code>executeQuery()</code> → SELECT → <code>ResultSet</code>; <code>executeUpdate()</code> → INSERT/UPDATE/DELETE → row count</li>
+            <li>Parameter indices in <code>PreparedStatement</code> are <b>1-based</b>, not 0-based</li>
+            <li>Never concatenate user input into SQL — <code>PreparedStatement</code> / PDO's <code>execute([...])</code> keep values as pure data, always</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 21: MCQ -->
+  <section class="slide" data-index="21">
+    <div class="eyebrow">Activity 1 of 3 · Multiple Choice (3 &times; 1 pt)</div>
+    <h1 class="slide-title">Multiple Choice — Test Yourself</h1>
+    <p class="subtitle">Total for this activity set: <b style="color:var(--text)">15 points</b> (3 MC + 7 Guess-the-Output + 2 Coding Problems). Answers are revealed on the Answer Key slides at the end.</p>
+    <div class="slide-body">
+      <div class="mcq-grid odd-last">
+        <div class="mcq-card">
+          <div class="qnum">QUESTION 01 · 1 pt</div>
+          <div class="qtext">In JDBC <code>PreparedStatement</code> parameter binding, what is the starting index for positional parameters (<code>?</code>)?</div>
+          <div class="mcq-opts">
+            <div><b>A.</b> 0-based indexing (the first parameter is index 0)</div>
+            <div><b>B.</b> 1-based indexing (the first parameter is index 1)</div>
+            <div><b>C.</b> Key-based named parameter indexing only</div>
+            <div><b>D.</b> Dynamic reverse indexing</div>
+          </div>
+        </div>
+        <div class="mcq-card">
+          <div class="qnum">QUESTION 02 · 1 pt</div>
+          <div class="qtext">What design pattern isolates raw database interaction logic from the core business logic of an application?</div>
+          <div class="mcq-opts">
+            <div><b>A.</b> Singleton Pattern</div>
+            <div><b>B.</b> Factory Pattern</div>
+            <div><b>C.</b> Data Access Object (DAO) Pattern</div>
+            <div><b>D.</b> Observer Pattern</div>
+          </div>
+        </div>
+        <div class="mcq-card">
+          <div class="qnum">QUESTION 03 · 1 pt</div>
+          <div class="qtext">Which JDBC method should be used for SQL statements that modify data (INSERT, UPDATE, DELETE)?</div>
+          <div class="mcq-opts">
+            <div><b>A.</b> executeQuery()</div>
+            <div><b>B.</b> executeUpdate()</div>
+            <div><b>C.</b> executeFetch()</div>
+            <div><b>D.</b> executeBatchQuery()</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 22: GO 1-2 -->
+  <section class="slide" data-index="22">
+    <div class="eyebrow">Activity 2 of 3 · Guess the Output (7 &times; 1 pt)</div>
+    <h1 class="slide-title">Round 1 — The Model Class, Java &amp; PHP</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+        <div class="go-card">
+          <div class="qnum">ITEM 01 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>UserModel.java</span><button class="copy-btn" data-target="go1">Copy</button></div>
+            <pre class="codepre"><code id="go1"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go1">class User {
+    private String name;
+    private String email;
+    User(String name, String email) {
+        this.name = name;
+        this.email = email;
+    }
+    String getName() { return name; }
+}
+public class Test {
+    public static void main(String[] args) {
+        User u = new User("Jane", "jane@example.com");
+        System.out.println(u.getName());
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="qnum">ITEM 02 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>UserModel.php</span><button class="copy-btn" data-target="go2">Copy</button></div>
+            <pre class="codepre"><code id="go2"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go2">&lt;?php
+class User {
+    private string $name;
+    private string $email;
+    public function __construct(string $name, string $email) {
+        $this->name = $name;
+        $this->email = $email;
+    }
+    public function getName(): string {
+        return $this->name;
+    }
+}
+$u = new User("Jane", "jane@example.com");
+echo $u->getName();
+?&gt;</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 23: GO 3-4 -->
+  <section class="slide" data-index="23">
+    <div class="eyebrow">Activity 2 of 3 · Guess the Output (7 &times; 1 pt)</div>
+    <h1 class="slide-title">Round 2 — Seeing SQL Injection Happen</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+        <div class="go-card">
+          <div class="qnum">ITEM 03 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>Injection.java</span><button class="copy-btn" data-target="go3">Copy</button></div>
+            <pre class="codepre"><code id="go3"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go3">public class Test {
+    public static void main(String[] args) {
+        String userInput = "' OR '1'='1";
+        String query = "SELECT * FROM users WHERE username = '"
+            + userInput + "'";
+        System.out.println(query);
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="qnum">ITEM 04 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>injection.php</span><button class="copy-btn" data-target="go4">Copy</button></div>
+            <pre class="codepre"><code id="go4"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go4">&lt;?php
+$userInput = "' OR '1'='1";
+$query = "SELECT * FROM users WHERE username = '"
+    . $userInput . "'";
+echo $query;
+?&gt;</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 24: GO 5-6 -->
+  <section class="slide" data-index="24">
+    <div class="eyebrow">Activity 2 of 3 · Guess the Output (7 &times; 1 pt)</div>
+    <h1 class="slide-title">Round 3 — The DAO List Pattern &amp; an Execute Trap</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+        <div class="go-card">
+          <div class="qnum">ITEM 05 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>ListUsers.java</span><button class="copy-btn" data-target="go5">Copy</button></div>
+            <pre class="codepre"><code id="go5"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go5">import java.util.ArrayList;
+import java.util.List;
+
+public class Test {
+    public static void main(String[] args) {
+        List<String> names = new ArrayList<>();
+        names.add("Ana");
+        names.add("Ben");
+        names.forEach(n -> System.out.println("- " + n));
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="qnum">ITEM 06 · 1 pt · TRAP</div>
+          <div class="code-block">
+            <div class="code-header"><span>ExecuteTrap.java</span><button class="copy-btn" data-target="go6">Copy</button></div>
+            <pre class="codepre"><code id="go6"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go6">String sql = "INSERT INTO users (name, email) VALUES (?, ?)";
+PreparedStatement stmt = conn.prepareStatement(sql);
+stmt.setString(1, "Ana");
+stmt.setString(2, "ana@example.com");
+ResultSet rs = stmt.executeQuery(); // ?</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="hint: wrong method for an INSERT..."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 25: GO 7 solo -->
+  <section class="slide" data-index="25">
+    <div class="eyebrow">Activity 2 of 3 · Guess the Output (7 &times; 1 pt)</div>
+    <h1 class="slide-title">Round 4 — Reading executeUpdate()'s Return Value</h1>
+    <div class="slide-body">
+      <div class="go-grid solo">
+        <div class="go-card">
+          <div class="qnum">ITEM 07 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>RowsAffected.java</span><button class="copy-btn" data-target="go7">Copy</button></div>
+            <pre class="codepre"><code id="go7"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go7">public class Test {
+    public static void main(String[] args) {
+        int rowsAffected = 3; // simulating stmt.executeUpdate()
+
+        if (rowsAffected > 0) {
+            System.out.println("Update successful, rows changed: " + rowsAffected);
+        } else {
+            System.out.println("No rows updated");
+        }
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 26: CODING PROBLEMS -->
+  <section class="slide" data-index="26">
+    <div class="eyebrow">Activity 3 of 3 · Coding Problems (2 &times; 2.5 pts)</div>
+    <h1 class="slide-title">Write the Code Yourself</h1>
+    <p class="subtitle">Same DAO shape, two languages. Sample solutions are on the Answer Key.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="lang-panel java">
+          <div class="lang-tag java">Problem 1 · 2.5 pts — Java</div>
+          <p>Write a model class <code>Product</code> with fields <code>id</code>, <code>name</code>, and <code>price</code>, a constructor, and getters for all three. Then write an interface <code>ProductDAO</code> with two method signatures: <code>void addProduct(Product p)</code> and <code>List&lt;Product&gt; getAllProducts()</code>.</p>
+        </div>
+        <div class="lang-panel php">
+          <div class="lang-tag php">Problem 2 · 2.5 pts — PHP</div>
+          <p>Write the same structure in PHP: a <code>Product</code> class with a constructor and getters (using type declarations), plus an interface <code>ProductDAO</code> with matching method signatures — <code>addProduct(Product $p): void</code> and <code>getAllProducts(): array</code>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 27: KEY QUOTES -->
+  <section class="slide" data-index="27">
+    <div class="eyebrow">Key Quotes</div>
+    <h1 class="slide-title">In This Lesson's Own Words</h1>
+    <div class="slide-body">
+      <div class="quote-wrap">
+        <div class="quote-block">
+          <p>Modern backend applications separate database persistence logic from business logic. Mastering JDBC, PreparedStatements, and the DAO pattern ensures secure, maintainable, and scalable data management.</p>
+          <span>— Lesson Key Takeaway</span>
+        </div>
+        <div class="quote-block">
+          <p>Never concatenate user inputs directly into raw SQL query strings! Always use Prepared Statements with parameterized placeholders.</p>
+          <span>— Security Warning, Section B.3</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 28: ANSWER KEY - MC -->
+  <section class="slide" data-index="28">
+    <div class="eyebrow">Receipt · Page 1 of 3</div>
+    <h1 class="slide-title">Answer Key — Multiple Choice</h1>
+    <div class="slide-body">
+      <div class="ans-scroll">
+        <div class="ans-block">
+          <h4>Question 01</h4>
+          <p><b>B — 1-based indexing.</b> The first <code>?</code> placeholder is index 1, not 0 — a common off-by-one trap for developers coming from array-indexing habits.</p>
+        </div>
+        <div class="ans-block">
+          <h4>Question 02</h4>
+          <p><b>C — Data Access Object (DAO) Pattern.</b> It centralizes SQL and database interaction, keeping business logic completely unaware of how data is actually stored.</p>
+        </div>
+        <div class="ans-block">
+          <h4>Question 03</h4>
+          <p><b>B — executeUpdate().</b> Used for INSERT, UPDATE, DELETE, and DDL statements — returns the number of rows affected, not a ResultSet.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 29: ANSWER KEY - GO -->
+  <section class="slide" data-index="29">
+    <div class="eyebrow">Receipt · Page 2 of 3</div>
+    <h1 class="slide-title">Answer Key — Guess the Output</h1>
+    <div class="slide-body">
+      <div class="ans-scroll">
+        <div class="ans-cols" style="display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:0 24px; align-content:start;">
+          <div class="ans-block"><h4>GO #01 — UserModel.java</h4><p>The constructor sets the field; the getter reads it back.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">Jane</pre></div>
+          <div class="ans-block"><h4>GO #02 — UserModel.php</h4><p>Identical logic, PHP syntax with type declarations.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">Jane</pre></div>
+          <div class="ans-block"><h4>GO #03 — Injection.java</h4><p>The malicious input rewrites the query's WHERE clause into something always true.</p><pre style="font-family:var(--mono); font-size:11.5px; color:var(--rose); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">SELECT * FROM users WHERE username = '' OR '1'='1'</pre></div>
+          <div class="ans-block"><h4>GO #04 — injection.php</h4><p>Same vulnerability, same result — PHP concatenation is just as dangerous as Java's.</p><pre style="font-family:var(--mono); font-size:11.5px; color:var(--rose); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">SELECT * FROM users WHERE username = '' OR '1'='1'</pre></div>
+          <div class="ans-block"><h4>GO #05 — ListUsers.java</h4><p>This is the exact shape of the DAO's <code>getAllUsers().forEach(...)</code> pattern from the guided drill.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">- Ana
+- Ben</pre></div>
+          <div class="ans-block"><h4>GO #06 — ExecuteTrap.java (trap!)</h4><p><code>executeQuery()</code> is only for SELECT statements. Calling it on an INSERT throws an exception at runtime.</p><pre style="font-family:var(--mono); font-size:11.5px; color:var(--rose); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">SQLException: executeQuery() cannot be used for an INSERT statement — use executeUpdate() instead</pre></div>
+          <div class="ans-block"><h4>GO #07 — RowsAffected.java</h4><p><code>rowsAffected</code> is <code>3</code>, which is greater than <code>0</code>, so the success branch runs.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">Update successful, rows changed: 3</pre></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 30: ANSWER KEY - CODING -->
+  <section class="slide" data-index="30">
+    <div class="eyebrow">Receipt · Page 3 of 3</div>
+    <h1 class="slide-title">Answer Key — Coding Problems</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>Problem 1 — Product.java</span><button class="copy-btn" data-target="ansc1">Copy</button></div>
+          <pre class="codepre"><code id="ansc1"></code></pre>
+        </div>
+        <script type="text/plain" data-target="ansc1">public class Product {
+    private int id;
+    private String name;
+    private double price;
+
+    public Product(int id, String name, double price) {
+        this.id = id;
+        this.name = name;
+        this.price = price;
+    }
+
+    public int getId() { return id; }
+    public String getName() { return name; }
+    public double getPrice() { return price; }
+}
+
+import java.util.List;
+
+public interface ProductDAO {
+    void addProduct(Product p);
+    List<Product> getAllProducts();
+}</script>
+
+        <div class="code-block">
+          <div class="code-header"><span>Problem 2 — Product.php</span><button class="copy-btn" data-target="ansc2">Copy</button></div>
+          <pre class="codepre"><code id="ansc2"></code></pre>
+        </div>
+        <script type="text/plain" data-target="ansc2">&lt;?php
+class Product {
+    private int $id;
+    private string $name;
+    private float $price;
+
+    public function __construct(int $id, string $name, float $price) {
+        $this->id = $id;
+        $this->name = $name;
+        $this->price = $price;
+    }
+
+    public function getId(): int { return $this->id; }
+    public function getName(): string { return $this->name; }
+    public function getPrice(): float { return $this->price; }
+}
+
+interface ProductDAO {
+    public function addProduct(Product $p): void;
+    public function getAllProducts(): array;
+}
+?&gt;</script>
+      </div>
+    </div>
+  </section>
+
+  <!-- 31: CLOSING -->
+  <section class="slide" data-index="31">
+    <div class="closing-wrap">
+      <div class="eyebrow" style="margin:0 auto;">Closing Note · End of the Bridge</div>
+      <div class="final-quote">"Every object you ever built now has somewhere real to live."</div>
+      <div class="final-msg">From Module 9's first PHP class, through Module 10's side-by-side architecture, to today's working connection into MySQL itself — the bridge is complete. Your classes, your interfaces, your carefully-encapsulated fields all lead here: real, persistent, secured data. Review the DAO pattern, try building your own model end to end, and take this forward into whatever you build next. Thank you for following the whole journey — good luck, and happy building. 🏁</div>
+    </div>
+  </section>
+
+</div>
+
+
+
+<!-- Shortcuts overlay -->
+<div class="overlay" id="overlay">
+  <div class="overlay-panel">
+    <h2>Keyboard &amp; Mouse Shortcuts</h2>
+    <div class="row"><span>Next slide</span><span><kbd>→</kbd> / right-click / front side button</span></div>
+    <div class="row"><span>Previous slide</span><span><kbd>←</kbd> / back side button</span></div>
+    <div class="row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="row"><span>Show this panel</span><span><kbd>?</kbd></span></div>
+    <div class="row"><span>Close this panel</span><span><kbd>Esc</kbd></span></div>
+    <button class="overlay-close" id="overlayClose">Back to Slides</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  var TOKEN_RE = /(\/\/.*$)|("(?:[^"\\]|\\.)*")|('(?:[^'\\]|\\.)*')|(&lt;\?php|\?&gt;)|(\$[A-Za-z_][A-Za-z0-9_]*)|\b(public|private|protected|static|final|abstract|interface|implements|extends|class|new|void|int|double|boolean|char|String|return|if|else|for|foreach|as|while|this|super|true|false|null|import|function|echo|print|package)\b|\b(\d+\.\d+|\d+)\b|\b([A-Z][A-Za-z0-9_]*)\b/gm;
+
+  function highlightCode(src){
+    var out = '';
+    var lastIndex = 0;
+    var m;
+    TOKEN_RE.lastIndex = 0;
+    while ((m = TOKEN_RE.exec(src)) !== null){
+      out += escapeHtml(src.slice(lastIndex, m.index));
+      if (m[1] !== undefined) out += '<span class="tok-comment">' + escapeHtml(m[1]) + '</span>';
+      else if (m[2] !== undefined) out += '<span class="tok-string">' + escapeHtml(m[2]) + '</span>';
+      else if (m[3] !== undefined) out += '<span class="tok-string">' + escapeHtml(m[3]) + '</span>';
+      else if (m[4] !== undefined) out += '<span class="tok-tag">' + m[4] + '</span>';
+      else if (m[5] !== undefined) out += '<span class="tok-var">' + escapeHtml(m[5]) + '</span>';
+      else if (m[6] !== undefined) out += '<span class="tok-keyword">' + escapeHtml(m[6]) + '</span>';
+      else if (m[7] !== undefined) out += '<span class="tok-number">' + escapeHtml(m[7]) + '</span>';
+      else if (m[8] !== undefined) out += '<span class="tok-type">' + escapeHtml(m[8]) + '</span>';
+      lastIndex = TOKEN_RE.lastIndex;
+      if (m.index === TOKEN_RE.lastIndex) TOKEN_RE.lastIndex++;
+    }
+    out += escapeHtml(src.slice(lastIndex));
+    return out;
+  }
+
+  function initCodeBlocks(){
+    var sources = document.querySelectorAll('script[type="text/plain"][data-target]');
+    sources.forEach(function(src){
+      var id = src.getAttribute('data-target');
+      var target = document.getElementById(id);
+      if (!target) return;
+      var raw = src.textContent.replace(/^\n/, '').replace(/\n$/, '');
+      // The raw text may contain literal &lt;/&gt; entities we intentionally wrote for <?php tags;
+      // decode those back to real characters for the copy button + tokenizer input.
+      var decoded = raw.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+      target.innerHTML = highlightCode(raw);
+      target.setAttribute('data-raw', decoded);
+    });
+  }
+
+  function fallbackCopy(text){
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); } catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  function initCopyButtons(){
+    document.querySelectorAll('.copy-btn').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var id = btn.getAttribute('data-target');
+        var code = document.getElementById(id);
+        var text = code ? (code.getAttribute('data-raw') || code.textContent) : '';
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).catch(function(){ fallbackCopy(text); });
+        } else {
+          fallbackCopy(text);
+        }
+        var originalText = btn.textContent;
+        btn.textContent = 'Copied! ✓';
+        btn.classList.add('copied');
+        setTimeout(function(){
+          btn.textContent = originalText;
+          btn.classList.remove('copied');
+        }, 1400);
+      });
+    });
+  }
+
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length;
+  var current = 0;
+  var progressFill = document.getElementById('progressFill');
+  var counterEl = document.getElementById('counter');
+  var overlay = document.getElementById('overlay');
+  var overlayClose = document.getElementById('overlayClose');
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function updateChrome(){
+    var pct = ((current + 1) / total) * 100;
+    progressFill.style.width = pct + '%';
+    counterEl.textContent = (current + 1) + ' / ' + total;
+  }
+
+  function isInteractive(el){
+    return !!(el.closest && el.closest('button, a, input, textarea, select, .no-nav, .overlay'));
+  }
+
+  function goTo(target, dir){
+    if (target < 0 || target >= total || target === current) return;
+    var oldEl = slides[current];
+    var newEl = slides[target];
+
+    oldEl.classList.remove('active');
+    oldEl.classList.add(dir > 0 ? 'exit-left' : 'exit-right');
+
+    newEl.classList.remove('exit-left', 'exit-right', 'enter-left');
+    if (reduceMotion){
+      newEl.classList.add('active');
+    } else {
+      if (dir < 0) newEl.classList.add('enter-left');
+      void newEl.offsetWidth;
+      requestAnimationFrame(function(){
+        newEl.classList.add('active');
+      });
+    }
+    newEl.scrollTop = 0;
+
+    current = target;
+    updateChrome();
+  }
+
+  function next(){ goTo(current + 1, 1); }
+  function prev(){ goTo(current - 1, -1); }
+  function first(){ goTo(0, -1); }
+  function last(){ goTo(total - 1, 1); }
+
+  function showOverlay(){ overlay.classList.add('show'); }
+  function hideOverlay(){ overlay.classList.remove('show'); }
+  function toggleOverlay(){
+    if (overlay.classList.contains('show')) hideOverlay(); else showOverlay();
+  }
+
+  document.addEventListener('keydown', function(e){
+    if (e.key === '?' ){ toggleOverlay(); return; }
+    if (e.key === 'Escape'){ hideOverlay(); return; }
+    if (overlay.classList.contains('show')) return;
+    if (e.key === 'ArrowRight' || e.key === 'PageDown'){ next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ prev(); }
+    else if (e.key === 'Home'){ first(); }
+    else if (e.key === 'End'){ last(); }
+  });
+
+  overlayClose.addEventListener('click', hideOverlay);
+  overlay.addEventListener('mousedown', function(e){
+    if (e.target === overlay) hideOverlay();
+  });
+
+  document.addEventListener('contextmenu', function(e){
+    e.preventDefault();
+  }, { capture: true });
+
+  document.addEventListener('mousedown', function(e){
+    if (overlay.classList.contains('show')) return;
+    if (isInteractive(e.target)) return;
+
+    if (e.button === 2){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    } else if (e.button === 3){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      prev();
+    } else if (e.button === 4){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    }
+  }, { capture: true });
+
+  document.addEventListener('auxclick', function(e){
+    if (e.button === 1 || e.button === 2 || e.button === 3 || e.button === 4){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, { capture: true });
+
+  document.addEventListener('mouseup', function(e){
+    if (e.button === 3 || e.button === 4){
+      e.preventDefault();
+    }
+  }, { capture: true });
+
+  var touchStartX = null, touchStartY = null;
+  document.addEventListener('touchstart', function(e){
+    if (e.touches.length !== 1) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(e){
+    if (touchStartX === null) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5){
+      if (dx < 0) next(); else prev();
+    }
+    touchStartX = null; touchStartY = null;
+  }, { passive: true });
+
+  initCodeBlocks();
+  initCopyButtons();
+  slides[0].classList.add('active');
+  updateChrome();
+
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Module 3 — Classes &amp; Objects in Java — Roast-Level Crash Course</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+        * {
+            box-sizing: border-box;
+        }
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--ink);
+            transition: background 300ms ease, color 300ms ease;
+        }
+        h1,
+        h2,
+        h3 {
+            font-family: 'Fraunces', Georgia, serif;
+            margin: 0;
+        }
+        code,
+        pre,
+        .mono {
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+        }
+
+        :root {
+            --bg: #F5E3B8;
+            --bg-alt: #FBF1DA;
+            --accent: #C27B22;
+            --accent-strong: #9C5A15;
+            --card: #FFF7E6;
+            --card-border: rgba(64, 43, 24, 0.18);
+            --shadow: rgba(64, 43, 24, 0.15);
+            --ink: #2E1408;
+            --ink-soft: #3F2210;
+            --eyebrow-ink: #33170A;
+            --card-ink: #2E1408;
+            --card-ink-soft: #3F2210;
+            --card-accent: #33170A;
+            --step-num-ink: #FFEDDD;
+            --success-ink: #1C4225;
+            --tick: 300ms;
+        }
+
+        #app {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .progress-track {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: rgba(64, 43, 24, 0.12);
+            z-index: 50;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-strong), var(--accent));
+            transition: width 350ms ease;
+        }
+
+        .roast-gauge {
+            position: fixed;
+            top: 18px;
+            right: 22px;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.14em;
+            color: var(--ink-soft);
+            user-select: none;
+            pointer-events: none;
+            transition: color var(--tick) ease;
+        }
+        .roast-gauge svg {
+            width: 34px;
+            height: 34px;
+            display: block;
+        }
+        .roast-gauge .steam {
+            transform-origin: center bottom;
+        }
+        @media (prefers-reduced-motion: no-preference) {
+            .roast-gauge .steam {
+                animation: steamRise 2.6s ease-in-out infinite;
+            }
+            .roast-gauge .steam.s2 {
+                animation-delay: 0.5s;
+            }
+        }
+        @keyframes steamRise {
+            0% {
+                opacity: 0;
+                transform: translateY(0) scaleY(1);
+            }
+            30% {
+                opacity: 0.65;
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-7px) scaleY(1.3);
+            }
+        }
+        .roast-label {
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .stage {
+            position: absolute;
+            inset: 0;
+        }
+        .slide {
+            position: absolute;
+            inset: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: safe center;
+            padding: 76px clamp(28px, 7vw, 120px) 90px;
+            opacity: 0;
+            transform: translateX(0) scale(1);
+            will-change: transform, opacity;
+        }
+        .slide.active {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+            transition: opacity var(--tick) ease, transform var(--tick) ease;
+            z-index: 5;
+        }
+        .slide.enter-fwd {
+            transform: translateX(64px) scale(0.985);
+            opacity: 0;
+        }
+        .slide.enter-bwd {
+            transform: translateX(-64px) scale(0.985);
+            opacity: 0;
+        }
+        .slide.exit-fwd {
+            transform: translateX(-64px) scale(0.985);
+            opacity: 0;
+            transition: opacity var(--tick) ease, transform var(--tick) ease;
+            z-index: 4;
+        }
+        .slide.exit-bwd {
+            transform: translateX(64px) scale(0.985);
+            opacity: 0;
+            transition: opacity var(--tick) ease, transform var(--tick) ease;
+            z-index: 4;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .slide,
+            .slide.active,
+            .slide.enter-fwd,
+            .slide.enter-bwd,
+            .slide.exit-fwd,
+            .slide.exit-bwd {
+                transition: opacity 120ms linear !important;
+                transform: none !important;
+            }
+        }
+        .slide-inner {
+            max-width: 1020px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .eyebrow {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12.5px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--eyebrow-ink);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+            transition: color var(--tick) ease;
+        }
+        .eyebrow::after {
+            content: '';
+            flex: 1;
+            height: 0;
+            border-top: 2px dashed var(--card-border);
+        }
+        h2.slide-title {
+            font-size: clamp(28px, 4vw, 44px);
+            font-weight: 700;
+            line-height: 1.12;
+            margin-bottom: 16px;
+            letter-spacing: -0.01em;
+        }
+        .lede {
+            font-size: 17px;
+            color: var(--ink-soft);
+            margin: -4px 0 18px;
+            max-width: 72ch;
+            line-height: 1.55;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 18px 20px;
+            min-width: 0;
+            box-shadow: 0 2px 10px var(--shadow);
+            transition: background var(--tick) ease, border-color var(--tick) ease;
+        }
+        .card h3 {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            font-family: 'Inter', sans-serif;
+            color: var(--card-ink);
+        }
+        .card p,
+        .card li {
+            font-size: 14.5px;
+            color: var(--card-ink-soft);
+            line-height: 1.5;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+            gap: 14px;
+            min-width: 0;
+        }
+        .card-grid.cols-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .card-grid.cols-3 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .card-grid.cols-4 {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+        @media (max-width:760px) {
+            .card-grid.cols-4 {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .card-grid.cols-3 {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .card-grid.cols-2 {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 26px;
+            align-items: start;
+            min-width: 0;
+        }
+        @media (max-width:760px) {
+            .two-col {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+        .two-col>* {
+            min-width: 0;
+        }
+
+        ul.ticket-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+        }
+        ul.ticket-list li {
+            position: relative;
+            padding-left: 22px;
+            font-size: 15.5px;
+            line-height: 1.5;
+            color: var(--ink);
+        }
+        ul.ticket-list li::before {
+            content: '—';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        ol.step-list {
+            list-style: none;
+            counter-reset: step;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        ol.step-list li {
+            position: relative;
+            padding-left: 40px;
+            font-size: 15.5px;
+            line-height: 1.55;
+            min-width: 0;
+        }
+        ol.step-list li::before {
+            counter-increment: step;
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            top: -1px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--card-accent);
+            color: var(--step-num-ink);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 13px;
+            transition: background var(--tick) ease;
+        }
+        ol.step-list b {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13.5px;
+            background: var(--card);
+            padding: 1px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--card-border);
+        }
+
+        .quote-block {
+            font-family: 'Fraunces', serif;
+            font-style: italic;
+            font-size: 19px;
+            line-height: 1.5;
+            color: var(--ink);
+            border-left: 3px solid var(--accent);
+            padding: 4px 0 4px 18px;
+            margin: 6px 0 20px;
+        }
+        .note {
+            background: var(--card);
+            border: 1px dashed var(--card-border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 14px;
+            color: var(--card-ink-soft);
+            margin-top: 14px;
+        }
+        .note b {
+            color: var(--card-ink);
+        }
+
+        pre.code-block {
+            background: #1e1710;
+            color: #f1e6d3;
+            border-radius: 10px;
+            padding: 18px 20px;
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-x: auto;
+            margin: 0;
+            min-width: 0;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 6px 18px var(--shadow);
+        }
+        pre.code-block code {
+            white-space: pre;
+        }
+        .tok-kw {
+            color: #e39a5a;
+            font-weight: 600;
+        }
+        .tok-str {
+            color: #a8c98f;
+        }
+        .tok-com {
+            color: #7d7166;
+            font-style: italic;
+        }
+        .tok-type {
+            color: #7fb0d6;
+        }
+        .tok-num {
+            color: #d99a6c;
+        }
+
+        .code-cap {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--ink-soft);
+            margin-bottom: 8px;
+        }
+
+        .op-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+            gap: 10px;
+            min-width: 0;
+        }
+        .op-chip {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            text-align: center;
+            min-width: 0;
+        }
+        .op-chip .sym {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--card-accent);
+        }
+        .op-chip .desc {
+            font-size: 12px;
+            color: var(--card-ink-soft);
+            margin-top: 2px;
+        }
+
+        table.type-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14.5px;
+        }
+        table.type-table th,
+        table.type-table td {
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--card-border);
+        }
+        table.type-table th {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--ink-soft);
+        }
+        table.type-table td code {
+            background: var(--card);
+            padding: 1px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--card-border);
+        }
+
+        .hud {
+            position: fixed;
+            bottom: 16px;
+            right: 20px;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .counter {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            color: var(--card-ink);
+            padding: 8px 16px;
+            border-radius: 999px;
+            box-shadow: 0 4px 14px var(--shadow);
+            transition: background var(--tick) ease, color var(--tick) ease, border-color var(--tick) ease;
+        }
+        .hint {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--ink-soft);
+            letter-spacing: 0.05em;
+            display: none;
+        }
+        @media (min-width:640px) {
+            .hint {
+                display: block;
+            }
+        }
+
+        .click-zone {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            cursor: pointer;
+        }
+
+        .slide::-webkit-scrollbar {
+            width: 8px;
+        }
+        .slide::-webkit-scrollbar-thumb {
+            background: var(--card-border);
+            border-radius: 8px;
+        }
+
+        .two-col pre.code-block {
+            max-width: 100%;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .two-col .code-block code {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .activity-box {
+            background: var(--card);
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            padding: 18px 22px;
+            margin-top: 10px;
+        }
+        .activity-box h3 {
+            font-family: 'Inter', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--card-accent);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .activity-box .prompt {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--card-ink-soft);
+        }
+        .activity-box .prompt code {
+            background: var(--bg);
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .answer-key {
+            background: var(--bg-alt);
+            border: 1px solid var(--accent);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-top: 14px;
+        }
+        .answer-key h4 {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--card-ink);
+            margin-bottom: 8px;
+        }
+        .answer-key .answer-pill {
+            display: inline-block;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            color: var(--success-ink);
+        }
+        .answer-key code {
+            background: var(--card);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            border: 1px solid var(--card-border);
+        }
+        .answer-key pre {
+            margin: 6px 0 0;
+        }
+        .answer-key pre.code-block code {
+            background: none;
+            padding: 0;
+            border: none;
+            border-radius: 0;
+            font-size: 14px;
+        }
+
+        .tag {
+            display: inline-block;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            background: var(--accent);
+            color: #fff;
+            padding: 2px 10px;
+            border-radius: 999px;
+            margin-right: 6px;
+        }
+        .tag.green {
+            background: #4a8c5c;
+        }
+        .tag.blue {
+            background: #3f7a9e;
+        }
+        .tag.purple {
+            background: #7a5f9e;
+        }
+        .tag.orange {
+            background: #c27b3a;
+        }
+
+        .quiz-option {
+            display: block;
+            padding: 6px 0 6px 28px;
+            position: relative;
+            font-size: 14.5px;
+            line-height: 1.5;
+            color: var(--card-ink-soft);
+        }
+        .quiz-option::before {
+            content: '';
+            position: absolute;
+            left: 4px;
+            top: 10px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid var(--card-border);
+            background: var(--card);
+        }
+        .quiz-option.correct::before {
+            background: #4a8c5c;
+            border-color: #4a8c5c;
+        }
+        .quiz-option.correct::after {
+            content: '✓';
+            position: absolute;
+            left: 6px;
+            top: 7px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .quiz-option.wrong::before {
+            background: #b14a4a;
+            border-color: #b14a4a;
+        }
+        .quiz-option.wrong::after {
+            content: '✗';
+            position: absolute;
+            left: 6px;
+            top: 7px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .hierarchy-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 0;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .hierarchy-diagram .top {
+            background: var(--accent);
+            color: #fff;
+            padding: 8px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        .hierarchy-diagram .connector {
+            width: 2px;
+            height: 24px;
+            background: var(--accent-strong);
+            margin: 2px 0;
+        }
+        .hierarchy-diagram .bottom {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .hierarchy-diagram .bottom span {
+            background: var(--card);
+            border: 2px solid var(--accent);
+            padding: 6px 18px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--card-ink);
+        }
+
+        .file-tree {
+            background: #1e1710;
+            border-radius: 10px;
+            padding: 18px 22px;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 6px 18px var(--shadow);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            line-height: 1.9;
+            color: #f1e6d3;
+        }
+        .file-tree .ft-row {
+            white-space: pre;
+        }
+        .file-tree .ft-folder {
+            color: #e39a5a;
+            font-weight: 700;
+        }
+        .file-tree .ft-file {
+            color: #7fb0d6;
+        }
+        .file-tree .ft-comment {
+            color: #7d7166;
+            font-style: italic;
+        }
+
+        .file-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+        .file-tabs .tab {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 600;
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            padding: 4px 14px;
+            border-radius: 999px;
+            color: var(--card-ink-soft);
+        }
+        .file-tabs .tab.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+        <div class="roast-gauge" id="roastGauge">
+            <svg viewBox="0 0 40 40" fill="none">
+                <ellipse class="steam" cx="14" cy="6" rx="1.6" ry="4" fill="currentColor" opacity="0.5"></ellipse>
+                <ellipse class="steam s2" cx="22" cy="5" rx="1.6" ry="4" fill="currentColor" opacity="0.5"></ellipse>
+                <path id="cupFill" d="M6 14 h22 l-2.2 16 a4 4 0 0 1 -4 3.4 h-9.6 a4 4 0 0 1 -4 -3.4 Z" fill="var(--accent)" stroke="var(--ink)" stroke-width="1.4"></path>
+                <path d="M28 17 h4.5 a3.5 3.5 0 0 1 0 9 h-3" stroke="var(--ink)" stroke-width="1.4" fill="none"></path>
+                <line x1="4" y1="14" x2="30" y2="14" stroke="var(--ink)" stroke-width="1.6" stroke-linecap="round"></line>
+            </svg>
+            <span class="roast-label" id="roastLabel">Light Roast</span>
+        </div>
+
+        <div class="click-zone" id="clickZone"></div>
+        <div class="stage" id="stage"></div>
+
+        <div class="hud">
+            <span class="hint">click / → to continue</span>
+            <div class="counter" id="counter">1 / 25</div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            "use strict";
+
+            function escapeHtml(s) {
+                return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
+            var KEYWORDS = ['public', 'private', 'protected', 'static', 'void', 'final', 'class', 'new', 'if', 'else',
+                'return',
+                'for', 'while', 'do', 'int', 'double', 'float', 'long', 'short', 'byte', 'char', 'boolean', 'true', 'false',
+                'null',
+                'this', 'super', 'package', 'import', 'extends', 'implements', 'instanceof', 'try', 'catch', 'finally',
+                'throw', 'throws', 'abstract'
+            ];
+            var KW_RE = new RegExp('\\b(' + KEYWORDS.join('|') + ')\\b');
+            var TOKEN_RE = /(\/\/.*$)|("(?:\\.|[^"\\])*")|('(?:\\.|[^'\\])')|\b([A-Za-z_][A-Za-z0-9_]*)\b|\b(\d+\.?\d*)\b/gm;
+
+            function highlightJava(src) {
+                var esc = escapeHtml(src);
+                return esc.replace(TOKEN_RE, function(match, comment, str, chr, word, num) {
+                    if (comment !== undefined) return '<span class="tok-com">' + comment + '</span>';
+                    if (str !== undefined) return '<span class="tok-str">' + str + '</span>';
+                    if (chr !== undefined) return '<span class="tok-str">' + chr + '</span>';
+                    if (word !== undefined) {
+                        if (KW_RE.test(word)) return '<span class="tok-kw">' + word + '</span>';
+                        if (/^[A-Z]/.test(word)) return '<span class="tok-type">' + word + '</span>';
+                        return word;
+                    }
+                    if (num !== undefined) return '<span class="tok-num">' + num + '</span>';
+                    return match;
+                });
+            }
+
+            function reindentJava(src) {
+                var INDENT = '    ';
+                var lines = src.split('\n').map(function(l) { return l.trim(); });
+                var depth = 0;
+                var out = [];
+                for (var i = 0; i < lines.length; i++) {
+                    var line = lines[i];
+                    if (line === '') { out.push(''); continue; }
+                    var leadingClose = /^[}\)\]]/.test(line);
+                    if (leadingClose) depth = Math.max(0, depth - 1);
+                    out.push(INDENT.repeat(depth) + line);
+                    var opens = (line.match(/[{(\[]/g) || []).length;
+                    var closes = (line.match(/[}\)\]]/g) || []).length;
+                    var net = opens - closes;
+                    if (leadingClose) net += 1;
+                    depth = Math.max(0, depth + net);
+                }
+                return out.join('\n');
+            }
+
+            function code(src) {
+                src = src.replace(/^\n/, '').replace(/\n$/, '');
+                src = reindentJava(src);
+                return '<pre class="code-block"><code>' + highlightJava(src) + '</code></pre>';
+            }
+
+            var S = [];
+
+            // ---- SLIDE 1: TITLE ----
+            S.push({
+                eyebrow: '🧩 Module 03 — Classes &amp; Objects',
+                title: 'Classes, Objects, and Instantiation',
+                lede: 'Deepen your understanding of Java\'s object-oriented foundation — classes as blueprints, objects as instances, and how to bring them to life.',
+                body: `
+              <div class="quote-block">"Isipin mo na lang na ang class ay Main program, at ang objects ay ang behavior/properties in class."</div>
+              <div class="card-grid cols-2">
+                <div class="card"><h3>🏗️ Class</h3><p>A blueprint or template that defines the structure and behavior of objects.</p></div>
+                <div class="card"><h3>🧩 Object</h3><p>An instance of a class — a concrete entity with state and behavior.</p></div>
+              </div>
+            `
+            });
+
+            // ---- SLIDE 2: Class + Constructor ----
+            S.push({
+                eyebrow: 'Order No. 02 — Blueprint',
+                title: 'Class &amp; Constructor',
+                lede: 'A class is like an object constructor. A constructor initializes the object when it is created.',
+                body: `
+              <div class="two-col">
+                <div>
+                  <div class="code-cap">Example — Class with Constructor</div>
+                  ${code(`public class Car_show {
+                      Car_show() {  // constructor
+                          // initialization code
+                      }
+                  }`)}
+                </div>
+                <div class="card"><h3>🔧 Constructor</h3><p>Ito ay maaahintulad din sa CLASS — it's a special method that runs when you create a new object.</p><p style="margin-top:10px;"><b>Class Instantiation:</b> "instantiating a class" means creating an object — an instance of the class.</p></div>
+              </div>
+              <div class="note"><b>💡 Key:</b> Use <code>new</code> as the operator to create a constructor — <code>new Car_show();</code></div>
+            `
+            });
+
+            // ---- SLIDE 3: Variables in Java ----
+            S.push({
+                eyebrow: 'Order No. 03 — Data Holders',
+                title: 'Types of Variables in Java',
+                lede: 'There are several kinds of variables — each with a specific scope and purpose.',
+                body: `
+              <div class="card-grid cols-3">
+                <div class="card"><h3>📦 Fields</h3><p>Member variables in a class. They define the state of an object.</p><p style="margin-top:6px;"><code class="mono">public int cadence;</code></p></div>
+                <div class="card"><h3>📍 Local Variables</h3><p>Variables declared inside a method or block. Only accessible within that scope.</p></div>
+                <div class="card"><h3>📨 Parameters</h3><p>Variables declared in method declarations. They receive values when the method is called.</p></div>
+              </div>
+              <div style="margin-top:14px;">
+                <div class="code-cap">Example — Bicycle class fields</div>
+                ${code(`public class Bicycle {
+                    public int cadence;
+                    public int gear;
+                    public int speed;
+                }`)}
+              </div>
+              <div class="note"><b>Field declaration order:</b> 1) Modifiers (e.g. <code>public</code>, <code>private</code>) → 2) Type → 3) Name</div>
+            `
+            });
+
+            // ---- SLIDE 4: Identifying Objects ----
+            S.push({
+                eyebrow: 'Order No. 04 — Spot the Object',
+                title: 'More About Objects',
+                lede: 'One of the keys to working with objects is knowing how to identify them in system-analysis documents.',
+                body: `
+              <div class="quote-block">"Since objects generally represent people, places, or things, a basic method of identifying objects is to pick out the nouns used in a sentence."</div>
+              <div class="card-grid cols-2">
+                <div class="card"><h3>📝 Example 1</h3><p><em>"A customer can have more than one bank account."</em></p><p style="margin-top:6px;"><b>Objects:</b> <code>customer</code>, <code>account</code></p></div>
+                <div class="card"><h3>🐱 Example 2</h3><p><em>"The cat meows."</em></p><p style="margin-top:6px;"><b>Object:</b> <code>cat</code></p></div>
+              </div>
+              <div class="note"><b>💡 Tip:</b> Look for nouns — they often indicate potential objects in your system.</div>
+            `
+            });
+
+            // ---- SLIDE 5: More About Classes ----
+            S.push({
+                eyebrow: 'Order No. 05 — Behavior',
+                title: 'More About Classes',
+                lede: 'A class defines how an object will behave and what it will contain when instantiated.',
+                body: `
+              <div class="two-col">
+                <div>
+                  <div class="code-cap">Identifying Objects &amp; Behaviors</div>
+                  <div style="background:var(--bg-alt);border-radius:10px;padding:16px;margin-top:6px;">
+                    <p style="font-size:15px;color:var(--ink);"><em>"Dogs bark, cats meow, and ducks quack."</em></p>
+                    <p style="font-size:14px;color:var(--ink-soft);margin-top:8px;"><b>Objects:</b> Dog, Cat, Duck &nbsp;|&nbsp; <b>Behaviors:</b> bark, meow, quack</p>
+                  </div>
+                </div>
+                <div class="card"><h3>🎯 Implementation</h3><p>We could create three classes: <code>Dog</code>, <code>Cat</code>, and <code>Duck</code>. Each would have a method like <code>sayHello()</code> that represents the sound they make.</p></div>
+              </div>
+            `
+            });
+
+            // ---- SLIDE 6: Dog, Cat, Duck Example ----
+            S.push({
+                eyebrow: 'Order No. 06 — Code Along',
+                title: 'HelloWorld with Animals',
+                lede: 'Let\'s modify the HelloWorld application by introducing three new objects — each with a <code>sayHello</code> method.',
+                body: `
+              <div class="file-tabs">
+                <span class="tab active">HelloWorld.java</span>
+                <span class="tab">Dog.java</span>
+                <span class="tab">Cat.java</span>
+                <span class="tab">Duck.java</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div>
+                  <div class="code-cap">HelloWorld.java</div>
+                  ${code(`public class HelloWorld {
+                      public static void main(String[] args) {
+                          Dog animal1 = new Dog();
+                          Cat animal2 = new Cat();
+                          Duck animal3 = new Duck();
+                          animal1.sayHello();
+                          animal2.sayHello();
+                          animal3.sayHello();
+                      }
+                  }`)}
+                </div>
+                <div>
+                  <div class="code-cap">Dog.java</div>
+                  ${code(`class Dog {
+                      public void sayHello() {
+                          System.out.println("Arf! Arf! Arf!");
+                      }
+                  }`)}
+                </div>
+                <div>
+                  <div class="code-cap">Cat.java</div>
+                  ${code(`class Cat {
+                      public void sayHello() {
+                          System.out.println("Meow! Meow!");
+                      }
+                  }`)}
+                </div>
+                <div>
+                  <div class="code-cap">Duck.java</div>
+                  ${code(`class Duck {
+                      public void sayHello() {
+                          System.out.println("Quack! Quack!");
+                      }
+                  }`)}
+                </div>
+              </div>
+              <div class="note"><b>📋 Instructions:</b> Create each class file, compile, and run. Observe how each object responds with its own sound.</div>
+            `
+            });
+
+            // ---- SLIDE 7: Car Class Activity ----
+            S.push({
+                eyebrow: '✏️ Order No. 07 — Activity 1',
+                title: 'Skill-Building: Car Class',
+                lede: 'Create a Car class with a color field and instantiate it in a Program class.',
+                body: `
+              <div class="activity-box">
+                <h3>🚗 Exercise 1 — Car Class</h3>
+                <div class="prompt">
+                  <p><strong>Instructions:</strong></p>
+                  <ol class="step-list">
+                    <li>Open your Jdoodle online compiler.</li>
+                    <li>Create a <code>Car</code> class using the <code>class</code> keyword.</li>
+                    <li>Add a <code>color</code> field with the value <code>"red"</code>.</li>
+                    <li>In a <code>Program</code> class, create an object <code>myObj</code> using <code>new Car()</code>.</li>
+                    <li>Print the color using dot syntax: <code>myObj.color</code>.</li>
+                  </ol>
+                </div>
+              </div>
+              <div class="note"><b>💡 Try it yourself first</b> — build it in Jdoodle, then check your work against the answer key on the next page.</div>
+            `
+            });
+
+            // ---- SLIDE 8: Answer Key — Car Class ----
+            S.push({
+                eyebrow: '🔑 Order No. 08 — Answer Key',
+                title: 'Exercise 1 — Solution',
+                lede: 'Compare your Car class against this reference solution.',
+                body: `
+              <div class="card answer-key">
+                <h4>✅ Car.java — Solution</h4>
+                ${code(`public class Car {
+                    public String color = "red";
+                }
+
+                public class Program {
+                    public static void main(String[] args) {
+                        Car myObj = new Car();
+                        System.out.println("Car is in color " + myObj.color);
+                    }
+                }`)}
+              </div>
+              <div class="note"><b>🔑 Key concept:</b> The <code>public</code> keyword is an access modifier — it allows the <code>Program</code> class to access the <code>color</code> field of <code>Car</code>.</div>
+            `
+            });
+
+            // ---- SLIDE 9: Person Class Activity ----
+            S.push({
+                eyebrow: '✏️ Order No. 09 — Activity 2',
+                title: 'Skill-Building: Person Class',
+                lede: 'Create a Person class with a Name property and override the <code>toString()</code> method.',
+                body: `
+              <div class="activity-box">
+                <h3>👤 Exercise 2 — Person Class</h3>
+                <div class="prompt">
+                  <p><strong>Task:</strong> Create a Java program that requests three names of people from the user and stores them in objects of type <code>Person</code>.</p>
+                  <p style="margin-top:8px;"><strong>Requirements:</strong></p>
+                  <ul class="ticket-list">
+                    <li>Create a <code>Person</code> class with a <code>name</code> field (String).</li>
+                    <li>Override the <code>toString()</code> method to return the person's name.</li>
+                    <li>In the <code>main</code> method, create three Person objects and print them.</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="note"><b>💡 Try it yourself first</b> — write your solution, then check it against the answer key on the next page.</div>
+            `
+            });
+
+            // ---- SLIDE 10: Answer Key — Person Class ----
+            S.push({
+                eyebrow: '🔑 Order No. 10 — Answer Key',
+                title: 'Exercise 2 — Solution',
+                lede: 'Compare your Person class against this reference solution.',
+                body: `
+              <div class="card answer-key">
+                <h4>✅ Person.java — Solution</h4>
+                ${code(`class Person {
+                    String name;
+
+                    Person(String name) {
+                        this.name = name;
+                    }
+
+                    public String toString() {  // overriding toString()
+                        return "Person: " + name;
+                    }
+
+                    public static void main(String[] args) {
+                        Person p1 = new Person("Alice");
+                        Person p2 = new Person("Bob");
+                        Person p3 = new Person("Charlie");
+
+                        System.out.println(p1);
+                        System.out.println(p2);
+                        System.out.println(p3);
+                    }
+                }`)}
+              </div>
+              <div class="note"><b>💡 What is an override?</b> Using the same method name but with different objects/variables — here, we override <code>toString()</code> to return a custom string.</div>
+            `
+            });
+
+            // ---- SLIDE 11: Micro Payroll — Intro + File Structure ----
+            S.push({
+                eyebrow: '💰 Order No. 11 — Payroll',
+                title: 'Micro Payroll Program Analysis',
+                lede: '"Roll your sleeves and analyze this micro payroll program." Let\'s walk through the code structure.',
+                body: `
+              <div class="code-cap">Project File Structure</div>
+              <div class="file-tree">
+                <div class="ft-row"><span class="ft-folder">📁 payroll-app/</span></div>
+                <div class="ft-row">├── <span class="ft-file">📄 EmployeeApp.java</span>       <span class="ft-comment">// main driver</span></div>
+                <div class="ft-row">├── <span class="ft-file">📄 Employee.java</span>          <span class="ft-comment">// abstract base class</span></div>
+                <div class="ft-row">├── <span class="ft-file">📄 FullTimeEmployee.java</span>  <span class="ft-comment">// final subclass</span></div>
+                <div class="ft-row">└── <span class="ft-file">📄 PartTimeEmployee.java</span>  <span class="ft-comment">// final subclass</span></div>
+              </div>
+              <div class="card-grid cols-2" style="margin-top:14px;">
+                <div class="card">
+                  <h3>📋 Program Flow</h3>
+                  <ol class="step-list">
+                    <li><b>1</b>&nbsp; User enters their name</li>
+                    <li><b>2</b>&nbsp; Selects employee type (F/P)</li>
+                    <li><b>3</b>&nbsp; Enters salary or wage details</li>
+                    <li><b>4</b>&nbsp; Program displays employee info</li>
+                  </ol>
+                </div>
+                <div class="card">
+                  <h3>🔑 Key OOP Concepts</h3>
+                  <ul class="ticket-list">
+                    <li><code>abstract class</code> — shared base, no direct instances</li>
+                    <li><code>final</code> — subclass can't be extended further</li>
+                    <li>Inheritance &amp; encapsulation</li>
+                    <li>Polymorphism across employee types</li>
+                  </ul>
+                </div>
+              </div>
+            `
+            });
+
+            // ---- SLIDE 12: Payroll — EmployeeApp ----
+            S.push({
+                eyebrow: '💰 Order No. 12 — Payroll Driver',
+                title: 'EmployeeApp.java — The Driver',
+                lede: 'The main class that handles user input and orchestrates the program.',
+                body: `
+              <div class="code-cap">EmployeeApp.java</div>
+              ${code(`import java.util.Scanner;
+
+              public class EmployeeApp {
+                  public static void main(String[] args) {
+                      Scanner in = new Scanner(System.in);
+
+                      System.out.print("Enter Employee Name: ");
+                      String name = in.nextLine();
+
+                      System.out.println("\\nEmployee Types:\\n F - Full Time\\n P - Part Time");
+                      System.out.print("Enter Employee Type: ");
+                      String type = in.nextLine();
+
+                      if (type.equalsIgnoreCase("F")) {
+                          FullTimeEmployee employee = new FullTimeEmployee(name);
+                          System.out.print("\\nEnter Monthly Salary: ");
+                          employee.setMonthlySalary(in.nextDouble());
+                          System.out.println(employee);
+                      } else if (type.equalsIgnoreCase("P")) {
+                          PartTimeEmployee employee = new PartTimeEmployee(name);
+                          System.out.print("\\nEnter Rate Per Hour: ");
+                          double rate = in.nextDouble();
+                          System.out.print("\\nEnter Number of Hours Worked: ");
+                          employee.setWage(rate, in.nextInt());
+                          System.out.println(employee);
+                      } else {
+                          System.out.println("Error: Invalid Employee Type!");
+                      }
+                  }
+              }`)}
+              <div class="note"><b>📌 Note:</b> Uses <code>equalsIgnoreCase()</code> for case-insensitive input comparison.</div>
+            `
+            });
+
+            // ---- SLIDE 13: Payroll — Employee (abstract) ----
+            S.push({
+                eyebrow: '💰 Order No. 13 — Abstract Base',
+                title: 'Employee.java — Abstract Class',
+                lede: 'The abstract base class that defines common properties and methods for all employees.',
+                body: `
+              <div class="code-cap">Employee.java</div>
+              ${code(`abstract class Employee {
+                  private String name;
+
+                  public Employee(String name) {
+                      setName(name);
+                  }
+
+                  public void setName(String name) {
+                      this.name = name;
+                  }
+
+                  public String getName() {
+                      return name;
+                  }
+              }`)}
+              <div class="note"><b>🔑 Key:</b> <code>abstract</code> means this class cannot be instantiated directly — it serves as a template for subclasses.</div>
+            `
+            });
+
+            // ---- SLIDE 14: Payroll — FullTimeEmployee ----
+            S.push({
+                eyebrow: '💰 Order No. 14 — Full-Time',
+                title: 'FullTimeEmployee.java — Final Subclass',
+                lede: 'A final subclass of Employee that represents full-time employees with a monthly salary.',
+                body: `
+              <div class="code-cap">FullTimeEmployee.java</div>
+              ${code(`final class FullTimeEmployee extends Employee {
+                  private double monthlySalary;
+
+                  public FullTimeEmployee(String name) {
+                      super(name);
+                  }
+
+                  public void setMonthlySalary(double salary) {
+                      monthlySalary = salary;
+                  }
+
+                  public double getMonthlySalary() {
+                      return monthlySalary;
+                  }
+
+                  public String toString() {
+                      return "\\nEmployee Name: " + getName() + "\\nMonthly Salary: " + monthlySalary;
+                  }
+              }`)}
+              <div class="note"><b>🔑 Key:</b> <code>final</code> means this class cannot be extended further. <code>super(name)</code> calls the parent constructor.</div>
+            `
+            });
+
+            // ---- SLIDE 15: Payroll — PartTimeEmployee ----
+            S.push({
+                eyebrow: '💰 Order No. 15 — Part-Time',
+                title: 'PartTimeEmployee.java — Final Subclass',
+                lede: 'A final subclass of Employee that represents part-time employees with hourly wages.',
+                body: `
+              <div class="code-cap">PartTimeEmployee.java</div>
+              ${code(`final class PartTimeEmployee extends Employee {
+                  private double ratePerHour;
+                  private int hoursWorked;
+                  private double wage;
+
+                  public PartTimeEmployee(String name) {
+                      super(name);
+                  }
+
+                  public void setWage(double rate, int hours) {
+                      ratePerHour = rate;
+                      hoursWorked = hours;
+                      wage = ratePerHour * hoursWorked;
+                  }
+
+                  public double getWage() {
+                      return wage;
+                  }
+
+                  public String toString() {
+                      return "\\nEmployee Name: " + getName() + "\\nWage: " + wage;
+                  }
+              }`)}
+              <div class="note"><b>📌 Note:</b> <code>abstract class</code> will be discussed in more detail in P2. <a href="#" style="color:var(--accent);text-decoration:underline;">Watch: Abstract Classes in Java</a></div>
+            `
+            });
+
+            // ---- SLIDE 16: Check for Understanding ----
+            S.push({
+                eyebrow: '📝 Order No. 16 — Quiz',
+                title: 'Check for Understanding — Multiple Choice',
+                lede: 'Test your knowledge! Write the letter of the best answer.',
+                body: `
+              <div class="card" style="margin-bottom:14px;">
+                <h3>1) What is an object?</h3>
+                <div class="quiz-option">A. Instance of an object</div>
+                <div class="quiz-option">B. Instance of a method</div>
+                <div class="quiz-option">C. Instance of class</div>
+                <div class="quiz-option">D. Instance of a program</div>
+              </div>
+
+              <div class="card" style="margin-bottom:14px;">
+                <h3>2) Which keyword is used to create a class in Java?</h3>
+                <div class="quiz-option">A. class</div>
+                <div class="quiz-option">B. MyClass</div>
+                <div class="quiz-option">C. className</div>
+                <div class="quiz-option">D. class()</div>
+              </div>
+
+              <div class="card">
+                <h3>3) What is the correct way to create an object called <code>myObj</code> of <code>MyClass</code>?</h3>
+                <div class="quiz-option">A. <code>class MyClass = new myObj();</code></div>
+                <div class="quiz-option">B. <code>MyClass myObj = new MyClass();</code></div>
+                <div class="quiz-option">C. <code>new myObj = MyClass();</code></div>
+                <div class="quiz-option">D. <code>class myObj = new MyClass();</code></div>
+              </div>
+              <div class="note"><b>💡 Write down your answers</b> — check them against the answer key on the next page.</div>
+            `
+            });
+
+            // ---- SLIDE 17: Answer Key — Quiz ----
+            S.push({
+                eyebrow: '🔑 Order No. 17 — Answer Key',
+                title: 'Check for Understanding — Answers',
+                lede: 'Here are the correct answers with short explanations.',
+                body: `
+              <div class="card answer-key" style="margin-bottom:14px;">
+                <h4>1) What is an object? — <span class="answer-pill">Answer: C</span></h4>
+                <p>C. Instance of a class — an object is an instance of a class.</p>
+              </div>
+              <div class="card answer-key" style="margin-bottom:14px;">
+                <h4>2) Which keyword is used to create a class in Java? — <span class="answer-pill">Answer: A</span></h4>
+                <p>A. <code>class</code> — the <code>class</code> keyword is used to define a class.</p>
+              </div>
+              <div class="card answer-key">
+                <h4>3) Correct way to create an object <code>myObj</code> of <code>MyClass</code>? — <span class="answer-pill">Answer: B</span></h4>
+                <p>B. <code>MyClass myObj = new MyClass();</code> — the correct syntax is <code>ClassName objectName = new ClassName();</code></p>
+              </div>
+            `
+            });
+
+            // ---- SLIDE 18: FAQ ----
+            S.push({
+                eyebrow: '❓ Order No. 18 — FAQs',
+                title: 'Lesson Wrap-Up — Frequently Asked Questions',
+                lede: 'Quick answers to the most common questions about classes and objects.',
+                body: `
+              <div class="card-grid cols-2">
+                <div class="card">
+                  <h3>❓ What is a Class?</h3>
+                  <p>A class is a template for objects. A class defines object properties including a valid range of values and a default value. A class also describes object behavior.</p>
+                </div>
+                <div class="card">
+                  <h3>❓ What is an Object?</h3>
+                  <p>An object is a member or an "instance" of a class. An object has a state in which all of its properties have values that you either explicitly define or that are defined by default settings.</p>
+                </div>
+              </div>
+              <div class="quote-block" style="margin-top:18px;">"A class defines the blueprint — an object brings it to life."</div>
+            `
+            });
+
+            // ---- SLIDE 19: Hierarchy Diagram ----
+            S.push({
+                eyebrow: '🌳 Order No. 19 — Inheritance',
+                title: 'Class Hierarchy: Animal → Dog, Cat, Cow',
+                lede: 'Visualizing inheritance — a parent class (Animal) with three subclasses.',
+                body: `
+              <div class="hierarchy-diagram">
+                <div class="top">ANIMAL CLASS</div>
+                <div class="connector"></div>
+                <div class="bottom">
+                  <span>🐕 DOG CLASS</span>
+                  <span>🐈 CAT CLASS</span>
+                  <span>🐄 COW CLASS</span>
+                </div>
+              </div>
+              <div class="card-grid cols-3" style="margin-top:14px;">
+                <div class="card"><h3>🐕 Dog</h3><p><code>sayHello()</code> → "Arf! Arf!"</p></div>
+                <div class="card"><h3>🐈 Cat</h3><p><code>sayHello()</code> → "Meow! Meow!"</p></div>
+                <div class="card"><h3>🐄 Cow</h3><p><code>sayHello()</code> → "Moo! Moo!"</p></div>
+              </div>
+              <div class="note"><b>📌 Concept:</b> Each subclass inherits from Animal but implements its own version of <code>sayHello()</code>.</div>
+            `
+            });
+
+            // ---- SLIDE 20: Constructor Deep Dive ----
+            S.push({
+                eyebrow: '🔧 Order No. 20 — Constructor',
+                title: 'Constructors — Initializing Objects',
+                lede: 'A constructor is a special method that is called when an object is instantiated. It initializes the object\'s state.',
+                body: `
+              <div class="two-col">
+                <div>
+                  <div class="code-cap">Example — Constructor</div>
+                  ${code(`public class Student {
+                      int id;
+                      String name;
+
+                      // Constructor
+                      Student(int id, String name) {
+                          this.id = id;
+                          this.name = name;
+                      }
+
+                      public static void main(String[] args) {
+                          Student s1 = new Student(101, "John");
+                          System.out.println(s1.id + " " + s1.name);
+                      }
+                  }`)}
+                </div>
+                <div class="card"><h3>🔑 Key Points</h3><ul class="ticket-list">
+                  <li>Constructor has the same name as the class.</li>
+                  <li>No return type (not even <code>void</code>).</li>
+                  <li>Use <code>this</code> to refer to the current object.</li>
+                  <li>Called automatically when <code>new</code> is used.</li>
+                </ul></div>
+              </div>
+            `
+            });
+
+            // ---- SLIDE 21: Access Modifiers ----
+            S.push({
+                eyebrow: '🔒 Order No. 21 — Access',
+                title: 'Access Modifiers — Public vs Private',
+                lede: 'Access modifiers control who can see and use your class members.',
+                body: `
+              <div class="card-grid cols-2">
+                <div class="card"><h3>🔓 public</h3><p>Visible everywhere — from any class in any package.</p><p style="margin-top:6px;"><code class="mono">public String name;</code></p></div>
+                <div class="card"><h3>🔒 private</h3><p>Visible only within the same class. Encapsulates data.</p><p style="margin-top:6px;"><code class="mono">private int age;</code></p></div>
+                <div class="card"><h3>🔐 protected</h3><p>Visible within the same package and subclasses.</p></div>
+                <div class="card"><h3>📦 (default)</h3><p>No modifier = visible only within the same package.</p></div>
+              </div>
+              <div class="note"><b>💡 Best practice:</b> Keep fields <code>private</code> and provide <code>public</code> getters/setters to access them.</div>
+            `
+            });
+
+            // ---- SLIDE 22: Getters & Setters ----
+            S.push({
+                eyebrow: '🔧 Order No. 22 — Encapsulation',
+                title: 'Getters and Setters',
+                lede: 'Encapsulation is achieved by keeping fields private and providing public methods to access them.',
+                body: `
+              <div class="two-col">
+                <div>
+                  <div class="code-cap">Example — Encapsulation</div>
+                  ${code(`public class Person {
+                      private String name;
+                      private int age;
+
+                      // Getter
+                      public String getName() {
+                          return name;
+                      }
+
+                      // Setter
+                      public void setName(String name) {
+                          this.name = name;
+                      }
+
+                      public int getAge() {
+                          return age;
+                      }
+
+                      public void setAge(int age) {
+                          if (age > 0) {
+                              this.age = age;
+                          }
+                      }
+                  }`)}
+                </div>
+                <div class="card"><h3>📦 Why Encapsulation?</h3><ul class="ticket-list">
+                  <li>Protects data from unauthorized access.</li>
+                  <li>Allows validation before setting values.</li>
+                  <li>Hides implementation details.</li>
+                  <li>Makes code easier to maintain.</li>
+                </ul></div>
+              </div>
+            `
+            });
+
+            // ---- SLIDE 23: Summary ----
+            S.push({
+                eyebrow: '📌 Order No. 23 — Summary',
+                title: 'Module 3 — What You Learned',
+                lede: 'A quick recap of the key concepts from this module.',
+                body: `
+              <div class="card-grid cols-3">
+                <div class="card"><h3>🏗️ Class</h3><p>Blueprint for creating objects.</p></div>
+                <div class="card"><h3>🧩 Object</h3><p>Instance of a class with state and behavior.</p></div>
+                <div class="card"><h3>🔧 Constructor</h3><p>Initializes object state when instantiated.</p></div>
+                <div class="card"><h3>📦 Fields</h3><p>Member variables that define object state.</p></div>
+                <div class="card"><h3>🔒 Encapsulation</h3><p>Hiding data with private fields + public methods.</p></div>
+                <div class="card"><h3>📨 Inheritance</h3><p>Subclasses inherit from parent classes.</p></div>
+                <div class="card"><h3>🔑 Access Modifiers</h3><p>public, private, protected, default.</p></div>
+                <div class="card"><h3>♻️ Method Override</h3><p>Redefining a method in a subclass.</p></div>
+                <div class="card"><h3>💰 Payroll Program</h3><p>Practical example with abstract classes and inheritance.</p></div>
+              </div>
+            `
+            });
+
+            // ---- SLIDE 24: Final Challenge ----
+            S.push({
+                eyebrow: '🏆 Order No. 24 — Challenge',
+                title: 'Final Challenge: Build Your Own Class',
+                lede: 'Apply everything you\'ve learned — create a class from scratch.',
+                body: `
+              <div class="activity-box">
+                <h3>🏆 Challenge — Create a <code>Book</code> Class</h3>
+                <div class="prompt">
+                  <p><strong>Requirements:</strong></p>
+                  <ul class="ticket-list">
+                    <li>Create a <code>Book</code> class with fields: <code>title</code>, <code>author</code>, <code>pages</code>.</li>
+                    <li>Add a constructor that initializes all three fields.</li>
+                    <li>Add a method <code>display()</code> that prints the book details.</li>
+                    <li>In the <code>main</code> method, create two Book objects and call <code>display()</code> on each.</li>
+                  </ul>
+                </div>
+              </div>
+              <div style="margin-top:14px;">
+                <div class="code-cap">Your code — fill in the blanks</div>
+                ${code(`public class Book {
+                    String title;
+                    String author;
+                    int pages;
+
+                    // Constructor
+                    public Book(String t, String a, int p) {
+                        // Fill in
+                    }
+
+                    // Display method
+                    public void display() {
+                        // Fill in
+                    }
+
+                    public static void main(String[] args) {
+                        Book b1 = new Book("1984", "George Orwell", 328);
+                        Book b2 = new Book("The Hobbit", "J.R.R. Tolkien", 310);
+                        // Call display() on both
+                    }
+                }`)}
+              </div>
+              <div class="note"><b>💡 Hint:</b> Use <code>this</code> to assign values in the constructor. Use <code>System.out.println()</code> in <code>display()</code>.</div>
+            `
+            });
+
+            // ---- SLIDE 25: Answer Key ----
+            S.push({
+                eyebrow: '🔑 Order No. 25 — Answer Key',
+                title: 'Final Challenge — Solution',
+                lede: 'Check your solution against this complete implementation.',
+                body: `
+              <div class="card answer-key">
+                <h4>✅ Book Class — Complete Solution</h4>
+                ${code(`public class Book {
+                    String title;
+                    String author;
+                    int pages;
+
+                    public Book(String t, String a, int p) {
+                        this.title = t;
+                        this.author = a;
+                        this.pages = p;
+                    }
+
+                    public void display() {
+                        System.out.println("Title: " + title);
+                        System.out.println("Author: " + author);
+                        System.out.println("Pages: " + pages);
+                        System.out.println();
+                    }
+
+                    public static void main(String[] args) {
+                        Book b1 = new Book("1984", "George Orwell", 328);
+                        Book b2 = new Book("The Hobbit", "J.R.R. Tolkien", 310);
+
+                        b1.display();
+                        b2.display();
+                    }
+                }`)}
+                <p style="margin-top:10px;"><b>Output:</b></p>
+                <pre style="background:var(--bg);padding:10px 14px;border-radius:6px;font-family:monospace;font-size:13px;color:var(--ink);">
+              Title: 1984
+              Author: George Orwell
+              Pages: 328
+
+              Title: The Hobbit
+              Author: J.R.R. Tolkien
+              Pages: 310
+            </pre>
+          </div>
+          <div class="quote-block" style="margin-top:18px;">"You've now mastered the fundamentals of classes and objects in Java. Keep building!"</div>
+          <div class="note"><b>🎯 Next up:</b> Inheritance, polymorphism, and more advanced OOP concepts in Module 4.</div>
+        `
+      });
+
+      // ---- roast interpolation ----
+      var STOPS = [
+        { bg: '#F5E3B8', bgAlt: '#FBF1DA', accent: '#C27B22', accentStrong: '#9C5A15', card: '#FFF7E6',
+          cardBorder: [64, 43, 24, 0.18], shadow: [64, 43, 24, 0.15] },
+        { bg: '#C97142', bgAlt: '#E0925C', accent: '#8B3A17', accentStrong: '#6B2A10', card: '#EAC195',
+          cardBorder: [42, 23, 16, 0.28], shadow: [42, 23, 16, 0.22] },
+        { bg: '#331014', bgAlt: '#4A1B1F', accent: '#C24B4F', accentStrong: '#E06B6E', card: '#4A1E22',
+          cardBorder: [240, 220, 196, 0.18], shadow: [0, 0, 0, 0.35] }
+      ];
+      var BG_CROSSOVER_T = 11 / 21;
+      var CARD_CROSSOVER_T = 15 / 21;
+      var TEXT_DARK = '#2E1408',
+        TEXT_DARK_SOFT = '#3F2210';
+      var TEXT_LIGHT = '#FFEDDD',
+        TEXT_LIGHT_SOFT = '#F2E6D6';
+      var ACCENT_DARK_TEXT = '#33170A',
+        ACCENT_LIGHT_TEXT = '#FFEDDD';
+      var SUCCESS_DARK = '#1C4225',
+        SUCCESS_LIGHT = '#9FE6AC';
+
+      function hexToRgb(h) { h = h.replace('#', ''); return [parseInt(h.substring(0, 2), 16), parseInt(h.substring(2, 4),
+            16), parseInt(h.substring(4, 6), 16)]; }
+
+      function rgbToHex(r, g, b) {
+        function c(x) { x = Math.round(Math.max(0, Math.min(255, x))); return x.toString(16).padStart(2, '0'); }
+        return '#' + c(r) + c(g) + c(b);
+      }
+
+      function lerp(a, b, t) { return a + (b - a) * t; }
+
+      function lerpHex(h1, h2, t) { var c1 = hexToRgb(h1),
+          c2 = hexToRgb(h2); return rgbToHex(lerp(c1[0], c2[0], t), lerp(c1[1], c2[1], t), lerp(c1[2], c2[2], t)); }
+
+      function lerpRgba(a, b, t) { return 'rgba(' + Math.round(lerp(a[0], b[0], t)) + ',' + Math.round(lerp(a[1], b[1],
+          t)) + ',' + Math.round(lerp(a[2], b[2], t)) + ',' + lerp(a[3], b[3], t).toFixed(2) + ')'; }
+
+      function roastVarsAt(t) {
+        var seg, localT;
+        if (t <= 0.5) { seg = [STOPS[0], STOPS[1]];
+          localT = t / 0.5; } else { seg = [STOPS[1], STOPS[2]];
+          localT = (t - 0.5) / 0.5; }
+        var A = seg[0],
+          B = seg[1];
+        return {
+          '--bg': lerpHex(A.bg, B.bg, localT),
+          '--bg-alt': lerpHex(A.bgAlt, B.bgAlt, localT),
+          '--accent': lerpHex(A.accent, B.accent, localT),
+          '--accent-strong': lerpHex(A.accentStrong, B.accentStrong, localT),
+          '--card': lerpHex(A.card, B.card, localT),
+          '--card-border': lerpRgba(A.cardBorder, B.cardBorder, localT),
+          '--shadow': lerpRgba(A.shadow, B.shadow, localT)
+        };
+      }
+
+      function applyRoast(t) {
+        var vars = roastVarsAt(t);
+        var root = document.documentElement.style;
+        for (var k in vars) { root.setProperty(k, vars[k]); }
+        var onBg = t < BG_CROSSOVER_T;
+        root.setProperty('--ink', onBg ? TEXT_DARK : TEXT_LIGHT);
+        root.setProperty('--ink-soft', onBg ? TEXT_DARK_SOFT : TEXT_LIGHT_SOFT);
+        root.setProperty('--eyebrow-ink', onBg ? ACCENT_DARK_TEXT : ACCENT_LIGHT_TEXT);
+        var onCard = t < CARD_CROSSOVER_T;
+        root.setProperty('--card-ink', onCard ? TEXT_DARK : TEXT_LIGHT);
+        root.setProperty('--card-ink-soft', onCard ? TEXT_DARK_SOFT : TEXT_LIGHT_SOFT);
+        root.setProperty('--card-accent', onCard ? ACCENT_DARK_TEXT : ACCENT_LIGHT_TEXT);
+        root.setProperty('--step-num-ink', onCard ? TEXT_LIGHT : TEXT_DARK);
+        root.setProperty('--success-ink', onCard ? SUCCESS_DARK : SUCCESS_LIGHT);
+        var label = t < 0.34 ? 'Light Roast' : (t < 0.67 ? 'Medium Roast' : 'Dark Roast');
+        document.getElementById('roastLabel').textContent = label;
+      }
+
+      // ---- render & navigate ----
+      var stage = document.getElementById('stage');
+      var counterEl = document.getElementById('counter');
+      var progressFill = document.getElementById('progressFill');
+      var total = S.length;
+      var current = 0;
+      var animating = false;
+
+      function buildSlideEl(idx) {
+        var d = S[idx];
+        var el = document.createElement('div');
+        el.className = 'slide';
+        el.innerHTML =
+          '<div class="slide-inner">' +
+          '<div class="eyebrow">' + d.eyebrow + '</div>' +
+          '<h2 class="slide-title">' + d.title + '</h2>' +
+          (d.lede ? '<div class="lede">' + d.lede + '</div>' : '') +
+          d.body +
+          '</div>';
+        return el;
+      }
+
+      function updateHud() {
+        counterEl.textContent = (current + 1) + ' / ' + total;
+        progressFill.style.width = ((current) / (total - 1) * 100) + '%';
+        applyRoast(current / (total - 1));
+      }
+
+      var curEl = buildSlideEl(0);
+      curEl.classList.add('active');
+      stage.appendChild(curEl);
+      updateHud();
+
+      function goTo(idx, dir) {
+        if (animating || idx === current || idx < 0 || idx >= total) return;
+        animating = true;
+        var nextEl = buildSlideEl(idx);
+        nextEl.classList.add(dir > 0 ? 'enter-fwd' : 'enter-bwd');
+        stage.appendChild(nextEl);
+        void nextEl.offsetWidth;
+        var oldEl = curEl;
+        requestAnimationFrame(function() {
+          oldEl.classList.remove('active');
+          oldEl.classList.add(dir > 0 ? 'exit-fwd' : 'exit-bwd');
+          nextEl.classList.remove('enter-fwd', 'enter-bwd');
+          nextEl.classList.add('active');
+        });
+        current = idx;
+        curEl = nextEl;
+        updateHud();
+        setTimeout(function() {
+          if (oldEl && oldEl.parentNode) oldEl.parentNode.removeChild(oldEl);
+          animating = false;
+        }, 420);
+      }
+
+      function next() { goTo(current + 1, 1); }
+
+      function prev() { goTo(current - 1, -1); }
+
+      document.getElementById('clickZone').addEventListener('click', function(e) {
+        var w = window.innerWidth;
+        if (e.clientX < w * 0.25) { prev(); } else { next(); }
+      });
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault();
+          next(); } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault();
+          prev(); } else if (e.key === 'Home') { e.preventDefault();
+          goTo(0, -1); } else if (e.key === 'End') { e.preventDefault();
+          goTo(total - 1, 1); } else if (e.key === 'ArrowUp') { e.preventDefault();
+          prev(); } else if (e.key === 'ArrowDown') { e.preventDefault();
+          next(); }
+      });
+    })();
+</script>
+</body>
+</html>

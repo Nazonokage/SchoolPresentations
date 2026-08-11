@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Roastery — Module 6: Access Modifiers</title>
+<style>
+  :root{
+    --bg:#1c140f;
+    --bg-alt:#251b14;
+    --panel:#2c2018;
+    --panel-2:#33261c;
+    --line: rgba(243,233,221,0.14);
+    --line-strong: rgba(243,233,221,0.28);
+    --text:#f4ead9;
+    --text-dim:#c9b6a2;
+    --accent:#e3a548;
+    --accent-soft:#c98a3a;
+    --accent-cool:#8fbf9a;
+    --accent-rose:#d9776b;
+    --code-bg:#150f0b;
+    --code-keyword:#eab676;
+    --code-string:#9ecb8f;
+    --code-number:#8ec7dc;
+    --code-type:#e2b8d8;
+    --code-comment:#7a6a5c;
+    --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --mono: SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; height:100%; }
+  body{
+    background:
+      radial-gradient(ellipse at 15% -10%, rgba(227,165,72,0.10), transparent 45%),
+      radial-gradient(ellipse at 100% 110%, rgba(143,191,154,0.07), transparent 45%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .deck{ position:relative; width:100vw; height:100vh; }
+
+  .slide{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    padding: clamp(20px, 3vh, 48px) clamp(24px, 5vw, 96px);
+    opacity:0;
+    transform: translateX(28px);
+    transition: opacity .35s ease, transform .35s ease;
+    pointer-events:none;
+    overflow-y:auto;
+  }
+  .slide.active{ opacity:1; transform:translateX(0); pointer-events:auto; z-index:2; }
+  .slide.enter-left{ transform:translateX(-28px); opacity:0; }
+  .slide.exit-left{ transform:translateX(-28px); opacity:0; }
+  .slide.exit-right{ transform:translateX(28px); opacity:0; }
+
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition:none !important; transform:none !important; }
+  }
+
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--mono); letter-spacing:.14em; text-transform:uppercase;
+    font-size:clamp(12px,1.1vw,14px); color:var(--accent);
+    margin-bottom: 10px;
+  }
+  .eyebrow::before{ content:"☕"; font-size:14px; }
+
+  h1.slide-title{
+    font-family:var(--serif); font-weight:700;
+    font-size: clamp(25px, 3.4vw, 50px);
+    line-height:1.12;
+    margin: 0 0 8px 0;
+    color:var(--text);
+  }
+  .subtitle{
+    font-size: clamp(15px, 1.2vw, 18px);
+    color:var(--text-dim);
+    margin: 0 0 16px 0;
+    max-width:920px;
+    line-height:1.55;
+  }
+
+  .slide-body{ flex:1; min-height:0; display:flex; flex-direction:column; }
+
+  /* ---------- TITLE ---------- */
+  .title-wrap{ height:100%; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:16px; max-width:1160px; }
+  .brew-badge{ display:flex; align-items:center; gap:12px; padding:9px 18px; border:1px solid var(--line); border-radius:999px; background:var(--panel); font-family:var(--mono); font-size:13px; color:var(--accent); letter-spacing:.06em; }
+  .title-main{ font-family:var(--serif); font-weight:700; font-size:clamp(32px,5vw,68px); line-height:1.06; letter-spacing:-0.01em; }
+  .title-main .accent{ color:var(--accent); }
+  .title-sub{ font-size:clamp(16px,1.5vw,20px); color:var(--text-dim); max-width:760px; line-height:1.55; }
+  .title-stats{ display:flex; gap:14px; margin-top:6px; flex-wrap:wrap; }
+  .stat-chip{ border:1px solid var(--line); background:var(--panel-2); border-radius:12px; padding:11px 18px; min-width:150px; }
+  .stat-chip .num{ font-family:var(--serif); font-size:26px; color:var(--accent); font-weight:700; }
+  .stat-chip .lbl{ font-size:13px; color:var(--text-dim); margin-top:2px; }
+  .steam-illo{ position:absolute; right:clamp(10px,4vw,80px); top:50%; transform:translateY(-50%); width:min(26vw,320px); opacity:.9; }
+
+  /* ---------- GRIDS ---------- */
+  .grid-2{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vw,22px); flex:1; min-height:0; }
+  .grid-2x2{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); grid-template-rows: repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vw,20px); flex:1; min-height:0; }
+  @media (max-width:900px){ .grid-2, .grid-2x2{ grid-template-columns: minmax(0,1fr); } }
+
+  /* ---------- TICKET (signature element) ---------- */
+  .ticket{ position:relative; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 20px 16px 26px; min-width:0; display:flex; flex-direction:column; gap:8px; }
+  .ticket::before{ content:""; position:absolute; left:14px; top:0; bottom:0; width:2px; background:repeating-linear-gradient(to bottom, var(--accent) 0 6px, transparent 6px 12px); opacity:.55; }
+  .ticket h3{ margin:0; font-family:var(--serif); font-size:18px; color:var(--accent); }
+  .ticket p{ margin:0; font-size:14.5px; color:var(--text-dim); line-height:1.6; }
+  .ticket ul{ margin:4px 0 0; padding-left:18px; font-size:14.5px; color:var(--text-dim); line-height:1.65; }
+  .ticket ul li b{ color:var(--text); }
+
+  .block-card{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 20px; min-width:0; display:flex; flex-direction:column; gap:8px; }
+  .block-card h3{ margin:0; font-family:var(--serif); font-size:18px; color:var(--accent); }
+  .block-card h3 .tag{ font-family:var(--mono); font-size:11px; color:var(--accent-cool); border:1px solid var(--line); border-radius:999px; padding:2px 8px; margin-left:8px; vertical-align:middle; }
+  .block-card p{ margin:0; font-size:14.5px; color:var(--text-dim); line-height:1.6; }
+  .block-card ul{ margin:4px 0 0; padding-left:18px; font-size:14.5px; color:var(--text-dim); line-height:1.65; }
+  .block-card ul li b{ color:var(--text); }
+
+  /* ---------- CODE ---------- */
+  .code-block{ background:var(--code-bg); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .code-header{ display:flex; align-items:center; justify-content:space-between; padding:7px 12px; background:var(--panel-2); border-bottom:1px solid var(--line); font-family:var(--mono); font-size:12px; color:var(--text-dim); }
+  .copy-btn{ font-family:var(--sans); font-size:12px; color:var(--text); background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:4px 10px; cursor:pointer; transition:background .15s ease, color .15s ease; }
+  .copy-btn:hover{ background:var(--accent); color:#1c140f; border-color:var(--accent); }
+  .copy-btn.copied{ background:var(--accent-cool); color:#1c140f; border-color:var(--accent-cool); }
+  pre.codepre{ margin:0; padding:10px 14px; max-height:50vh; overflow:auto; font-family:var(--mono); font-size:clamp(12px,.92vw,14px); line-height:1.55; }
+  code .tok-keyword{ color:var(--code-keyword); }
+  code .tok-string{ color:var(--code-string); }
+  code .tok-number{ color:var(--code-number); }
+  code .tok-type{ color:var(--code-type); }
+  code .tok-comment{ color:var(--code-comment); font-style:italic; }
+
+  /* ---------- ZONES DIAGRAM (signature schematic) ---------- */
+  .zones-wrap{ display:flex; align-items:center; justify-content:center; flex:1; }
+
+  /* ---------- TABLES ---------- */
+  table.cmp{ width:100%; border-collapse:collapse; font-size:14.5px; }
+  table.cmp th, table.cmp td{ text-align:left; padding:10px 14px; border-bottom:1px solid var(--line); vertical-align:top; }
+  table.cmp th{ font-family:var(--mono); font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--accent-cool); border-bottom:1px solid var(--line-strong); }
+  table.cmp td b{ color:var(--text); }
+  table.cmp tr:last-child td{ border-bottom:none; }
+  table.cmp td.yes{ color:var(--accent-cool); font-weight:700; }
+  table.cmp td.no{ color:var(--accent-rose); }
+  .spec-card{ position:relative; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 20px; }
+
+  /* ---------- MCQ ---------- */
+  .mcq-grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vh,18px); flex:1; min-height:0; }
+  .mcq-grid.odd-last > :last-child{ grid-column: 1 / -1; max-width:640px; margin:0 auto; width:100%; }
+  @media (max-width:900px){ .mcq-grid{ grid-template-columns:minmax(0,1fr); } .mcq-grid.odd-last > :last-child{ max-width:none; } }
+  .mcq-card{ position:relative; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 20px; }
+  .mcq-card .qnum{ font-family:var(--mono); font-size:12px; color:var(--accent); letter-spacing:.08em; }
+  .mcq-card .qtext{ font-size:clamp(15px,1.1vw,17.5px); font-weight:600; margin:6px 0 10px; line-height:1.4; }
+  .mcq-opts{ display:flex; flex-direction:column; gap:6px; font-size:14.5px; color:var(--text-dim); }
+  .mcq-opts div{ display:flex; gap:8px; }
+  .mcq-opts b{ color:var(--accent-cool); min-width:18px; }
+  .output-prompt{ display:flex; align-items:center; gap:10px; font-size:14px; color:var(--text-dim); margin-top:8px; }
+  .output-prompt input{ flex:1; border:none; border-bottom:1px dashed var(--line); background:transparent; color:var(--text); font-family:var(--mono); font-size:14px; padding:4px 6px; }
+  .output-prompt input:focus{ outline:none; border-bottom-color:var(--accent); }
+  .go-grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vw,20px); flex:1; min-height:0; }
+  .go-grid.solo{ grid-template-columns:minmax(0,1fr); }
+  @media (max-width:900px){ .go-grid{ grid-template-columns:minmax(0,1fr); } }
+  .go-card{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 18px; display:flex; flex-direction:column; gap:8px; min-width:0; }
+  .go-card .qnum{ font-family:var(--mono); font-size:12px; color:var(--accent); letter-spacing:.06em; }
+
+  /* ---------- QUOTES ---------- */
+  .quote-wrap{ flex:1; display:flex; flex-direction:column; justify-content:center; gap:26px; max-width:1100px; }
+  .quote-block{ position:relative; padding-left:28px; }
+  .quote-block::before{ content:"“"; position:absolute; left:-6px; top:-18px; font-family:var(--serif); font-size:64px; color:var(--accent); opacity:.6; }
+  .quote-block p{ font-family:var(--serif); font-size:clamp(17px,1.9vw,24px); line-height:1.5; margin:0 0 8px; color:var(--text); }
+  .quote-block span{ font-family:var(--mono); font-size:13px; color:var(--accent-cool); }
+
+  /* ---------- ANSWER KEY ---------- */
+  .ans-scroll{ flex:1; min-height:0; overflow-y:auto; padding-right:8px; }
+  .ans-block{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 18px; margin-bottom:12px; break-inside:avoid; }
+  .ans-block h4{ margin:0 0 6px 0; font-family:var(--mono); font-size:14px; color:var(--accent); }
+  .ans-block p{ margin:0; font-size:14.5px; color:var(--text-dim); line-height:1.6; }
+  .ans-block p b{ color:var(--text); }
+
+  /* ---------- CLOSING ---------- */
+  .closing-wrap{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:22px; }
+  .closing-wrap .final-quote{ font-family:var(--serif); font-size:clamp(20px,2.4vw,32px); max-width:900px; line-height:1.5; color:var(--text); }
+  .closing-wrap .final-msg{ font-size:16px; color:var(--text-dim); max-width:640px; line-height:1.6; }
+
+  /* ---------- CHROME ---------- */
+  .progress-track{ position:fixed; top:0; left:0; right:0; height:4px; background:rgba(255,255,255,0.06); z-index:50; }
+  .progress-fill{ height:100%; background:linear-gradient(90deg, var(--accent-soft), var(--accent)); width:0%; transition:width .3s ease; }
+  .counter{ position:fixed; bottom:16px; right:20px; z-index:50; font-family:var(--mono); font-size:13px; color:var(--text-dim); background:rgba(0,0,0,0.35); border:1px solid var(--line); border-radius:999px; padding:6px 14px; backdrop-filter: blur(4px); }
+  .hint{ position:fixed; bottom:16px; left:20px; z-index:50; font-family:var(--mono); font-size:12px; color:var(--text-dim); background:rgba(0,0,0,0.35); border:1px solid var(--line); border-radius:999px; padding:6px 14px; }
+
+  .overlay{ position:fixed; inset:0; background:rgba(10,7,5,0.72); backdrop-filter: blur(3px); display:flex; align-items:center; justify-content:center; z-index:100; opacity:0; pointer-events:none; transition:opacity .2s ease; }
+  .overlay.show{ opacity:1; pointer-events:auto; }
+  .overlay-panel{ background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:28px 32px; max-width:520px; width:90%; }
+  .overlay-panel h2{ margin:0 0 14px 0; font-family:var(--serif); color:var(--accent); font-size:22px; }
+  .overlay-panel .row{ display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--line); font-size:14px; color:var(--text-dim); }
+  .overlay-panel .row:last-child{ border-bottom:none; }
+  .overlay-close{ margin-top:16px; width:100%; padding:10px; border-radius:8px; border:1px solid var(--line); background:var(--accent); color:#1c140f; font-weight:600; cursor:pointer; font-family:var(--sans); font-size:14px; }
+  kbd{ display:inline-block; font-family:var(--mono); font-size:13px; background:var(--panel-2); border:1px solid var(--line); border-bottom-width:2px; border-radius:6px; padding:2px 8px; color:var(--text); }
+
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb{ background:var(--panel-2); border-radius:8px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+</style>
+</head>
+<body>
+
+<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+<div class="counter" id="counter">1 / 24</div>
+<div class="hint">Right-click or → for next · press ? for help</div>
+
+<div class="deck" id="deck">
+
+  <!-- 0: TITLE -->
+  <section class="slide" data-index="0">
+    <div class="title-wrap">
+      <div class="brew-badge">MODULE 6 · THE JAVA ROASTERY</div>
+      <div class="title-main">Access Modifiers<br><span class="accent">The House Rules of Visibility</span></div>
+      <div class="title-sub">Every good roastery has house rules about who gets the secret blend, who runs the shared machines, and who can walk right up to the counter. Java's access modifiers work the same way — today we brew a solid grasp of all four levels.</div>
+      <div class="title-stats">
+        <div class="stat-chip"><div class="num">4</div><div class="lbl">Access Levels</div></div>
+        <div class="stat-chip"><div class="num">7</div><div class="lbl">Worked Examples</div></div>
+        <div class="stat-chip"><div class="num">3</div><div class="lbl">Skill Checks</div></div>
+      </div>
+    </div>
+    <svg class="steam-illo" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Illustration of a steaming coffee cup, representing the Java Roastery theme">
+      <g fill="none" stroke="#e3a548" stroke-width="4" stroke-linecap="round" opacity="0.85">
+        <path d="M70 40 C60 20, 80 20, 72 5" />
+        <path d="M100 40 C90 15, 112 15, 102 -2" />
+        <path d="M130 40 C120 20, 142 20, 132 5" />
+      </g>
+      <rect x="50" y="95" width="110" height="70" rx="10" fill="#2c2018" stroke="#e3a548" stroke-width="4"/>
+      <path d="M160 105 h18 a18 18 0 0 1 0 42 h-18" fill="none" stroke="#e3a548" stroke-width="4"/>
+      <ellipse cx="105" cy="95" rx="55" ry="10" fill="#8fbf9a" opacity="0.85"/>
+      <rect x="40" y="165" width="130" height="10" rx="4" fill="#e3a548" opacity="0.6"/>
+    </svg>
+  </section>
+
+  <!-- 1: ROADMAP -->
+  <section class="slide" data-index="1">
+    <div class="eyebrow">Today's Order</div>
+    <h1 class="slide-title">Lesson Preview</h1>
+    <p class="subtitle">Identify and memorize the primary Java access modifiers, and practice writing basic programs to appreciate their usage in object-oriented development.</p>
+    <div class="slide-body">
+      <div class="grid-2x2">
+        <div class="block-card">
+          <h3>🔐 Access Modifiers</h3>
+          <p>Four levels of visibility that control who can reach your classes, fields, and methods — <code>private</code>, default, <code>protected</code>, and <code>public</code>.</p>
+        </div>
+        <div class="block-card">
+          <h3>🛠️ Guided Drills</h3>
+          <p>Worked exercises for each access level, plus a full encapsulation drill converting pseudocode into working Java.</p>
+        </div>
+        <div class="block-card">
+          <h3>✅ Skill Check</h3>
+          <p>Multiple choice questions covering all four visibility levels and when to reach for each one.</p>
+        </div>
+        <div class="block-card">
+          <h3>📋 Wrap-Up</h3>
+          <p>FAQs that tie encapsulation back together. <span style="color:var(--text-dim); font-style:italic;">(Static members now get their own deep dive next, in Module 7.)</span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2: THE FOUR ACCESS MODIFIERS -->
+  <section class="slide" data-index="2">
+    <div class="eyebrow">Menu Board</div>
+    <h1 class="slide-title">The Four Access Modifiers</h1>
+    <p class="subtitle">Access modifiers set the visibility of classes, constructors, fields, and methods — enforcing encapsulation the way a counter, a staff room, and a back office enforce who can reach what.</p>
+    <div class="slide-body">
+      <div class="grid-2x2">
+        <div class="ticket">
+          <h3>🔒 private <span style="font-size:12px; color:var(--text-dim); font-family:var(--mono);">Class-level</span></h3>
+          <p>Restricted only to the class where it's declared — like a barista's personal recipe notebook nobody else touches.</p>
+        </div>
+        <div class="ticket">
+          <h3>📦 default <span style="font-size:12px; color:var(--text-dim); font-family:var(--mono);">Package-level</span></h3>
+          <p>No modifier written means visible only to classes in the same package — the house blend, shared among staff on shift.</p>
+        </div>
+        <div class="ticket">
+          <h3>👪 protected <span style="font-size:12px; color:var(--text-dim); font-family:var(--mono);">Package &amp; Subclass</span></h3>
+          <p>Accessible within the same package and by subclasses anywhere — the family recipe passed down to every franchise branch.</p>
+        </div>
+        <div class="ticket">
+          <h3>🌍 public <span style="font-size:12px; color:var(--text-dim); font-family:var(--mono);">World-level</span></h3>
+          <p>Accessible from anywhere in the project, no restrictions — the menu board everyone walking in can read.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3: SIGNATURE ZONES DIAGRAM -->
+  <section class="slide" data-index="3">
+    <div class="eyebrow">Signature Schematic</div>
+    <h1 class="slide-title">The Four Zones of the Roastery</h1>
+    <p class="subtitle">Picture the shop as four nested zones. Each access modifier decides how far out from the counter your data is allowed to travel.</p>
+    <div class="slide-body zones-wrap">
+      <svg viewBox="0 0 620 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Nested diagram showing four zones: an outer Menu Board zone representing public access, a Franchise Network ring representing protected access, a Staff Room ring representing default package access, and an innermost Personal Locker representing private access" style="width:100%; max-width:660px; height:auto; margin:0 auto;">
+        <rect x="10" y="10" width="600" height="400" rx="26" fill="none" stroke="#8fbf9a" stroke-width="2.5"/>
+        <text x="30" y="38" font-family="SFMono-Regular, monospace" font-size="13" fill="#8fbf9a">🌍 public — the Menu Board (everyone)</text>
+
+        <rect x="55" y="60" width="510" height="320" rx="22" fill="none" stroke="#e3a548" stroke-width="2.5"/>
+        <text x="75" y="86" font-family="SFMono-Regular, monospace" font-size="13" fill="#e3a548">👪 protected — Franchise Network (package + subclasses)</text>
+
+        <rect x="105" y="108" width="410" height="230" rx="18" fill="none" stroke="#8ec7dc" stroke-width="2.5"/>
+        <text x="125" y="134" font-family="SFMono-Regular, monospace" font-size="13" fill="#8ec7dc">📦 default — Staff Room (same package)</text>
+
+        <rect x="200" y="160" width="220" height="120" rx="14" fill="#2c2018" stroke="#d9776b" stroke-width="2.5"/>
+        <text x="310" y="212" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="14" fill="#d9776b">🔒 private</text>
+        <text x="310" y="234" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="12" fill="#c9b6a2">Personal Locker</text>
+        <text x="310" y="252" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="11" fill="#c9b6a2">(declaring class only)</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- 4: EXERCISE 1 - PRIVATE -->
+  <section class="slide" data-index="4">
+    <div class="eyebrow">Exercise 01</div>
+    <h1 class="slide-title">Private Access — Locked Behind the Counter</h1>
+    <p class="subtitle">Private members are reachable only from inside their own class. Reach in from outside, and the compiler shuts the window.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>❌ NumberClass.java — direct access fails</span><button class="copy-btn" data-target="code1">Copy</button></div>
+          <pre class="codepre"><code id="code1"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code1">public class NumberClass {
+    private int number = 10;
+}
+
+public class Program {
+    public static void main(String[] args) {
+        NumberClass num = new NumberClass();
+
+        // COMPILE ERROR:
+        // number has private access in NumberClass
+        System.out.println(num.number);
+    }
+}</script>
+
+        <div class="code-block">
+          <div class="code-header"><span>✅ HelperClass.java — access via method</span><button class="copy-btn" data-target="code2">Copy</button></div>
+          <pre class="codepre"><code id="code2"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code2">class HelperClass {
+    private int power = 1;
+
+    public HelperClass() {
+        displayPower();
+    }
+
+    public void displayPower() {
+        // Allowed: inside the same class
+        System.out.println("Power value: " + this.power);
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        HelperClass example = new HelperClass();
+    }
+}</script>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5: EXERCISE 2 - PUBLIC -->
+  <section class="slide" data-index="5">
+    <div class="eyebrow">Exercise 02</div>
+    <h1 class="slide-title">Public Access — The Open Menu</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>ReturnNumber.java</span><button class="copy-btn" data-target="code3">Copy</button></div>
+          <pre class="codepre"><code id="code3"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code3">public class ReturnNumber {
+    public int x = 105;
+
+    public static void main(String[] args) {
+        ReturnNumber num = new ReturnNumber();
+
+        // Allowed: x is public
+        System.out.println("Public field value: " + num.x);
+    }
+}
+// Output: Public field value: 105</script>
+
+        <div class="block-card">
+          <h3 style="font-size:17px;">🔍 Code Breakdown</h3>
+          <ul>
+            <li><b>public int x = 105;</b> — field is visible to everyone</li>
+            <li><b>num.x</b> in <code>main()</code> — direct access, no compiler error</li>
+            <li>Any class in any package can read or write <code>x</code> — use sparingly</li>
+          </ul>
+          <h3 style="font-size:15px; margin-top:8px;">💡 Key Takeaway</h3>
+          <ul>
+            <li><code>public</code> is the <b>widest</b> visibility level</li>
+            <li>Great for constants and API entry points</li>
+            <li>Use <code>public</code> deliberately — over-exposure breaks encapsulation</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6: DEFAULT ACCESS DEEP DIVE -->
+  <section class="slide" data-index="6">
+    <div class="eyebrow">Going Further</div>
+    <h1 class="slide-title">Default (Package-Level) Access</h1>
+    <p class="subtitle">Write no modifier at all, and Java quietly applies the "default" level — visible only to classes sharing the same package.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>WarehouseDesk.java — same package</span><button class="copy-btn" data-target="code4">Copy</button></div>
+          <pre class="codepre"><code id="code4"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code4">// Both classes live in the same package
+// (same folder, no "package" statement needed).
+
+class InventoryItem {
+    int stockCount = 42; // no modifier -> default (package-private)
+}
+
+public class WarehouseDesk {
+    public static void main(String[] args) {
+        InventoryItem item = new InventoryItem();
+
+        // Allowed: WarehouseDesk is in the SAME package as InventoryItem
+        System.out.println("Stock on hand: " + item.stockCount);
+    }
+}
+// Output: Stock on hand: 42</script>
+
+        <div class="block-card">
+          <h3 style="font-size:17px;">🔍 What Changes If the Package Differs?</h3>
+          <p>If <code>WarehouseDesk</code> instead lived in a <b style="color:var(--text)">different</b> package — say, imported from another folder — that same line would refuse to compile:</p>
+          <p style="font-family:var(--mono); font-size:13px; color:var(--accent-rose); background:var(--code-bg); padding:8px 10px; border-radius:6px;">error: stockCount is not public in InventoryItem; cannot be accessed from outside package</p>
+          <h3 style="font-size:15px; margin-top:6px;">💡 Key Takeaway</h3>
+          <ul>
+            <li>Default access is the <b>quiet in-between</b> — tighter than <code>public</code>, looser than <code>private</code></li>
+            <li>Useful for helper classes that only your own package should touch</li>
+            <li>No keyword needed — just leave the modifier off</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7: PROTECTED ACCESS DEEP DIVE -->
+  <section class="slide" data-index="7">
+    <div class="eyebrow">Going Further</div>
+    <h1 class="slide-title">Protected Access — The Franchise Recipe</h1>
+    <p class="subtitle"><code>protected</code> reaches everywhere <code>default</code> does, plus one more place: subclasses, even if they live in a completely different package.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>HouseBlendRecipe.java — parent, package A</span><button class="copy-btn" data-target="code5">Copy</button></div>
+          <pre class="codepre"><code id="code5"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code5">package com.roastery.recipes;
+
+public class HouseBlendRecipe {
+    protected String secretRatio = "70% Arabica, 30% Robusta";
+}</script>
+
+        <div class="code-block">
+          <div class="code-header"><span>FranchiseBranch.java — subclass, package B</span><button class="copy-btn" data-target="code6">Copy</button></div>
+          <pre class="codepre"><code id="code6"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code6">package com.roastery.franchise;
+import com.roastery.recipes.HouseBlendRecipe;
+
+public class FranchiseBranch extends HouseBlendRecipe {
+    public void printRecipe() {
+        // Allowed: protected reaches subclasses,
+        // even in a different package, through inheritance
+        System.out.println("Our secret ratio: " + secretRatio);
+    }
+}</script>
+      </div>
+      <p style="margin-top:10px; font-size:13.5px; color:var(--text-dim);">💡 <b style="color:var(--text)">Key difference from default:</b> a plain, unrelated class in <code>com.roastery.franchise</code> that does <i>not</i> extend <code>HouseBlendRecipe</code> still couldn't touch <code>secretRatio</code> — <code>protected</code> opens the door for subclasses specifically, not the whole outside package.</p>
+    </div>
+  </section>
+
+  <!-- 8: VISIBILITY MATRIX -->
+  <section class="slide" data-index="8">
+    <div class="eyebrow">Reference Table</div>
+    <h1 class="slide-title">The Visibility Matrix</h1>
+    <div class="slide-body">
+      <div class="spec-card">
+        <table class="cmp">
+          <tr><th>Access Level</th><th>Same Class</th><th>Same Package</th><th>Subclass (different package)</th><th>World (everywhere)</th></tr>
+          <tr><td><b>private</b></td><td class="yes">✓</td><td class="no">✕</td><td class="no">✕</td><td class="no">✕</td></tr>
+          <tr><td><b>default</b> (no modifier)</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">✕</td><td class="no">✕</td></tr>
+          <tr><td><b>protected</b></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">✕</td></tr>
+          <tr><td><b>public</b></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        </table>
+      </div>
+      <p style="margin-top:14px; font-size:14.5px; color:var(--text-dim);"><b style="color:var(--text)">Rule of thumb:</b> pick the <i>tightest</i> level that still gets the job done. You can always widen access later — narrowing it after other code depends on it is much harder.</p>
+    </div>
+  </section>
+
+  <!-- 9: GUIDED DRILL -->
+  <section class="slide" data-index="9">
+    <div class="eyebrow">Guided Drill · Activity 3</div>
+    <h1 class="slide-title">Pseudocode → Java: BankAccount</h1>
+    <p class="subtitle">Keep <code>balance</code> private, add <code>deposit()</code> and <code>showBalance()</code>, then test it in <code>main</code> by depositing 500.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>Pseudocode — BankAccount</span><button class="copy-btn" data-target="code7">Copy</button></div>
+          <pre class="codepre"><code id="code7"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code7">CLASS BankAccount
+    PRIVATE balance = 0
+
+    METHOD deposit(amount)
+        balance = balance + amount
+    END METHOD
+
+    METHOD showBalance()
+        PRINT "Balance: " + balance
+    END METHOD
+END CLASS</script>
+
+        <div class="code-block">
+          <div class="code-header"><span>BankAccount.java — sample answer</span><button class="copy-btn" data-target="code8">Copy</button></div>
+          <pre class="codepre"><code id="code8"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code8">class BankAccount {
+    private double balance = 0;
+
+    public void deposit(double amount) {
+        balance = balance + amount;
+    }
+
+    public void showBalance() {
+        System.out.println("Balance: " + balance);
+    }
+
+    public static void main(String[] args) {
+        BankAccount account = new BankAccount();
+        account.deposit(500);
+        account.showBalance();
+    }
+}
+// Output: Balance: 500.0</script>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10: REAL-LIFE ANALOGIES -->
+  <section class="slide" data-index="10">
+    <div class="eyebrow">Making It Stick</div>
+    <h1 class="slide-title">Real-Life Analogies</h1>
+    <div class="slide-body">
+      <div class="grid-2x2">
+        <div class="block-card">
+          <h3 style="font-size:17px;">private <span class="tag">personal notebook</span></h3>
+          <p>A barista's personal recipe notebook — nobody else touches it, not even a co-worker on the same shift.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">default <span class="tag">house blend</span></h3>
+          <p>The house blend recipe, shared among everyone working that location — but not handed out to other branches.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">protected <span class="tag">franchise recipe</span></h3>
+          <p>The family recipe passed down to every franchise branch — each one inherits it, wherever they're located.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">public <span class="tag">the menu board</span></h3>
+          <p>The menu board out front — anyone walking in off the street can read it, no questions asked.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11: FAQ -->
+  <section class="slide" data-index="11">
+    <div class="eyebrow">Barista FAQ</div>
+    <h1 class="slide-title">Wrap-Up &amp; FAQs</h1>
+    <div class="slide-body">
+      <div class="grid-2x2">
+        <div class="block-card">
+          <h3 style="font-size:16px;">What does public do?</h3>
+          <p>It sets the accessibility level to universal — classes, fields, and methods marked public can be referenced and invoked from any other package or class across the entire project.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:16px;">Why mark fields private?</h3>
+          <p>Private fields protect sensitive internal data from unvalidated external modification — data encapsulation that keeps object state reliable and secure.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:16px;">What's the real difference between default and protected?</h3>
+          <p>Default stops at the package boundary. Protected does everything default does, <i>plus</i> it lets subclasses in other packages inherit access too.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:16px;">Why do access specifiers matter in OOP?</h3>
+          <p>They set precise boundaries for software architecture: modularity, encapsulation, fewer unintended side effects, and control over who reaches sensitive components.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12: RECAP -->
+  <section class="slide" data-index="12">
+    <div class="eyebrow">Before the Skill Check</div>
+    <h1 class="slide-title">Recap</h1>
+    <div class="slide-body">
+      <div class="block-card" style="max-width:900px;">
+        <ul style="font-size:15.5px; line-height:1.8;">
+          <li><b>private, default, protected, public</b> control visibility from tightest (own class only) to widest (entire project) — pick the tightest level that still gets the job done.</li>
+          <li><b>private</b> is invisible outside its declaring class — expose only what's needed through public getters/setters.</li>
+          <li><b>default</b> (no modifier) opens access to the whole package, nothing further.</li>
+          <li><b>protected</b> adds subclasses to that reach, even across package lines.</li>
+          <li><b>public</b> is wide open — use it deliberately, since over-exposure breaks encapsulation.</li>
+          <li>Encapsulating private fields behind public methods keeps object state reliable — the core habit behind every exercise today.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- MCQ -->
+  <section class="slide" data-index="13">
+    <div class="eyebrow">Activity 1 of 3 · Multiple Choice (3 &times; 1 pt)</div>
+    <h1 class="slide-title">Multiple Choice — Test Yourself</h1>
+    <p class="subtitle">Total for this activity set: <b style="color:var(--text)">15 points</b> (3 MC + 7 Guess-the-Output + 2 Coding Problems). Answers are revealed on the Answer Key slides at the end.</p>
+    <div class="slide-body">
+      <div class="mcq-grid odd-last">
+        <div class="mcq-card">
+          <div class="qnum">QUESTION 01 · 1 pt</div>
+          <div class="qtext">Which keyword ensures that a variable or method is accessible only within its defining class?</div>
+          <div class="mcq-opts">
+            <div><b>A.</b> public</div>
+            <div><b>B.</b> private</div>
+            <div><b>C.</b> protected</div>
+            <div><b>D.</b> static</div>
+          </div>
+        </div>
+        <div class="mcq-card">
+          <div class="qnum">QUESTION 02 · 1 pt</div>
+          <div class="qtext">Which access level applies when <b>no modifier keyword</b> is written at all?</div>
+          <div class="mcq-opts">
+            <div><b>A.</b> private</div>
+            <div><b>B.</b> protected</div>
+            <div><b>C.</b> public</div>
+            <div><b>D.</b> default (package-private)</div>
+          </div>
+        </div>
+        <div class="mcq-card">
+          <div class="qnum">QUESTION 03 · 1 pt</div>
+          <div class="qtext">A subclass in a <b>different package</b> needs to access a field declared in its parent class. Which modifier allows this?</div>
+          <div class="mcq-opts">
+            <div><b>A.</b> private only</div>
+            <div><b>B.</b> default only</div>
+            <div><b>C.</b> protected or public</div>
+            <div><b>D.</b> None of these</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GO 1-2 -->
+  <section class="slide" data-index="14">
+    <div class="eyebrow">Activity 2 of 3 · Guess the Output (7 &times; 1 pt)</div>
+    <h1 class="slide-title">Round 1 — Private &amp; Public</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+        <div class="go-card">
+          <div class="qnum">ITEM 01 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>Coffee.java</span><button class="copy-btn" data-target="go1">Copy</button></div>
+            <pre class="codepre"><code id="go1"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go1">class Coffee {
+    private String roast = "Medium";
+    public String getRoast() { return roast; }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Coffee c = new Coffee();
+        System.out.println(c.getRoast());
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="qnum">ITEM 02 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>Cup.java</span><button class="copy-btn" data-target="go2">Copy</button></div>
+            <pre class="codepre"><code id="go2"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go2">class Cup {
+    public int size = 12;
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Cup a = new Cup();
+        a.size = 16;
+        System.out.println(a.size);
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GO 3-4 -->
+  <section class="slide" data-index="15">
+    <div class="eyebrow">Activity 2 of 3 · Guess the Output (7 &times; 1 pt)</div>
+    <h1 class="slide-title">Round 2 — Default &amp; Protected</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+        <div class="go-card">
+          <div class="qnum">ITEM 03 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>Register.java</span><button class="copy-btn" data-target="go3">Copy</button></div>
+            <pre class="codepre"><code id="go3"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go3">class Till {
+    double cash = 100.0; // default access, same package
+}
+
+public class Register {
+    public static void main(String[] args) {
+        Till t = new Till();
+        t.cash += 25;
+        System.out.println(t.cash);
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="qnum">ITEM 04 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>EspressoRoast.java</span><button class="copy-btn" data-target="go4">Copy</button></div>
+            <pre class="codepre"><code id="go4"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go4">class Roast {
+    protected String level = "Dark";
+}
+
+class EspressoRoast extends Roast {
+    void show() {
+        System.out.println("Level: " + level);
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        EspressoRoast e = new EspressoRoast();
+        e.show();
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GO 5-6 -->
+  <section class="slide" data-index="16">
+    <div class="eyebrow">Activity 2 of 3 · Guess the Output (7 &times; 1 pt)</div>
+    <h1 class="slide-title">Round 3 — Trap Question &amp; Independent Objects</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+        <div class="go-card">
+          <div class="qnum">ITEM 05 · 1 pt · TRAP</div>
+          <div class="code-block">
+            <div class="code-header"><span>Teller.java</span><button class="copy-btn" data-target="go5">Copy</button></div>
+            <pre class="codepre"><code id="go5"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go5">class Vault {
+    private double balance = 500;
+}
+
+public class Teller {
+    public static void main(String[] args) {
+        Vault v = new Vault();
+        System.out.println(v.balance); // ?
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="hint: not every program compiles..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="qnum">ITEM 06 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>Shift.java</span><button class="copy-btn" data-target="go6">Copy</button></div>
+            <pre class="codepre"><code id="go6"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go6">class Barista {
+    private String name;
+    public Barista(String name) { this.name = name; }
+    public String getName() { return name; }
+}
+
+public class Shift {
+    public static void main(String[] args) {
+        Barista a = new Barista("Mira");
+        Barista b = new Barista("Theo");
+        System.out.println(a.getName() + " and " + b.getName());
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GO 7 (solo) -->
+  <section class="slide" data-index="17">
+    <div class="eyebrow">Activity 2 of 3 · Guess the Output (7 &times; 1 pt)</div>
+    <h1 class="slide-title">Round 4 — Encapsulation with Validation</h1>
+    <div class="slide-body">
+      <div class="go-grid solo">
+        <div class="go-card">
+          <div class="qnum">ITEM 07 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>Order.java</span><button class="copy-btn" data-target="go7">Copy</button></div>
+            <pre class="codepre"><code id="go7"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go7">class Order {
+    private int quantity;
+
+    public void setQuantity(int q) {
+        if (q > 0) {
+            quantity = q;
+        }
+    }
+
+    public int getQuantity() { return quantity; }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Order o = new Order();
+        o.setQuantity(-5);
+        o.setQuantity(3);
+        System.out.println(o.getQuantity());
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CODING PROBLEMS -->
+  <section class="slide" data-index="18">
+    <div class="eyebrow">Activity 3 of 3 · Coding Problems (2 &times; 2.5 pts)</div>
+    <h1 class="slide-title">Write the Code Yourself</h1>
+    <p class="subtitle">No starter code this time — write each class from scratch. Sample solutions are on the Answer Key.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="block-card">
+          <h3 style="font-size:17px;">Problem 1 · 2.5 pts</h3>
+          <p>Write a class <code>Customer</code> with:</p>
+          <ul>
+            <li>a <b>private</b> field <code>email</code></li>
+            <li>a <b>public</b> getter <code>getEmail()</code></li>
+            <li>a <b>public</b> setter <code>setEmail(String email)</code> that only accepts the value if it contains <code>"@"</code> — otherwise print <code>"Invalid email!"</code></li>
+          </ul>
+          <p>In <code>main</code>, create a <code>Customer</code>, try an invalid email, then a valid one, and print the final stored email.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">Problem 2 · 2.5 pts</h3>
+          <p>Write two classes:</p>
+          <ul>
+            <li><code>Vehicle</code> with a <b>protected</b> field <code>topSpeed</code></li>
+            <li><code>SportsCar extends Vehicle</code> with a method <code>showTopSpeed()</code> that prints <code>topSpeed</code> directly — no getter needed</li>
+          </ul>
+          <p>In <code>main</code>, create a <code>SportsCar</code>, set its inherited <code>topSpeed</code>, and call <code>showTopSpeed()</code> to prove <code>protected</code> reaches the subclass.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- KEY QUOTES -->
+  <section class="slide" data-index="19">
+    <div class="eyebrow">Key Quotes</div>
+    <h1 class="slide-title">In This Lesson's Own Words</h1>
+    <div class="slide-body">
+      <div class="quote-wrap">
+        <div class="quote-block">
+          <p>Every good roastery has house rules about who gets the secret blend, who runs the shared machines, and who can walk right up to the counter.</p>
+          <span>— Lesson Introduction</span>
+        </div>
+        <div class="quote-block">
+          <p>Private members are invisible outside their declaring class — use public getters and setters to expose only what's needed.</p>
+          <span>— Exercise 01 Key Takeaway</span>
+        </div>
+        <div class="quote-block">
+          <p>Public is the widest visibility level. Use it deliberately — over-exposure breaks encapsulation.</p>
+          <span>— Exercise 02 Key Takeaway</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ANSWER KEY - MC -->
+  <section class="slide" data-index="20">
+    <div class="eyebrow">Receipt · Page 1 of 3</div>
+    <h1 class="slide-title">Answer Key — Multiple Choice</h1>
+    <div class="slide-body">
+      <div class="ans-scroll">
+        <div class="ans-block">
+          <h4>Question 01</h4>
+          <p><b>B — private.</b> Restricted only to the class where it's declared — no other class, not even in the same package, can reach it directly.</p>
+        </div>
+        <div class="ans-block">
+          <h4>Question 02</h4>
+          <p><b>D — default (package-private).</b> Leaving off the modifier entirely doesn't mean "no restriction" — it quietly applies package-level visibility.</p>
+        </div>
+        <div class="ans-block">
+          <h4>Question 03</h4>
+          <p><b>C — protected or public.</b> Default stops at the package boundary, so it wouldn't reach a subclass elsewhere. Private wouldn't even work within the same class's package. Protected (or the wider public) is required.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ANSWER KEY - GO -->
+  <section class="slide" data-index="21">
+    <div class="eyebrow">Receipt · Page 2 of 3</div>
+    <h1 class="slide-title">Answer Key — Guess the Output</h1>
+    <div class="slide-body">
+      <div class="ans-scroll">
+        <div class="ans-cols" style="display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:0 24px; align-content:start;">
+          <div class="ans-block"><h4>GO #01 — Coffee.java</h4><p>The getter simply returns the private field's value.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent-cool); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">Medium</pre></div>
+          <div class="ans-block"><h4>GO #02 — Cup.java</h4><p><code>size</code> is public, so it's reassigned directly, no getter needed.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent-cool); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">16</pre></div>
+          <div class="ans-block"><h4>GO #03 — Register.java</h4><p>Default access allows <code>Register</code> to reach <code>cash</code> since both classes share a package.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent-cool); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">125.0</pre></div>
+          <div class="ans-block"><h4>GO #04 — EspressoRoast.java</h4><p><code>protected</code> lets the subclass inherit and read <code>level</code> directly.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent-cool); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">Level: Dark</pre></div>
+          <div class="ans-block"><h4>GO #05 — Teller.java (trap!)</h4><p><code>balance</code> is private — <code>Teller</code> cannot reach it at all, from any package.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent-rose); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">Compile Error: balance has private access in Vault</pre></div>
+          <div class="ans-block"><h4>GO #06 — Shift.java</h4><p>Each <code>Barista</code> object keeps its own private <code>name</code>, exposed safely through its own getter.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent-cool); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">Mira and Theo</pre></div>
+          <div class="ans-block"><h4>GO #07 — Order.java</h4><p>The setter's <code>if (q &gt; 0)</code> guard rejects <code>-5</code>, so only <code>3</code> is ever stored.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent-cool); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">3</pre></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ANSWER KEY - CODING -->
+  <section class="slide" data-index="22">
+    <div class="eyebrow">Receipt · Page 3 of 3</div>
+    <h1 class="slide-title">Answer Key — Coding Problems</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>Problem 1 — Customer.java</span><button class="copy-btn" data-target="ansc1">Copy</button></div>
+          <pre class="codepre"><code id="ansc1"></code></pre>
+        </div>
+        <script type="text/plain" data-target="ansc1">class Customer {
+    private String email;
+
+    public String getEmail() { return email; }
+
+    public void setEmail(String email) {
+        if (email != null && email.contains("@")) {
+            this.email = email;
+        } else {
+            System.out.println("Invalid email!");
+        }
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Customer c = new Customer();
+        c.setEmail("not-an-email");
+        c.setEmail("ana@roastery.com");
+        System.out.println(c.getEmail());
+    }
+}
+// Output:
+// Invalid email!
+// ana@roastery.com</script>
+
+        <div class="code-block">
+          <div class="code-header"><span>Problem 2 — SportsCar.java</span><button class="copy-btn" data-target="ansc2">Copy</button></div>
+          <pre class="codepre"><code id="ansc2"></code></pre>
+        </div>
+        <script type="text/plain" data-target="ansc2">class Vehicle {
+    protected int topSpeed;
+}
+
+class SportsCar extends Vehicle {
+    void showTopSpeed() {
+        System.out.println("Top speed: " + topSpeed + " km/h");
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        SportsCar car = new SportsCar();
+        car.topSpeed = 320;
+        car.showTopSpeed();
+    }
+}
+// Output: Top speed: 320 km/h</script>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16: CLOSING -->
+  <section class="slide" data-index="23">
+    <div class="closing-wrap">
+      <div class="eyebrow" style="margin:0 auto;">Closing Note</div>
+      <div class="final-quote">"A well-run shop knows exactly who's allowed behind the counter — good code does too."</div>
+      <div class="final-msg">That's Module 6 — the four access modifiers, from a locked personal notebook to the wide-open menu board. Next up in Module 7: static vs. non-static members, in a lot more detail. Good luck, and happy brewing. ☕</div>
+
+    </div>
+  </section>
+
+</div>
+
+<!-- Shortcuts overlay -->
+<div class="overlay" id="overlay">
+  <div class="overlay-panel">
+    <h2>Keyboard &amp; Mouse Shortcuts</h2>
+    <div class="row"><span>Next slide</span><span><kbd>→</kbd> / right-click / front side button</span></div>
+    <div class="row"><span>Previous slide</span><span><kbd>←</kbd> / back side button</span></div>
+    <div class="row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="row"><span>Show this panel</span><span><kbd>?</kbd></span></div>
+    <div class="row"><span>Close this panel</span><span><kbd>Esc</kbd></span></div>
+    <button class="overlay-close" id="overlayClose">Balik sa Slides</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  var TOKEN_RE = /(\/\/.*$)|("(?:[^"\\]|\\.)*")|('(?:[^'\\]|\\.)*')|\b(public|private|protected|static|final|class|new|void|int|double|boolean|char|String|return|if|else|for|while|this|super|extends|import|package|true|false|null)\b|\b(\d+\.\d+|\d+)\b|\b([A-Z][A-Za-z0-9_]*)\b/gm;
+
+  function highlightJava(src){
+    var out = '';
+    var lastIndex = 0;
+    var m;
+    TOKEN_RE.lastIndex = 0;
+    while ((m = TOKEN_RE.exec(src)) !== null){
+      out += escapeHtml(src.slice(lastIndex, m.index));
+      if (m[1] !== undefined) out += '<span class="tok-comment">' + escapeHtml(m[1]) + '</span>';
+      else if (m[2] !== undefined) out += '<span class="tok-string">' + escapeHtml(m[2]) + '</span>';
+      else if (m[3] !== undefined) out += '<span class="tok-string">' + escapeHtml(m[3]) + '</span>';
+      else if (m[4] !== undefined) out += '<span class="tok-keyword">' + escapeHtml(m[4]) + '</span>';
+      else if (m[5] !== undefined) out += '<span class="tok-number">' + escapeHtml(m[5]) + '</span>';
+      else if (m[6] !== undefined) out += '<span class="tok-type">' + escapeHtml(m[6]) + '</span>';
+      lastIndex = TOKEN_RE.lastIndex;
+      if (m.index === TOKEN_RE.lastIndex) TOKEN_RE.lastIndex++;
+    }
+    out += escapeHtml(src.slice(lastIndex));
+    return out;
+  }
+
+  function initCodeBlocks(){
+    var sources = document.querySelectorAll('script[type="text/plain"][data-target]');
+    sources.forEach(function(src){
+      var id = src.getAttribute('data-target');
+      var target = document.getElementById(id);
+      if (!target) return;
+      var raw = src.textContent.replace(/^\n/, '').replace(/\n$/, '');
+      target.innerHTML = highlightJava(raw);
+      target.setAttribute('data-raw', raw);
+    });
+  }
+
+  function fallbackCopy(text){
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); } catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  function initCopyButtons(){
+    document.querySelectorAll('.copy-btn').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var id = btn.getAttribute('data-target');
+        var code = document.getElementById(id);
+        var text = code ? (code.getAttribute('data-raw') || code.textContent) : '';
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).catch(function(){ fallbackCopy(text); });
+        } else {
+          fallbackCopy(text);
+        }
+        var originalText = btn.textContent;
+        btn.textContent = 'Copied! ✓';
+        btn.classList.add('copied');
+        setTimeout(function(){
+          btn.textContent = originalText;
+          btn.classList.remove('copied');
+        }, 1400);
+      });
+    });
+  }
+
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length;
+  var current = 0;
+  var progressFill = document.getElementById('progressFill');
+  var counterEl = document.getElementById('counter');
+  var overlay = document.getElementById('overlay');
+  var overlayClose = document.getElementById('overlayClose');
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function updateChrome(){
+    var pct = ((current + 1) / total) * 100;
+    progressFill.style.width = pct + '%';
+    counterEl.textContent = (current + 1) + ' / ' + total;
+  }
+
+  function isInteractive(el){
+    return !!(el.closest && el.closest('button, a, input, textarea, select, .no-nav, .overlay'));
+  }
+
+  function goTo(target, dir){
+    if (target < 0 || target >= total || target === current) return;
+    var oldEl = slides[current];
+    var newEl = slides[target];
+
+    oldEl.classList.remove('active');
+    oldEl.classList.add(dir > 0 ? 'exit-left' : 'exit-right');
+
+    newEl.classList.remove('exit-left', 'exit-right', 'enter-left');
+    if (reduceMotion){
+      newEl.classList.add('active');
+    } else {
+      if (dir < 0) newEl.classList.add('enter-left');
+      void newEl.offsetWidth;
+      requestAnimationFrame(function(){
+        newEl.classList.add('active');
+      });
+    }
+    newEl.scrollTop = 0;
+
+    current = target;
+    updateChrome();
+  }
+
+  function next(){ goTo(current + 1, 1); }
+  function prev(){ goTo(current - 1, -1); }
+  function first(){ goTo(0, -1); }
+  function last(){ goTo(total - 1, 1); }
+
+  function showOverlay(){ overlay.classList.add('show'); }
+  function hideOverlay(){ overlay.classList.remove('show'); }
+  function toggleOverlay(){
+    if (overlay.classList.contains('show')) hideOverlay(); else showOverlay();
+  }
+
+  document.addEventListener('keydown', function(e){
+    if (e.key === '?' ){ toggleOverlay(); return; }
+    if (e.key === 'Escape'){ hideOverlay(); return; }
+    if (overlay.classList.contains('show')) return;
+    if (e.key === 'ArrowRight' || e.key === 'PageDown'){ next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ prev(); }
+    else if (e.key === 'Home'){ first(); }
+    else if (e.key === 'End'){ last(); }
+  });
+
+  overlayClose.addEventListener('click', hideOverlay);
+  overlay.addEventListener('mousedown', function(e){
+    if (e.target === overlay) hideOverlay();
+  });
+
+  document.addEventListener('contextmenu', function(e){
+    e.preventDefault();
+  }, { capture: true });
+
+  document.addEventListener('mousedown', function(e){
+    if (overlay.classList.contains('show')) return;
+    if (isInteractive(e.target)) return;
+
+    if (e.button === 2){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    } else if (e.button === 3){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      prev();
+    } else if (e.button === 4){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    }
+  }, { capture: true });
+
+  document.addEventListener('auxclick', function(e){
+    if (e.button === 1 || e.button === 2 || e.button === 3 || e.button === 4){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, { capture: true });
+
+  document.addEventListener('mouseup', function(e){
+    if (e.button === 3 || e.button === 4){
+      e.preventDefault();
+    }
+  }, { capture: true });
+
+  var touchStartX = null, touchStartY = null;
+  document.addEventListener('touchstart', function(e){
+    if (e.touches.length !== 1) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(e){
+    if (touchStartX === null) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5){
+      if (dx < 0) next(); else prev();
+    }
+    touchStartX = null; touchStartY = null;
+  }, { passive: true });
+
+  initCodeBlocks();
+  initCopyButtons();
+  slides[0].classList.add('active');
+  updateChrome();
+
+})();
+</script>
+
+</body>
+</html>

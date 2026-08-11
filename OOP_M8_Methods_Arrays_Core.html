@@ -1,0 +1,1657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Foundry — Module 8: Methods, Arrays & the Blueprint of OOP</title>
+<style>
+  :root{
+    --ink:#0e141b;
+    --ink-2:#141c25;
+    --panel:#182230;
+    --panel-2:#1e2b3b;
+    --line: rgba(211,229,247,0.14);
+    --line-strong: rgba(211,229,247,0.28);
+    --paper:#eef4fb;
+    --graphite:#93a7bc;
+    --copper:#e8935a;
+    --copper-soft:#c97a45;
+    --cyan:#5ec8f2;
+    --rose:#e2726a;
+    --code-bg:#0a0f14;
+    --code-keyword:#e8ac6f;
+    --code-string:#8bd17c;
+    --code-number:#7ec6e6;
+    --code-type:#c9a8e6;
+    --code-comment:#5d7085;
+    --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --mono: SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; height:100%; }
+  body{
+    background:
+      repeating-linear-gradient(0deg, rgba(94,200,242,0.045) 0px, rgba(94,200,242,0.045) 1px, transparent 1px, transparent 42px),
+      repeating-linear-gradient(90deg, rgba(94,200,242,0.045) 0px, rgba(94,200,242,0.045) 1px, transparent 1px, transparent 42px),
+      radial-gradient(ellipse at 10% -10%, rgba(232,147,90,0.10), transparent 45%),
+      radial-gradient(ellipse at 100% 110%, rgba(94,200,242,0.08), transparent 45%),
+      var(--ink);
+    color:var(--paper);
+    font-family:var(--sans);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .deck{ position:relative; width:100vw; height:100vh; }
+
+  .slide{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    padding: clamp(20px, 3vh, 46px) clamp(24px, 5vw, 92px);
+    opacity:0;
+    transform: translateX(28px);
+    transition: opacity .35s ease, transform .35s ease;
+    pointer-events:none;
+    overflow-y:auto;
+  }
+  .slide.active{ opacity:1; transform:translateX(0); pointer-events:auto; z-index:2; }
+  .slide.enter-left{ transform:translateX(-28px); opacity:0; }
+  .slide.exit-left{ transform:translateX(-28px); opacity:0; }
+  .slide.exit-right{ transform:translateX(28px); opacity:0; }
+
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition:none !important; transform:none !important; }
+  }
+
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:10px;
+    font-family:var(--mono); letter-spacing:.14em; text-transform:uppercase;
+    font-size:clamp(12px,1.05vw,14px); color:var(--copper);
+    margin-bottom: 10px; padding-bottom:8px;
+    border-bottom: 1px dashed var(--line-strong);
+    width:fit-content;
+  }
+  .eyebrow::before{ content:"◆"; font-size:9px; color:var(--cyan); }
+
+  h1.slide-title{
+    font-family:var(--serif); font-weight:700;
+    font-size: clamp(25px, 3.3vw, 46px);
+    line-height:1.14;
+    margin: 0 0 8px 0;
+    color:var(--paper);
+  }
+  .subtitle{
+    font-size: clamp(15px, 1.2vw, 18px);
+    color:var(--graphite);
+    margin: 0 0 16px 0;
+    max-width:920px;
+    line-height:1.55;
+  }
+
+  .slide-body{ flex:1; min-height:0; display:flex; flex-direction:column; }
+
+  /* ---------- Registration-mark card (signature element) ---------- */
+  .spec-card{
+    position:relative;
+    background: var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding: 16px 20px;
+  }
+  .spec-card::before, .spec-card::after{
+    content:""; position:absolute; width:14px; height:14px; pointer-events:none;
+  }
+  .spec-card::before{
+    top:-1px; left:-1px; border-top:2px solid var(--cyan); border-left:2px solid var(--cyan);
+  }
+  .spec-card::after{
+    bottom:-1px; right:-1px; border-bottom:2px solid var(--cyan); border-right:2px solid var(--cyan);
+  }
+
+  /* ---------- TITLE SLIDE ---------- */
+  .title-wrap{
+    height:100%; display:flex; flex-direction:column; align-items:flex-start; justify-content:center;
+    gap: 16px; max-width:1160px;
+  }
+  .brew-badge{
+    display:flex; align-items:center; gap:12px;
+    padding: 9px 18px; border:1px solid var(--line); border-radius:4px;
+    background:var(--panel); font-family:var(--mono); font-size:13px; color:var(--copper);
+    letter-spacing:.08em;
+  }
+  .title-main{
+    font-family:var(--serif); font-weight:700;
+    font-size: clamp(32px, 5vw, 68px);
+    line-height:1.06; letter-spacing:-0.01em;
+  }
+  .title-main .accent{ color:var(--copper); }
+  .title-sub{ font-size:clamp(16px,1.5vw,20px); color:var(--graphite); max-width:760px; line-height:1.55; }
+  .title-stats{ display:flex; gap:14px; margin-top:6px; flex-wrap:wrap; }
+  .stat-chip{
+    border:1px solid var(--line); background:var(--panel-2); border-radius:6px;
+    padding:11px 18px; min-width:150px;
+  }
+  .stat-chip .num{ font-family:var(--serif); font-size:26px; color:var(--copper); font-weight:700; }
+  .stat-chip .lbl{ font-size:13px; color:var(--graphite); margin-top:2px; font-family:var(--mono); }
+
+  .draft-illo{ position:absolute; right:clamp(10px,4vw,80px); top:50%; transform:translateY(-50%); width:min(26vw,320px); opacity:.92; }
+
+  /* ---------- GENERIC GRIDS ---------- */
+  .grid-2{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vw,22px); flex:1; min-height:0; }
+  .grid-2x2{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); grid-template-rows: repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vw,20px); flex:1; min-height:0; }
+  @media (max-width:900px){ .grid-2, .grid-2x2{ grid-template-columns: minmax(0,1fr); } }
+
+  .block-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding: 16px 20px; min-width:0; display:flex; flex-direction:column; gap:8px;
+  }
+  .block-card h3{ margin:0; font-family:var(--serif); font-size:19px; color:var(--copper); }
+  .block-card h3 .tag{ font-family:var(--mono); font-size:11px; color:var(--cyan); border:1px solid var(--line); border-radius:4px; padding:2px 8px; margin-left:8px; vertical-align:middle; }
+  .block-card p{ margin:0; font-size:14.5px; color:var(--graphite); line-height:1.6; }
+  .block-card ul{ margin:4px 0 0; padding-left:18px; font-size:14.5px; color:var(--graphite); line-height:1.65; }
+  .block-card ul li b{ color:var(--paper); }
+
+  /* ---------- CODE BLOCKS ---------- */
+  .code-block{ background:var(--code-bg); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .code-header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:7px 12px; background:var(--panel-2); border-bottom:1px solid var(--line);
+    font-family:var(--mono); font-size:12px; color:var(--graphite);
+  }
+  .copy-btn{
+    font-family:var(--sans); font-size:12px; color:var(--paper);
+    background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    padding:4px 10px; cursor:pointer; transition:background .15s ease, color .15s ease;
+  }
+  .copy-btn:hover{ background:var(--copper); color:#0e141b; border-color:var(--copper); }
+  .copy-btn.copied{ background:var(--cyan); color:#0e141b; border-color:var(--cyan); }
+  pre.codepre{
+    margin:0; padding: 10px 14px; max-height: 50vh; overflow:auto;
+    font-family:var(--mono); font-size: clamp(12px, .92vw, 14px); line-height:1.55;
+  }
+  code .tok-keyword{ color:var(--code-keyword); }
+  code .tok-string{ color:var(--code-string); }
+  code .tok-number{ color:var(--code-number); }
+  code .tok-type{ color:var(--code-type); }
+  code .tok-comment{ color:var(--code-comment); font-style:italic; }
+
+  /* ---------- METHOD ANATOMY SCHEMATIC ---------- */
+  .anatomy-sig{
+    font-family:var(--mono); font-size:clamp(14px,1.35vw,20px);
+    background:var(--code-bg); border:1px solid var(--line); border-radius:10px;
+    padding:18px 22px; line-height:1.9; overflow-x:auto; white-space:pre;
+  }
+  .anatomy-sig .seg{ padding:2px 4px; border-radius:4px; }
+  .seg-mod{ background:rgba(232,147,90,0.18); color:var(--copper); }
+  .seg-static{ background:rgba(94,200,242,0.16); color:var(--cyan); }
+  .seg-ret{ background:rgba(139,209,124,0.16); color:var(--code-string); }
+  .seg-name{ background:rgba(201,168,230,0.18); color:var(--code-type); }
+  .seg-param{ background:rgba(126,198,230,0.14); color:var(--code-number); }
+  .anatomy-legend{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; margin-top:14px; }
+  .leg-item{ border:1px dashed var(--line-strong); border-radius:8px; padding:9px 10px; font-size:13px; color:var(--graphite); }
+  .leg-item .dot{ display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:6px; }
+  @media (max-width:1100px){ .anatomy-legend{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+  /* ---------- MEMORY / DIAGRAM BOXES ---------- */
+  .mem-row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .mem-box{
+    font-family:var(--mono); font-size:14px; background:var(--panel-2); border:1px solid var(--line-strong);
+    border-radius:6px; padding:10px 14px; text-align:center; min-width:70px;
+  }
+  .mem-box .idx{ font-size:11px; color:var(--cyan); margin-top:4px; }
+  .mem-arrow{ color:var(--copper); font-size:20px; }
+
+  /* ---------- TABLES ---------- */
+  table.cmp{ width:100%; border-collapse:collapse; font-size:14.5px; }
+  table.cmp th, table.cmp td{ text-align:left; padding:10px 14px; border-bottom:1px solid var(--line); vertical-align:top; }
+  table.cmp th{ font-family:var(--mono); font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--cyan); border-bottom:1px solid var(--line-strong); }
+  table.cmp td b{ color:var(--paper); }
+  table.cmp tr:last-child td{ border-bottom:none; }
+
+  /* ---------- MCQ TICKETS ---------- */
+  .mcq-grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vh,18px); flex:1; min-height:0; }
+  .mcq-grid.odd-last > :last-child{ grid-column: 1 / -1; max-width:640px; margin:0 auto; width:100%; }
+  @media (max-width:900px){ .mcq-grid{ grid-template-columns:minmax(0,1fr); } .mcq-grid.odd-last > :last-child{ max-width:none; } }
+  .mcq-card{ position:relative; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 20px; }
+  .mcq-card .qnum{ font-family:var(--mono); font-size:12px; color:var(--copper); letter-spacing:.08em; }
+  .mcq-card .qtext{ font-size:clamp(15px,1.1vw,17.5px); font-weight:600; margin:6px 0 10px; line-height:1.4; }
+  .mcq-opts{ display:flex; flex-direction:column; gap:6px; font-size:14.5px; color:var(--graphite); }
+  .mcq-opts div{ display:flex; gap:8px; }
+  .mcq-opts b{ color:var(--cyan); min-width:18px; }
+  .output-prompt{ display:flex; align-items:center; gap:10px; font-size:14px; color:var(--graphite); margin-top:8px; }
+  .output-prompt input{ flex:1; border:none; border-bottom:1px dashed var(--line); background:transparent; color:var(--paper); font-family:var(--mono); font-size:14px; padding:4px 6px; }
+  .output-prompt input:focus{ outline:none; border-bottom-color:var(--copper); }
+  .go-grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vw,20px); flex:1; min-height:0; }
+  .go-grid.solo{ grid-template-columns:minmax(0,1fr); }
+  @media (max-width:900px){ .go-grid{ grid-template-columns:minmax(0,1fr); } }
+  .go-card{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 18px; display:flex; flex-direction:column; gap:8px; min-width:0; }
+  .go-card .qnum{ font-family:var(--mono); font-size:12px; color:var(--copper); letter-spacing:.06em; }
+
+  /* ---------- QUOTES ---------- */
+  .quote-wrap{ flex:1; display:flex; flex-direction:column; justify-content:center; gap:30px; max-width:1100px; }
+  .quote-block{ position:relative; padding-left:28px; }
+  .quote-block::before{ content:"“"; position:absolute; left:-6px; top:-18px; font-family:var(--serif); font-size:64px; color:var(--copper); opacity:.6; }
+  .quote-block p{ font-family:var(--serif); font-size:clamp(18px,2vw,26px); line-height:1.5; margin:0 0 8px; color:var(--paper); }
+  .quote-block span{ font-family:var(--mono); font-size:13px; color:var(--cyan); }
+
+  /* ---------- ANSWER KEY ---------- */
+  .ans-scroll{ flex:1; min-height:0; overflow-y:auto; padding-right:8px; }
+  .ans-block{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 18px; margin-bottom:12px; break-inside:avoid; }
+  .ans-block h4{ margin:0 0 6px 0; font-family:var(--mono); font-size:14px; color:var(--copper); }
+  .ans-block p{ margin:0; font-size:14.5px; color:var(--graphite); line-height:1.6; }
+  .ans-block p b{ color:var(--paper); }
+
+  /* ---------- CLOSING ---------- */
+  .closing-wrap{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:22px; }
+  .closing-wrap .final-quote{ font-family:var(--serif); font-size:clamp(20px,2.4vw,32px); max-width:900px; line-height:1.5; color:var(--paper); }
+  .closing-wrap .final-msg{ font-size:16px; color:var(--graphite); max-width:640px; line-height:1.6; }
+
+  /* ---------- CHROME ---------- */
+  .progress-track{ position:fixed; top:0; left:0; right:0; height:4px; background:rgba(255,255,255,0.06); z-index:50; }
+  .progress-fill{ height:100%; background:linear-gradient(90deg, var(--copper-soft), var(--copper)); width:0%; transition:width .3s ease; }
+  .counter{
+    position:fixed; bottom:16px; right:20px; z-index:50;
+    font-family:var(--mono); font-size:13px; color:var(--graphite);
+    background:rgba(0,0,0,0.35); border:1px solid var(--line); border-radius:6px; padding:6px 14px;
+    backdrop-filter: blur(4px);
+  }
+  .hint{
+    position:fixed; bottom:16px; left:20px; z-index:50;
+    font-family:var(--mono); font-size:12px; color:var(--graphite);
+    background:rgba(0,0,0,0.35); border:1px solid var(--line); border-radius:6px; padding:6px 14px;
+  }
+
+  .overlay{
+    position:fixed; inset:0; background:rgba(6,9,12,0.75); backdrop-filter: blur(3px);
+    display:flex; align-items:center; justify-content:center; z-index:100;
+    opacity:0; pointer-events:none; transition:opacity .2s ease;
+  }
+  .overlay.show{ opacity:1; pointer-events:auto; }
+  .overlay-panel{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:28px 32px; max-width:520px; width:90%; }
+  .overlay-panel h2{ margin:0 0 14px 0; font-family:var(--serif); color:var(--copper); font-size:22px; }
+  .overlay-panel .row{ display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--line); font-size:14px; color:var(--graphite); }
+  .overlay-panel .row:last-child{ border-bottom:none; }
+  .overlay-close{ margin-top:16px; width:100%; padding:10px; border-radius:8px; border:1px solid var(--line); background:var(--copper); color:#0e141b; font-weight:600; cursor:pointer; font-family:var(--sans); font-size:14px; }
+  kbd{ display:inline-block; font-family:var(--mono); font-size:13px; background:var(--panel-2); border:1px solid var(--line); border-bottom-width:2px; border-radius:6px; padding:2px 8px; color:var(--paper); }
+
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb{ background:var(--panel-2); border-radius:8px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+</style>
+</head>
+<body>
+
+<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+<div class="counter" id="counter">1 / 31</div>
+<div class="hint">Right-click or → for next · press ? for help</div>
+
+<div class="deck" id="deck">
+
+  <!-- 0: TITLE -->
+  <section class="slide" data-index="0">
+    <div class="title-wrap">
+      <div class="brew-badge">MODULE 8 · JAVA CORE MECHANICS</div>
+      <div class="title-main">Methods, Arrays &amp; the<br><span class="accent">Blueprint of OOP</span></div>
+      <div class="title-sub">A deep dive into how Java methods actually execute, how arrays hold data in memory, and how encapsulation, constructors, and inheritance let you design software the way an engineer drafts a blueprint — deliberately, and built to be reused.</div>
+      <div class="title-stats">
+        <div class="stat-chip"><div class="num">4</div><div class="lbl">Core Mechanics</div></div>
+        <div class="stat-chip"><div class="num">15+</div><div class="lbl">Worked Examples</div></div>
+        <div class="stat-chip"><div class="num">3</div><div class="lbl">Skill Checks</div></div>
+      </div>
+    </div>
+    <svg class="draft-illo" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Illustration of a drafting compass and blueprint ruler, representing the engineering-blueprint theme of this lesson">
+      <g fill="none" stroke="#5ec8f2" stroke-width="3" opacity="0.9">
+        <circle cx="120" cy="120" r="86" stroke-dasharray="4 6"/>
+        <line x1="120" y1="34" x2="120" y2="206"/>
+        <line x1="34" y1="120" x2="206" y2="120"/>
+      </g>
+      <g stroke="#e8935a" stroke-width="6" stroke-linecap="round">
+        <line x1="120" y1="60" x2="80" y2="190"/>
+        <line x1="120" y1="60" x2="160" y2="190"/>
+      </g>
+      <circle cx="120" cy="60" r="9" fill="#e8935a"/>
+      <circle cx="80" cy="190" r="6" fill="#eef4fb"/>
+      <circle cx="160" cy="190" r="6" fill="#eef4fb"/>
+    </svg>
+  </section>
+
+  <!-- 1: LESSON ROADMAP -->
+  <section class="slide" data-index="1">
+    <div class="eyebrow">Section A · Lesson Preview</div>
+    <h1 class="slide-title">The Four Building Blocks</h1>
+    <p class="subtitle">Scalable, maintainable Java applications rest on structured modularization and deliberate memory management. Everything in this deck builds on these four ideas.</p>
+    <div class="slide-body">
+      <div class="grid-2x2">
+        <div class="block-card">
+          <h3>Methods</h3>
+          <p>Self-contained blocks of code designed to perform one specific operation. They promote reuse — write the logic once, call it wherever it's needed.</p>
+        </div>
+        <div class="block-card">
+          <h3>Arrays</h3>
+          <p>Linear data structures storing a fixed-size, sequential collection of elements of the same type — indexed slots sitting in contiguous memory.</p>
+        </div>
+        <div class="block-card">
+          <h3>Classes &amp; Objects</h3>
+          <p>Classes are the blueprints; objects are the running instances built from them. Every OOP mechanic in this deck exists to make that blueprint safer to reuse.</p>
+        </div>
+        <div class="block-card">
+          <h3>Encapsulation</h3>
+          <p>The practice of bundling data (fields) and code (methods) together, while restricting direct access to an object's internals from the outside world.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2: METHOD ANATOMY -->
+  <section class="slide" data-index="2">
+    <div class="eyebrow">Section B.1 · Method Structure</div>
+    <h1 class="slide-title">Anatomy of a Method Signature</h1>
+    <p class="subtitle">Every Java method signature declares five things, in order: who can call it, whether it needs an object, what it hands back, its name, and what it needs from you.</p>
+    <div class="slide-body">
+      <div class="anatomy-sig"><span class="seg seg-mod">[Access Modifier]</span> <span class="seg seg-static">[Static/Non-Static]</span> <span class="seg seg-ret">[Return Type]</span> <span class="seg seg-name">methodName</span>(<span class="seg seg-param">ParameterType param1, ...</span>) {
+    <span class="tok-comment">// Method body logic</span>
+    <span class="tok-keyword">return</span> value; <span class="tok-comment">// Required if Return Type isn't 'void'</span>
+}</div>
+      <div class="anatomy-legend">
+        <div class="leg-item"><span class="dot" style="background:var(--copper)"></span><b>Access Modifier</b><br>Who's allowed to call this: <code>public</code>, <code>private</code>, <code>protected</code>, or default.</div>
+        <div class="leg-item"><span class="dot" style="background:var(--cyan)"></span><b>Static / Non-Static</b><br><code>static</code> belongs to the class itself; non-static needs an object instance to run.</div>
+        <div class="leg-item"><span class="dot" style="background:var(--code-string)"></span><b>Return Type</b><br>The data type sent back to the caller — or <code>void</code> if nothing is returned.</div>
+        <div class="leg-item"><span class="dot" style="background:var(--code-type)"></span><b>Method Name</b><br>The identifier used to call it — conventionally a verb, like <code>calculateTotal</code>.</div>
+        <div class="leg-item"><span class="dot" style="background:var(--code-number)"></span><b>Parameters</b><br>The inputs the method needs to do its job, each with its own type.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3: PASS-BY-VALUE DEEP DIVE -->
+  <section class="slide" data-index="3">
+    <div class="eyebrow">Rule 1 of 3 · Execution Behavior</div>
+    <h1 class="slide-title">Pass-by-Value: What Actually Gets Copied</h1>
+    <p class="subtitle">Java <b style="color:var(--paper)">always</b> passes arguments by value — but what counts as "the value" differs for primitives versus object references.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="spec-card" style="display:flex; flex-direction:column; gap:10px;">
+          <h3 style="margin:0; font-family:var(--serif); color:var(--copper); font-size:17px;">Primitives — the literal is copied</h3>
+          <div class="code-block">
+            <div class="code-header"><span>PassByValueDemo.java</span><button class="copy-btn" data-target="code1">Copy</button></div>
+            <pre class="codepre"><code id="code1"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code1">public class PassByValueDemo {
+    static void tryToDouble(int number) {
+        number = number * 2; // changes only the local copy
+    }
+
+    public static void main(String[] args) {
+        int score = 10;
+        tryToDouble(score);
+        System.out.println(score); // still 10
+    }
+}</script>
+          <div class="mem-row">
+            <div class="mem-box">score = 10<div class="idx">main()</div></div>
+            <span class="mem-arrow">→ copy →</span>
+            <div class="mem-box">number = 10 → 20<div class="idx">tryToDouble()</div></div>
+          </div>
+        </div>
+
+        <div class="spec-card" style="display:flex; flex-direction:column; gap:10px;">
+          <h3 style="margin:0; font-family:var(--serif); color:var(--copper); font-size:17px;">Object references — the address is copied</h3>
+          <div class="code-block">
+            <div class="code-header"><span>ReferenceDemo.java</span><button class="copy-btn" data-target="code2">Copy</button></div>
+            <pre class="codepre"><code id="code2"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code2">public class ReferenceDemo {
+    static void relabel(StringBuilder label) {
+        label.append(" (edited)"); // mutates the SAME object
+    }
+
+    static void reassign(StringBuilder label) {
+        label = new StringBuilder("Brand New"); // only the local copy points elsewhere
+    }
+
+    public static void main(String[] args) {
+        StringBuilder tag = new StringBuilder("Original");
+        relabel(tag);
+        System.out.println(tag); // Original (edited)
+        reassign(tag);
+        System.out.println(tag); // still Original (edited)
+    }
+}</script>
+          <p style="margin:0; font-size:13.5px; color:var(--graphite); line-height:1.55;"><b style="color:var(--paper)">Rule of thumb:</b> change what's <i>inside</i> the box a reference points to, and the caller sees it. Swap the reference for a brand-new box, and the caller never finds out.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4: METHOD OVERLOADING CONCEPT -->
+  <section class="slide" data-index="4">
+    <div class="eyebrow">Rule 2 of 3 · Reusability</div>
+    <h1 class="slide-title">Method Overloading — Same Name, Different Signatures</h1>
+    <p class="subtitle">Multiple methods can share the exact same name as long as their parameter lists differ. Java figures out which version to run at <b style="color:var(--paper)">compile time</b>, based on the arguments you pass.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="block-card">
+          <h3 style="font-size:17px;">What's Allowed to Differ</h3>
+          <ul>
+            <li><b>Number</b> of parameters — one argument vs. three</li>
+            <li><b>Order</b> of parameter types — <code>(String, int)</code> vs. <code>(int, String)</code></li>
+            <li><b>Type</b> of parameters — <code>int</code> vs. <code>double</code> vs. <code>String</code></li>
+          </ul>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">What Does <i>Not</i> Count</h3>
+          <ul>
+            <li>Return type <b>alone</b> — two methods with identical parameters but different return types will not compile</li>
+            <li>Parameter <b>names</b> — the compiler only cares about types and order, not what you call them</li>
+            <li>Access modifier alone — <code>public</code> vs <code>private</code> doesn't create a valid overload</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5: OVERLOADING CODE + PITFALL -->
+  <section class="slide" data-index="5">
+    <div class="eyebrow">Worked Example</div>
+    <h1 class="slide-title">Dynamic Pricing with Overloaded Methods</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>PricingCalculator.java</span><button class="copy-btn" data-target="code3">Copy</button></div>
+          <pre class="codepre"><code id="code3"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code3">public class PricingCalculator {
+
+    // Calculate total for a single item
+    public static double calculateTotal(double price) {
+        return price;
+    }
+
+    // Overloaded: total with item quantity
+    public static double calculateTotal(double price, int quantity) {
+        return price * quantity;
+    }
+
+    // Overloaded: quantity + a percent discount
+    public static double calculateTotal(double price, int quantity, double discountRate) {
+        double subtotal = price * quantity;
+        return subtotal - (subtotal * discountRate);
+    }
+
+    public static void main(String[] args) {
+        double singleItem = calculateTotal(49.99);
+        double bulkItems = calculateTotal(25.00, 4);
+        double discountedBulk = calculateTotal(100.00, 2, 0.15); // 15% discount
+
+        System.out.println("Single Item: $" + singleItem);
+        System.out.println("Bulk Total: $" + bulkItems);
+        System.out.println("Discounted Total: $" + discountedBulk);
+    }
+}</script>
+
+        <div class="spec-card" style="display:flex; flex-direction:column; gap:10px;">
+          <h3 style="margin:0; font-family:var(--serif); color:var(--rose); font-size:17px;">⚠ Watch Out: Overload Ambiguity</h3>
+          <p style="margin:0; font-size:14px; color:var(--graphite); line-height:1.6;">Calling <code>calculateTotal(25.00, 4)</code> matches <code>(double, int)</code> exactly — no ambiguity. But if you also declare an <code>(int, int)</code> overload, and call it with two whole numbers like <code>calculateTotal(25, 4)</code>, Java prefers the <b style="color:var(--paper)">exact match</b> over widening an <code>int</code> to a <code>double</code>.</p>
+          <div class="code-block">
+            <div class="code-header"><span>ambiguity.java</span><button class="copy-btn" data-target="code4">Copy</button></div>
+            <pre class="codepre"><code id="code4"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code4">// If BOTH overloads exist:
+static double calculateTotal(double price, int qty) { ... }
+static double calculateTotal(int price, int qty)    { ... }
+
+calculateTotal(25, 4);
+// Java picks (int, int) — an exact match
+// beats widening int -> double.</script>
+          <p style="margin:0; font-size:13px; color:var(--graphite); line-height:1.55;"><b style="color:var(--paper)">Takeaway:</b> when in doubt, be explicit about literal types (<code>25.0</code> vs <code>25</code>) so the overload you expect is the one that actually runs.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6: ARRAYS - DECLARATION & MEMORY MODEL -->
+  <section class="slide" data-index="6">
+    <div class="eyebrow">Section B.2 · Arrays</div>
+    <h1 class="slide-title">Declaring, Allocating &amp; Visualizing Arrays</h1>
+    <p class="subtitle">An array reserves a fixed number of same-type slots in contiguous memory, numbered from <code>0</code>. Once created, that slot count never changes.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>arrays-basics.java</span><button class="copy-btn" data-target="code5">Copy</button></div>
+          <pre class="codepre"><code id="code5"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code5">// Declare and allocate an array of integers
+int[] scores = new int[5]; // 5 slots, default value 0
+scores[0] = 88;
+scores[1] = 92;
+scores[2] = 79;
+scores[3] = 95;
+scores[4] = 84;
+
+// Array literal instantiation — declare + fill in one line
+String[] languages = {"Java", "Python", "C++", "JavaScript"};</script>
+
+        <div class="spec-card" style="display:flex; flex-direction:column; gap:14px;">
+          <h3 style="margin:0; font-family:var(--serif); color:var(--copper); font-size:17px;">What <code>scores</code> Looks Like in Memory</h3>
+          <div class="mem-row">
+            <div class="mem-box">88<div class="idx">[0]</div></div>
+            <div class="mem-box">92<div class="idx">[1]</div></div>
+            <div class="mem-box">79<div class="idx">[2]</div></div>
+            <div class="mem-box">95<div class="idx">[3]</div></div>
+            <div class="mem-box">84<div class="idx">[4]</div></div>
+          </div>
+          <p style="margin:0; font-size:14px; color:var(--graphite); line-height:1.6;">Five boxes, indexed <code>0</code> through <code>4</code>. <code>scores.length</code> reports <code>5</code> — note it's a field, not a method, so no parentheses. Asking for <code>scores[5]</code> reaches one box past the end and crashes (more on that shortly).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7: ARRAY ITERATION -->
+  <section class="slide" data-index="7">
+    <div class="eyebrow">Traversal Techniques</div>
+    <h1 class="slide-title">Standard For-Loop vs. Enhanced For-Each</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>ArrayOperations.java</span><button class="copy-btn" data-target="code6">Copy</button></div>
+          <pre class="codepre"><code id="code6"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code6">public class ArrayOperations {
+    public static void main(String[] args) {
+        int[] scores = {88, 92, 79, 95, 84};
+        String[] languages = {"Java", "Python", "C++", "JavaScript"};
+
+        System.out.println("=== Standard For-Loop ===");
+        for (int i = 0; i < scores.length; i++) {
+            System.out.println("Score at index " + i + ": " + scores[i]);
+        }
+
+        System.out.println("\n=== Enhanced For-Each Loop ===");
+        for (String lang : languages) {
+            System.out.println("Language: " + lang);
+        }
+    }
+}</script>
+
+        <div class="block-card">
+          <h3 style="font-size:17px;">Which One Should You Use?</h3>
+          <table class="cmp">
+            <tr><th>Standard <code>for</code></th><th>Enhanced <code>for-each</code></th></tr>
+            <tr><td>Gives you the <b>index</b> — needed to modify elements or print position</td><td>Cleaner, shorter syntax — no index bookkeeping</td></tr>
+            <tr><td>Can iterate backwards, skip elements, or loop a fixed count</td><td>Read-only traversal, always front to back</td></tr>
+            <tr><td>Slightly more room for off-by-one mistakes</td><td>Impossible to go out of bounds — the loop handles it</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8: ARRAY PITFALLS + 2D PREVIEW -->
+  <section class="slide" data-index="8">
+    <div class="eyebrow">Going Further</div>
+    <h1 class="slide-title">Common Array Pitfalls (and a Peek at 2D Arrays)</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="spec-card" style="display:flex; flex-direction:column; gap:10px;">
+          <h3 style="margin:0; font-family:var(--serif); color:var(--rose); font-size:17px;">ArrayIndexOutOfBoundsException</h3>
+          <div class="code-block">
+            <div class="code-header"><span>outOfBounds.java</span><button class="copy-btn" data-target="code7">Copy</button></div>
+            <pre class="codepre"><code id="code7"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code7">int[] nums = {10, 20, 30};
+System.out.println(nums[3]);
+// throws ArrayIndexOutOfBoundsException
+// valid indices for a length-3 array are 0, 1, 2</script>
+          <p style="margin:0; font-size:14px; color:var(--graphite); line-height:1.6;">Valid indices run from <code>0</code> to <code>length - 1</code>. This is a <b style="color:var(--paper)">runtime</b> error, not a compile error — the code compiles fine and only crashes when that line actually executes.</p>
+        </div>
+
+        <div class="spec-card" style="display:flex; flex-direction:column; gap:10px;">
+          <h3 style="margin:0; font-family:var(--serif); color:var(--copper); font-size:17px;">Sneak Peek: 2D Arrays</h3>
+          <div class="code-block">
+            <div class="code-header"><span>seatMap.java</span><button class="copy-btn" data-target="code8">Copy</button></div>
+            <pre class="codepre"><code id="code8"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code8">int[][] seatMap = {
+    {1, 1, 0},
+    {0, 1, 1}
+};
+System.out.println(seatMap[1][2]);
+// row index 1, column index 2 -> 1</script>
+          <p style="margin:0; font-size:14px; color:var(--graphite); line-height:1.6;">A 2D array is simply an <b style="color:var(--paper)">array of arrays</b> — perfect for grids like seat maps, tic-tac-toe boards, or spreadsheets. Access with two indices: <code>[row][column]</code>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9: ENCAPSULATION CONCEPT -->
+  <section class="slide" data-index="9">
+    <div class="eyebrow">Section B.3 · Object-Oriented Programming</div>
+    <h1 class="slide-title">Encapsulation: Locking the Blueprint</h1>
+    <p class="subtitle">Encapsulation hides a class's attributes behind <code>private</code>, then exposes only the interaction you intend through <code>public</code> getters and setters.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="block-card">
+          <h3 style="font-size:17px;">Why Bother Hiding Fields?</h3>
+          <ul>
+            <li><b>Data integrity</b> — a setter can reject bad input (like an email with no <code>@</code>) before it ever gets stored</li>
+            <li><b>Flexibility</b> — you can change how a field is stored internally later, without breaking code that calls the getter</li>
+            <li><b>Controlled access</b> — read-only fields simply skip the setter entirely</li>
+          </ul>
+        </div>
+        <svg viewBox="0 0 320 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Diagram of a capsule showing private fields locked inside, with public getter and setter methods acting as the only door in and out" style="width:100%; height:auto;">
+          <rect x="20" y="30" width="280" height="160" rx="80" fill="#182230" stroke="#5ec8f2" stroke-width="2.5"/>
+          <text x="160" y="65" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="13" fill="#e8935a">private fields</text>
+          <text x="160" y="100" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="12" fill="#93a7bc">username, email, active</text>
+          <line x1="60" y1="118" x2="260" y2="118" stroke="#93a7bc" stroke-dasharray="3 5"/>
+          <text x="160" y="145" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="13" fill="#8bd17c">public getX() / setX()</text>
+          <text x="160" y="167" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="11" fill="#93a7bc">the only door in or out</text>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10: ENCAPSULATION CODE -->
+  <section class="slide" data-index="10">
+    <div class="eyebrow">Worked Example</div>
+    <h1 class="slide-title">UserAccount.java — Encapsulation in Practice</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>UserAccount.java</span><button class="copy-btn" data-target="code9">Copy</button></div>
+          <pre class="codepre" style="max-height:64vh;"><code id="code9"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code9">public class UserAccount {
+    private String username;
+    private String email;
+    private boolean active;
+
+    // Default Constructor
+    public UserAccount() {
+        this("GuestUser", "guest@example.com", true);
+    }
+
+    // Parametric Constructor (Constructor Overloading)
+    public UserAccount(String username, String email, boolean active) {
+        this.username = username;
+        this.setEmail(email); // use the setter for validation
+        this.active = active;
+    }
+
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) {
+        if (email != null && email.contains("@")) {
+            this.email = email;
+        } else {
+            System.out.println("Invalid Email format provided!");
+        }
+    }
+
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
+
+    public void printSummary() {
+        System.out.println("Account: " + username + " | Email: " + email
+            + " | Status: " + (active ? "Active" : "Inactive"));
+    }
+}</script>
+
+        <div class="block-card">
+          <h3 style="font-size:17px;">Three Details Worth Noticing</h3>
+          <ul>
+            <li>The <b>default constructor</b> doesn't repeat itself — it delegates to the parametric one via <code>this(...)</code></li>
+            <li><b>setEmail()</b> is called even from inside the constructor, so validation runs no matter how the object is created</li>
+            <li><b>isActive()</b>, not <code>getActive()</code> — boolean getters conventionally start with <code>is</code></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11: CONSTRUCTORS DEEP DIVE -->
+  <section class="slide" data-index="11">
+    <div class="eyebrow">Constructors</div>
+    <h1 class="slide-title">Default, Parametric &amp; Constructor Chaining</h1>
+    <p class="subtitle">A constructor is a special routine, matching the class name, with no return type, that runs automatically the moment <code>new</code> creates an object.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="block-card">
+          <h3 style="font-size:17px;">Three Flavors</h3>
+          <ul>
+            <li><b>Default constructor</b> — takes no arguments, often fills in sensible fallback values</li>
+            <li><b>Parametric constructor</b> — accepts arguments to set fields immediately on creation</li>
+            <li><b>Constructor overloading</b> — multiple constructors, same class, differing parameter lists (the same rule as method overloading, applied to constructors)</li>
+          </ul>
+        </div>
+        <div class="spec-card" style="display:flex; flex-direction:column; gap:10px;">
+          <h3 style="margin:0; font-family:var(--serif); color:var(--copper); font-size:17px;">Constructor Chaining with <code>this(...)</code></h3>
+          <div class="code-block">
+            <div class="code-header"><span>chaining.java</span><button class="copy-btn" data-target="code10">Copy</button></div>
+            <pre class="codepre"><code id="code10"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code10">public UserAccount() {
+    this("GuestUser", "guest@example.com", true);
+    // must be the FIRST line of the constructor
+}</script>
+          <p style="margin:0; font-size:14px; color:var(--graphite); line-height:1.6;"><code>this(...)</code> calls <b style="color:var(--paper)">another constructor in the same class</b>, so initialization logic lives in exactly one place. It must be the very first statement — Java only allows one such call, and only at the top.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12: INHERITANCE CONCEPT -->
+  <section class="slide" data-index="12">
+    <div class="eyebrow">Section B.4 · Inheritance</div>
+    <h1 class="slide-title">Inheritance: Building an IS-A Relationship</h1>
+    <p class="subtitle">A subclass inherits fields and methods from a superclass using <code>extends</code>. A <code>SoftwareDeveloper</code> <b style="color:var(--paper)">IS-A</b> <code>Employee</code> — plus a little extra.</p>
+    <div class="slide-body">
+      <svg viewBox="0 0 720 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="UML-style class diagram showing the Employee superclass with fields employeeId and baseSalary and method calculatePay, connected by an extends arrow to the SoftwareDeveloper subclass which adds annualBonus and overrides calculatePay" style="width:100%; max-width:760px; height:auto; margin:0 auto;">
+        <rect x="230" y="20" width="260" height="110" rx="8" fill="#182230" stroke="#5ec8f2" stroke-width="2"/>
+        <text x="360" y="45" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#e8935a">Employee</text>
+        <line x1="245" y1="55" x2="475" y2="55" stroke="#93a7bc" stroke-dasharray="2 4"/>
+        <text x="245" y="75" font-family="SFMono-Regular, monospace" font-size="12" fill="#eef4fb">- employeeId</text>
+        <text x="245" y="93" font-family="SFMono-Regular, monospace" font-size="12" fill="#eef4fb">- baseSalary</text>
+        <text x="245" y="115" font-family="SFMono-Regular, monospace" font-size="12" fill="#8bd17c">+ calculatePay()</text>
+
+        <line x1="360" y1="130" x2="360" y2="180" stroke="#e8935a" stroke-width="2.5"/>
+        <polygon points="360,130 350,150 370,150" fill="#0e141b" stroke="#e8935a" stroke-width="2.5"/>
+        <text x="380" y="160" font-family="SFMono-Regular, monospace" font-size="12" fill="#e8935a">extends</text>
+
+        <rect x="200" y="180" width="320" height="130" rx="8" fill="#182230" stroke="#5ec8f2" stroke-width="2"/>
+        <text x="360" y="205" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#e8935a">SoftwareDeveloper</text>
+        <line x1="215" y1="215" x2="505" y2="215" stroke="#93a7bc" stroke-dasharray="2 4"/>
+        <text x="215" y="235" font-family="SFMono-Regular, monospace" font-size="12" fill="#eef4fb">- annualBonus</text>
+        <text x="215" y="257" font-family="SFMono-Regular, monospace" font-size="12" fill="#c9a8e6">+ calculatePay() <tspan fill="#93a7bc">[override]</tspan></text>
+        <text x="215" y="279" font-family="SFMono-Regular, monospace" font-size="12" fill="#8bd17c">+ displayProfile()</text>
+        <text x="215" y="301" font-family="SFMono-Regular, monospace" font-size="11" fill="#93a7bc">inherits employeeId, baseSalary too</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- 13: INHERITANCE CODE (SIDE BY SIDE) -->
+  <section class="slide" data-index="13">
+    <div class="eyebrow">Worked Example</div>
+    <h1 class="slide-title">Employee.java &amp; SoftwareDeveloper.java</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>Employee.java (superclass)</span><button class="copy-btn" data-target="code11">Copy</button></div>
+          <pre class="codepre" style="max-height:60vh;"><code id="code11"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code11">public class Employee {
+    private String employeeId;
+    private double baseSalary;
+
+    public Employee(String employeeId, double baseSalary) {
+        this.employeeId = employeeId;
+        this.baseSalary = baseSalary;
+    }
+
+    public String getEmployeeId() { return employeeId; }
+    public double getBaseSalary() { return baseSalary; }
+
+    public double calculatePay() {
+        return baseSalary;
+    }
+}</script>
+
+        <div class="code-block">
+          <div class="code-header"><span>SoftwareDeveloper.java (subclass)</span><button class="copy-btn" data-target="code12">Copy</button></div>
+          <pre class="codepre" style="max-height:60vh;"><code id="code12"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code12">public class SoftwareDeveloper extends Employee {
+    private double annualBonus;
+
+    public SoftwareDeveloper(String employeeId, double baseSalary, double annualBonus) {
+        super(employeeId, baseSalary); // call parent's constructor
+        this.annualBonus = annualBonus;
+    }
+
+    @Override
+    public double calculatePay() {
+        return getBaseSalary() + annualBonus;
+    }
+
+    public void displayProfile() {
+        System.out.println("Developer ID: " + getEmployeeId());
+        System.out.println("Total Earnings: $" + calculatePay());
+    }
+}</script>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14: OVERLOADING VS OVERRIDING -->
+  <section class="slide" data-index="14">
+    <div class="eyebrow">Don't Mix These Up</div>
+    <h1 class="slide-title">Method Overloading vs. Method Overriding</h1>
+    <div class="slide-body">
+      <div class="spec-card">
+        <table class="cmp">
+          <tr><th>Aspect</th><th>Overloading</th><th>Overriding</th></tr>
+          <tr><td><b>Where it happens</b></td><td>Within the <b>same class</b></td><td>Between a <b>superclass</b> and <b>subclass</b></td></tr>
+          <tr><td><b>Signature rule</b></td><td>Must <b>differ</b> in number, order, or type of parameters</td><td>Must be <b>identical</b> — same name, return type, and parameters</td></tr>
+          <tr><td><b>Resolved</b></td><td><b>Compile time</b> — the compiler picks based on your arguments</td><td><b>Runtime</b> — the JVM picks based on the object's actual class</td></tr>
+          <tr><td><b>Purpose</b></td><td>Offer several ways to call the same-named action</td><td>Customize inherited behavior for a more specific subclass</td></tr>
+          <tr><td><b>Keyword hint</b></td><td>None required</td><td><code>@Override</code> — optional but strongly recommended</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15: SUPER KEYWORD -->
+  <section class="slide" data-index="15">
+    <div class="eyebrow">The <code style="color:var(--cyan)">super</code> Keyword</div>
+    <h1 class="slide-title">Reaching Back to the Parent Class</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="block-card">
+          <h3 style="font-size:17px;">Two Uses of <code>super</code></h3>
+          <ul>
+            <li><b><code>super(args)</code></b> — calls the parent class's constructor. Must be the <b>first line</b> of the subclass constructor.</li>
+            <li><b><code>super.methodName()</code></b> — calls the parent's version of a method you've overridden, from inside your override.</li>
+          </ul>
+          <p style="margin:6px 0 0;">Both let a subclass <b style="color:var(--paper)">reuse</b> the parent's logic instead of copy-pasting it.</p>
+        </div>
+        <div class="spec-card" style="display:flex; flex-direction:column; gap:10px;">
+          <h3 style="margin:0; font-family:var(--serif); color:var(--copper); font-size:17px;">Reusing Parent Logic Inside an Override</h3>
+          <div class="code-block">
+            <div class="code-header"><span>super-reuse.java</span><button class="copy-btn" data-target="code13">Copy</button></div>
+            <pre class="codepre"><code id="code13"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code13">@Override
+public double calculatePay() {
+    double base = super.calculatePay(); // reuse Employee's logic
+    return base + annualBonus;
+}
+// equivalent to writing "return baseSalary + annualBonus;"
+// but never duplicates Employee's own calculation.</script>
+          <p style="margin:0; font-size:13.5px; color:var(--graphite); line-height:1.55;">Our <code>SoftwareDeveloper</code> example recalculated directly — this version instead asks the parent to do its part first via <code>super.calculatePay()</code>, then adds the bonus. Same result, less duplication.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16: GUIDED DRILL -->
+  <section class="slide" data-index="16">
+    <div class="eyebrow">Section C · Guided Drill</div>
+    <h1 class="slide-title">StudentGradeTracker.java</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>StudentGradeTracker.java</span><button class="copy-btn" data-target="code14">Copy</button></div>
+          <pre class="codepre" style="max-height:64vh;"><code id="code14"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code14">public class StudentGradeTracker {
+    private String studentName;
+    private double[] grades;
+
+    public StudentGradeTracker(String studentName, double[] grades) {
+        this.studentName = studentName;
+        this.grades = grades;
+    }
+
+    public double calculateAverage() {
+        if (grades.length == 0) return 0.0;
+        double sum = 0;
+        for (double grade : grades) {
+            sum += grade;
+        }
+        return sum / grades.length;
+    }
+
+    public double getHighestGrade() {
+        if (grades.length == 0) return 0.0;
+        double max = grades[0];
+        for (int i = 1; i < grades.length; i++) {
+            if (grades[i] > max) {
+                max = grades[i];
+            }
+        }
+        return max;
+    }
+
+    public void printReport() {
+        System.out.println("====================================");
+        System.out.println("Grade Report for: " + studentName);
+        System.out.println("Average Score: " + String.format("%.2f", calculateAverage()));
+        System.out.println("Highest Score: " + getHighestGrade());
+        System.out.println("====================================");
+    }
+
+    public static void main(String[] args) {
+        double[] sampleGrades = {88.5, 94.0, 78.25, 91.0, 85.5};
+        StudentGradeTracker tracker = new StudentGradeTracker("Ozias Fenwick", sampleGrades);
+        tracker.printReport();
+    }
+}</script>
+
+        <div class="block-card">
+          <h3 style="font-size:17px;">Reading the Logic</h3>
+          <ul>
+            <li><b>calculateAverage()</b> guards against an empty array before dividing — avoids a division-by-zero surprise</li>
+            <li><b>getHighestGrade()</b> assumes <code>grades[0]</code> is the max, then scans the rest looking for anything bigger</li>
+            <li><b>printReport()</b> uses <code>String.format("%.2f", ...)</code> to round the average to exactly two decimal places</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 17: REAL-LIFE ANALOGIES -->
+  <section class="slide" data-index="17">
+    <div class="eyebrow">Making It Stick</div>
+    <h1 class="slide-title">Real-Life Analogies</h1>
+    <div class="slide-body">
+      <div class="grid-2x2">
+        <div class="block-card">
+          <h3 style="font-size:17px;">Method <span class="tag">vending machine</span></h3>
+          <p>Press the same button, get the same product every time. You don't need to know the internal wiring — just the input (button) and the output (snack).</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">Array <span class="tag">egg carton</span></h3>
+          <p>A fixed number of slots, each holding exactly one item, numbered by position. You can't add a 13th egg to a 12-slot carton without a new carton.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">Class / Object <span class="tag">blueprint / house</span></h3>
+          <p>An architect's blueprint defines the design once. Every house built from it is a separate object — same layout, different furniture inside.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">Encapsulation <span class="tag">medicine capsule</span></h3>
+          <p>The active ingredients are sealed inside. You interact through the intended dosage, not by cracking the capsule open yourself.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 18: FAQ -->
+  <section class="slide" data-index="18">
+    <div class="eyebrow">Section E · Wrap-Up</div>
+    <h1 class="slide-title">Frequently Asked Questions</h1>
+    <div class="slide-body">
+      <div class="grid-2x2">
+        <div class="block-card">
+          <h3 style="font-size:16px;">Overloading vs. Overriding?</h3>
+          <p>Overloading: same class, different parameter signatures, resolved at compile time. Overriding: superclass/subclass, identical signature, resolved at runtime.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:16px;">Why use constructors?</h3>
+          <p>They run automatically on <code>new</code>, guaranteeing an object starts in a valid, fully initialized state with every necessary field assigned.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:16px;">How does <code>this</code> work?</h3>
+          <p>It refers to the current instance — used in constructors and setters to distinguish a field from a parameter sharing the same name, e.g. <code>this.name = name</code>.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:16px;">Can an array resize itself?</h3>
+          <p>No — Java arrays are fixed-size once created. For collections that grow and shrink, reach for <code>ArrayList</code> or another Java Collections Framework structure.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 19: RECAP -->
+  <section class="slide" data-index="19">
+    <div class="eyebrow">Before the Skill Check</div>
+    <h1 class="slide-title">Recap</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="block-card">
+          <h3 style="font-size:17px;">Methods &amp; Arrays</h3>
+          <ul>
+            <li>Method signatures: access, static/non-static, return type, name, parameters</li>
+            <li>Java is always pass-by-value — even "reference passing" is really a copied address</li>
+            <li>Overloading = same name, different parameter list, resolved at compile time</li>
+            <li>Arrays are fixed-size, zero-indexed, contiguous — watch your bounds</li>
+          </ul>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">Encapsulation &amp; Inheritance</h3>
+          <ul>
+            <li>Encapsulation: <code>private</code> fields + <code>public</code> getters/setters for controlled, validated access</li>
+            <li>Constructors chain with <code>this(...)</code>; subclasses chain to parents with <code>super(...)</code></li>
+            <li>Inheritance builds an IS-A relationship via <code>extends</code></li>
+            <li>Overriding = identical signature, resolved at runtime, customizes inherited behavior</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACTIVITIES - MCQ -->
+  <section class="slide" data-index="20">
+    <div class="eyebrow">Activity 1 of 3 · Multiple Choice (3 &times; 1 pt)</div>
+    <h1 class="slide-title">Multiple Choice — Test Yourself</h1>
+    <p class="subtitle">Total for this activity set: <b style="color:var(--paper)">15 points</b> (3 MC + 7 Guess-the-Output + 2 Coding Problems). Answers are revealed on the Answer Key slides at the end.</p>
+    <div class="slide-body">
+      <div class="mcq-grid odd-last">
+        <div class="mcq-card">
+          <div class="qnum">QUESTION 01 · 1 pt</div>
+          <div class="qtext">What is the effect of applying the <code>final</code> modifier to a class field in Java?</div>
+          <div class="mcq-opts">
+            <div><b>A.</b> The field can only be accessed within the package.</div>
+            <div><b>B.</b> The field's value cannot be changed once initialized.</div>
+            <div><b>C.</b> The field belongs to the class rather than an object instance.</div>
+            <div><b>D.</b> The field is automatically hidden from child classes.</div>
+          </div>
+        </div>
+        <div class="mcq-card">
+          <div class="qnum">QUESTION 02 · 1 pt</div>
+          <div class="qtext">Which mechanism lets a subclass provide its own implementation of a method already declared in its superclass?</div>
+          <div class="mcq-opts">
+            <div><b>A.</b> Method Overloading</div>
+            <div><b>B.</b> Method Overriding</div>
+            <div><b>C.</b> Method Abstraction</div>
+            <div><b>D.</b> Encapsulation</div>
+          </div>
+        </div>
+        <div class="mcq-card">
+          <div class="qnum">QUESTION 03 · 1 pt</div>
+          <div class="qtext">What happens when an out-of-bounds index (e.g. <code>index &lt; 0</code> or <code>index &gt;= length</code>) is accessed on an array?</div>
+          <div class="mcq-opts">
+            <div><b>A.</b> The array automatically resizes to fit the index.</div>
+            <div><b>B.</b> The value defaults to <code>null</code> or <code>0</code>.</div>
+            <div><b>C.</b> Java throws an <code>ArrayIndexOutOfBoundsException</code> at runtime.</div>
+            <div><b>D.</b> The compiler generates a fatal build error.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GO 1-2 -->
+  <section class="slide" data-index="21">
+    <div class="eyebrow">Activity 2 of 3 · Guess the Output (7 &times; 1 pt)</div>
+    <h1 class="slide-title">Round 1 — Pass-by-Value &amp; Overloading</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+        <div class="go-card">
+          <div class="qnum">ITEM 01 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>PassByValue.java</span><button class="copy-btn" data-target="go1">Copy</button></div>
+            <pre class="codepre"><code id="go1"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go1">public class Test {
+    static void change(int x) {
+        x = 100;
+    }
+
+    public static void main(String[] args) {
+        int a = 5;
+        change(a);
+        System.out.println(a);
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="qnum">ITEM 02 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>Overload.java</span><button class="copy-btn" data-target="go2">Copy</button></div>
+            <pre class="codepre"><code id="go2"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go2">public class Test {
+    static void show(double d) {
+        System.out.println("double: " + d);
+    }
+
+    static void show(int i) {
+        System.out.println("int: " + i);
+    }
+
+    public static void main(String[] args) {
+        show(7);
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GO 3-4 -->
+  <section class="slide" data-index="22">
+    <div class="eyebrow">Activity 2 of 3 · Guess the Output (7 &times; 1 pt)</div>
+    <h1 class="slide-title">Round 2 — Arrays &amp; Encapsulation</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+        <div class="go-card">
+          <div class="qnum">ITEM 03 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>ArraySum.java</span><button class="copy-btn" data-target="go3">Copy</button></div>
+            <pre class="codepre"><code id="go3"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go3">public class Test {
+    public static void main(String[] args) {
+        int[] nums = {4, 8, 15};
+        int sum = 0;
+        for (int n : nums) {
+            sum += n;
+        }
+        System.out.println(sum);
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="qnum">ITEM 04 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>Account.java</span><button class="copy-btn" data-target="go4">Copy</button></div>
+            <pre class="codepre"><code id="go4"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go4">class Account {
+    private double balance;
+
+    void deposit(double amt) {
+        if (amt > 0) {
+            balance += amt;
+        }
+    }
+
+    double getBalance() { return balance; }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Account a = new Account();
+        a.deposit(-50);
+        a.deposit(200);
+        System.out.println(a.getBalance());
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GO 5-6 -->
+  <section class="slide" data-index="23">
+    <div class="eyebrow">Activity 2 of 3 · Guess the Output (7 &times; 1 pt)</div>
+    <h1 class="slide-title">Round 3 — Constructor Chaining &amp; Overriding</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+        <div class="go-card">
+          <div class="qnum">ITEM 05 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>Box.java</span><button class="copy-btn" data-target="go5">Copy</button></div>
+            <pre class="codepre"><code id="go5"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go5">class Box {
+    int size;
+    Box() { this(10); }
+    Box(int size) { this.size = size; }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Box b = new Box();
+        System.out.println(b.size);
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="qnum">ITEM 06 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>Polymorphism.java</span><button class="copy-btn" data-target="go6">Copy</button></div>
+            <pre class="codepre"><code id="go6"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go6">class Animal {
+    String speak() { return "..."; }
+}
+
+class Dog extends Animal {
+    @Override
+    String speak() { return "Woof"; }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Animal a = new Dog();
+        System.out.println(a.speak());
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GO 7 (solo) -->
+  <section class="slide" data-index="24">
+    <div class="eyebrow">Activity 2 of 3 · Guess the Output (7 &times; 1 pt)</div>
+    <h1 class="slide-title">Round 4 — Reusing Parent Logic with <code>super</code></h1>
+    <div class="slide-body">
+      <div class="go-grid solo">
+        <div class="go-card">
+          <div class="qnum">ITEM 07 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>Vehicle.java</span><button class="copy-btn" data-target="go7">Copy</button></div>
+            <pre class="codepre"><code id="go7"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go7">class Vehicle {
+    double cost() { return 1000; }
+}
+
+class Car extends Vehicle {
+    @Override
+    double cost() {
+        return super.cost() + 500;
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Car c = new Car();
+        System.out.println(c.cost());
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CODING PROBLEMS -->
+  <section class="slide" data-index="25">
+    <div class="eyebrow">Activity 3 of 3 · Coding Problems (2 &times; 2.5 pts)</div>
+    <h1 class="slide-title">Write the Code Yourself</h1>
+    <p class="subtitle">No starter code this time — write each class from scratch. Sample solutions are on the Answer Key.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="block-card">
+          <h3 style="font-size:17px;">Problem 1 · 2.5 pts</h3>
+          <p>Write an <b>overloaded</b> method <code>combine</code> with two versions:</p>
+          <ul>
+            <li><code>combine(int a, int b)</code> — returns their sum</li>
+            <li><code>combine(String a, String b)</code> — returns them concatenated with a space in between</li>
+          </ul>
+          <p>In <code>main</code>, call both versions and print the results, proving Java picks the right one based on argument types.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">Problem 2 · 2.5 pts</h3>
+          <p>Write a class <code>Book</code> with:</p>
+          <ul>
+            <li>a constructor accepting <code>title</code> (String) and <code>price</code> (double)</li>
+            <li>getters for both fields</li>
+          </ul>
+          <p>Then write a static method <code>findMax(int[] arr)</code> that returns the largest number in an array. In <code>main</code>, create a <code>Book</code> and print its details, then call <code>findMax()</code> on a sample array of at least 5 numbers and print the result.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- KEY QUOTES -->
+  <section class="slide" data-index="26">
+    <div class="eyebrow">Key Quotes</div>
+    <h1 class="slide-title">In This Lesson's Own Words</h1>
+    <div class="slide-body">
+      <div class="quote-wrap">
+        <div class="quote-block">
+          <p>Master the foundational pillars of Java development — from modular method design and array manipulation to core Object-Oriented Programming concepts like encapsulation, constructor overloading, and class inheritance.</p>
+          <span>— Lesson Key Takeaway</span>
+        </div>
+        <div class="quote-block">
+          <p>Debug, complete, and execute the modular student database drill. Fix index boundaries, apply appropriate encapsulation, and compute calculated metrics.</p>
+          <span>— Guided Drill Task Brief</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ANSWER KEY - MC -->
+  <section class="slide" data-index="27">
+    <div class="eyebrow">The Final Receipt · Page 1 of 3</div>
+    <h1 class="slide-title">Answer Key — Multiple Choice</h1>
+    <div class="slide-body">
+      <div class="ans-scroll">
+        <div class="ans-block">
+          <h4>Question 01</h4>
+          <p><b>B.</b> The field's value cannot be changed once initialized. <code>final</code> locks the value after its first assignment — it has nothing to do with package access, static-ness, or child-class visibility.</p>
+        </div>
+        <div class="ans-block">
+          <h4>Question 02</h4>
+          <p><b>B.</b> Method Overriding. A subclass supplies its own version of an inherited method, keeping the exact same name, return type, and parameters — resolved at runtime based on the object's actual class.</p>
+        </div>
+        <div class="ans-block">
+          <h4>Question 03</h4>
+          <p><b>C.</b> Java throws an <code>ArrayIndexOutOfBoundsException</code> at runtime. Arrays don't auto-resize, and the compiler can't always know an index is invalid ahead of time — so the check happens while the program is running.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ANSWER KEY - GO -->
+  <section class="slide" data-index="28">
+    <div class="eyebrow">The Final Receipt · Page 2 of 3</div>
+    <h1 class="slide-title">Answer Key — Guess the Output</h1>
+    <div class="slide-body">
+      <div class="ans-scroll">
+        <div class="ans-cols" style="display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:0 24px; align-content:start;">
+          <div class="ans-block"><h4>GO #01 — PassByValue.java</h4><p><code>x = 100</code> only changes the method's own local copy — <code>a</code> in <code>main</code> is untouched.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--cyan); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">5</pre></div>
+          <div class="ans-block"><h4>GO #02 — Overload.java</h4><p><code>show(7)</code> matches the <code>int</code> overload exactly — no widening to <code>double</code> needed.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--cyan); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">int: 7</pre></div>
+          <div class="ans-block"><h4>GO #03 — ArraySum.java</h4><p>The for-each loop adds every element: <code>4 + 8 + 15</code>.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--cyan); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">27</pre></div>
+          <div class="ans-block"><h4>GO #04 — Account.java</h4><p>The <code>-50</code> deposit fails the <code>amt &gt; 0</code> guard, so only <code>200</code> is ever added.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--cyan); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">200.0</pre></div>
+          <div class="ans-block"><h4>GO #05 — Box.java</h4><p>The no-arg constructor chains to <code>this(10)</code>, which sets <code>size</code> to <code>10</code>.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--cyan); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">10</pre></div>
+          <div class="ans-block"><h4>GO #06 — Polymorphism.java</h4><p>The reference type is <code>Animal</code>, but the actual object is <code>Dog</code> — the overridden version always runs.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--cyan); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">Woof</pre></div>
+          <div class="ans-block"><h4>GO #07 — Vehicle.java</h4><p><code>super.cost()</code> reuses the parent's <code>1000</code>, then <code>Car</code> adds its own <code>500</code> on top.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--cyan); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">1500.0</pre></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ANSWER KEY - CODING -->
+  <section class="slide" data-index="29">
+    <div class="eyebrow">The Final Receipt · Page 3 of 3</div>
+    <h1 class="slide-title">Answer Key — Coding Problems</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>Problem 1 — Combine.java</span><button class="copy-btn" data-target="ansc1">Copy</button></div>
+          <pre class="codepre"><code id="ansc1"></code></pre>
+        </div>
+        <script type="text/plain" data-target="ansc1">public class Combine {
+    static int combine(int a, int b) {
+        return a + b;
+    }
+
+    static String combine(String a, String b) {
+        return a + " " + b;
+    }
+
+    public static void main(String[] args) {
+        System.out.println(combine(4, 5));
+        System.out.println(combine("Hello", "World"));
+    }
+}
+// Output:
+// 9
+// Hello World</script>
+
+        <div class="code-block">
+          <div class="code-header"><span>Problem 2 — Book.java</span><button class="copy-btn" data-target="ansc2">Copy</button></div>
+          <pre class="codepre"><code id="ansc2"></code></pre>
+        </div>
+        <script type="text/plain" data-target="ansc2">class Book {
+    private String title;
+    private double price;
+
+    public Book(String title, double price) {
+        this.title = title;
+        this.price = price;
+    }
+
+    public String getTitle() { return title; }
+    public double getPrice() { return price; }
+}
+
+public class Test {
+    static int findMax(int[] arr) {
+        int max = arr[0];
+        for (int i = 1; i < arr.length; i++) {
+            if (arr[i] > max) max = arr[i];
+        }
+        return max;
+    }
+
+    public static void main(String[] args) {
+        Book b = new Book("Effective Java", 45.99);
+        System.out.println(b.getTitle() + " - $" + b.getPrice());
+
+        int[] nums = {12, 45, 7, 89, 34};
+        System.out.println("Max: " + findMax(nums));
+    }
+}
+// Output:
+// Effective Java - $45.99
+// Max: 89</script>
+      </div>
+    </div>
+  </section>
+
+  <!-- 23: FINAL CLOSING -->
+  <section class="slide" data-index="30">
+    <div class="closing-wrap">
+      <div class="eyebrow" style="margin:0 auto;">Closing Note</div>
+      <div class="final-quote">"Every great structure begins with a well-drawn blueprint — write yours in clean, deliberate code."</div>
+      <div class="final-msg">That's Module 8 — methods, arrays, encapsulation, constructors, and inheritance, all in one toolkit. Review the worked examples, try the drill on your own machine, and revisit the Answer Key whenever you need a refresher. Good luck, and happy building. 🛠️</div>
+    </div>
+  </section>
+
+</div>
+
+<!-- Shortcuts overlay -->
+<div class="overlay" id="overlay">
+  <div class="overlay-panel">
+    <h2>Keyboard &amp; Mouse Shortcuts</h2>
+    <div class="row"><span>Next slide</span><span><kbd>→</kbd> / right-click / front side button</span></div>
+    <div class="row"><span>Previous slide</span><span><kbd>←</kbd> / back side button</span></div>
+    <div class="row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="row"><span>Show this panel</span><span><kbd>?</kbd></span></div>
+    <div class="row"><span>Close this panel</span><span><kbd>Esc</kbd></span></div>
+    <button class="overlay-close" id="overlayClose">Back to Slides</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- Syntax highlighter (single-pass tokenizer) ---------------- */
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  var TOKEN_RE = /(\/\/.*$)|("(?:[^"\\]|\\.)*")|('(?:[^'\\]|\\.)*')|\b(public|private|protected|static|final|class|new|void|int|double|boolean|char|String|return|if|else|for|while|this|super|extends|true|false|null|import|throws)\b|\b(\d+\.\d+|\d+)\b|\b([A-Z][A-Za-z0-9_]*)\b/gm;
+
+  function highlightJava(src){
+    var out = '';
+    var lastIndex = 0;
+    var m;
+    TOKEN_RE.lastIndex = 0;
+    while ((m = TOKEN_RE.exec(src)) !== null){
+      out += escapeHtml(src.slice(lastIndex, m.index));
+      if (m[1] !== undefined) out += '<span class="tok-comment">' + escapeHtml(m[1]) + '</span>';
+      else if (m[2] !== undefined) out += '<span class="tok-string">' + escapeHtml(m[2]) + '</span>';
+      else if (m[3] !== undefined) out += '<span class="tok-string">' + escapeHtml(m[3]) + '</span>';
+      else if (m[4] !== undefined) out += '<span class="tok-keyword">' + escapeHtml(m[4]) + '</span>';
+      else if (m[5] !== undefined) out += '<span class="tok-number">' + escapeHtml(m[5]) + '</span>';
+      else if (m[6] !== undefined) out += '<span class="tok-type">' + escapeHtml(m[6]) + '</span>';
+      lastIndex = TOKEN_RE.lastIndex;
+      if (m.index === TOKEN_RE.lastIndex) TOKEN_RE.lastIndex++;
+    }
+    out += escapeHtml(src.slice(lastIndex));
+    return out;
+  }
+
+  function initCodeBlocks(){
+    var sources = document.querySelectorAll('script[type="text/plain"][data-target]');
+    sources.forEach(function(src){
+      var id = src.getAttribute('data-target');
+      var target = document.getElementById(id);
+      if (!target) return;
+      var raw = src.textContent.replace(/^\n/, '').replace(/\n$/, '');
+      target.innerHTML = highlightJava(raw);
+      target.setAttribute('data-raw', raw);
+    });
+  }
+
+  function fallbackCopy(text){
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); } catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  function initCopyButtons(){
+    document.querySelectorAll('.copy-btn').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var id = btn.getAttribute('data-target');
+        var code = document.getElementById(id);
+        var text = code ? (code.getAttribute('data-raw') || code.textContent) : '';
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).catch(function(){ fallbackCopy(text); });
+        } else {
+          fallbackCopy(text);
+        }
+        var originalText = btn.textContent;
+        btn.textContent = 'Copied! ✓';
+        btn.classList.add('copied');
+        setTimeout(function(){
+          btn.textContent = originalText;
+          btn.classList.remove('copied');
+        }, 1400);
+      });
+    });
+  }
+
+  /* ---------------- Slide navigation ---------------- */
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length;
+  var current = 0;
+  var progressFill = document.getElementById('progressFill');
+  var counterEl = document.getElementById('counter');
+  var overlay = document.getElementById('overlay');
+  var overlayClose = document.getElementById('overlayClose');
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function updateChrome(){
+    var pct = ((current + 1) / total) * 100;
+    progressFill.style.width = pct + '%';
+    counterEl.textContent = (current + 1) + ' / ' + total;
+  }
+
+  function isInteractive(el){
+    return !!(el.closest && el.closest('button, a, input, textarea, select, .no-nav, .overlay'));
+  }
+
+  function goTo(target, dir){
+    if (target < 0 || target >= total || target === current) return;
+    var oldEl = slides[current];
+    var newEl = slides[target];
+
+    oldEl.classList.remove('active');
+    oldEl.classList.add(dir > 0 ? 'exit-left' : 'exit-right');
+
+    newEl.classList.remove('exit-left', 'exit-right', 'enter-left');
+    if (reduceMotion){
+      newEl.classList.add('active');
+    } else {
+      if (dir < 0) newEl.classList.add('enter-left'); // dir > 0 uses the default right-offset state
+      void newEl.offsetWidth; // force reflow so the transition below actually animates
+      requestAnimationFrame(function(){
+        newEl.classList.add('active');
+      });
+    }
+    newEl.scrollTop = 0;
+
+    current = target;
+    updateChrome();
+  }
+
+  function next(){ goTo(current + 1, 1); }
+  function prev(){ goTo(current - 1, -1); }
+  function first(){ goTo(0, -1); }
+  function last(){ goTo(total - 1, 1); }
+
+  function showOverlay(){ overlay.classList.add('show'); }
+  function hideOverlay(){ overlay.classList.remove('show'); }
+  function toggleOverlay(){
+    if (overlay.classList.contains('show')) hideOverlay(); else showOverlay();
+  }
+
+  /* Keyboard */
+  document.addEventListener('keydown', function(e){
+    if (e.key === '?' ){ toggleOverlay(); return; }
+    if (e.key === 'Escape'){ hideOverlay(); return; }
+    if (overlay.classList.contains('show')) return;
+    if (e.key === 'ArrowRight' || e.key === 'PageDown'){ next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ prev(); }
+    else if (e.key === 'Home'){ first(); }
+    else if (e.key === 'End'){ last(); }
+  });
+
+  overlayClose.addEventListener('click', hideOverlay);
+  overlay.addEventListener('mousedown', function(e){
+    if (e.target === overlay) hideOverlay();
+  });
+
+  /* Right-click + side buttons, capture phase, single-trigger */
+  document.addEventListener('contextmenu', function(e){
+    e.preventDefault();
+  }, { capture: true });
+
+  document.addEventListener('mousedown', function(e){
+    if (overlay.classList.contains('show')) return;
+    if (isInteractive(e.target)) return;
+
+    if (e.button === 2){ // right click
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    } else if (e.button === 3){ // back side button
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      prev();
+    } else if (e.button === 4){ // forward side button
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    }
+  }, { capture: true });
+
+  document.addEventListener('auxclick', function(e){
+    if (e.button === 1 || e.button === 2 || e.button === 3 || e.button === 4){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, { capture: true });
+
+  document.addEventListener('mouseup', function(e){
+    if (e.button === 3 || e.button === 4){
+      e.preventDefault();
+    }
+  }, { capture: true });
+
+  /* Swipe (mobile) */
+  var touchStartX = null, touchStartY = null;
+  document.addEventListener('touchstart', function(e){
+    if (e.touches.length !== 1) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(e){
+    if (touchStartX === null) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5){
+      if (dx < 0) next(); else prev();
+    }
+    touchStartX = null; touchStartY = null;
+  }, { passive: true });
+
+  /* Init */
+  initCodeBlocks();
+  initCopyButtons();
+  slides[0].classList.add('active');
+  updateChrome();
+
+})();
+</script>
+
+</body>
+</html>

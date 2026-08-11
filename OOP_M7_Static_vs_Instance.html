@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Roastery — Module 7: Static vs. Non-Static</title>
+<style>
+  :root{
+    --bg:#1c140f;
+    --bg-alt:#251b14;
+    --panel:#2c2018;
+    --panel-2:#33261c;
+    --line: rgba(243,233,221,0.14);
+    --line-strong: rgba(243,233,221,0.28);
+    --text:#f4ead9;
+    --text-dim:#c9b6a2;
+    --accent:#e3a548;
+    --accent-soft:#c98a3a;
+    --accent-cool:#8fbf9a;
+    --accent-rose:#d9776b;
+    --code-bg:#150f0b;
+    --code-keyword:#eab676;
+    --code-string:#9ecb8f;
+    --code-number:#8ec7dc;
+    --code-type:#e2b8d8;
+    --code-comment:#7a6a5c;
+    --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --mono: SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; height:100%; }
+  body{
+    background:
+      radial-gradient(ellipse at 15% -10%, rgba(227,165,72,0.10), transparent 45%),
+      radial-gradient(ellipse at 100% 110%, rgba(143,191,154,0.07), transparent 45%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .deck{ position:relative; width:100vw; height:100vh; }
+
+  .slide{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    padding: clamp(20px, 3vh, 48px) clamp(24px, 5vw, 96px);
+    opacity:0;
+    transform: translateX(28px);
+    transition: opacity .35s ease, transform .35s ease;
+    pointer-events:none;
+    overflow-y:auto;
+  }
+  .slide.active{ opacity:1; transform:translateX(0); pointer-events:auto; z-index:2; }
+  .slide.enter-left{ transform:translateX(-28px); opacity:0; }
+  .slide.exit-left{ transform:translateX(-28px); opacity:0; }
+  .slide.exit-right{ transform:translateX(28px); opacity:0; }
+
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition:none !important; transform:none !important; }
+  }
+
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--mono); letter-spacing:.14em; text-transform:uppercase;
+    font-size:clamp(12px,1.1vw,14px); color:var(--accent);
+    margin-bottom: 10px;
+  }
+  .eyebrow::before{ content:"☕"; font-size:14px; }
+
+  h1.slide-title{
+    font-family:var(--serif); font-weight:700;
+    font-size: clamp(25px, 3.4vw, 50px);
+    line-height:1.12;
+    margin: 0 0 8px 0;
+    color:var(--text);
+  }
+  .subtitle{
+    font-size: clamp(15px, 1.2vw, 18px);
+    color:var(--text-dim);
+    margin: 0 0 16px 0;
+    max-width:920px;
+    line-height:1.55;
+  }
+
+  .slide-body{ flex:1; min-height:0; display:flex; flex-direction:column; }
+
+  /* ---------- TITLE ---------- */
+  .title-wrap{ height:100%; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:16px; max-width:1160px; }
+  .brew-badge{ display:flex; align-items:center; gap:12px; padding:9px 18px; border:1px solid var(--line); border-radius:999px; background:var(--panel); font-family:var(--mono); font-size:13px; color:var(--accent); letter-spacing:.06em; }
+  .title-main{ font-family:var(--serif); font-weight:700; font-size:clamp(32px,5vw,68px); line-height:1.06; letter-spacing:-0.01em; }
+  .title-main .accent{ color:var(--accent); }
+  .title-sub{ font-size:clamp(16px,1.5vw,20px); color:var(--text-dim); max-width:760px; line-height:1.55; }
+  .title-stats{ display:flex; gap:14px; margin-top:6px; flex-wrap:wrap; }
+  .stat-chip{ border:1px solid var(--line); background:var(--panel-2); border-radius:12px; padding:11px 18px; min-width:150px; }
+  .stat-chip .num{ font-family:var(--serif); font-size:26px; color:var(--accent); font-weight:700; }
+  .stat-chip .lbl{ font-size:13px; color:var(--text-dim); margin-top:2px; }
+  .steam-illo{ position:absolute; right:clamp(10px,4vw,80px); top:50%; transform:translateY(-50%); width:min(26vw,320px); opacity:.9; }
+
+  /* ---------- GRIDS ---------- */
+  .grid-2{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vw,22px); flex:1; min-height:0; }
+  .grid-2x2{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); grid-template-rows: repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vw,20px); flex:1; min-height:0; }
+  @media (max-width:900px){ .grid-2, .grid-2x2{ grid-template-columns: minmax(0,1fr); } }
+
+  /* ---------- TICKET (signature element) ---------- */
+  .ticket{ position:relative; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 20px 16px 26px; min-width:0; display:flex; flex-direction:column; gap:8px; }
+  .ticket::before{ content:""; position:absolute; left:14px; top:0; bottom:0; width:2px; background:repeating-linear-gradient(to bottom, var(--accent) 0 6px, transparent 6px 12px); opacity:.55; }
+  .ticket h3{ margin:0; font-family:var(--serif); font-size:18px; color:var(--accent); }
+  .ticket p{ margin:0; font-size:14.5px; color:var(--text-dim); line-height:1.6; }
+  .ticket ul{ margin:4px 0 0; padding-left:18px; font-size:14.5px; color:var(--text-dim); line-height:1.65; }
+  .ticket ul li b{ color:var(--text); }
+
+  .block-card{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 20px; min-width:0; display:flex; flex-direction:column; gap:8px; }
+  .block-card h3{ margin:0; font-family:var(--serif); font-size:18px; color:var(--accent); }
+  .block-card h3 .tag{ font-family:var(--mono); font-size:11px; color:var(--accent-cool); border:1px solid var(--line); border-radius:999px; padding:2px 8px; margin-left:8px; vertical-align:middle; }
+  .block-card p{ margin:0; font-size:14.5px; color:var(--text-dim); line-height:1.6; }
+  .block-card ul{ margin:4px 0 0; padding-left:18px; font-size:14.5px; color:var(--text-dim); line-height:1.65; }
+  .block-card ul li b{ color:var(--text); }
+
+  /* ---------- CODE ---------- */
+  .code-block{ background:var(--code-bg); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .code-header{ display:flex; align-items:center; justify-content:space-between; padding:7px 12px; background:var(--panel-2); border-bottom:1px solid var(--line); font-family:var(--mono); font-size:12px; color:var(--text-dim); }
+  .copy-btn{ font-family:var(--sans); font-size:12px; color:var(--text); background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:4px 10px; cursor:pointer; transition:background .15s ease, color .15s ease; }
+  .copy-btn:hover{ background:var(--accent); color:#1c140f; border-color:var(--accent); }
+  .copy-btn.copied{ background:var(--accent-cool); color:#1c140f; border-color:var(--accent-cool); }
+  pre.codepre{ margin:0; padding:10px 14px; max-height:50vh; overflow:auto; font-family:var(--mono); font-size:clamp(12px,.92vw,14px); line-height:1.55; }
+  code .tok-keyword{ color:var(--code-keyword); }
+  code .tok-string{ color:var(--code-string); }
+  code .tok-number{ color:var(--code-number); }
+  code .tok-type{ color:var(--code-type); }
+  code .tok-comment{ color:var(--code-comment); font-style:italic; }
+
+  /* ---------- ZONES DIAGRAM (signature schematic) ---------- */
+  .zones-wrap{ display:flex; align-items:center; justify-content:center; flex:1; }
+
+  /* ---------- TABLES ---------- */
+  table.cmp{ width:100%; border-collapse:collapse; font-size:14.5px; }
+  table.cmp th, table.cmp td{ text-align:left; padding:10px 14px; border-bottom:1px solid var(--line); vertical-align:top; }
+  table.cmp th{ font-family:var(--mono); font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--accent-cool); border-bottom:1px solid var(--line-strong); }
+  table.cmp td b{ color:var(--text); }
+  table.cmp tr:last-child td{ border-bottom:none; }
+  table.cmp td.yes{ color:var(--accent-cool); font-weight:700; }
+  table.cmp td.no{ color:var(--accent-rose); }
+  .spec-card{ position:relative; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 20px; }
+
+  /* ---------- MCQ ---------- */
+  .mcq-grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vh,18px); flex:1; min-height:0; }
+  .mcq-grid.odd-last > :last-child{ grid-column: 1 / -1; max-width:640px; margin:0 auto; width:100%; }
+  @media (max-width:900px){ .mcq-grid{ grid-template-columns:minmax(0,1fr); } .mcq-grid.odd-last > :last-child{ max-width:none; } }
+  .mcq-card{ position:relative; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 20px; }
+  .mcq-card .qnum{ font-family:var(--mono); font-size:12px; color:var(--accent); letter-spacing:.08em; }
+  .mcq-card .qtext{ font-size:clamp(15px,1.1vw,17.5px); font-weight:600; margin:6px 0 10px; line-height:1.4; }
+  .mcq-opts{ display:flex; flex-direction:column; gap:6px; font-size:14.5px; color:var(--text-dim); }
+  .mcq-opts div{ display:flex; gap:8px; }
+  .mcq-opts b{ color:var(--accent-cool); min-width:18px; }
+  .output-prompt{ display:flex; align-items:center; gap:10px; font-size:14px; color:var(--text-dim); margin-top:8px; }
+  .output-prompt input{ flex:1; border:none; border-bottom:1px dashed var(--line); background:transparent; color:var(--text); font-family:var(--mono); font-size:14px; padding:4px 6px; }
+  .output-prompt input:focus{ outline:none; border-bottom-color:var(--accent); }
+  .go-grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vw,20px); flex:1; min-height:0; }
+  .go-grid.solo{ grid-template-columns:minmax(0,1fr); }
+  @media (max-width:900px){ .go-grid{ grid-template-columns:minmax(0,1fr); } }
+  .go-card{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 18px; display:flex; flex-direction:column; gap:8px; min-width:0; }
+  .go-card .qnum{ font-family:var(--mono); font-size:12px; color:var(--accent); letter-spacing:.06em; }
+
+  /* ---------- QUOTES ---------- */
+  .quote-wrap{ flex:1; display:flex; flex-direction:column; justify-content:center; gap:26px; max-width:1100px; }
+  .quote-block{ position:relative; padding-left:28px; }
+  .quote-block::before{ content:"“"; position:absolute; left:-6px; top:-18px; font-family:var(--serif); font-size:64px; color:var(--accent); opacity:.6; }
+  .quote-block p{ font-family:var(--serif); font-size:clamp(17px,1.9vw,24px); line-height:1.5; margin:0 0 8px; color:var(--text); }
+  .quote-block span{ font-family:var(--mono); font-size:13px; color:var(--accent-cool); }
+
+  /* ---------- ANSWER KEY ---------- */
+  .ans-scroll{ flex:1; min-height:0; overflow-y:auto; padding-right:8px; }
+  .ans-block{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 18px; margin-bottom:12px; break-inside:avoid; }
+  .ans-block h4{ margin:0 0 6px 0; font-family:var(--mono); font-size:14px; color:var(--accent); }
+  .ans-block p{ margin:0; font-size:14.5px; color:var(--text-dim); line-height:1.6; }
+  .ans-block p b{ color:var(--text); }
+
+  /* ---------- CLOSING ---------- */
+  .closing-wrap{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:22px; }
+  .closing-wrap .final-quote{ font-family:var(--serif); font-size:clamp(20px,2.4vw,32px); max-width:900px; line-height:1.5; color:var(--text); }
+  .closing-wrap .final-msg{ font-size:16px; color:var(--text-dim); max-width:640px; line-height:1.6; }
+
+  /* ---------- CHROME ---------- */
+  .progress-track{ position:fixed; top:0; left:0; right:0; height:4px; background:rgba(255,255,255,0.06); z-index:50; }
+  .progress-fill{ height:100%; background:linear-gradient(90deg, var(--accent-soft), var(--accent)); width:0%; transition:width .3s ease; }
+  .counter{ position:fixed; bottom:16px; right:20px; z-index:50; font-family:var(--mono); font-size:13px; color:var(--text-dim); background:rgba(0,0,0,0.35); border:1px solid var(--line); border-radius:999px; padding:6px 14px; backdrop-filter: blur(4px); }
+  .hint{ position:fixed; bottom:16px; left:20px; z-index:50; font-family:var(--mono); font-size:12px; color:var(--text-dim); background:rgba(0,0,0,0.35); border:1px solid var(--line); border-radius:999px; padding:6px 14px; }
+
+  .overlay{ position:fixed; inset:0; background:rgba(10,7,5,0.72); backdrop-filter: blur(3px); display:flex; align-items:center; justify-content:center; z-index:100; opacity:0; pointer-events:none; transition:opacity .2s ease; }
+  .overlay.show{ opacity:1; pointer-events:auto; }
+  .overlay-panel{ background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:28px 32px; max-width:520px; width:90%; }
+  .overlay-panel h2{ margin:0 0 14px 0; font-family:var(--serif); color:var(--accent); font-size:22px; }
+  .overlay-panel .row{ display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--line); font-size:14px; color:var(--text-dim); }
+  .overlay-panel .row:last-child{ border-bottom:none; }
+  .overlay-close{ margin-top:16px; width:100%; padding:10px; border-radius:8px; border:1px solid var(--line); background:var(--accent); color:#1c140f; font-weight:600; cursor:pointer; font-family:var(--sans); font-size:14px; }
+  kbd{ display:inline-block; font-family:var(--mono); font-size:13px; background:var(--panel-2); border:1px solid var(--line); border-bottom-width:2px; border-radius:6px; padding:2px 8px; color:var(--text); }
+
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb{ background:var(--panel-2); border-radius:8px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+</style>
+</head>
+<body>
+
+<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+<div class="counter" id="counter">1 / 25</div>
+<div class="hint">Right-click or → for next · press ? for help</div>
+
+<div class="deck" id="deck">
+
+  <!-- 0: TITLE -->
+  <section class="slide" data-index="0">
+    <div class="title-wrap">
+      <div class="brew-badge">MODULE 7 · THE JAVA ROASTERY</div>
+      <div class="title-main">Static vs. Non-Static<br><span class="accent">One Shared Machine, Many Baristas</span></div>
+      <div class="title-sub">Every shop has one shared espresso machine — and every barista has their own apron and nametag. Java's <code>static</code> and instance members work the same way. Today we go deep: fields, methods, common mistakes, and the classic counter pattern.</div>
+      <div class="title-stats">
+        <div class="stat-chip"><div class="num">2</div><div class="lbl">Member Types</div></div>
+        <div class="stat-chip"><div class="num">8</div><div class="lbl">Worked Examples</div></div>
+        <div class="stat-chip"><div class="num">3</div><div class="lbl">Skill Checks</div></div>
+      </div>
+    </div>
+    <svg class="steam-illo" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Illustration of a steaming coffee cup, representing the Java Roastery theme">
+      <g fill="none" stroke="#e3a548" stroke-width="4" stroke-linecap="round" opacity="0.85">
+        <path d="M70 40 C60 20, 80 20, 72 5" />
+        <path d="M100 40 C90 15, 112 15, 102 -2" />
+        <path d="M130 40 C120 20, 142 20, 132 5" />
+      </g>
+      <rect x="50" y="95" width="110" height="70" rx="10" fill="#2c2018" stroke="#e3a548" stroke-width="4"/>
+      <path d="M160 105 h18 a18 18 0 0 1 0 42 h-18" fill="none" stroke="#e3a548" stroke-width="4"/>
+      <ellipse cx="105" cy="95" rx="55" ry="10" fill="#8fbf9a" opacity="0.85"/>
+      <rect x="40" y="165" width="130" height="10" rx="4" fill="#e3a548" opacity="0.6"/>
+    </svg>
+  </section>
+
+  <!-- 1: ROADMAP -->
+  <section class="slide" data-index="1">
+    <div class="eyebrow">Today's Order</div>
+    <h1 class="slide-title">Lesson Preview</h1>
+    <p class="subtitle">Understand exactly what belongs to a class versus what belongs to an object — then practice telling them apart in real code, including the mistakes that trip people up.</p>
+    <div class="slide-body">
+      <div class="grid-2x2">
+        <div class="block-card">
+          <h3>☕ Static Members</h3>
+          <p>Fields and methods that belong to the class itself — one shared copy for everyone, no object required to reach them.</p>
+        </div>
+        <div class="block-card">
+          <h3>👤 Instance (Non-Static) Members</h3>
+          <p>Fields and methods that belong to <i>each individual object</i> — every barista gets their own copy.</p>
+        </div>
+        <div class="block-card">
+          <h3>🛠️ Guided Drills</h3>
+          <p>Worked exercises including the classic static counter pattern, plus a pseudocode-to-Java conversion challenge.</p>
+        </div>
+        <div class="block-card">
+          <h3>✅ Skill Check</h3>
+          <p>Multiple choice questions on when static applies, why it applies, and what breaks if you mix the two up.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2: CONCEPT -->
+  <section class="slide" data-index="2">
+    <div class="eyebrow">Brewing Basics</div>
+    <h1 class="slide-title">What "Static" Actually Means</h1>
+    <p class="subtitle">The <code>static</code> keyword makes a member belong to the class itself rather than to any one object — like an espresso machine that belongs to the shop, not to any single barista.</p>
+    <div class="slide-body">
+      <div class="grid-2x2">
+        <div class="ticket">
+          <h3>Single Copy</h3>
+          <p>No matter how many objects are instantiated, only one copy of a static member exists in memory.</p>
+        </div>
+        <div class="ticket">
+          <h3>Direct Access</h3>
+          <p>Static fields and methods can be called directly through the class name — no object required, e.g. <code>ClassName.staticMethod()</code>.</p>
+        </div>
+        <div class="ticket">
+          <h3>Constants</h3>
+          <p>Static variables are commonly paired with <code>final</code> to define global constants that never change.</p>
+        </div>
+        <div class="ticket">
+          <h3>Instance, by Contrast</h3>
+          <p>Every non-static field or method belongs to a specific object — change one barista's nametag, and every other barista's stays exactly the same.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3: SIGNATURE DIAGRAM -->
+  <section class="slide" data-index="3">
+    <div class="eyebrow">Signature Schematic</div>
+    <h1 class="slide-title">One Shared Machine, Three Baristas</h1>
+    <p class="subtitle">A static field is like the shop's single espresso machine — every object shares the exact same one. An instance field is like each barista's own personal nametag.</p>
+    <div class="slide-body zones-wrap">
+      <svg viewBox="0 0 640 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Diagram showing one shared static field box at the top connected by lines to three separate barista objects at the bottom, each with their own instance field, illustrating that static members have a single shared copy while instance members are unique per object" style="width:100%; max-width:680px; height:auto; margin:0 auto;">
+        <rect x="170" y="20" width="300" height="70" rx="12" fill="#2c2018" stroke="#e3a548" stroke-width="2.5"/>
+        <text x="320" y="50" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="13" fill="#e3a548">static shopName</text>
+        <text x="320" y="70" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="11" fill="#c9b6a2">"The Java Roastery" — ONE shared copy</text>
+
+        <line x1="320" y1="90" x2="110" y2="230" stroke="#8fbf9a" stroke-width="2" stroke-dasharray="4 5"/>
+        <line x1="320" y1="90" x2="320" y2="230" stroke="#8fbf9a" stroke-width="2" stroke-dasharray="4 5"/>
+        <line x1="320" y1="90" x2="530" y2="230" stroke="#8fbf9a" stroke-width="2" stroke-dasharray="4 5"/>
+
+        <rect x="30" y="230" width="160" height="90" rx="10" fill="#2c2018" stroke="#8ec7dc" stroke-width="2.5"/>
+        <text x="110" y="260" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="12" fill="#8ec7dc">Barista: Ana</text>
+        <text x="110" y="280" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="11" fill="#c9b6a2">instance field</text>
+        <text x="110" y="298" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="11" fill="#c9b6a2">name = "Ana"</text>
+
+        <rect x="240" y="230" width="160" height="90" rx="10" fill="#2c2018" stroke="#8ec7dc" stroke-width="2.5"/>
+        <text x="320" y="260" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="12" fill="#8ec7dc">Barista: Ben</text>
+        <text x="320" y="280" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="11" fill="#c9b6a2">instance field</text>
+        <text x="320" y="298" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="11" fill="#c9b6a2">name = "Ben"</text>
+
+        <rect x="450" y="230" width="160" height="90" rx="10" fill="#2c2018" stroke="#8ec7dc" stroke-width="2.5"/>
+        <text x="530" y="260" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="12" fill="#8ec7dc">Barista: Cleo</text>
+        <text x="530" y="280" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="11" fill="#c9b6a2">instance field</text>
+        <text x="530" y="298" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="11" fill="#c9b6a2">name = "Cleo"</text>
+
+        <text x="320" y="360" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="12" fill="#d9776b">Change shopName once, and all three baristas see the update.</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- 4: STATIC VS INSTANCE FIELDS -->
+  <section class="slide" data-index="4">
+    <div class="eyebrow">Fields, Side by Side</div>
+    <h1 class="slide-title">Static Fields vs. Instance Fields</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>Barista.java</span><button class="copy-btn" data-target="code1">Copy</button></div>
+          <pre class="codepre"><code id="code1"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code1">public class Barista {
+    String name;                                    // instance field — each object gets its own
+    static String shopName = "The Java Roastery";   // static field — ONE shared copy
+
+    public Barista(String name) {
+        this.name = name;
+    }
+
+    void introduce() {
+        System.out.println(name + " works at " + shopName);
+    }
+
+    public static void main(String[] args) {
+        Barista ana = new Barista("Ana");
+        Barista ben = new Barista("Ben");
+
+        ana.introduce();
+        ben.introduce();
+
+        // Change the SHARED copy once...
+        Barista.shopName = "The Java Roastery — Downtown Branch";
+
+        // ...and BOTH objects see the update
+        ana.introduce();
+        ben.introduce();
+    }
+}</script>
+
+        <div class="block-card">
+          <h3 style="font-size:17px;">🔍 What Just Happened</h3>
+          <ul>
+            <li><b>name</b> is instance — <code>ana.name</code> and <code>ben.name</code> are two completely separate boxes in memory</li>
+            <li><b>shopName</b> is static — there is only ONE box, and every object reads from that same box</li>
+            <li>Reassigning <code>Barista.shopName</code> once instantly changes what <i>both</i> <code>ana</code> and <code>ben</code> report</li>
+          </ul>
+          <div class="code-block" style="margin-top:6px;">
+            <div class="code-header"><span>Console Output</span></div>
+            <pre class="codepre" style="max-height:none;">Ana works at The Java Roastery
+Ben works at The Java Roastery
+Ana works at The Java Roastery — Downtown Branch
+Ben works at The Java Roastery — Downtown Branch</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5: STATIC VS INSTANCE METHODS + ERROR/FIX -->
+  <section class="slide" data-index="5">
+    <div class="eyebrow">Barista Rules</div>
+    <h1 class="slide-title">Rules for Static Methods</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="block-card">
+          <h3 style="font-size:17px;">1. Local Variables Are Fine</h3>
+          <p>Static methods can freely declare and use their own local variables inside the method body — like a barista's personal notepad for a single order.</p>
+          <h3 style="font-size:17px; margin-top:10px;">2. No Direct Access to Instance Members</h3>
+          <p>Static methods cannot directly access non-static (instance) variables or methods, unless an object instance is explicitly passed in as a parameter. The shared machine can't reach into one specific barista's private locker.</p>
+        </div>
+
+        <div class="spec-card" style="display:flex; flex-direction:column; gap:10px;">
+          <h3 style="margin:0; font-family:var(--serif); color:var(--accent-rose); font-size:17px;">❌ This Won't Compile</h3>
+          <div class="code-block">
+            <div class="code-header"><span>StaticError.java</span><button class="copy-btn" data-target="code2">Copy</button></div>
+            <pre class="codepre"><code id="code2"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code2">public class Barista {
+    String name = "Ana"; // instance field
+
+    static void greet() {
+        // COMPILE ERROR: cannot access instance field
+        // "name" from a static context — no object exists yet
+        System.out.println("Hello, " + name);
+    }
+}</script>
+          <h3 style="margin:8px 0 0; font-family:var(--serif); color:var(--accent-cool); font-size:17px;">✅ The Fix — Pass the Object In</h3>
+          <div class="code-block">
+            <div class="code-header"><span>StaticFixed.java</span><button class="copy-btn" data-target="code3">Copy</button></div>
+            <pre class="codepre"><code id="code3"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code3">public class Barista {
+    String name = "Ana";
+
+    static void greet(Barista b) {
+        // Fixed: the object is explicitly passed in
+        System.out.println("Hello, " + b.name);
+    }
+
+    public static void main(String[] args) {
+        Barista ana = new Barista();
+        greet(ana);
+    }
+}
+// Output: Hello, Ana</script>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6: EXERCISE - DATASTATIC -->
+  <section class="slide" data-index="6">
+    <div class="eyebrow">Exercise 01</div>
+    <h1 class="slide-title">Static Class Members — The Shared Espresso Machine</h1>
+    <p class="subtitle">Static members are called straight off the class name, no object required.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>DataStatic.java</span><button class="copy-btn" data-target="code4">Copy</button></div>
+          <pre class="codepre"><code id="code4"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code4">public class DataStatic {
+    private static int powerBlast = 1000;
+
+    public DataStatic() {}
+
+    public static void printAgentDetails() {
+        System.out.println("Agent Code: 007, James Bond");
+        displayPower();
+    }
+
+    public static void displayPower() {
+        System.out.println("Power Blast Level: " + powerBlast);
+    }
+
+    public static int addBooster(int units) {
+        return units * 100;
+    }
+
+    public static void main(String[] args) {
+        int res = addBooster(15);
+        System.out.println("Booster Shot Value: " + res);
+        printAgentDetails();
+    }
+}
+// Output:
+// Booster Shot Value: 1500
+// Agent Code: 007, James Bond
+// Power Blast Level: 1000</script>
+
+        <div class="block-card">
+          <h3 style="font-size:17px;">🔍 Code Breakdown</h3>
+          <ul>
+            <li><b>private static int powerBlast</b> — shared across all instances</li>
+            <li><b>addBooster()</b> — static method called via class name: <code>DataStatic.addBooster(15)</code></li>
+            <li><b>printAgentDetails()</b> calls <b>displayPower()</b> — static methods can freely call other static methods</li>
+          </ul>
+          <h3 style="font-size:15px; margin-top:8px;">💡 Key Takeaway</h3>
+          <ul>
+            <li>Static members belong to the <b>class</b>, not any object</li>
+            <li>Access via <code>ClassName.member</code> — no <code>new</code> required</li>
+            <li>One copy shared — changes affect all references</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7: EXERCISE - CALCULATOR -->
+  <section class="slide" data-index="7">
+    <div class="eyebrow">Exercise 02</div>
+    <h1 class="slide-title">Static Utility Pattern — The Calculator Blend</h1>
+    <p class="subtitle">Static fields and methods can be read, called, and even reassigned directly through the class name.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>Calculator.java</span><button class="copy-btn" data-target="code5">Copy</button></div>
+          <pre class="codepre"><code id="code5"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code5">class Calculator {
+    public Calculator() {}
+
+    public static String type = "Arithmetic";
+
+    public static int sum(int num1, int num2) {
+        return num1 + num2;
+    }
+}
+
+public class MainCalculator {
+    public static void main(String[] args) {
+        int result = Calculator.sum(10, 25);
+        System.out.println("Result is: " + result);
+
+        String calcType = Calculator.type;
+        System.out.println("Initial Calculator Type: " + calcType);
+
+        Calculator.type = "Scientific";
+        System.out.println("Updated Calculator Type: " + Calculator.type);
+    }
+}
+// Output:
+// Result is: 35
+// Initial Calculator Type: Arithmetic
+// Updated Calculator Type: Scientific</script>
+
+        <div class="block-card">
+          <h3 style="font-size:17px;">🔍 Code Breakdown</h3>
+          <ul>
+            <li><b>public static String type</b> — shared state, mutable</li>
+            <li><b>Calculator.sum(10, 25)</b> — static method called via class name</li>
+            <li><b>Calculator.type = "Scientific"</b> — reassign static field globally</li>
+          </ul>
+          <h3 style="font-size:15px; margin-top:8px; color:var(--accent-rose);">⚠ Common Mistake</h3>
+          <ul>
+            <li>Forgetting that static fields are <b>shared</b> — changing them affects all callers</li>
+            <li>Using static for instance-specific data leads to bugs</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8: STATIC COUNTER PATTERN -->
+  <section class="slide" data-index="8">
+    <div class="eyebrow">Going Further</div>
+    <h1 class="slide-title">The Static Counter Pattern</h1>
+    <p class="subtitle">One of the most common real uses of static: tracking something across <i>every</i> object ever created, like a take-a-number ticket dispenser.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>Order.java</span><button class="copy-btn" data-target="code6">Copy</button></div>
+          <pre class="codepre"><code id="code6"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code6">public class Order {
+    static int totalOrders = 0; // shared across every Order ever made
+    int orderNumber;            // this object's own personal number
+
+    public Order() {
+        totalOrders++;               // bump the ONE shared counter
+        orderNumber = totalOrders;   // freeze a snapshot into this object
+    }
+
+    public static void main(String[] args) {
+        Order o1 = new Order();
+        Order o2 = new Order();
+        Order o3 = new Order();
+
+        System.out.println("Order #" + o1.orderNumber);
+        System.out.println("Order #" + o2.orderNumber);
+        System.out.println("Order #" + o3.orderNumber);
+        System.out.println("Total orders made: " + Order.totalOrders);
+    }
+}
+// Output:
+// Order #1
+// Order #2
+// Order #3
+// Total orders made: 3</script>
+
+        <div class="block-card">
+          <h3 style="font-size:17px;">🔍 Why This Works</h3>
+          <ul>
+            <li><b>totalOrders</b> is static — every <code>new Order()</code> increments the exact same shared counter</li>
+            <li><b>orderNumber</b> is instance — each object grabs a private snapshot of the counter <i>at the moment it was created</i>, then never changes again</li>
+            <li>This is exactly how frameworks generate unique IDs, ticket numbers, or "how many objects exist" tallies</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9: COMPARISON TABLE -->
+  <section class="slide" data-index="9">
+    <div class="eyebrow">Reference Table</div>
+    <h1 class="slide-title">Static vs. Instance — Full Comparison</h1>
+    <div class="slide-body">
+      <div class="spec-card">
+        <table class="cmp">
+          <tr><th>Aspect</th><th>Static</th><th>Instance (Non-Static)</th></tr>
+          <tr><td><b>Belongs to</b></td><td>The class itself</td><td>Each individual object</td></tr>
+          <tr><td><b>Copies in memory</b></td><td>Exactly one, shared by all</td><td>One separate copy per object created</td></tr>
+          <tr><td><b>Access syntax</b></td><td><code>ClassName.member</code></td><td><code>objectName.member</code></td></tr>
+          <tr><td><b>Needs <code>new</code> first?</b></td><td>No</td><td>Yes</td></tr>
+          <tr><td><b>Can access instance members directly?</b></td><td>No — needs an object reference passed in</td><td>Yes, freely — including other instance and static members</td></tr>
+          <tr><td><b>Typical use</b></td><td>Constants, utility methods, shared counters</td><td>Object-specific data and behavior</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10: GUIDED DRILL -->
+  <section class="slide" data-index="10">
+    <div class="eyebrow">Guided Drill · Activity 4</div>
+    <h1 class="slide-title">Pseudocode → Java: MathHelper</h1>
+    <p class="subtitle">Make <code>square()</code> a static method and call it directly from <code>main</code> without creating an object.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>Pseudocode — MathHelper</span><button class="copy-btn" data-target="code7">Copy</button></div>
+          <pre class="codepre"><code id="code7"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code7">CLASS MathHelper
+    STATIC METHOD square(n)
+        RETURN n * n
+    END METHOD
+
+    STATIC METHOD main
+        result = MathHelper.square(6)
+        PRINT "Square: " + result
+    END METHOD
+END CLASS</script>
+
+        <div class="code-block">
+          <div class="code-header"><span>MathHelper.java — sample answer</span><button class="copy-btn" data-target="code8">Copy</button></div>
+          <pre class="codepre"><code id="code8"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code8">class MathHelper {
+    public static int square(int n) {
+        return n * n;
+    }
+
+    public static void main(String[] args) {
+        int result = square(6);
+        System.out.println("Square: " + result);
+    }
+}
+// Output: Square: 36</script>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11: REAL-LIFE ANALOGIES -->
+  <section class="slide" data-index="11">
+    <div class="eyebrow">Making It Stick</div>
+    <h1 class="slide-title">Real-Life Analogies</h1>
+    <div class="slide-body">
+      <div class="grid-2x2">
+        <div class="block-card">
+          <h3 style="font-size:17px;">Static field/method <span class="tag">shared machine</span></h3>
+          <p>The shop's one espresso machine — every barista uses the exact same physical machine, not their own personal copy.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">Instance field/method <span class="tag">personal apron</span></h3>
+          <p>Each barista's own apron and nametag — unique to them, unaffected by what any other barista is wearing.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">Static counter <span class="tag">ticket dispenser</span></h3>
+          <p>The shop's take-a-number dispenser — one running count for the whole store, no matter how many customers walk in.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">Calling static vs. instance <span class="tag">machine vs. badge</span></h3>
+          <p>Using the shared machine means walking straight up to it. Using an instance method means you need your own badge (object) first.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12: FAQ -->
+  <section class="slide" data-index="12">
+    <div class="eyebrow">Barista FAQ</div>
+    <h1 class="slide-title">Wrap-Up &amp; FAQs</h1>
+    <div class="slide-body">
+      <div class="grid-2x2">
+        <div class="block-card">
+          <h3 style="font-size:16px;">What is a static member?</h3>
+          <p>A member that belongs to the class blueprint rather than any one instance — enabling shared state and utility functions without needing object allocation.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:16px;">Can a static method call an instance method directly?</h3>
+          <p>No — the same rule applies to methods as to fields. It needs an object reference to call an instance method on, just like accessing an instance field.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:16px;">Why is <code>main()</code> always static?</h3>
+          <p>The JVM calls <code>main()</code> before any object of your class exists. Since there's no object yet, the method has to belong to the class itself.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:16px;">When should I use static vs. instance?</h3>
+          <p>Static for data or behavior that's the same for everyone (constants, utilities, shared counters). Instance for anything that varies from object to object.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13: RECAP -->
+  <section class="slide" data-index="13">
+    <div class="eyebrow">Before the Skill Check</div>
+    <h1 class="slide-title">Recap</h1>
+    <div class="slide-body">
+      <div class="block-card" style="max-width:900px;">
+        <ul style="font-size:15.5px; line-height:1.8;">
+          <li><b>static</b> members belong to the class, not the object — one shared copy, called directly through the class name.</li>
+          <li><b>Instance (non-static)</b> members belong to each individual object — every object gets its own separate copy.</li>
+          <li>Static methods can't reach instance members directly — an object reference has to be passed in first.</li>
+          <li>Static methods can freely declare and use their own local variables, and can call other static methods directly.</li>
+          <li>The <b>static counter pattern</b> — a shared static field incremented inside the constructor — is a classic way to track something across every object created.</li>
+          <li>Pick static for shared, class-wide data; pick instance for anything that should vary per object.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- MCQ -->
+  <section class="slide" data-index="14">
+    <div class="eyebrow">Activity 1 of 3 · Multiple Choice (3 &times; 1 pt)</div>
+    <h1 class="slide-title">Multiple Choice — Test Yourself</h1>
+    <p class="subtitle">Total for this activity set: <b style="color:var(--text)">15 points</b> (3 MC + 7 Guess-the-Output + 2 Coding Problems). Answers are revealed on the Answer Key slides at the end.</p>
+    <div class="slide-body">
+      <div class="mcq-grid odd-last">
+        <div class="mcq-card">
+          <div class="qnum">QUESTION 01 · 1 pt</div>
+          <div class="qtext">What happens when you declare a class member as <code>static</code>?</div>
+          <div class="mcq-opts">
+            <div><b>A.</b> It can only be accessed by subclasses.</div>
+            <div><b>B.</b> Only one instance of the member exists, shared across all objects.</div>
+            <div><b>C.</b> It cannot be accessed without creating an object with <code>new</code>.</div>
+            <div><b>D.</b> It becomes immutable and cannot be changed.</div>
+          </div>
+        </div>
+        <div class="mcq-card">
+          <div class="qnum">QUESTION 02 · 1 pt</div>
+          <div class="qtext">A static method tries to use a non-static (instance) field directly. What happens?</div>
+          <div class="mcq-opts">
+            <div><b>A.</b> It works automatically.</div>
+            <div><b>B.</b> It compiles, but the field prints as <code>null</code>.</div>
+            <div><b>C.</b> It fails to compile unless an object reference is provided.</div>
+            <div><b>D.</b> Static methods can never use any variables.</div>
+          </div>
+        </div>
+        <div class="mcq-card">
+          <div class="qnum">QUESTION 03 · 1 pt</div>
+          <div class="qtext">Why must Java's <code>main()</code> method always be declared <code>static</code>?</div>
+          <div class="mcq-opts">
+            <div><b>A.</b> Because it returns a value.</div>
+            <div><b>B.</b> Because the JVM calls it before any object of the class exists.</div>
+            <div><b>C.</b> Because static methods run faster.</div>
+            <div><b>D.</b> It's not actually required.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GO 1-2 -->
+  <section class="slide" data-index="15">
+    <div class="eyebrow">Activity 2 of 3 · Guess the Output (7 &times; 1 pt)</div>
+    <h1 class="slide-title">Round 1 — Static Fields at Work</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+        <div class="go-card">
+          <div class="qnum">ITEM 01 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>Ticket.java</span><button class="copy-btn" data-target="go1">Copy</button></div>
+            <pre class="codepre"><code id="go1"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go1">class Ticket {
+    static int nextNumber = 1;
+    int myNumber;
+
+    public Ticket() {
+        myNumber = nextNumber;
+        nextNumber++;
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Ticket t1 = new Ticket();
+        Ticket t2 = new Ticket();
+        System.out.println(t1.myNumber + " " + t2.myNumber);
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="qnum">ITEM 02 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>MathUtil.java</span><button class="copy-btn" data-target="go2">Copy</button></div>
+            <pre class="codepre"><code id="go2"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go2">class MathUtil {
+    static int triple(int n) {
+        return n * 3;
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        System.out.println(MathUtil.triple(4));
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GO 3-4 -->
+  <section class="slide" data-index="16">
+    <div class="eyebrow">Activity 2 of 3 · Guess the Output (7 &times; 1 pt)</div>
+    <h1 class="slide-title">Round 2 — Instance Independence vs. Shared State</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+        <div class="go-card">
+          <div class="qnum">ITEM 03 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>Counter.java</span><button class="copy-btn" data-target="go3">Copy</button></div>
+            <pre class="codepre"><code id="go3"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go3">class Counter {
+    int count = 0; // instance field
+    void increment() { count++; }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Counter a = new Counter();
+        Counter b = new Counter();
+        a.increment();
+        a.increment();
+        b.increment();
+        System.out.println(a.count + " " + b.count);
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="qnum">ITEM 04 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>Shop.java</span><button class="copy-btn" data-target="go4">Copy</button></div>
+            <pre class="codepre"><code id="go4"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go4">class Shop {
+    static String status = "Open"; // static field
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Shop s1 = new Shop();
+        Shop s2 = new Shop();
+        Shop.status = "Closed";
+        System.out.println(s1.status + " " + s2.status);
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GO 5-6 -->
+  <section class="slide" data-index="17">
+    <div class="eyebrow">Activity 2 of 3 · Guess the Output (7 &times; 1 pt)</div>
+    <h1 class="slide-title">Round 3 — Trap Question &amp; the Counter Pattern</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+        <div class="go-card">
+          <div class="qnum">ITEM 05 · 1 pt · TRAP</div>
+          <div class="code-block">
+            <div class="code-header"><span>Item.java</span><button class="copy-btn" data-target="go5">Copy</button></div>
+            <pre class="codepre"><code id="go5"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go5">class Item {
+    int price = 50; // instance field
+
+    static void show() {
+        System.out.println(price); // ?
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="hint: not every program compiles..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="qnum">ITEM 06 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>Visitor.java</span><button class="copy-btn" data-target="go6">Copy</button></div>
+            <pre class="codepre"><code id="go6"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go6">class Visitor {
+    static int total = 0;
+    public Visitor() { total++; }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        for (int i = 0; i < 4; i++) {
+            new Visitor();
+        }
+        System.out.println("Total visitors: " + Visitor.total);
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GO 7 (solo) -->
+  <section class="slide" data-index="18">
+    <div class="eyebrow">Activity 2 of 3 · Guess the Output (7 &times; 1 pt)</div>
+    <h1 class="slide-title">Round 4 — Instance Methods CAN Call Static Ones</h1>
+    <div class="slide-body">
+      <div class="go-grid solo">
+        <div class="go-card">
+          <div class="qnum">ITEM 07 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>Helper.java</span><button class="copy-btn" data-target="go7">Copy</button></div>
+            <pre class="codepre"><code id="go7"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go7">class Helper {
+    static int square(int n) {
+        return n * n;
+    }
+
+    void printSquare(int n) {
+        // an instance method CAN call a static one directly
+        System.out.println(square(n));
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Helper h = new Helper();
+        h.printSquare(5);
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CODING PROBLEMS -->
+  <section class="slide" data-index="19">
+    <div class="eyebrow">Activity 3 of 3 · Coding Problems (2 &times; 2.5 pts)</div>
+    <h1 class="slide-title">Write the Code Yourself</h1>
+    <p class="subtitle">No starter code this time — write each class from scratch. Sample solutions are on the Answer Key.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="block-card">
+          <h3 style="font-size:17px;">Problem 1 · 2.5 pts</h3>
+          <p>Write a class <code>Product</code> with:</p>
+          <ul>
+            <li>an <b>instance</b> field <code>name</code>, set through the constructor</li>
+            <li>a <b>static</b> field <code>totalProducts</code>, incremented every time a new <code>Product</code> is created</li>
+            <li>a <b>static</b> method <code>getTotalProducts()</code> that returns the current count</li>
+          </ul>
+          <p>In <code>main</code>, create 3 <code>Product</code> objects, then print the total count using the static method.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">Problem 2 · 2.5 pts</h3>
+          <p>Write a class <code>Circle</code> with:</p>
+          <ul>
+            <li>a <b>static final</b> field <code>PI = 3.14</code></li>
+            <li>an <b>instance</b> field <code>radius</code>, set through the constructor</li>
+            <li>a method <code>getArea()</code> that returns <code>PI * radius * radius</code></li>
+          </ul>
+          <p>In <code>main</code>, create two <code>Circle</code> objects with different radii, and print both areas — showing each keeps its own radius while sharing the same <code>PI</code>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- KEY QUOTES -->
+  <section class="slide" data-index="20">
+    <div class="eyebrow">Key Quotes</div>
+    <h1 class="slide-title">In This Lesson's Own Words</h1>
+    <div class="slide-body">
+      <div class="quote-wrap">
+        <div class="quote-block">
+          <p>The static keyword makes a member belong to the class itself rather than to any one object — like an espresso machine that belongs to the shop, not to any single barista.</p>
+          <span>— Concept Introduction</span>
+        </div>
+        <div class="quote-block">
+          <p>Static members belong to the class, not any object. Access via ClassName.member — no new required.</p>
+          <span>— Exercise 01 Key Takeaway</span>
+        </div>
+        <div class="quote-block">
+          <p>Forgetting that static fields are shared — changing them affects all callers.</p>
+          <span>— Exercise 02 Common Mistake</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ANSWER KEY - MC -->
+  <section class="slide" data-index="21">
+    <div class="eyebrow">Receipt · Page 1 of 3</div>
+    <h1 class="slide-title">Answer Key — Multiple Choice</h1>
+    <div class="slide-body">
+      <div class="ans-scroll">
+        <div class="ans-block">
+          <h4>Question 01</h4>
+          <p><b>B — one shared instance.</b> Static members exist once per class, not once per object — every object reads and writes the exact same copy.</p>
+        </div>
+        <div class="ans-block">
+          <h4>Question 02</h4>
+          <p><b>C — it fails to compile unless an object reference is provided.</b> A static context has no "current object" to look at, so instance members are simply out of reach until you hand one over explicitly.</p>
+        </div>
+        <div class="ans-block">
+          <h4>Question 03</h4>
+          <p><b>B — the JVM calls it before any object of the class exists.</b> Since nothing has been instantiated yet when the program starts, <code>main()</code> must belong to the class itself rather than to an instance.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ANSWER KEY - GO -->
+  <section class="slide" data-index="22">
+    <div class="eyebrow">Receipt · Page 2 of 3</div>
+    <h1 class="slide-title">Answer Key — Guess the Output</h1>
+    <div class="slide-body">
+      <div class="ans-scroll">
+        <div class="ans-cols" style="display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:0 24px; align-content:start;">
+          <div class="ans-block"><h4>GO #01 — Ticket.java</h4><p>Each new <code>Ticket</code> grabs the shared counter's current value, then bumps it for the next one.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent-cool); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">1 2</pre></div>
+          <div class="ans-block"><h4>GO #02 — MathUtil.java</h4><p>A static method called directly through the class name — no object needed.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent-cool); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">12</pre></div>
+          <div class="ans-block"><h4>GO #03 — Counter.java</h4><p><code>count</code> is instance — <code>a</code> and <code>b</code> each track their own separate total.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent-cool); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">2 1</pre></div>
+          <div class="ans-block"><h4>GO #04 — Shop.java</h4><p><code>status</code> is static — there's only one copy, so both references see the update.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent-cool); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">Closed Closed</pre></div>
+          <div class="ans-block"><h4>GO #05 — Item.java (trap!)</h4><p>A static method has no object to read <code>price</code> from — instance fields are unreachable without one.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent-rose); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">Compile Error: non-static field price cannot be referenced from a static context</pre></div>
+          <div class="ans-block"><h4>GO #06 — Visitor.java</h4><p>Every loop iteration creates a new <code>Visitor</code>, and each constructor call bumps the one shared <code>total</code>.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent-cool); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">Total visitors: 4</pre></div>
+          <div class="ans-block"><h4>GO #07 — Helper.java</h4><p>The restriction only runs one direction: instance methods can freely call static ones, since an object always has access to its class.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent-cool); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">25</pre></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ANSWER KEY - CODING -->
+  <section class="slide" data-index="23">
+    <div class="eyebrow">Receipt · Page 3 of 3</div>
+    <h1 class="slide-title">Answer Key — Coding Problems</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>Problem 1 — Product.java</span><button class="copy-btn" data-target="ansc1">Copy</button></div>
+          <pre class="codepre"><code id="ansc1"></code></pre>
+        </div>
+        <script type="text/plain" data-target="ansc1">class Product {
+    String name;
+    static int totalProducts = 0;
+
+    public Product(String name) {
+        this.name = name;
+        totalProducts++;
+    }
+
+    static int getTotalProducts() {
+        return totalProducts;
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Product p1 = new Product("Mug");
+        Product p2 = new Product("Beans");
+        Product p3 = new Product("Grinder");
+        System.out.println(Product.getTotalProducts());
+    }
+}
+// Output: 3</script>
+
+        <div class="code-block">
+          <div class="code-header"><span>Problem 2 — Circle.java</span><button class="copy-btn" data-target="ansc2">Copy</button></div>
+          <pre class="codepre"><code id="ansc2"></code></pre>
+        </div>
+        <script type="text/plain" data-target="ansc2">class Circle {
+    static final double PI = 3.14;
+    double radius;
+
+    public Circle(double radius) {
+        this.radius = radius;
+    }
+
+    double getArea() {
+        return PI * radius * radius;
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Circle small = new Circle(2);
+        Circle big = new Circle(5);
+        System.out.println(small.getArea());
+        System.out.println(big.getArea());
+    }
+}
+// Output:
+// 12.56
+// 78.5</script>
+      </div>
+    </div>
+  </section>
+
+  <!-- 17: CLOSING -->
+  <section class="slide" data-index="24">
+    <div class="closing-wrap">
+      <div class="eyebrow" style="margin:0 auto;">Closing Note</div>
+      <div class="final-quote">"One machine serves the whole shop. One badge belongs to just you. Know which one your code needs."</div>
+      <div class="final-msg">That's Module 7 — static vs. instance members, from shared fields to the classic counter pattern. Review the worked examples, try rewriting the counter drill on your own, and revisit the Answer Key whenever you need a refresher. Good luck, and happy brewing. ☕</div>
+    </div>
+  </section>
+
+</div>
+
+
+<!-- Shortcuts overlay -->
+<div class="overlay" id="overlay">
+  <div class="overlay-panel">
+    <h2>Keyboard &amp; Mouse Shortcuts</h2>
+    <div class="row"><span>Next slide</span><span><kbd>→</kbd> / right-click / front side button</span></div>
+    <div class="row"><span>Previous slide</span><span><kbd>←</kbd> / back side button</span></div>
+    <div class="row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="row"><span>Show this panel</span><span><kbd>?</kbd></span></div>
+    <div class="row"><span>Close this panel</span><span><kbd>Esc</kbd></span></div>
+    <button class="overlay-close" id="overlayClose">Balik sa Slides</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  var TOKEN_RE = /(\/\/.*$)|("(?:[^"\\]|\\.)*")|('(?:[^'\\]|\\.)*')|\b(public|private|protected|static|final|class|new|void|int|double|boolean|char|String|return|if|else|for|while|this|super|extends|import|package|true|false|null)\b|\b(\d+\.\d+|\d+)\b|\b([A-Z][A-Za-z0-9_]*)\b/gm;
+
+  function highlightJava(src){
+    var out = '';
+    var lastIndex = 0;
+    var m;
+    TOKEN_RE.lastIndex = 0;
+    while ((m = TOKEN_RE.exec(src)) !== null){
+      out += escapeHtml(src.slice(lastIndex, m.index));
+      if (m[1] !== undefined) out += '<span class="tok-comment">' + escapeHtml(m[1]) + '</span>';
+      else if (m[2] !== undefined) out += '<span class="tok-string">' + escapeHtml(m[2]) + '</span>';
+      else if (m[3] !== undefined) out += '<span class="tok-string">' + escapeHtml(m[3]) + '</span>';
+      else if (m[4] !== undefined) out += '<span class="tok-keyword">' + escapeHtml(m[4]) + '</span>';
+      else if (m[5] !== undefined) out += '<span class="tok-number">' + escapeHtml(m[5]) + '</span>';
+      else if (m[6] !== undefined) out += '<span class="tok-type">' + escapeHtml(m[6]) + '</span>';
+      lastIndex = TOKEN_RE.lastIndex;
+      if (m.index === TOKEN_RE.lastIndex) TOKEN_RE.lastIndex++;
+    }
+    out += escapeHtml(src.slice(lastIndex));
+    return out;
+  }
+
+  function initCodeBlocks(){
+    var sources = document.querySelectorAll('script[type="text/plain"][data-target]');
+    sources.forEach(function(src){
+      var id = src.getAttribute('data-target');
+      var target = document.getElementById(id);
+      if (!target) return;
+      var raw = src.textContent.replace(/^\n/, '').replace(/\n$/, '');
+      target.innerHTML = highlightJava(raw);
+      target.setAttribute('data-raw', raw);
+    });
+  }
+
+  function fallbackCopy(text){
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); } catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  function initCopyButtons(){
+    document.querySelectorAll('.copy-btn').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var id = btn.getAttribute('data-target');
+        var code = document.getElementById(id);
+        var text = code ? (code.getAttribute('data-raw') || code.textContent) : '';
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).catch(function(){ fallbackCopy(text); });
+        } else {
+          fallbackCopy(text);
+        }
+        var originalText = btn.textContent;
+        btn.textContent = 'Copied! ✓';
+        btn.classList.add('copied');
+        setTimeout(function(){
+          btn.textContent = originalText;
+          btn.classList.remove('copied');
+        }, 1400);
+      });
+    });
+  }
+
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length;
+  var current = 0;
+  var progressFill = document.getElementById('progressFill');
+  var counterEl = document.getElementById('counter');
+  var overlay = document.getElementById('overlay');
+  var overlayClose = document.getElementById('overlayClose');
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function updateChrome(){
+    var pct = ((current + 1) / total) * 100;
+    progressFill.style.width = pct + '%';
+    counterEl.textContent = (current + 1) + ' / ' + total;
+  }
+
+  function isInteractive(el){
+    return !!(el.closest && el.closest('button, a, input, textarea, select, .no-nav, .overlay'));
+  }
+
+  function goTo(target, dir){
+    if (target < 0 || target >= total || target === current) return;
+    var oldEl = slides[current];
+    var newEl = slides[target];
+
+    oldEl.classList.remove('active');
+    oldEl.classList.add(dir > 0 ? 'exit-left' : 'exit-right');
+
+    newEl.classList.remove('exit-left', 'exit-right', 'enter-left');
+    if (reduceMotion){
+      newEl.classList.add('active');
+    } else {
+      if (dir < 0) newEl.classList.add('enter-left');
+      void newEl.offsetWidth;
+      requestAnimationFrame(function(){
+        newEl.classList.add('active');
+      });
+    }
+    newEl.scrollTop = 0;
+
+    current = target;
+    updateChrome();
+  }
+
+  function next(){ goTo(current + 1, 1); }
+  function prev(){ goTo(current - 1, -1); }
+  function first(){ goTo(0, -1); }
+  function last(){ goTo(total - 1, 1); }
+
+  function showOverlay(){ overlay.classList.add('show'); }
+  function hideOverlay(){ overlay.classList.remove('show'); }
+  function toggleOverlay(){
+    if (overlay.classList.contains('show')) hideOverlay(); else showOverlay();
+  }
+
+  document.addEventListener('keydown', function(e){
+    if (e.key === '?' ){ toggleOverlay(); return; }
+    if (e.key === 'Escape'){ hideOverlay(); return; }
+    if (overlay.classList.contains('show')) return;
+    if (e.key === 'ArrowRight' || e.key === 'PageDown'){ next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ prev(); }
+    else if (e.key === 'Home'){ first(); }
+    else if (e.key === 'End'){ last(); }
+  });
+
+  overlayClose.addEventListener('click', hideOverlay);
+  overlay.addEventListener('mousedown', function(e){
+    if (e.target === overlay) hideOverlay();
+  });
+
+  document.addEventListener('contextmenu', function(e){
+    e.preventDefault();
+  }, { capture: true });
+
+  document.addEventListener('mousedown', function(e){
+    if (overlay.classList.contains('show')) return;
+    if (isInteractive(e.target)) return;
+
+    if (e.button === 2){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    } else if (e.button === 3){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      prev();
+    } else if (e.button === 4){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    }
+  }, { capture: true });
+
+  document.addEventListener('auxclick', function(e){
+    if (e.button === 1 || e.button === 2 || e.button === 3 || e.button === 4){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, { capture: true });
+
+  document.addEventListener('mouseup', function(e){
+    if (e.button === 3 || e.button === 4){
+      e.preventDefault();
+    }
+  }, { capture: true });
+
+  var touchStartX = null, touchStartY = null;
+  document.addEventListener('touchstart', function(e){
+    if (e.touches.length !== 1) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(e){
+    if (touchStartX === null) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5){
+      if (dx < 0) next(); else prev();
+    }
+    touchStartX = null; touchStartY = null;
+  }, { passive: true });
+
+  initCodeBlocks();
+  initCopyButtons();
+  slides[0].classList.add('active');
+  updateChrome();
+
+})();
+</script>
+
+</body>
+</html>

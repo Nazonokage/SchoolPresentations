@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learn Java in 15 Minutes — Roast-Level Crash Course</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+    * { box-sizing: border-box; }
+    html, body { margin:0; padding:0; height:100%; overflow:hidden; }
+    body {
+      font-family:'Inter', system-ui, sans-serif;
+      background:var(--bg);
+      color:var(--ink);
+      transition: background 300ms ease, color 300ms ease;
+    }
+    h1,h2,h3 { font-family:'Fraunces', Georgia, serif; margin:0; }
+    code, pre, .mono { font-family:'JetBrains Mono', 'Courier New', monospace; }
+
+    :root {
+      --bg:#F5E3B8; --bg-alt:#FBF1DA;
+      --accent:#C27B22; --accent-strong:#9C5A15; --card:#FFF7E6; --card-border:rgba(64,43,24,0.18);
+      --shadow: rgba(64,43,24,0.15);
+      --ink:#2E1408; --ink-soft:#3F2210; --eyebrow-ink:#33170A;
+      --card-ink:#2E1408; --card-ink-soft:#3F2210; --card-accent:#33170A; --step-num-ink:#FFEDDD;
+      --tick:300ms;
+    }
+
+    #app { position:relative; width:100vw; height:100vh; overflow:hidden; }
+
+    /* progress */
+    .progress-track { position:fixed; top:0; left:0; right:0; height:5px; background:rgba(64,43,24,0.12); z-index:50; }
+    .progress-fill { height:100%; width:0%; background:linear-gradient(90deg, var(--accent-strong), var(--accent)); transition: width 350ms ease; }
+
+    /* roast gauge */
+    .roast-gauge { position:fixed; top:18px; right:22px; z-index:50; display:flex; flex-direction:column; align-items:center; gap:4px; font-family:'JetBrains Mono', monospace; font-size:10px; letter-spacing:0.14em; color:var(--ink-soft); user-select:none; pointer-events:none; transition: color var(--tick) ease; }
+    .roast-gauge svg { width:34px; height:34px; display:block; }
+    .roast-gauge .steam { transform-origin:center bottom; }
+    @media (prefers-reduced-motion: no-preference) {
+      .roast-gauge .steam { animation: steamRise 2.6s ease-in-out infinite; }
+      .roast-gauge .steam.s2 { animation-delay:0.5s; }
+    }
+    @keyframes steamRise {
+      0%{ opacity:0; transform:translateY(0) scaleY(1); }
+      30%{ opacity:0.65; }
+      100%{ opacity:0; transform:translateY(-7px) scaleY(1.3); }
+    }
+    .roast-label { text-transform:uppercase; font-weight:700; }
+
+    /* slides */
+    .stage { position:absolute; inset:0; }
+    .slide {
+      position:absolute; inset:0;
+      overflow-y:auto; overflow-x:hidden;
+      display:flex; flex-direction:column; align-items:stretch; justify-content:safe center;
+      padding: 76px clamp(28px, 7vw, 120px) 90px;
+      opacity:0; transform:translateX(0) scale(1);
+      will-change: transform, opacity;
+    }
+    .slide.active { opacity:1; transform:translateX(0) scale(1); transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:5; }
+    .slide.enter-fwd { transform:translateX(64px) scale(0.985); opacity:0; }
+    .slide.enter-bwd { transform:translateX(-64px) scale(0.985); opacity:0; }
+    .slide.exit-fwd { transform:translateX(-64px) scale(0.985); opacity:0; transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:4; }
+    .slide.exit-bwd { transform:translateX(64px) scale(0.985); opacity:0; transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:4; }
+    @media (prefers-reduced-motion: reduce) {
+      .slide, .slide.active, .slide.enter-fwd, .slide.enter-bwd, .slide.exit-fwd, .slide.exit-bwd {
+        transition: opacity 120ms linear !important; transform:none !important;
+      }
+    }
+    .slide-inner { max-width:980px; width:100%; margin:0 auto; }
+
+    .eyebrow { font-family:'JetBrains Mono', monospace; font-size:12.5px; letter-spacing:0.16em; text-transform:uppercase; font-weight:700; color:var(--eyebrow-ink); display:flex; align-items:center; gap:10px; margin-bottom:14px; transition: color var(--tick) ease; }
+    .eyebrow::after { content:''; flex:1; height:0; border-top:2px dashed var(--card-border); }
+    h2.slide-title { font-size:clamp(28px, 4vw, 44px); font-weight:700; line-height:1.12; margin-bottom:22px; letter-spacing:-0.01em; }
+    .lede { font-size:17px; color:var(--ink-soft); margin:-8px 0 22px; max-width:70ch; line-height:1.55; }
+
+    .card { background:var(--card); border:1px solid var(--card-border); border-radius:10px; padding:18px 20px; min-width:0; box-shadow: 0 2px 10px var(--shadow); transition: background var(--tick) ease, border-color var(--tick) ease; }
+    .card h3 { font-size:15px; font-weight:700; margin-bottom:6px; font-family:'Inter',sans-serif; color:var(--card-ink); }
+    .card p, .card li { font-size:14.5px; color:var(--card-ink-soft); line-height:1.5; }
+
+    .card-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(0, 1fr)); gap:14px; min-width:0; }
+    .card-grid.cols-2 { grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .card-grid.cols-4 { grid-template-columns:repeat(4, minmax(0,1fr)); }
+    @media (max-width:760px){ .card-grid.cols-4{grid-template-columns:repeat(2, minmax(0,1fr));} .card-grid.cols-2{grid-template-columns:minmax(0,1fr);} }
+
+    .two-col { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:26px; align-items:start; min-width:0; }
+    @media (max-width:760px){ .two-col { grid-template-columns:minmax(0,1fr); } }
+    .two-col > * { min-width:0; }
+
+    ul.ticket-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:9px; }
+    ul.ticket-list li { position:relative; padding-left:22px; font-size:15.5px; line-height:1.5; color:var(--ink); }
+    ul.ticket-list li::before { content:'—'; position:absolute; left:0; color:var(--accent); font-weight:700; }
+
+    ol.step-list { list-style:none; counter-reset:step; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; }
+    ol.step-list li { position:relative; padding-left:40px; font-size:15.5px; line-height:1.55; min-width:0; }
+    ol.step-list li::before { counter-increment:step; content:counter(step); position:absolute; left:0; top:-1px; width:26px; height:26px; border-radius:50%; background:var(--card-accent); color:var(--step-num-ink); display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:13px; transition: background var(--tick) ease; }
+    ol.step-list b { font-family:'JetBrains Mono',monospace; font-size:13.5px; background:var(--card); padding:1px 6px; border-radius:4px; border:1px solid var(--card-border); }
+
+    .quote-block { font-family:'Fraunces', serif; font-style:italic; font-size:19px; line-height:1.5; color:var(--ink); border-left:3px solid var(--accent); padding:4px 0 4px 18px; margin:6px 0 20px; }
+    .note { background:var(--card); border:1px dashed var(--card-border); border-radius:10px; padding:12px 16px; font-size:14px; color:var(--card-ink-soft); margin-top:14px; }
+    .note b { color:var(--card-ink); }
+
+    pre.code-block {
+      background:#1e1710; color:#f1e6d3; border-radius:10px; padding:18px 20px;
+      font-size:14px; line-height:1.6; overflow-x:auto; margin:0; min-width:0;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 6px 18px var(--shadow);
+    }
+    pre.code-block code { white-space:pre; }
+    .tok-kw{ color:#e39a5a; font-weight:600; }
+    .tok-str{ color:#a8c98f; }
+    .tok-com{ color:#7d7166; font-style:italic; }
+    .tok-type{ color:#7fb0d6; }
+    .tok-num{ color:#d99a6c; }
+
+    .code-cap { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:8px; }
+
+    .op-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(0,1fr)); gap:10px; min-width:0; }
+    .op-chip { background:var(--card); border:1px solid var(--card-border); border-radius:8px; padding:10px 12px; text-align:center; min-width:0; }
+    .op-chip .sym { font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:700; color:var(--card-accent); }
+    .op-chip .desc { font-size:12px; color:var(--card-ink-soft); margin-top:2px; }
+
+    table.type-table { width:100%; border-collapse:collapse; font-size:14.5px; }
+    table.type-table th, table.type-table td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--card-border); }
+    table.type-table th { font-family:'JetBrains Mono',monospace; font-size:11.5px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-soft); }
+    table.type-table td code { background:var(--card); padding:1px 6px; border-radius:4px; border:1px solid var(--card-border); }
+
+    /* HUD */
+    .hud { position:fixed; bottom:16px; right:20px; z-index:50; display:flex; align-items:center; gap:12px; }
+    .counter { font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700; background:var(--card); border:1px solid var(--card-border); color:var(--card-ink); padding:8px 16px; border-radius:999px; box-shadow:0 4px 14px var(--shadow); transition: background var(--tick) ease, color var(--tick) ease, border-color var(--tick) ease; }
+    .hint { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-soft); letter-spacing:0.05em; display:none; }
+    @media (min-width:640px){ .hint { display:block; } }
+
+    .click-zone { position:fixed; inset:0; z-index:1; cursor:pointer; }
+
+    .slide::-webkit-scrollbar { width:8px; }
+    .slide::-webkit-scrollbar-thumb { background:var(--card-border); border-radius:8px; }
+
+    /* fix for code blocks in two-col: prevent overflow and force wrap */
+    .two-col pre.code-block { max-width:100%; overflow-x:auto; white-space:pre-wrap; word-break:break-word; }
+    .two-col .code-block code { white-space:pre-wrap; word-break:break-word; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+  <div class="roast-gauge" id="roastGauge">
+    <svg viewBox="0 0 40 40" fill="none">
+      <ellipse class="steam" cx="14" cy="6" rx="1.6" ry="4" fill="currentColor" opacity="0.5"></ellipse>
+      <ellipse class="steam s2" cx="22" cy="5" rx="1.6" ry="4" fill="currentColor" opacity="0.5"></ellipse>
+      <path id="cupFill" d="M6 14 h22 l-2.2 16 a4 4 0 0 1 -4 3.4 h-9.6 a4 4 0 0 1 -4 -3.4 Z" fill="var(--accent)" stroke="var(--ink)" stroke-width="1.4"></path>
+      <path d="M28 17 h4.5 a3.5 3.5 0 0 1 0 9 h-3" stroke="var(--ink)" stroke-width="1.4" fill="none"></path>
+      <line x1="4" y1="14" x2="30" y2="14" stroke="var(--ink)" stroke-width="1.6" stroke-linecap="round"></line>
+    </svg>
+    <span class="roast-label" id="roastLabel">Light Roast</span>
+  </div>
+
+  <div class="click-zone" id="clickZone"></div>
+  <div class="stage" id="stage"></div>
+
+  <div class="hud">
+    <span class="hint">click / → to continue</span>
+    <div class="counter" id="counter">1 / 20</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  var KEYWORDS = ['public','private','protected','static','void','final','class','new','if','else','return',
+    'for','while','do','int','double','float','long','short','byte','char','boolean','true','false','null',
+    'this','super','package','import','extends','implements','instanceof','try','catch','finally','throw','throws'];
+  var KW_RE = new RegExp('\\b(' + KEYWORDS.join('|') + ')\\b');
+  var TOKEN_RE = /(\/\/.*$)|("(?:\\.|[^"\\])*")|('(?:\\.|[^'\\])')|\b([A-Za-z_][A-Za-z0-9_]*)\b|\b(\d+\.?\d*)\b/gm;
+
+  function highlightJava(src){
+    var esc = escapeHtml(src);
+    return esc.replace(TOKEN_RE, function(match, comment, str, chr, word, num){
+      if(comment !== undefined) return '<span class="tok-com">' + comment + '</span>';
+      if(str !== undefined) return '<span class="tok-str">' + str + '</span>';
+      if(chr !== undefined) return '<span class="tok-str">' + chr + '</span>';
+      if(word !== undefined){
+        if(KW_RE.test(word)) return '<span class="tok-kw">' + word + '</span>';
+        if(/^[A-Z]/.test(word)) return '<span class="tok-type">' + word + '</span>';
+        return word;
+      }
+      if(num !== undefined) return '<span class="tok-num">' + num + '</span>';
+      return match;
+    });
+  }
+  function code(src){
+    return '<pre class="code-block"><code>' + highlightJava(src.replace(/^\n/,'').replace(/\n$/,'')) + '</code></pre>';
+  }
+
+  var S = [];
+
+  S.push({
+    eyebrow: 'Order No. 01 — Welcome',
+    title: 'Learn Java in 15 Minutes',
+    lede: 'A beginner-friendly crash course. Grab a cup — we\'re brewing from light roast basics to dark roast object-oriented programming.',
+    body:
+      '<div class="quote-block">"I remember struggling in my first Java class. Now I\'ve been programming in Java for 10 years. Let me help you avoid the same struggle."</div>' +
+      '<div class="card-grid cols-2">' +
+        '<div class="card"><h3>☕ Fun fact</h3><p>Java is one of the most widely-used programming languages in the world.</p></div>' +
+        '<div class="card"><h3>🌍 Fun fact</h3><p>It runs on over 3 billion devices, from phones to servers.</p></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'Order No. 02 — Setup',
+    title: 'Setting Up Your Java Environment',
+    lede: 'Before you can code, two things need to be on the counter.',
+    body:
+      '<div class="card-grid cols-2">' +
+        '<div class="card"><h3>1. JDK — Java Development Kit</h3><p>The software that lets you write and run Java programs. Non-negotiable — this is your bean grinder.</p></div>' +
+        '<div class="card"><h3>2. An IDE</h3><p>An Integrated Development Environment — like Microsoft Word, but for code. It auto-completes, finds errors, and runs your programs.</p></div>' +
+      '</div>' +
+      '<div class="note"><b>Recommended IDE:</b> Eclipse (used in this tutorial) or IntelliJ IDEA. Install the JDK and Eclipse — it only takes a few minutes.</div>'
+  });
+
+  S.push({
+    eyebrow: 'Order No. 03 — First Project',
+    title: 'Creating Your First Java Program',
+    body:
+      '<ol class="step-list">' +
+        '<li><b>Open Eclipse.</b></li>' +
+        '<li>Create a new project: right-click the <b>Package Explorer</b> → <b>New</b> → <b>Java Project</b>. Name it (e.g. <b>ProjectPineapple</b>). Uncheck the "module" option. Click <b>Finish</b>.</li>' +
+        '<li>Create a new class: right-click the <b>src</b> folder → <b>New</b> → <b>Class</b>. Name it (e.g. <b>AwesomeJavaProgram</b>). Check the box for <b>public static void main(String[] args)</b>. Click <b>Finish</b>.</li>' +
+      '</ol>' +
+      '<div class="note">Eclipse just generated a "skeleton" — a working template for your program.</div>'
+  });
+
+  S.push({
+    eyebrow: 'Order No. 04 — Entry Point',
+    title: 'The Main Method: Where Your Program Starts',
+    lede: 'When you run your program, Java executes everything inside <code class="mono">main</code>.',
+    body:
+      code('public static void main(String[] args) {\n    // Your code goes here!\n}') +
+      '<ul class="ticket-list" style="margin-top:18px;">' +
+        '<li><b>public</b> — accessible from anywhere.</li>' +
+        '<li><b>static</b> — can be called without creating an object.</li>' +
+        '<li><b>void</b> — returns nothing.</li>' +
+        '<li><b>main</b> — the name of the method.</li>' +
+        '<li><b>String[] args</b> — command-line arguments (ignore for now).</li>' +
+      '</ul>' +
+      '<div class="note">Pro tip: almost all your code will go inside these curly braces <code class="mono">{ }</code>.</div>'
+  });
+
+  S.push({
+    eyebrow: 'Order No. 05 — Variables',
+    title: 'Variables: Storing Data',
+    lede: 'A variable is a container that stores data. It has a name, a type, and a value.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('type variableName = value;\n\nint myInt = 7;') + '</div>' +
+        '<div>' + code('System.out.println(myInt);\n// prints: 7') + '</div>' +
+      '</div>' +
+      '<ul class="ticket-list" style="margin-top:18px;">' +
+        '<li><b>int</b> — the type (whole number).</li>' +
+        '<li><b>myInt</b> — the name.</li>' +
+        '<li><b>7</b> — the value.</li>' +
+        '<li><b>;</b> — ends the statement (most lines end with one).</li>' +
+      '</ul>'
+  });
+
+  S.push({
+    eyebrow: 'Order No. 06 — Data Types',
+    title: 'Primitive Data Types: The Basics',
+    lede: 'The building blocks of Java — they start with a lowercase letter. There are 8 primitive types in total.',
+    body:
+      '<div class="card-grid cols-4">' +
+        '<div class="card"><h3>int</h3><p>Whole numbers</p><p><code class="mono">int age = 25;</code></p></div>' +
+        '<div class="card"><h3>double</h3><p>Decimal numbers</p><p><code class="mono">double price = 19.99;</code></p></div>' +
+        '<div class="card"><h3>char</h3><p>A single character</p><p><code class="mono">char initial = \'J\';</code></p></div>' +
+        '<div class="card"><h3>boolean</h3><p>True or false</p><p><code class="mono">boolean isRaining = false;</code></p></div>' +
+      '</div>' +
+      '<div style="margin-top:16px;">' + code('int myInt = 7;\ndouble shoeSize = 9.5;\nchar myInitial = \'J\';\nboolean isJavaFun = true;') + '</div>'
+  });
+
+  S.push({
+    eyebrow: 'Order No. 07 — Operators',
+    title: 'Making Variables Work Together',
+    lede: 'You can perform calculations directly on variables.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('int myInt = 7;\ndouble shoeSize = 9.5;\n\nSystem.out.println(myInt * shoeSize);\n// Outputs: 66.5\n\ndouble result = myInt * shoeSize;\nSystem.out.println(result);\n// Outputs: 66.5') + '</div>' +
+        '<div class="op-grid" style="align-content:start;">' +
+          '<div class="op-chip"><div class="sym">+</div><div class="desc">Addition</div></div>' +
+          '<div class="op-chip"><div class="sym">-</div><div class="desc">Subtraction</div></div>' +
+          '<div class="op-chip"><div class="sym">*</div><div class="desc">Multiplication</div></div>' +
+          '<div class="op-chip"><div class="sym">/</div><div class="desc">Division</div></div>' +
+        '</div>' +
+      '</div>'
+  });
+
+  // ORDER 8 — Strings + .getClass().getSimpleName() sample
+  S.push({
+    eyebrow: 'Order No. 08 — Strings',
+    title: 'The String Type (Non-Primitive)',
+    lede: 'Strings hold text and start with a capital \'S\' — they aren\'t primitive. Use double quotes for their values.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('String myName = "John";\n\nSystem.out.println(myName.length());\n// 4\n\nSystem.out.println(myName.toUpperCase());\n// JOHN\n\n// getClass().getSimpleName()\nSystem.out.println(myName.getClass().getSimpleName());\n// String') + '</div>' +
+        '<div class="card"><h3>Methods</h3><p>Strings have built-in "actions" called methods. Use a dot <code class="mono">.</code> to access them.</p><p style="margin-top:8px;">Pro tip: type your variable name + a period in Eclipse to see every method available.</p><p style="margin-top:8px;"><code>.getClass().getSimpleName()</code> returns the type name.</p></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'Order No. 09 — Methods',
+    title: 'Methods: Reusable Actions',
+    lede: 'A method is a block of code that performs a specific task, callable whenever you need it.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('private static void burp() {\n    System.out.println("Burp!");\n}') + '</div>' +
+        '<div>' + code('public static void main(String[] args) {\n    burp();\n    // prints "Burp!"\n}') + '</div>' +
+      '</div>' +
+      '<ul class="ticket-list" style="margin-top:18px;">' +
+        '<li><b>private</b> — only accessible within this file.</li>' +
+        '<li><b>static</b> — can be called without creating an object.</li>' +
+        '<li><b>void</b> — returns nothing. <b>burp</b> — the method\'s name. <b>()</b> — no parameters.</li>' +
+      '</ul>'
+  });
+
+  // ORDER 10 — Parameters (fixed layout + printf example)
+  S.push({
+    eyebrow: 'Order No. 10 — Parameters',
+    title: 'Sending Data to Methods',
+    lede: 'Parameters are information you pass into a method, making it flexible.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('private static void printName(String name, int number) {\n    System.out.println("My name is " + name + " and my number is " + number);\n    // printf example:\n    System.out.printf("My name is %s and my number is %d\\n", name, number);\n}') + '</div>' +
+        '<div>' + code('public static void main(String[] args) {\n    printName("John", 7);\n    // My name is John and my number is 7\n}') + '</div>' +
+      '</div>' +
+      '<div class="note">Separate multiple parameters with commas. <b>Concatenation</b> joins strings with <code class="mono">+</code>. <b>printf</b> uses format specifiers like <code>%s</code> (String) and <code>%d</code> (int).</div>'
+  });
+
+  S.push({
+    eyebrow: 'Order No. 11 — Return Values',
+    title: 'Getting Data Back from Methods',
+    lede: 'Some methods hand you back a result instead of just doing something.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('private static String getName() {\n    return "My name is John";\n}') + '</div>' +
+        '<div>' + code('public static void main(String[] args) {\n    String result = getName();\n    System.out.println(result);\n    // My name is John\n}') + '</div>' +
+      '</div>' +
+      '<div class="note">Change <code class="mono">void</code> to the return type (e.g. <code class="mono">String</code>, <code class="mono">int</code>) and use the <code class="mono">return</code> keyword. The caller can store or use the value.</div>'
+  });
+
+  S.push({
+    eyebrow: 'Order No. 12 — Decisions',
+    title: 'Making Decisions with If / Else',
+    lede: '"If this condition is true, do this." Conditionals let your program branch.',
+    body:
+      code('String name = "John";\n\nif (name.equals("John")) {\n    System.out.println("This guy is awesome!");\n} else if (name.equals("Larry")) {\n    System.out.println("This guy is okay, I guess.");\n} else {\n    System.out.println("I don\'t know this guy at all.");\n}') +
+      '<div class="note">Use <code class="mono">.equals()</code> to compare Strings — not <code class="mono">==</code>.</div>'
+  });
+
+  S.push({
+    eyebrow: 'Order No. 13 — Comparisons',
+    title: 'Comparing Numbers',
+    body:
+      '<div class="two-col">' +
+        '<div class="op-grid" style="align-content:start;">' +
+          '<div class="op-chip"><div class="sym">==</div><div class="desc">Equal to</div></div>' +
+          '<div class="op-chip"><div class="sym">!=</div><div class="desc">Not equal to</div></div>' +
+          '<div class="op-chip"><div class="sym">&gt;</div><div class="desc">Greater than</div></div>' +
+          '<div class="op-chip"><div class="sym">&lt;</div><div class="desc">Less than</div></div>' +
+          '<div class="op-chip"><div class="sym">&gt;=</div><div class="desc">Greater or equal</div></div>' +
+          '<div class="op-chip"><div class="sym">&lt;=</div><div class="desc">Less or equal</div></div>' +
+        '</div>' +
+        '<div>' + code('int number = 7;\n\nif (number == 5) {\n    System.out.println("Number is 5");\n} else if (number > 5) {\n    System.out.println("Number is greater than 5");\n} else {\n    System.out.println("Number is less than 5");\n}') + '</div>' +
+      '</div>' +
+      '<div class="note">Double equals <code class="mono">==</code> compares. Single equals <code class="mono">=</code> assigns.</div>'
+  });
+
+  S.push({
+    eyebrow: 'Order No. 14 — Loops',
+    title: 'Loops: Doing Things Multiple Times',
+    lede: 'A loop repeats a block of code — saving you from copy-pasting.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('for (int i = 0; i < 10; i++) {\n    System.out.println(\n        "These pretzels are making me thirsty!"\n    );\n}') + '</div>' +
+        '<div class="card"><h3>How it works</h3><ol class="step-list">' +
+          '<li><b>int i = 0</b> — start with i at 0.</li>' +
+          '<li><b>i &lt; 10</b> — keep looping while i is less than 10.</li>' +
+          '<li><b>i++</b> — add 1 to i after each loop.</li>' +
+        '</ol></div>' +
+      '</div>' +
+      '<div class="note">This prints the message 10 times. Want 100? Change <code class="mono">10</code> to <code class="mono">100</code>.</div>'
+  });
+
+  S.push({
+    eyebrow: 'Order No. 15 — OOP',
+    title: 'Understanding Classes and Objects',
+    lede: 'Java organizes code into "objects" that hold attributes (data) and methods (actions).',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>Class</h3><p>A blueprint or template. Like a cookie cutter — it defines the shape, but isn\'t a cookie itself.</p></div>' +
+        '<div class="card"><h3>Object</h3><p>An actual instance created from the blueprint. Like the cookie you cut out — you can make many from one cutter.</p></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'Order No. 16 — Custom Classes',
+    title: 'Creating Your Own Class',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>Steps</h3><ol class="step-list">' +
+          '<li>Right-click the <b>src</b> folder.</li>' +
+          '<li>Go to <b>New</b> → <b>Class</b>.</li>' +
+          '<li>Name it (e.g. <b>Cat</b>).</li>' +
+        '</ol></div>' +
+        '<div>' + code('public class Cat {\n    String name;\n    int age;\n\n    public void meow() {\n        System.out.println("Meow!");\n    }\n}') + '</div>' +
+      '</div>' +
+      '<div class="note">Every <code class="mono">Cat</code> has a <b>name</b> and an <b>age</b> — and every <code class="mono">Cat</code> can <b>meow()</b>.</div>'
+  });
+
+  S.push({
+    eyebrow: 'Order No. 17 — Objects',
+    title: 'Using Your Class to Create Objects',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('public static void main(String[] args) {\n    Cat myCat = new Cat();\n    myCat.name = "Fred";\n    myCat.age = 6;\n\n    Cat anotherCat = new Cat();\n    anotherCat.name = "Stella";\n    anotherCat.age = 5;\n}') + '</div>' +
+        '<div>' + code('System.out.println(myCat.name);\n// Fred\nSystem.out.println(anotherCat.age);\n// 5\nmyCat.meow();\n// Meow!') + '</div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'Order No. 18 — Static vs Non-Static',
+    title: 'Static vs. Non-Static Methods',
+    lede: '<b>static</b> belongs to the class itself. Non-static belongs to individual objects.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('public class Cat {\n    // Non-static\n    public void meow() {\n        System.out.println("Meow!");\n    }\n\n    // Static\n    public static void dingDong() {\n        System.out.println("Ding dong!");\n    }\n}') + '</div>' +
+        '<div>' + code('Cat.dingDong();\n// Works fine!\n\nCat.meow();\n// ERROR! Can\'t call on the class.\n\nCat myCat = new Cat();\nmyCat.meow();\n// Works!') + '</div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'Order No. 19 — Recap',
+    title: 'Java in 15 Minutes: What You Learned',
+    body:
+      '<div class="card-grid cols-4">' +
+        '<div class="card"><h3>Setup</h3><p>Creating a project in Eclipse.</p></div>' +
+        '<div class="card"><h3>Variables</h3><p>int, double, char, boolean, String.</p></div>' +
+        '<div class="card"><h3>Operators</h3><p>Doing math with variables.</p></div>' +
+        '<div class="card"><h3>Methods</h3><p>Create, call, and return values.</p></div>' +
+        '<div class="card"><h3>Conditionals</h3><p>if, else if, and else.</p></div>' +
+        '<div class="card"><h3>Loops</h3><p>The for loop for repetition.</p></div>' +
+        '<div class="card"><h3>OOP basics</h3><p>Classes, objects, attributes, methods.</p></div>' +
+        '<div class="card"><h3>Static vs non-static</h3><p>Knowing when to use each.</p></div>' +
+      '</div>' +
+      '<div class="quote-block" style="margin-top:20px;">Java is a deep language, but these basics are your foundation. Build on them.</div>'
+  });
+
+  S.push({
+    eyebrow: 'Order No. 20 — Last Call',
+    title: 'Where to Go From Here',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>Practice is key</h3><ul class="ticket-list">' +
+          '<li>Write small programs every day.</li>' +
+          '<li>Experiment with the code from this video.</li>' +
+          '<li>Break things, then fix them.</li>' +
+        '</ul></div>' +
+        '<div class="card"><h3>Recommended next topics</h3><ul class="ticket-list">' +
+          '<li>Arrays and ArrayLists</li>' +
+          '<li>Inheritance and polymorphism</li>' +
+          '<li>Exception handling</li>' +
+          '<li>File I/O (reading/writing files)</li>' +
+        '</ul></div>' +
+      '</div>' +
+      '<div class="note"><b>Resources:</b> Official Java Documentation at docs.oracle.com, plus online courses and tutorials.</div>' +
+      '<div class="quote-block">If you ever have Java questions, put them in the comments — I\'ll do my best to respond. Happy coding, and I\'ll see you in the next one!</div>'
+  });
+
+  /* roast interpolation */
+  var STOPS = [
+    {bg:'#F5E3B8', bgAlt:'#FBF1DA', accent:'#C27B22', accentStrong:'#9C5A15', card:'#FFF7E6', cardBorder:[64,43,24,0.18], shadow:[64,43,24,0.15]},
+    {bg:'#C97142', bgAlt:'#E0925C', accent:'#8B3A17', accentStrong:'#6B2A10', card:'#EAC195', cardBorder:[42,23,16,0.28], shadow:[42,23,16,0.22]},
+    {bg:'#331014', bgAlt:'#4A1B1F', accent:'#C24B4F', accentStrong:'#E06B6E', card:'#4A1E22', cardBorder:[240,220,196,0.18], shadow:[0,0,0,0.35]}
+  ];
+  var BG_CROSSOVER_T = 11 / 19;
+  var CARD_CROSSOVER_T = 15 / 19;
+  var TEXT_DARK = '#2E1408', TEXT_DARK_SOFT = '#3F2210';
+  var TEXT_LIGHT = '#FFEDDD', TEXT_LIGHT_SOFT = '#F2E6D6';
+  var ACCENT_DARK_TEXT = '#33170A', ACCENT_LIGHT_TEXT = '#FFEDDD';
+  function hexToRgb(h){ h = h.replace('#',''); return [parseInt(h.substring(0,2),16), parseInt(h.substring(2,4),16), parseInt(h.substring(4,6),16)]; }
+  function rgbToHex(r,g,b){ function c(x){ x = Math.round(Math.max(0,Math.min(255,x))); return x.toString(16).padStart(2,'0'); } return '#' + c(r) + c(g) + c(b); }
+  function lerp(a,b,t){ return a + (b-a)*t; }
+  function lerpHex(h1,h2,t){ var c1=hexToRgb(h1), c2=hexToRgb(h2); return rgbToHex(lerp(c1[0],c2[0],t), lerp(c1[1],c2[1],t), lerp(c1[2],c2[2],t)); }
+  function lerpRgba(a,b,t){ return 'rgba(' + Math.round(lerp(a[0],b[0],t)) + ',' + Math.round(lerp(a[1],b[1],t)) + ',' + Math.round(lerp(a[2],b[2],t)) + ',' + lerp(a[3],b[3],t).toFixed(2) + ')'; }
+  function roastVarsAt(t){
+    var seg, localT;
+    if(t <= 0.5){ seg = [STOPS[0], STOPS[1]]; localT = t / 0.5; }
+    else { seg = [STOPS[1], STOPS[2]]; localT = (t - 0.5) / 0.5; }
+    var A = seg[0], B = seg[1];
+    return {
+      '--bg': lerpHex(A.bg, B.bg, localT),
+      '--bg-alt': lerpHex(A.bgAlt, B.bgAlt, localT),
+      '--accent': lerpHex(A.accent, B.accent, localT),
+      '--accent-strong': lerpHex(A.accentStrong, B.accentStrong, localT),
+      '--card': lerpHex(A.card, B.card, localT),
+      '--card-border': lerpRgba(A.cardBorder, B.cardBorder, localT),
+      '--shadow': lerpRgba(A.shadow, B.shadow, localT)
+    };
+  }
+  function applyRoast(t){
+    var vars = roastVarsAt(t);
+    var root = document.documentElement.style;
+    for(var k in vars){ root.setProperty(k, vars[k]); }
+    var onBg = t < BG_CROSSOVER_T;
+    root.setProperty('--ink', onBg ? TEXT_DARK : TEXT_LIGHT);
+    root.setProperty('--ink-soft', onBg ? TEXT_DARK_SOFT : TEXT_LIGHT_SOFT);
+    root.setProperty('--eyebrow-ink', onBg ? ACCENT_DARK_TEXT : ACCENT_LIGHT_TEXT);
+    var onCard = t < CARD_CROSSOVER_T;
+    root.setProperty('--card-ink', onCard ? TEXT_DARK : TEXT_LIGHT);
+    root.setProperty('--card-ink-soft', onCard ? TEXT_DARK_SOFT : TEXT_LIGHT_SOFT);
+    root.setProperty('--card-accent', onCard ? ACCENT_DARK_TEXT : ACCENT_LIGHT_TEXT);
+    root.setProperty('--step-num-ink', onCard ? TEXT_LIGHT : TEXT_DARK);
+    var label = t < 0.34 ? 'Light Roast' : (t < 0.67 ? 'Medium Roast' : 'Dark Roast');
+    document.getElementById('roastLabel').textContent = label;
+  }
+
+  /* render & navigation */
+  var stage = document.getElementById('stage');
+  var counterEl = document.getElementById('counter');
+  var progressFill = document.getElementById('progressFill');
+  var total = S.length;
+  var current = 0;
+  var animating = false;
+
+  function buildSlideEl(idx){
+    var d = S[idx];
+    var el = document.createElement('div');
+    el.className = 'slide';
+    el.innerHTML =
+      '<div class="slide-inner">' +
+        '<div class="eyebrow">' + d.eyebrow + '</div>' +
+        '<h2 class="slide-title">' + d.title + '</h2>' +
+        (d.lede ? '<div class="lede">' + d.lede + '</div>' : '') +
+        d.body +
+      '</div>';
+    return el;
+  }
+
+  function updateHud(){
+    counterEl.textContent = (current+1) + ' / ' + total;
+    progressFill.style.width = ((current) / (total-1) * 100) + '%';
+    applyRoast(current / (total-1));
+  }
+
+  var curEl = buildSlideEl(0);
+  curEl.classList.add('active');
+  stage.appendChild(curEl);
+  updateHud();
+
+  function goTo(idx, dir){
+    if(animating || idx === current || idx < 0 || idx >= total) return;
+    animating = true;
+    var nextEl = buildSlideEl(idx);
+    nextEl.classList.add(dir > 0 ? 'enter-fwd' : 'enter-bwd');
+    stage.appendChild(nextEl);
+    void nextEl.offsetWidth;
+    var oldEl = curEl;
+    requestAnimationFrame(function(){
+      oldEl.classList.remove('active');
+      oldEl.classList.add(dir > 0 ? 'exit-fwd' : 'exit-bwd');
+      nextEl.classList.remove('enter-fwd','enter-bwd');
+      nextEl.classList.add('active');
+    });
+    current = idx;
+    curEl = nextEl;
+    updateHud();
+    setTimeout(function(){
+      if(oldEl && oldEl.parentNode) oldEl.parentNode.removeChild(oldEl);
+      animating = false;
+    }, 420);
+  }
+
+  function next(){ goTo(current+1, 1); }
+  function prev(){ goTo(current-1, -1); }
+
+  document.getElementById('clickZone').addEventListener('click', function(e){
+    var w = window.innerWidth;
+    if(e.clientX < w * 0.25){ prev(); } else { next(); }
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown'){ e.preventDefault(); next(); }
+    else if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); prev(); }
+    else if(e.key === 'Home'){ e.preventDefault(); goTo(0, -1); }
+    else if(e.key === 'End'){ e.preventDefault(); goTo(total-1, 1); }
+    else if(e.key === 'ArrowUp'){ e.preventDefault(); prev(); }
+    else if(e.key === 'ArrowDown'){ e.preventDefault(); next(); }
+  });
+})();
+</script>
+</body>
+</html>

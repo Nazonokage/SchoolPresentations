@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Roastery — Module 9: Apache Maven Build Automation</title>
+<style>
+  :root{
+    --bg:#1c140f;
+    --bg-alt:#251b14;
+    --panel:#2c2018;
+    --panel-2:#33261c;
+    --line: rgba(243,233,221,0.14);
+    --line-strong: rgba(243,233,221,0.28);
+    --text:#f4ead9;
+    --text-dim:#c9b6a2;
+    --accent:#e3a548;
+    --accent-soft:#c98a3a;
+    --accent-cool:#8fbf9a;
+    --accent-rose:#d9776b;
+    --code-bg:#150f0b;
+    --code-keyword:#eab676;
+    --code-string:#9ecb8f;
+    --code-number:#8ec7dc;
+    --code-type:#e2b8d8;
+    --code-comment:#7a6a5c;
+    --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --mono: SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; height:100%; }
+  body{
+    background:
+      radial-gradient(ellipse at 15% -10%, rgba(227,165,72,0.10), transparent 45%),
+      radial-gradient(ellipse at 100% 110%, rgba(143,191,154,0.07), transparent 45%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .deck{ position:relative; width:100vw; height:100vh; }
+
+  .slide{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    padding: clamp(20px, 3vh, 48px) clamp(24px, 5vw, 96px);
+    opacity:0;
+    transform: translateX(28px);
+    transition: opacity .35s ease, transform .35s ease;
+    pointer-events:none;
+    overflow-y:auto;
+  }
+  .slide.active{ opacity:1; transform:translateX(0); pointer-events:auto; z-index:2; }
+  .slide.enter-left{ transform:translateX(-28px); opacity:0; }
+  .slide.exit-left{ transform:translateX(-28px); opacity:0; }
+  .slide.exit-right{ transform:translateX(28px); opacity:0; }
+
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition:none !important; transform:none !important; }
+  }
+
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--mono); letter-spacing:.14em; text-transform:uppercase;
+    font-size:clamp(12px,1.1vw,14px); color:var(--accent);
+    margin-bottom: 10px;
+  }
+  .eyebrow::before{ content:"☕"; font-size:14px; }
+
+  h1.slide-title{
+    font-family:var(--serif); font-weight:700;
+    font-size: clamp(25px, 3.4vw, 50px);
+    line-height:1.12;
+    margin: 0 0 8px 0;
+    color:var(--text);
+  }
+  .subtitle{
+    font-size: clamp(15px, 1.2vw, 18px);
+    color:var(--text-dim);
+    margin: 0 0 16px 0;
+    max-width:920px;
+    line-height:1.55;
+  }
+
+  .slide-body{ flex:1; min-height:0; display:flex; flex-direction:column; }
+
+  /* ---------- TITLE ---------- */
+  .title-wrap{ height:100%; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:16px; max-width:1160px; }
+  .brew-badge{ display:flex; align-items:center; gap:12px; padding:9px 18px; border:1px solid var(--line); border-radius:999px; background:var(--panel); font-family:var(--mono); font-size:13px; color:var(--accent); letter-spacing:.06em; }
+  .title-main{ font-family:var(--serif); font-weight:700; font-size:clamp(32px,5vw,68px); line-height:1.06; letter-spacing:-0.01em; }
+  .title-main .accent{ color:var(--accent); }
+  .title-sub{ font-size:clamp(16px,1.5vw,20px); color:var(--text-dim); max-width:760px; line-height:1.55; }
+  .title-stats{ display:flex; gap:14px; margin-top:6px; flex-wrap:wrap; }
+  .stat-chip{ border:1px solid var(--line); background:var(--panel-2); border-radius:12px; padding:11px 18px; min-width:150px; }
+  .stat-chip .num{ font-family:var(--serif); font-size:26px; color:var(--accent); font-weight:700; }
+  .stat-chip .lbl{ font-size:13px; color:var(--text-dim); margin-top:2px; }
+  .steam-illo{ position:absolute; right:clamp(10px,4vw,80px); top:50%; transform:translateY(-50%); width:min(26vw,320px); opacity:.9; }
+
+  /* ---------- GRIDS ---------- */
+  .grid-2{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vw,22px); flex:1; min-height:0; }
+  .grid-2x2{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); grid-template-rows: repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vw,20px); flex:1; min-height:0; }
+  @media (max-width:900px){ .grid-2, .grid-2x2{ grid-template-columns: minmax(0,1fr); } }
+
+  /* ---------- TICKET (signature element) ---------- */
+  .ticket{ position:relative; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 20px 16px 26px; min-width:0; display:flex; flex-direction:column; gap:8px; }
+  .ticket::before{ content:""; position:absolute; left:14px; top:0; bottom:0; width:2px; background:repeating-linear-gradient(to bottom, var(--accent) 0 6px, transparent 6px 12px); opacity:.55; }
+  .ticket h3{ margin:0; font-family:var(--serif); font-size:18px; color:var(--accent); }
+  .ticket p{ margin:0; font-size:14.5px; color:var(--text-dim); line-height:1.6; }
+  .ticket ul{ margin:4px 0 0; padding-left:18px; font-size:14.5px; color:var(--text-dim); line-height:1.65; }
+  .ticket ul li b{ color:var(--text); }
+
+  .block-card{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 20px; min-width:0; display:flex; flex-direction:column; gap:8px; }
+  .block-card h3{ margin:0; font-family:var(--serif); font-size:18px; color:var(--accent); }
+  .block-card h3 .tag{ font-family:var(--mono); font-size:11px; color:var(--accent-cool); border:1px solid var(--line); border-radius:999px; padding:2px 8px; margin-left:8px; vertical-align:middle; }
+  .block-card p{ margin:0; font-size:14.5px; color:var(--text-dim); line-height:1.6; }
+  .block-card ul{ margin:4px 0 0; padding-left:18px; font-size:14.5px; color:var(--text-dim); line-height:1.65; }
+  .block-card ul li b{ color:var(--text); }
+
+  /* ---------- CODE ---------- */
+  .code-block{ background:var(--code-bg); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .code-header{ display:flex; align-items:center; justify-content:space-between; padding:7px 12px; background:var(--panel-2); border-bottom:1px solid var(--line); font-family:var(--mono); font-size:12px; color:var(--text-dim); }
+  .copy-btn{ font-family:var(--sans); font-size:12px; color:var(--text); background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:4px 10px; cursor:pointer; transition:background .15s ease, color .15s ease; }
+  .copy-btn:hover{ background:var(--accent); color:#1c140f; border-color:var(--accent); }
+  .copy-btn.copied{ background:var(--accent-cool); color:#1c140f; border-color:var(--accent-cool); }
+  pre.codepre{ margin:0; padding:10px 14px; max-height:50vh; overflow:auto; font-family:var(--mono); font-size:clamp(12px,.92vw,14px); line-height:1.55; }
+  code .tok-keyword{ color:var(--code-keyword); }
+  code .tok-string{ color:var(--code-string); }
+  code .tok-number{ color:var(--code-number); }
+  code .tok-type{ color:var(--code-type); }
+  code .tok-comment{ color:var(--code-comment); font-style:italic; }
+
+  /* ---------- ZONES DIAGRAM (signature schematic) ---------- */
+  .zones-wrap{ display:flex; align-items:center; justify-content:center; flex:1; }
+
+  /* ---------- TABLES ---------- */
+  table.cmp{ width:100%; border-collapse:collapse; font-size:14.5px; }
+  table.cmp th, table.cmp td{ text-align:left; padding:10px 14px; border-bottom:1px solid var(--line); vertical-align:top; }
+  table.cmp th{ font-family:var(--mono); font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--accent-cool); border-bottom:1px solid var(--line-strong); }
+  table.cmp td b{ color:var(--text); }
+  table.cmp tr:last-child td{ border-bottom:none; }
+  table.cmp td.yes{ color:var(--accent-cool); font-weight:700; }
+  table.cmp td.no{ color:var(--accent-rose); }
+  .spec-card{ position:relative; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 20px; }
+
+  /* ---------- MCQ ---------- */
+  .mcq-grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vh,18px); flex:1; min-height:0; }
+  .mcq-grid.odd-last > :last-child{ grid-column: 1 / -1; max-width:640px; margin:0 auto; width:100%; }
+  @media (max-width:900px){ .mcq-grid{ grid-template-columns:minmax(0,1fr); } .mcq-grid.odd-last > :last-child{ max-width:none; } }
+  .mcq-card{ position:relative; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 20px; }
+  .mcq-card .qnum{ font-family:var(--mono); font-size:12px; color:var(--accent); letter-spacing:.08em; }
+  .mcq-card .qtext{ font-size:clamp(15px,1.1vw,17.5px); font-weight:600; margin:6px 0 10px; line-height:1.4; }
+  .mcq-opts{ display:flex; flex-direction:column; gap:6px; font-size:14.5px; color:var(--text-dim); }
+  .mcq-opts div{ display:flex; gap:8px; }
+  .mcq-opts b{ color:var(--accent-cool); min-width:18px; }
+
+  /* ---------- ANATOMY SCHEMATIC ---------- */
+  .anatomy-sig{
+    font-family:var(--mono); font-size:clamp(13px,1.2vw,17px);
+    background:var(--code-bg); border:1px solid var(--line); border-radius:10px;
+    padding:18px 22px; line-height:1.9; overflow-x:auto; white-space:pre;
+  }
+  .anatomy-sig .seg{ padding:2px 4px; border-radius:4px; }
+  .seg-mod{ background:rgba(227,165,72,0.18); color:var(--accent); }
+  .seg-static{ background:rgba(143,191,154,0.16); color:var(--accent-cool); }
+  .seg-ret{ background:rgba(158,203,143,0.16); color:var(--code-string); }
+  .seg-name{ background:rgba(226,184,216,0.18); color:var(--code-type); }
+  .seg-param{ background:rgba(142,199,220,0.14); color:var(--code-number); }
+  .anatomy-legend{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-top:14px; }
+  .leg-item{ border:1px dashed var(--line-strong); border-radius:8px; padding:9px 10px; font-size:13px; color:var(--text-dim); }
+  .leg-item .dot{ display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:6px; }
+  @media (max-width:1100px){ .anatomy-legend{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  .output-prompt{ display:flex; align-items:center; gap:10px; font-size:14px; color:var(--text-dim); margin-top:8px; }
+  .output-prompt input{ flex:1; border:none; border-bottom:1px dashed var(--line); background:transparent; color:var(--text); font-family:var(--mono); font-size:14px; padding:4px 6px; }
+  .output-prompt input:focus{ outline:none; border-bottom-color:var(--accent); }
+  .go-grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vw,20px); flex:1; min-height:0; }
+  .go-grid.solo{ grid-template-columns:minmax(0,1fr); }
+  @media (max-width:900px){ .go-grid{ grid-template-columns:minmax(0,1fr); } }
+  .go-card{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 18px; display:flex; flex-direction:column; gap:8px; min-width:0; }
+  .go-card .qnum{ font-family:var(--mono); font-size:12px; color:var(--accent); letter-spacing:.06em; }
+
+  /* ---------- QUOTES ---------- */
+  .quote-wrap{ flex:1; display:flex; flex-direction:column; justify-content:center; gap:26px; max-width:1100px; }
+  .quote-block{ position:relative; padding-left:28px; }
+  .quote-block::before{ content:"“"; position:absolute; left:-6px; top:-18px; font-family:var(--serif); font-size:64px; color:var(--accent); opacity:.6; }
+  .quote-block p{ font-family:var(--serif); font-size:clamp(17px,1.9vw,24px); line-height:1.5; margin:0 0 8px; color:var(--text); }
+  .quote-block span{ font-family:var(--mono); font-size:13px; color:var(--accent-cool); }
+
+  /* ---------- ANSWER KEY ---------- */
+  .ans-scroll{ flex:1; min-height:0; overflow-y:auto; padding-right:8px; }
+  .ans-block{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 18px; margin-bottom:12px; break-inside:avoid; }
+  .ans-block h4{ margin:0 0 6px 0; font-family:var(--mono); font-size:14px; color:var(--accent); }
+  .ans-block p{ margin:0; font-size:14.5px; color:var(--text-dim); line-height:1.6; }
+  .ans-block p b{ color:var(--text); }
+
+  /* ---------- CLOSING ---------- */
+  .closing-wrap{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:22px; }
+  .closing-wrap .final-quote{ font-family:var(--serif); font-size:clamp(20px,2.4vw,32px); max-width:900px; line-height:1.5; color:var(--text); }
+  .closing-wrap .final-msg{ font-size:16px; color:var(--text-dim); max-width:640px; line-height:1.6; }
+
+  /* ---------- CHROME ---------- */
+  .progress-track{ position:fixed; top:0; left:0; right:0; height:4px; background:rgba(255,255,255,0.06); z-index:50; }
+  .progress-fill{ height:100%; background:linear-gradient(90deg, var(--accent-soft), var(--accent)); width:0%; transition:width .3s ease; }
+  .counter{ position:fixed; bottom:16px; right:20px; z-index:50; font-family:var(--mono); font-size:13px; color:var(--text-dim); background:rgba(0,0,0,0.35); border:1px solid var(--line); border-radius:999px; padding:6px 14px; backdrop-filter: blur(4px); }
+  .hint{ position:fixed; bottom:16px; left:20px; z-index:50; font-family:var(--mono); font-size:12px; color:var(--text-dim); background:rgba(0,0,0,0.35); border:1px solid var(--line); border-radius:999px; padding:6px 14px; }
+
+  .overlay{ position:fixed; inset:0; background:rgba(10,7,5,0.72); backdrop-filter: blur(3px); display:flex; align-items:center; justify-content:center; z-index:100; opacity:0; pointer-events:none; transition:opacity .2s ease; }
+  .overlay.show{ opacity:1; pointer-events:auto; }
+  .overlay-panel{ background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:28px 32px; max-width:520px; width:90%; }
+  .overlay-panel h2{ margin:0 0 14px 0; font-family:var(--serif); color:var(--accent); font-size:22px; }
+  .overlay-panel .row{ display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--line); font-size:14px; color:var(--text-dim); }
+  .overlay-panel .row:last-child{ border-bottom:none; }
+  .overlay-close{ margin-top:16px; width:100%; padding:10px; border-radius:8px; border:1px solid var(--line); background:var(--accent); color:#1c140f; font-weight:600; cursor:pointer; font-family:var(--sans); font-size:14px; }
+  kbd{ display:inline-block; font-family:var(--mono); font-size:13px; background:var(--panel-2); border:1px solid var(--line); border-bottom-width:2px; border-radius:6px; padding:2px 8px; color:var(--text); }
+
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb{ background:var(--panel-2); border-radius:8px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+</style>
+</head>
+<body>
+
+<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+<div class="counter" id="counter">1 / 28</div>
+<div class="hint">Right-click or → for next · press ? for help</div>
+
+<div class="deck" id="deck">
+
+  <!-- 0: TITLE -->
+  <section class="slide" data-index="0">
+    <div class="title-wrap">
+      <div class="brew-badge">MODULE 9 · THE JAVA ROASTERY</div>
+      <div class="title-main">Apache Maven<br><span class="accent">The Recipe Card for Your Build</span></div>
+      <div class="title-sub">A single-file Java program is fine for a home kitchen. A real roastery needs a recipe card that lists every ingredient, a supplier who delivers it automatically, and a production line that turns raw beans into a sealed, ready-to-ship bag. That's exactly what Maven does for your code.</div>
+      <div class="title-stats">
+        <div class="stat-chip"><div class="num">7</div><div class="lbl">Lifecycle Phases</div></div>
+        <div class="stat-chip"><div class="num">10+</div><div class="lbl">Worked Examples</div></div>
+        <div class="stat-chip"><div class="num">3</div><div class="lbl">Skill Checks</div></div>
+      </div>
+    </div>
+    <svg class="steam-illo" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Illustration of a steaming coffee cup, representing the Java Roastery theme">
+      <g fill="none" stroke="#e3a548" stroke-width="4" stroke-linecap="round" opacity="0.85">
+        <path d="M70 40 C60 20, 80 20, 72 5" />
+        <path d="M100 40 C90 15, 112 15, 102 -2" />
+        <path d="M130 40 C120 20, 142 20, 132 5" />
+      </g>
+      <rect x="50" y="95" width="110" height="70" rx="10" fill="#2c2018" stroke="#e3a548" stroke-width="4"/>
+      <path d="M160 105 h18 a18 18 0 0 1 0 42 h-18" fill="none" stroke="#e3a548" stroke-width="4"/>
+      <ellipse cx="105" cy="95" rx="55" ry="10" fill="#8fbf9a" opacity="0.85"/>
+      <rect x="40" y="165" width="130" height="10" rx="4" fill="#e3a548" opacity="0.6"/>
+    </svg>
+  </section>
+
+  <!-- 1: ROADMAP -->
+  <section class="slide" data-index="1">
+    <div class="eyebrow">Today's Order</div>
+    <h1 class="slide-title">Lesson Preview</h1>
+    <p class="subtitle">As Java applications grow beyond single source files, build management tools like Apache Maven automate dependency management, compilation, testing, and packaging into standalone executable JAR files.</p>
+    <div class="slide-body">
+      <div class="grid-2x2">
+        <div class="block-card">
+          <h3>📋 pom.xml</h3>
+          <p>The Project Object Model — a recipe card listing your project's coordinates, dependencies, and build plugins.</p>
+        </div>
+        <div class="block-card">
+          <h3>📦 Dependency Management</h3>
+          <p>Declare a library once, and Maven fetches it automatically — no manual `.jar` downloads or classpath wrangling.</p>
+        </div>
+        <div class="block-card">
+          <h3>⚙️ Build Lifecycle</h3>
+          <p>A standardized pipeline — validate, compile, test, package, verify, install, deploy — the same on every machine.</p>
+        </div>
+        <div class="block-card">
+          <h3>🛠️ Guided Drill</h3>
+          <p>Build an abstracted service class, compile it via Maven, and run the final executable JAR file yourself.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2: WHAT IS MAVEN -->
+  <section class="slide" data-index="2">
+    <div class="eyebrow">Brewing Basics</div>
+    <h1 class="slide-title">What Is Apache Maven?</h1>
+    <p class="subtitle">Apache Maven is an industry-standard build automation tool for Java projects. It standardizes project layout, handles external library dependencies automatically, and provides a uniform build lifecycle to compile, test, and package applications.</p>
+    <div class="slide-body">
+      <div class="spec-card">
+        <table class="cmp">
+          <tr><th>Feature</th><th>Manual Compilation (javac / jar)</th><th>Apache Maven Management</th></tr>
+          <tr><td><b>Dependency Tracking</b></td><td>Manual download of .jar files and manual classpath configuration.</td><td>Automatic downloading via <code>pom.xml</code> configuration.</td></tr>
+          <tr><td><b>Directory Structure</b></td><td>Arbitrary or inconsistent layouts across teams.</td><td>Standardized directory structure across all projects.</td></tr>
+          <tr><td><b>Build Reproducibility</b></td><td>Fragile across different operating systems.</td><td>Deterministic and automated across environments.</td></tr>
+          <tr><td><b>Packaging</b></td><td>Manual manifest editing for executable JAR creation.</td><td>Single-command automated executable JAR packaging.</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3: DIRECTORY STRUCTURE -->
+  <section class="slide" data-index="3">
+    <div class="eyebrow">Signature Schematic</div>
+    <h1 class="slide-title">The Standard Maven Directory Structure</h1>
+    <p class="subtitle">Maven relies on <b style="color:var(--text)">Convention over Configuration</b>. By following a predictable directory structure, Maven understands where source code, resources, and tests reside — no complex scripts required.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="anatomy-sig" style="font-size:15px; line-height:2;">my-app/
+├── <span class="seg seg-mod">pom.xml</span>                <span class="tok-comment">// Project Object Model (config)</span>
+└── src/
+    ├── main/
+    │   ├── <span class="seg seg-ret">java/</span>          <span class="tok-comment">// Application source code (.java)</span>
+    │   └── <span class="seg seg-param">resources/</span>     <span class="tok-comment">// Config files, properties, assets</span>
+    └── test/
+        └── <span class="seg seg-name">java/</span>          <span class="tok-comment">// Unit test code (e.g. JUnit)</span></div>
+
+        <div class="block-card">
+          <h3 style="font-size:17px;">🔍 Why This Matters</h3>
+          <ul>
+            <li><code>pom.xml</code> — always lives at the project root, the recipe card Maven reads first</li>
+            <li><code>src/main/java</code> — your actual application code, organized by package folders</li>
+            <li><code>src/main/resources</code> — non-code files bundled into the final JAR (properties, configs)</li>
+            <li><code>src/test/java</code> — test code, completely separate from production code — it never ships in the final JAR</li>
+          </ul>
+          <h3 style="font-size:15px; margin-top:8px;">💡 Key Takeaway</h3>
+          <p style="margin:0;">Every Maven project — yours, your teammate's, an open-source library — looks the same at a glance. That predictability is the entire point.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4: POM.XML COORDINATES -->
+  <section class="slide" data-index="4">
+    <div class="eyebrow">Section B.1 · The pom.xml File</div>
+    <h1 class="slide-title">Anatomy of Project Coordinates</h1>
+    <p class="subtitle">Every Maven project is uniquely identified by three coordinates — together they form its "address" in the Maven world.</p>
+    <div class="slide-body">
+      <div class="anatomy-sig">&lt;<span class="seg seg-mod">groupId</span>&gt;com.example.app&lt;/groupId&gt;
+&lt;<span class="seg seg-static">artifactId</span>&gt;app-runner&lt;/artifactId&gt;
+&lt;<span class="seg seg-ret">version</span>&gt;1.0.0&lt;/version&gt;
+&lt;<span class="seg seg-name">packaging</span>&gt;jar&lt;/packaging&gt;</div>
+      <div class="anatomy-legend">
+        <div class="leg-item"><span class="dot" style="background:var(--accent)"></span><b>groupId</b><br>Organization or namespace — conventionally a reversed domain name.</div>
+        <div class="leg-item"><span class="dot" style="background:var(--accent-cool)"></span><b>artifactId</b><br>The project's own name — becomes the base of the final JAR filename.</div>
+        <div class="leg-item"><span class="dot" style="background:var(--code-string)"></span><b>version</b><br>The release number — bump it every time you ship a new build.</div>
+        <div class="leg-item"><span class="dot" style="background:var(--code-type)"></span><b>packaging</b><br>The output type — <code>jar</code>, <code>war</code>, or <code>pom</code> for parent projects.</div>
+      </div>
+      <p style="margin-top:14px; font-size:14px; color:var(--text-dim);">Together these produce the final artifact name: <code>app-runner-1.0.0.jar</code> — exactly what you'll see appear in <code>target/</code> after a build.</p>
+    </div>
+  </section>
+
+  <!-- 5: DEPENDENCIES + BUILD/PLUGINS -->
+  <section class="slide" data-index="5">
+    <div class="eyebrow">Section B.1 · The pom.xml File</div>
+    <h1 class="slide-title">Dependencies &amp; the Build Plugin</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>pom.xml — dependencies</span><button class="copy-btn" data-target="code1">Copy</button></div>
+          <pre class="codepre"><code id="code1"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code1"><dependencies>
+    <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>3.14.0</version>
+    </dependency>
+</dependencies></script>
+
+        <div class="code-block">
+          <div class="code-header"><span>pom.xml — build plugin</span><button class="copy-btn" data-target="code2">Copy</button></div>
+          <pre class="codepre"><code id="code2"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code2"><build>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+            <version>3.3.0</version>
+            <configuration>
+                <archive>
+                    <manifest>
+                        <addClasspath>true</addClasspath>
+                        <mainClass>com.example.app.Main</mainClass>
+                    </manifest>
+                </archive>
+            </configuration>
+        </plugin>
+    </plugins>
+</build></script>
+      </div>
+      <p style="margin-top:10px; font-size:13.5px; color:var(--text-dim);">💡 <b style="color:var(--text)">Key detail:</b> the <code>&lt;mainClass&gt;</code> entry is what lets <code>java -jar app-runner-1.0.0.jar</code> know which class to run — skip it, and the JAR builds fine but refuses to execute.</p>
+    </div>
+  </section>
+
+  <!-- 6: DEPENDENCY RESOLUTION DIAGRAM -->
+  <section class="slide" data-index="6">
+    <div class="eyebrow">Going Further</div>
+    <h1 class="slide-title">How a Dependency Actually Gets Fetched</h1>
+    <p class="subtitle">Declaring a dependency in <code>pom.xml</code> triggers a lookup chain — understanding it helps you diagnose "why won't this download" moments.</p>
+    <div class="slide-body zones-wrap">
+      <svg viewBox="0 0 780 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Diagram showing dependency resolution flow: pom.xml declares a dependency, Maven checks the local cache at dot m2 repository first, and if not found downloads from the Maven Central Repository, then stores it locally and adds it to the project classpath" style="width:100%; max-width:820px; height:auto; margin:0 auto;">
+        <rect x="10" y="70" width="150" height="80" rx="10" fill="#2c2018" stroke="#e3a548" stroke-width="2.5"/>
+        <text x="85" y="105" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="13" fill="#e3a548">pom.xml</text>
+        <text x="85" y="125" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="10" fill="#c9b6a2">declares dependency</text>
+
+        <line x1="160" y1="110" x2="215" y2="110" stroke="#8fbf9a" stroke-width="2" marker-end="url(#arrow1)"/>
+
+        <rect x="215" y="70" width="170" height="80" rx="10" fill="#2c2018" stroke="#8ec7dc" stroke-width="2.5"/>
+        <text x="300" y="100" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="12" fill="#8ec7dc">Local Cache</text>
+        <text x="300" y="118" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="10" fill="#c9b6a2">~/.m2/repository</text>
+        <text x="300" y="134" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="10" fill="#c9b6a2">checked first</text>
+
+        <line x1="385" y1="110" x2="440" y2="110" stroke="#8fbf9a" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#arrow1)"/>
+        <text x="412" y="98" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="9" fill="#d9776b">if missing</text>
+
+        <rect x="440" y="70" width="180" height="80" rx="10" fill="#2c2018" stroke="#e2b8d8" stroke-width="2.5"/>
+        <text x="530" y="100" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="12" fill="#e2b8d8">Maven Central</text>
+        <text x="530" y="118" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="10" fill="#c9b6a2">Repository (remote)</text>
+        <text x="530" y="134" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="10" fill="#c9b6a2">downloads once</text>
+
+        <line x1="620" y1="110" x2="675" y2="110" stroke="#8fbf9a" stroke-width="2" marker-end="url(#arrow1)"/>
+
+        <rect x="675" y="70" width="95" height="80" rx="10" fill="#2c2018" stroke="#e3a548" stroke-width="2.5"/>
+        <text x="722" y="105" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="12" fill="#e3a548">Your</text>
+        <text x="722" y="122" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="12" fill="#e3a548">Classpath</text>
+
+        <text x="390" y="190" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="11" fill="#93a7bc">Next build, the same dependency loads straight from the local cache — no re-download.</text>
+
+        <defs>
+          <marker id="arrow1" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 z" fill="#8fbf9a"/>
+          </marker>
+        </defs>
+      </svg>
+    </div>
+  </section>
+
+  <!-- 7: MODULAR CLASSES -->
+  <section class="slide" data-index="7">
+    <div class="eyebrow">Section B.2 · Writing Modular Classes</div>
+    <h1 class="slide-title">Using a Maven Dependency in Real Code</h1>
+    <p class="subtitle">Inside <code>src/main/java/com/example/app/Main.java</code> — a clean, object-oriented entry point using the <code>commons-lang3</code> dependency declared earlier.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>Main.java</span><button class="copy-btn" data-target="code3">Copy</button></div>
+          <pre class="codepre" style="max-height:60vh;"><code id="code3"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code3">package com.example.app;
+
+import org.apache.commons.lang3.StringUtils;
+
+class TaskManager {
+    private String taskName;
+
+    public TaskManager(String taskName) {
+        this.taskName = taskName;
+    }
+
+    public void processTask() {
+        // Using an external library method from a Maven dependency
+        String formatted = StringUtils.capitalize(this.taskName);
+        System.out.println("Processing Task: " + formatted);
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("=== Maven-Built Java Application Running ===");
+        TaskManager manager = new TaskManager("initialize database connection");
+        manager.processTask();
+    }
+}
+// Output:
+// === Maven-Built Java Application Running ===
+// Processing Task: Initialize database connection</script>
+
+        <div class="block-card">
+          <h3 style="font-size:17px;">🔍 What's Happening</h3>
+          <ul>
+            <li><code>StringUtils.capitalize()</code> comes from the <code>commons-lang3</code> jar — Maven made it available on the classpath automatically</li>
+            <li><code>TaskManager</code> is a normal encapsulated class — Maven doesn't change how you write Java, only how the project is organized and built</li>
+            <li>This file lives at <code>src/main/java/com/example/app/Main.java</code> — the folder path mirrors the package name exactly</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8: BUILD LIFECYCLE -->
+  <section class="slide" data-index="8">
+    <div class="eyebrow">Going Further</div>
+    <h1 class="slide-title">The Full Maven Build Lifecycle</h1>
+    <p class="subtitle">The lesson's commands (<code>clean</code>, <code>compile</code>, <code>package</code>) are just three stops on a longer, standardized pipeline — and running any later phase automatically runs every phase before it.</p>
+    <div class="slide-body zones-wrap">
+      <svg viewBox="0 0 900 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Diagram of the seven Maven build lifecycle phases in order: validate, compile, test, package, verify, install, deploy, connected left to right by arrows" style="width:100%; max-width:920px; height:auto; margin:0 auto;">
+        <g font-family="SFMono-Regular, monospace" font-size="12">
+          <rect x="0" y="60" width="110" height="60" rx="8" fill="#2c2018" stroke="#8fbf9a" stroke-width="2"/>
+          <text x="55" y="95" text-anchor="middle" fill="#8fbf9a">validate</text>
+
+          <rect x="132" y="60" width="110" height="60" rx="8" fill="#2c2018" stroke="#e3a548" stroke-width="2"/>
+          <text x="187" y="95" text-anchor="middle" fill="#e3a548">compile</text>
+
+          <rect x="264" y="60" width="110" height="60" rx="8" fill="#2c2018" stroke="#8ec7dc" stroke-width="2"/>
+          <text x="319" y="95" text-anchor="middle" fill="#8ec7dc">test</text>
+
+          <rect x="396" y="60" width="110" height="60" rx="8" fill="#2c2018" stroke="#e2b8d8" stroke-width="2"/>
+          <text x="451" y="95" text-anchor="middle" fill="#e2b8d8">package</text>
+
+          <rect x="528" y="60" width="110" height="60" rx="8" fill="#2c2018" stroke="#8fbf9a" stroke-width="2"/>
+          <text x="583" y="95" text-anchor="middle" fill="#8fbf9a">verify</text>
+
+          <rect x="660" y="60" width="110" height="60" rx="8" fill="#2c2018" stroke="#e3a548" stroke-width="2"/>
+          <text x="715" y="95" text-anchor="middle" fill="#e3a548">install</text>
+
+          <rect x="792" y="60" width="108" height="60" rx="8" fill="#2c2018" stroke="#d9776b" stroke-width="2"/>
+          <text x="846" y="95" text-anchor="middle" fill="#d9776b">deploy</text>
+
+          <g stroke="#93a7bc" stroke-width="2" fill="none" marker-end="url(#arrow2)">
+            <line x1="110" y1="90" x2="130" y2="90"/>
+            <line x1="242" y1="90" x2="262" y2="90"/>
+            <line x1="374" y1="90" x2="394" y2="90"/>
+            <line x1="506" y1="90" x2="526" y2="90"/>
+            <line x1="638" y1="90" x2="658" y2="90"/>
+            <line x1="770" y1="90" x2="790" y2="90"/>
+          </g>
+        </g>
+        <text x="450" y="160" text-anchor="middle" font-family="SFMono-Regular, monospace" font-size="11" fill="#93a7bc">Running "mvn package" silently runs validate → compile → test first. Running "mvn test" never reaches package.</text>
+        <defs>
+          <marker id="arrow2" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 z" fill="#93a7bc"/>
+          </marker>
+        </defs>
+      </svg>
+      <div class="grid-2x2" style="margin-top:18px;">
+        <div class="block-card"><h3 style="font-size:15px;">validate / compile</h3><p style="font-size:13.5px;">Checks the project structure is correct, then turns <code>.java</code> files into <code>.class</code> bytecode.</p></div>
+        <div class="block-card"><h3 style="font-size:15px;">test / package</h3><p style="font-size:13.5px;">Runs unit tests from <code>src/test/java</code>, then bundles everything into a <code>.jar</code> (or <code>.war</code>).</p></div>
+        <div class="block-card"><h3 style="font-size:15px;">verify / install</h3><p style="font-size:13.5px;">Runs extra checks, then copies the artifact into your local <code>~/.m2</code> repository for other local projects to use.</p></div>
+        <div class="block-card"><h3 style="font-size:15px;">deploy</h3><p style="font-size:13.5px;">Copies the final artifact to a shared remote repository so teammates (or the world) can use it too.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9: ESSENTIAL COMMANDS -->
+  <section class="slide" data-index="9">
+    <div class="eyebrow">Section B.3 · Essential Commands</div>
+    <h1 class="slide-title">The Commands You'll Actually Type</h1>
+    <p class="subtitle">Run these from the root directory containing your <code>pom.xml</code>.</p>
+    <div class="slide-body">
+      <div class="grid-2x2">
+        <div class="block-card">
+          <h3 style="font-size:16px;">1. Clean compiled artifacts</h3>
+          <div class="code-block"><div class="code-header"><span>terminal</span></div><pre class="codepre" style="max-height:none;">mvn clean</pre></div>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:16px;">2. Compile source code</h3>
+          <div class="code-block"><div class="code-header"><span>terminal</span></div><pre class="codepre" style="max-height:none;">mvn compile</pre></div>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:16px;">3. Package into a JAR</h3>
+          <div class="code-block"><div class="code-header"><span>terminal</span></div><pre class="codepre" style="max-height:none;">mvn package</pre></div>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:16px;">4. Run the executable JAR</h3>
+          <div class="code-block"><div class="code-header"><span>terminal</span></div><pre class="codepre" style="max-height:none;">java -jar target/app-runner-1.0.0.jar</pre></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10: GUIDED DRILL PART 1 -->
+  <section class="slide" data-index="10">
+    <div class="eyebrow">Section C · Guided Drill · Part 1 of 3</div>
+    <h1 class="slide-title">Define the Abstract Class</h1>
+    <p class="subtitle">Goal: create an abstracted service class, compile it via Maven, and execute the final JAR file.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>AbstractService.java</span><button class="copy-btn" data-target="code4">Copy</button></div>
+          <pre class="codepre"><code id="code4"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code4">package com.example.app;
+
+public abstract class AbstractService {
+    private String serviceName;
+
+    public AbstractService(String serviceName) {
+        this.serviceName = serviceName;
+    }
+
+    public String getServiceName() {
+        return serviceName;
+    }
+
+    // Abstract method - implemented by child classes
+    public abstract void executeService();
+}</script>
+
+        <div class="block-card">
+          <h3 style="font-size:17px;">🔍 Why Abstract?</h3>
+          <ul>
+            <li><code>AbstractService</code> can never be instantiated directly with <code>new</code> — it exists purely to be extended</li>
+            <li><code>getServiceName()</code> is a normal, inherited method — every subclass gets it for free</li>
+            <li><code>executeService()</code> has no body here — each subclass is <b>required</b> to supply its own implementation</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11: GUIDED DRILL PART 2 -->
+  <section class="slide" data-index="11">
+    <div class="eyebrow">Section C · Guided Drill · Part 2 of 3</div>
+    <h1 class="slide-title">Implement the Concrete Class &amp; Entry Point</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>InventoryService.java</span><button class="copy-btn" data-target="code5">Copy</button></div>
+          <pre class="codepre"><code id="code5"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code5">package com.example.app;
+
+public class InventoryService extends AbstractService {
+
+    public InventoryService() {
+        super("Inventory Audit Service");
+    }
+
+    @Override
+    public void executeService() {
+        System.out.println("[" + getServiceName() + "] Scanning inventory records...");
+        System.out.println("[" + getServiceName() + "] All stock levels verified.");
+    }
+}</script>
+
+        <div class="code-block">
+          <div class="code-header"><span>App.java</span><button class="copy-btn" data-target="code6">Copy</button></div>
+          <pre class="codepre"><code id="code6"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code6">package com.example.app;
+
+public class App {
+    public static void main(String[] args) {
+        AbstractService service = new InventoryService();
+        service.executeService();
+    }
+}
+// Output:
+// [Inventory Audit Service] Scanning inventory records...
+// [Inventory Audit Service] All stock levels verified.</script>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12: GUIDED DRILL PART 3 -->
+  <section class="slide" data-index="12">
+    <div class="eyebrow">Section C · Guided Drill · Part 3 of 3</div>
+    <h1 class="slide-title">Build &amp; Run the Command Sequence</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>terminal</span><button class="copy-btn" data-target="code7">Copy</button></div>
+          <pre class="codepre"><code id="code7"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code7"># Step 1: Package into JAR
+mvn clean package
+
+# Step 2: Run the executable JAR
+java -jar target/app-runner-1.0.0.jar</script>
+
+        <div class="block-card">
+          <h3 style="font-size:17px;">🔍 What Happens, Step by Step</h3>
+          <ul>
+            <li><code>mvn clean</code> deletes any old <code>target/</code> folder — no stale <code>.class</code> files left behind</li>
+            <li><code>mvn package</code> runs validate → compile → test → package, producing <code>target/app-runner-1.0.0.jar</code></li>
+            <li><code>java -jar</code> reads the JAR's manifest, finds the configured <code>mainClass</code>, and runs its <code>main()</code> method</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13: TROUBLESHOOTING -->
+  <section class="slide" data-index="13">
+    <div class="eyebrow">Going Further</div>
+    <h1 class="slide-title">Common Errors &amp; How to Read Them</h1>
+    <div class="slide-body">
+      <div class="grid-2x2">
+        <div class="block-card">
+          <h3 style="font-size:15px; color:var(--accent-rose);">"package org.apache.commons.lang3 does not exist"</h3>
+          <p style="font-size:13.5px;">The dependency isn't declared in <code>pom.xml</code> (or hasn't downloaded yet). Add the <code>&lt;dependency&gt;</code> block and re-run <code>mvn compile</code>.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:15px; color:var(--accent-rose);">"no main manifest attribute, in ...jar"</h3>
+          <p style="font-size:13.5px;">The JAR built successfully, but <code>&lt;mainClass&gt;</code> was never configured in the <code>maven-jar-plugin</code> section.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:15px; color:var(--accent-rose);">"invalid target release: 17"</h3>
+          <p style="font-size:13.5px;"><code>pom.xml</code> targets Java 17, but the installed JDK is older. Either upgrade the JDK or lower <code>maven.compiler.target</code>.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:15px; color:var(--accent-rose);">Stale or "phantom" build errors</h3>
+          <p style="font-size:13.5px;">Old compiled classes lingering in <code>target/</code> can cause confusing errors. Run <code>mvn clean</code> first, then rebuild.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14: REAL-LIFE ANALOGIES -->
+  <section class="slide" data-index="14">
+    <div class="eyebrow">Making It Stick</div>
+    <h1 class="slide-title">Real-Life Analogies</h1>
+    <div class="slide-body">
+      <div class="grid-2x2">
+        <div class="block-card">
+          <h3 style="font-size:17px;">pom.xml <span class="tag">recipe card</span></h3>
+          <p>Lists every ingredient (dependency), the recipe name (coordinates), and how the final dish should be packaged.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">Maven Central <span class="tag">wholesale supplier</span></h3>
+          <p>The regional supplier who has virtually every ingredient in stock, ready to deliver the moment you order it.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">Local cache (~/.m2) <span class="tag">shop pantry</span></h3>
+          <p>Once you've ordered flour, you don't re-order it for the next batch — it's already sitting in your own pantry.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">Build lifecycle <span class="tag">the roasting line</span></h3>
+          <p>Raw beans go in one end (validate, compile), get roasted and tested along the way, and come out the other end sealed and labeled (package) — ready to ship (deploy).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15: FAQ -->
+  <section class="slide" data-index="15">
+    <div class="eyebrow">Barista FAQ</div>
+    <h1 class="slide-title">Wrap-Up &amp; FAQs</h1>
+    <div class="slide-body">
+      <div class="grid-2x2">
+        <div class="block-card">
+          <h3 style="font-size:16px;">What does pom.xml stand for?</h3>
+          <p><b>Project Object Model.</b> It holds the configuration Maven uses to build the project — dependencies, plugins, source directories, and version metadata.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:16px;">How does Maven fetch external libraries?</h3>
+          <p>A <code>&lt;dependency&gt;</code> tag in <code>pom.xml</code> triggers Maven to download the <code>.jar</code> from the central Maven Repository and cache it locally at <code>~/.m2/repository</code>.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:16px;">mvn compile vs. mvn package — what's the difference?</h3>
+          <p><code>compile</code> turns <code>.java</code> into <code>.class</code> bytecode. <code>package</code> does that, runs tests, and wraps everything into a final <code>.jar</code> (or <code>.war</code>).</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:16px;">Why use Maven instead of plain javac?</h3>
+          <p>Manual compilation means tracking every library path and compilation order by hand. Maven automates all of it with standardized, repeatable commands.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16: RECAP -->
+  <section class="slide" data-index="16">
+    <div class="eyebrow">Before the Skill Check</div>
+    <h1 class="slide-title">Recap</h1>
+    <div class="slide-body">
+      <div class="block-card" style="max-width:900px;">
+        <ul style="font-size:15.5px; line-height:1.8;">
+          <li><b>pom.xml</b> is the recipe card — coordinates, dependencies, and build plugins all live here.</li>
+          <li>Maven's <b>standard directory structure</b> (<code>src/main/java</code>, <code>src/test/java</code>) means every project looks familiar.</li>
+          <li>Dependencies resolve through a chain: <b>local cache first, Maven Central if missing</b> — then cached for next time.</li>
+          <li>The <b>build lifecycle</b> runs in order — validate, compile, test, package, verify, install, deploy — and later phases always run the earlier ones first.</li>
+          <li><code>mvn clean package</code> then <code>java -jar target/your-app.jar</code> is the everyday two-step build-and-run habit.</li>
+          <li>Most build errors trace back to a missing dependency, a missing <code>mainClass</code>, or a Java version mismatch.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 17: MCQ -->
+  <section class="slide" data-index="17">
+    <div class="eyebrow">Activity 1 of 3 · Multiple Choice (3 &times; 1 pt)</div>
+    <h1 class="slide-title">Multiple Choice — Test Yourself</h1>
+    <p class="subtitle">Total for this activity set: <b style="color:var(--text)">15 points</b> (3 MC + 7 Guess-the-Output + 2 Coding Problems). Answers are revealed on the Answer Key slides at the end.</p>
+    <div class="slide-body">
+      <div class="mcq-grid odd-last">
+        <div class="mcq-card">
+          <div class="qnum">QUESTION 01 · 1 pt</div>
+          <div class="qtext">Which file serves as the primary configuration blueprint for an Apache Maven project?</div>
+          <div class="mcq-opts">
+            <div><b>A.</b> build.gradle</div>
+            <div><b>B.</b> pom.xml</div>
+            <div><b>C.</b> manifest.mf</div>
+            <div><b>D.</b> settings.env</div>
+          </div>
+        </div>
+        <div class="mcq-card">
+          <div class="qnum">QUESTION 02 · 1 pt</div>
+          <div class="qtext">In the standard Maven directory layout, where should production Java source code files be placed?</div>
+          <div class="mcq-opts">
+            <div><b>A.</b> src/test/java</div>
+            <div><b>B.</b> target/classes</div>
+            <div><b>C.</b> src/main/java</div>
+            <div><b>D.</b> lib/java</div>
+          </div>
+        </div>
+        <div class="mcq-card">
+          <div class="qnum">QUESTION 03 · 1 pt</div>
+          <div class="qtext">Which command cleans existing build outputs and produces a packaged <code>.jar</code> artifact in the <code>target/</code> directory?</div>
+          <div class="mcq-opts">
+            <div><b>A.</b> mvn execute</div>
+            <div><b>B.</b> mvn run --jar</div>
+            <div><b>C.</b> mvn clean package</div>
+            <div><b>D.</b> javac -jar main.java</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 18: GO 1-2 -->
+  <section class="slide" data-index="18">
+    <div class="eyebrow">Activity 2 of 3 · Guess the Output (7 &times; 1 pt)</div>
+    <h1 class="slide-title">Round 1 — Tracing Real Output</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+        <div class="go-card">
+          <div class="qnum">ITEM 01 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>TaskManager.java</span><button class="copy-btn" data-target="go1">Copy</button></div>
+            <pre class="codepre"><code id="go1"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go1">class TaskManager {
+    private String taskName;
+
+    public TaskManager(String taskName) {
+        this.taskName = taskName;
+    }
+
+    public void processTask() {
+        String formatted = taskName.substring(0, 1).toUpperCase()
+            + taskName.substring(1);
+        System.out.println("Processing Task: " + formatted);
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        TaskManager m = new TaskManager("brew fresh coffee");
+        m.processTask();
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="qnum">ITEM 02 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>InventoryService.java</span><button class="copy-btn" data-target="go2">Copy</button></div>
+            <pre class="codepre"><code id="go2"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go2">abstract class Service {
+    protected String name;
+    Service(String name) { this.name = name; }
+    abstract void run();
+}
+
+class Backup extends Service {
+    Backup() { super("Backup Service"); }
+    void run() {
+        System.out.println("[" + name + "] Complete.");
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Service s = new Backup();
+        s.run();
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 19: GO 3-4 -->
+  <section class="slide" data-index="19">
+    <div class="eyebrow">Activity 2 of 3 · Guess the Output (7 &times; 1 pt)</div>
+    <h1 class="slide-title">Round 2 — Missing Dependency &amp; Manifest Traps</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+        <div class="go-card">
+          <div class="qnum">ITEM 03 · 1 pt · TRAP</div>
+          <div class="code-block">
+            <div class="code-header"><span>pom.xml (excerpt)</span><button class="copy-btn" data-target="go3">Copy</button></div>
+            <pre class="codepre"><code id="go3"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go3"><!-- pom.xml has NO <dependencies> block at all -->
+
+<!-- but Main.java contains: -->
+import org.apache.commons.lang3.StringUtils;
+
+// Running: mvn compile
+// What happens?</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="hint: think about what's missing..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="qnum">ITEM 04 · 1 pt · TRAP</div>
+          <div class="code-block">
+            <div class="code-header"><span>terminal</span><button class="copy-btn" data-target="go4">Copy</button></div>
+            <pre class="codepre"><code id="go4"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go4"><!-- pom.xml's maven-jar-plugin has NO <mainClass> configured -->
+
+$ mvn clean package
+$ java -jar target/app-runner-1.0.0.jar
+
+// What happens on the second command?</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="hint: the jar DID build successfully..."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 20: GO 5-6 -->
+  <section class="slide" data-index="20">
+    <div class="eyebrow">Activity 2 of 3 · Guess the Output (7 &times; 1 pt)</div>
+    <h1 class="slide-title">Round 3 — Directory &amp; Version Traps</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+        <div class="go-card">
+          <div class="qnum">ITEM 05 · 1 pt · TRAP</div>
+          <div class="code-block">
+            <div class="code-header"><span>project layout</span><button class="copy-btn" data-target="go5">Copy</button></div>
+            <pre class="codepre"><code id="go5"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go5">// Calculator.java was placed here by mistake:
+// src/test/java/com/example/app/Calculator.java
+// (it should have gone in src/main/java instead)
+
+// Main.java (in src/main/java) tries:
+Calculator calc = new Calculator();
+
+// Running: mvn package
+// What happens?</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="hint: main code can't see test code..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="qnum">ITEM 06 · 1 pt · TRAP</div>
+          <div class="code-block">
+            <div class="code-header"><span>pom.xml (excerpt)</span><button class="copy-btn" data-target="go6">Copy</button></div>
+            <pre class="codepre"><code id="go6"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go6"><properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+</properties>
+
+<!-- but the installed JDK on this machine is version 11 -->
+
+// Running: mvn compile
+// What happens?</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="hint: check the JDK version installed..."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 21: GO 7 (solo) -->
+  <section class="slide" data-index="21">
+    <div class="eyebrow">Activity 2 of 3 · Guess the Output (7 &times; 1 pt)</div>
+    <h1 class="slide-title">Round 4 — Full Program Trace</h1>
+    <div class="slide-body">
+      <div class="go-grid solo">
+        <div class="go-card">
+          <div class="qnum">ITEM 07 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>App.java</span><button class="copy-btn" data-target="go7">Copy</button></div>
+            <pre class="codepre"><code id="go7"></code></pre>
+          </div>
+          <script type="text/plain" data-target="go7">abstract class AbstractService {
+    private String serviceName;
+    AbstractService(String serviceName) { this.serviceName = serviceName; }
+    String getServiceName() { return serviceName; }
+    abstract void executeService();
+}
+
+class ReportService extends AbstractService {
+    ReportService() { super("Report Service"); }
+    void executeService() {
+        System.out.println("[" + getServiceName() + "] Generating monthly report...");
+        System.out.println("[" + getServiceName() + "] Report saved.");
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        AbstractService service = new ReportService();
+        service.executeService();
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 22: CODING PROBLEMS -->
+  <section class="slide" data-index="22">
+    <div class="eyebrow">Activity 3 of 3 · Coding Problems (2 &times; 2.5 pts)</div>
+    <h1 class="slide-title">Write the Code Yourself</h1>
+    <p class="subtitle">No starter code this time — write each answer from scratch. Sample solutions are on the Answer Key.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="block-card">
+          <h3 style="font-size:17px;">Problem 1 · 2.5 pts</h3>
+          <p>Write the <code>&lt;dependencies&gt;</code> block of a <code>pom.xml</code> that adds <b>JUnit Jupiter 5.10.0</b> as a <b>test-scoped</b> dependency (groupId: <code>org.junit.jupiter</code>, artifactId: <code>junit-jupiter</code>). Test-scoped dependencies need a <code>&lt;scope&gt;test&lt;/scope&gt;</code> tag — they're only available while running tests, never bundled into the final JAR.</p>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">Problem 2 · 2.5 pts</h3>
+          <p>Using the <code>AbstractService</code> class from the Guided Drill, write a new subclass <code>ReportGenerator</code> that overrides <code>executeService()</code> to print a two-line custom report message of your choice. Then write a small <code>main</code> method that creates a <code>ReportGenerator</code> and calls <code>executeService()</code> on it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 23: KEY QUOTES -->
+  <section class="slide" data-index="23">
+    <div class="eyebrow">Key Quotes</div>
+    <h1 class="slide-title">In This Lesson's Own Words</h1>
+    <div class="slide-body">
+      <div class="quote-wrap">
+        <div class="quote-block">
+          <p>As Java applications grow beyond single source files, build management tools like Apache Maven automate dependency management, compilation, testing, and packaging into standalone executable JAR files.</p>
+          <span>— Lesson Key Takeaway</span>
+        </div>
+        <div class="quote-block">
+          <p>Create an abstracted service class, compile it via Maven, and execute the final JAR file.</p>
+          <span>— Guided Drill Goal</span>
+        </div>
+        <div class="quote-block">
+          <p>Maven relies on Convention over Configuration — by following a predictable directory structure, Maven understands where source code, resources, and tests reside without requiring complex scripts.</p>
+          <span>— Directory Structure Section</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 24: ANSWER KEY - MC -->
+  <section class="slide" data-index="24">
+    <div class="eyebrow">Receipt · Page 1 of 3</div>
+    <h1 class="slide-title">Answer Key — Multiple Choice</h1>
+    <div class="slide-body">
+      <div class="ans-scroll">
+        <div class="ans-block">
+          <h4>Question 01</h4>
+          <p><b>B — pom.xml.</b> The Project Object Model is the primary configuration blueprint Maven reads for every build.</p>
+        </div>
+        <div class="ans-block">
+          <h4>Question 02</h4>
+          <p><b>C — src/main/java.</b> Production source code always lives here; <code>src/test/java</code> is reserved for test code, which never ships in the final JAR.</p>
+        </div>
+        <div class="ans-block">
+          <h4>Question 03</h4>
+          <p><b>C — mvn clean package.</b> <code>clean</code> removes old build output, and <code>package</code> compiles, tests, and bundles everything into a fresh <code>.jar</code> in <code>target/</code>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 25: ANSWER KEY - GO -->
+  <section class="slide" data-index="25">
+    <div class="eyebrow">Receipt · Page 2 of 3</div>
+    <h1 class="slide-title">Answer Key — Guess the Output</h1>
+    <div class="slide-body">
+      <div class="ans-scroll">
+        <div class="ans-cols" style="display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:0 24px; align-content:start;">
+          <div class="ans-block"><h4>GO #01 — TaskManager.java</h4><p>Manual capitalization: first letter uppercased, rest of the string appended unchanged.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent-cool); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">Processing Task: Brew fresh coffee</pre></div>
+          <div class="ans-block"><h4>GO #02 — Backup.java</h4><p><code>run()</code> is overridden in <code>Backup</code>, using the inherited <code>name</code> field set via <code>super(...)</code>.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent-cool); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">[Backup Service] Complete.</pre></div>
+          <div class="ans-block"><h4>GO #03 — pom.xml (trap!)</h4><p>Without a <code>&lt;dependency&gt;</code> declaration, Maven has no idea <code>commons-lang3</code> exists — the import can't resolve.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent-rose); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">ERROR: package org.apache.commons.lang3 does not exist</pre></div>
+          <div class="ans-block"><h4>GO #04 — terminal (trap!)</h4><p>The build succeeds — packaging doesn't require a main class. It only fails when you try to <i>run</i> it without one configured.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent-rose); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">no main manifest attribute, in target/app-runner-1.0.0.jar</pre></div>
+          <div class="ans-block"><h4>GO #05 — project layout (trap!)</h4><p>Code in <code>src/main/java</code> cannot see anything under <code>src/test/java</code> — the compiler treats them as separate, unrelated source sets.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent-rose); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">ERROR: cannot find symbol: class Calculator</pre></div>
+          <div class="ans-block"><h4>GO #06 — pom.xml (trap!)</h4><p>You can't compile for a Java version newer than the JDK you actually have installed.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent-rose); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">Fatal error compiling: invalid target release: 17</pre></div>
+          <div class="ans-block"><h4>GO #07 — ReportService.java</h4><p>Same pattern as the Guided Drill — an abstract parent, a concrete override, and two println statements using the inherited name.</p><pre style="font-family:var(--mono); font-size:12.5px; color:var(--accent-cool); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">[Report Service] Generating monthly report...
+[Report Service] Report saved.</pre></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 26: ANSWER KEY - CODING -->
+  <section class="slide" data-index="26">
+    <div class="eyebrow">Receipt · Page 3 of 3</div>
+    <h1 class="slide-title">Answer Key — Coding Problems</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>Problem 1 — pom.xml excerpt</span><button class="copy-btn" data-target="ansc1">Copy</button></div>
+          <pre class="codepre"><code id="ansc1"></code></pre>
+        </div>
+        <script type="text/plain" data-target="ansc1"><dependencies>
+    <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter</artifactId>
+        <version>5.10.0</version>
+        <scope>test</scope>
+    </dependency>
+</dependencies></script>
+
+        <div class="code-block">
+          <div class="code-header"><span>Problem 2 — ReportGenerator.java</span><button class="copy-btn" data-target="ansc2">Copy</button></div>
+          <pre class="codepre"><code id="ansc2"></code></pre>
+        </div>
+        <script type="text/plain" data-target="ansc2">package com.example.app;
+
+public class ReportGenerator extends AbstractService {
+
+    public ReportGenerator() {
+        super("Report Generator");
+    }
+
+    @Override
+    public void executeService() {
+        System.out.println("[" + getServiceName() + "] Compiling quarterly figures...");
+        System.out.println("[" + getServiceName() + "] Report ready for review.");
+    }
+
+    public static void main(String[] args) {
+        ReportGenerator generator = new ReportGenerator();
+        generator.executeService();
+    }
+}
+// Output:
+// [Report Generator] Compiling quarterly figures...
+// [Report Generator] Report ready for review.</script>
+      </div>
+    </div>
+  </section>
+
+  <!-- 27: CLOSING -->
+  <section class="slide" data-index="27">
+    <div class="closing-wrap">
+      <div class="eyebrow" style="margin:0 auto;">Closing Note</div>
+      <div class="final-quote">"A recipe card only helps if everyone in the kitchen follows it — that's what Maven gives your build."</div>
+      <div class="final-msg">That's Module 9 — pom.xml, dependency resolution, the full build lifecycle, and a hands-on drill from abstract class to executable JAR. Try running the drill yourself, break something on purpose, and see if you recognize the error. Good luck, and happy brewing. ☕</div>
+    </div>
+  </section>
+</div>
+
+<!-- Shortcuts overlay -->
+<div class="overlay" id="overlay">
+  <div class="overlay-panel">
+    <h2>Keyboard &amp; Mouse Shortcuts</h2>
+    <div class="row"><span>Next slide</span><span><kbd>→</kbd> / right-click / front side button</span></div>
+    <div class="row"><span>Previous slide</span><span><kbd>←</kbd> / back side button</span></div>
+    <div class="row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="row"><span>Show this panel</span><span><kbd>?</kbd></span></div>
+    <div class="row"><span>Close this panel</span><span><kbd>Esc</kbd></span></div>
+    <button class="overlay-close" id="overlayClose">Balik sa Slides</button>
+  </div>
+</div>
+
+
+<script>
+(function(){
+  "use strict";
+
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  var TOKEN_RE = /(\/\/.*$)|("(?:[^"\\]|\\.)*")|('(?:[^'\\]|\\.)*')|\b(public|private|protected|static|final|class|new|void|int|double|boolean|char|String|return|if|else|for|while|this|super|extends|import|package|true|false|null)\b|\b(\d+\.\d+|\d+)\b|\b([A-Z][A-Za-z0-9_]*)\b/gm;
+
+  function highlightJava(src){
+    var out = '';
+    var lastIndex = 0;
+    var m;
+    TOKEN_RE.lastIndex = 0;
+    while ((m = TOKEN_RE.exec(src)) !== null){
+      out += escapeHtml(src.slice(lastIndex, m.index));
+      if (m[1] !== undefined) out += '<span class="tok-comment">' + escapeHtml(m[1]) + '</span>';
+      else if (m[2] !== undefined) out += '<span class="tok-string">' + escapeHtml(m[2]) + '</span>';
+      else if (m[3] !== undefined) out += '<span class="tok-string">' + escapeHtml(m[3]) + '</span>';
+      else if (m[4] !== undefined) out += '<span class="tok-keyword">' + escapeHtml(m[4]) + '</span>';
+      else if (m[5] !== undefined) out += '<span class="tok-number">' + escapeHtml(m[5]) + '</span>';
+      else if (m[6] !== undefined) out += '<span class="tok-type">' + escapeHtml(m[6]) + '</span>';
+      lastIndex = TOKEN_RE.lastIndex;
+      if (m.index === TOKEN_RE.lastIndex) TOKEN_RE.lastIndex++;
+    }
+    out += escapeHtml(src.slice(lastIndex));
+    return out;
+  }
+
+  function initCodeBlocks(){
+    var sources = document.querySelectorAll('script[type="text/plain"][data-target]');
+    sources.forEach(function(src){
+      var id = src.getAttribute('data-target');
+      var target = document.getElementById(id);
+      if (!target) return;
+      var raw = src.textContent.replace(/^\n/, '').replace(/\n$/, '');
+      target.innerHTML = highlightJava(raw);
+      target.setAttribute('data-raw', raw);
+    });
+  }
+
+  function fallbackCopy(text){
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); } catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  function initCopyButtons(){
+    document.querySelectorAll('.copy-btn').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var id = btn.getAttribute('data-target');
+        var code = document.getElementById(id);
+        var text = code ? (code.getAttribute('data-raw') || code.textContent) : '';
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).catch(function(){ fallbackCopy(text); });
+        } else {
+          fallbackCopy(text);
+        }
+        var originalText = btn.textContent;
+        btn.textContent = 'Copied! ✓';
+        btn.classList.add('copied');
+        setTimeout(function(){
+          btn.textContent = originalText;
+          btn.classList.remove('copied');
+        }, 1400);
+      });
+    });
+  }
+
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length;
+  var current = 0;
+  var progressFill = document.getElementById('progressFill');
+  var counterEl = document.getElementById('counter');
+  var overlay = document.getElementById('overlay');
+  var overlayClose = document.getElementById('overlayClose');
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function updateChrome(){
+    var pct = ((current + 1) / total) * 100;
+    progressFill.style.width = pct + '%';
+    counterEl.textContent = (current + 1) + ' / ' + total;
+  }
+
+  function isInteractive(el){
+    return !!(el.closest && el.closest('button, a, input, textarea, select, .no-nav, .overlay'));
+  }
+
+  function goTo(target, dir){
+    if (target < 0 || target >= total || target === current) return;
+    var oldEl = slides[current];
+    var newEl = slides[target];
+
+    oldEl.classList.remove('active');
+    oldEl.classList.add(dir > 0 ? 'exit-left' : 'exit-right');
+
+    newEl.classList.remove('exit-left', 'exit-right', 'enter-left');
+    if (reduceMotion){
+      newEl.classList.add('active');
+    } else {
+      if (dir < 0) newEl.classList.add('enter-left');
+      void newEl.offsetWidth;
+      requestAnimationFrame(function(){
+        newEl.classList.add('active');
+      });
+    }
+    newEl.scrollTop = 0;
+
+    current = target;
+    updateChrome();
+  }
+
+  function next(){ goTo(current + 1, 1); }
+  function prev(){ goTo(current - 1, -1); }
+  function first(){ goTo(0, -1); }
+  function last(){ goTo(total - 1, 1); }
+
+  function showOverlay(){ overlay.classList.add('show'); }
+  function hideOverlay(){ overlay.classList.remove('show'); }
+  function toggleOverlay(){
+    if (overlay.classList.contains('show')) hideOverlay(); else showOverlay();
+  }
+
+  document.addEventListener('keydown', function(e){
+    if (e.key === '?' ){ toggleOverlay(); return; }
+    if (e.key === 'Escape'){ hideOverlay(); return; }
+    if (overlay.classList.contains('show')) return;
+    if (e.key === 'ArrowRight' || e.key === 'PageDown'){ next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ prev(); }
+    else if (e.key === 'Home'){ first(); }
+    else if (e.key === 'End'){ last(); }
+  });
+
+  overlayClose.addEventListener('click', hideOverlay);
+  overlay.addEventListener('mousedown', function(e){
+    if (e.target === overlay) hideOverlay();
+  });
+
+  document.addEventListener('contextmenu', function(e){
+    e.preventDefault();
+  }, { capture: true });
+
+  document.addEventListener('mousedown', function(e){
+    if (overlay.classList.contains('show')) return;
+    if (isInteractive(e.target)) return;
+
+    if (e.button === 2){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    } else if (e.button === 3){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      prev();
+    } else if (e.button === 4){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    }
+  }, { capture: true });
+
+  document.addEventListener('auxclick', function(e){
+    if (e.button === 1 || e.button === 2 || e.button === 3 || e.button === 4){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, { capture: true });
+
+  document.addEventListener('mouseup', function(e){
+    if (e.button === 3 || e.button === 4){
+      e.preventDefault();
+    }
+  }, { capture: true });
+
+  var touchStartX = null, touchStartY = null;
+  document.addEventListener('touchstart', function(e){
+    if (e.touches.length !== 1) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(e){
+    if (touchStartX === null) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5){
+      if (dx < 0) next(); else prev();
+    }
+    touchStartX = null; touchStartY = null;
+  }, { passive: true });
+
+  initCodeBlocks();
+  initCopyButtons();
+  slides[0].classList.add('active');
+  updateChrome();
+
+})();
+</script>
+
+</body>
+</html>

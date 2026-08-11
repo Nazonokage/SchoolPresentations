@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Programming Logic &amp; Java — Roast-Level Crash Course</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+        * {
+            box-sizing: border-box;
+        }
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--ink);
+            transition: background 300ms ease, color 300ms ease;
+        }
+        h1,
+        h2,
+        h3 {
+            font-family: 'Fraunces', Georgia, serif;
+            margin: 0;
+        }
+        code,
+        pre,
+        .mono {
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+        }
+
+        :root {
+            --bg: #F5E3B8;
+            --bg-alt: #FBF1DA;
+            --accent: #C27B22;
+            --accent-strong: #9C5A15;
+            --card: #FFF7E6;
+            --card-border: rgba(64, 43, 24, 0.18);
+            --shadow: rgba(64, 43, 24, 0.15);
+            --ink: #2E1408;
+            --ink-soft: #3F2210;
+            --eyebrow-ink: #33170A;
+            --card-ink: #2E1408;
+            --card-ink-soft: #3F2210;
+            --card-accent: #33170A;
+            --step-num-ink: #FFEDDD;
+            --tick: 300ms;
+        }
+
+        #app {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .progress-track {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: rgba(64, 43, 24, 0.12);
+            z-index: 50;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-strong), var(--accent));
+            transition: width 350ms ease;
+        }
+
+        .roast-gauge {
+            position: fixed;
+            top: 18px;
+            right: 22px;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.14em;
+            color: var(--ink-soft);
+            user-select: none;
+            pointer-events: none;
+            transition: color var(--tick) ease;
+        }
+        .roast-gauge svg {
+            width: 34px;
+            height: 34px;
+            display: block;
+        }
+        .roast-gauge .steam {
+            transform-origin: center bottom;
+        }
+        @media (prefers-reduced-motion: no-preference) {
+            .roast-gauge .steam {
+                animation: steamRise 2.6s ease-in-out infinite;
+            }
+            .roast-gauge .steam.s2 {
+                animation-delay: 0.5s;
+            }
+        }
+        @keyframes steamRise {
+            0% {
+                opacity: 0;
+                transform: translateY(0) scaleY(1);
+            }
+            30% {
+                opacity: 0.65;
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-7px) scaleY(1.3);
+            }
+        }
+        .roast-label {
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .stage {
+            position: absolute;
+            inset: 0;
+        }
+        .slide {
+            position: absolute;
+            inset: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: safe center;
+            padding: 76px clamp(28px, 7vw, 120px) 90px;
+            opacity: 0;
+            transform: translateX(0) scale(1);
+            will-change: transform, opacity;
+        }
+        .slide.active {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+            transition: opacity var(--tick) ease, transform var(--tick) ease;
+            z-index: 5;
+        }
+        .slide.enter-fwd {
+            transform: translateX(64px) scale(0.985);
+            opacity: 0;
+        }
+        .slide.enter-bwd {
+            transform: translateX(-64px) scale(0.985);
+            opacity: 0;
+        }
+        .slide.exit-fwd {
+            transform: translateX(-64px) scale(0.985);
+            opacity: 0;
+            transition: opacity var(--tick) ease, transform var(--tick) ease;
+            z-index: 4;
+        }
+        .slide.exit-bwd {
+            transform: translateX(64px) scale(0.985);
+            opacity: 0;
+            transition: opacity var(--tick) ease, transform var(--tick) ease;
+            z-index: 4;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .slide,
+            .slide.active,
+            .slide.enter-fwd,
+            .slide.enter-bwd,
+            .slide.exit-fwd,
+            .slide.exit-bwd {
+                transition: opacity 120ms linear !important;
+                transform: none !important;
+            }
+        }
+        .slide-inner {
+            max-width: 1020px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .eyebrow {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12.5px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--eyebrow-ink);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+            transition: color var(--tick) ease;
+        }
+        .eyebrow::after {
+            content: '';
+            flex: 1;
+            height: 0;
+            border-top: 2px dashed var(--card-border);
+        }
+        h2.slide-title {
+            font-size: clamp(28px, 4vw, 44px);
+            font-weight: 700;
+            line-height: 1.12;
+            margin-bottom: 16px;
+            letter-spacing: -0.01em;
+        }
+        .lede {
+            font-size: 17px;
+            color: var(--ink-soft);
+            margin: -4px 0 18px;
+            max-width: 72ch;
+            line-height: 1.55;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 18px 20px;
+            min-width: 0;
+            box-shadow: 0 2px 10px var(--shadow);
+            transition: background var(--tick) ease, border-color var(--tick) ease;
+        }
+        .card h3 {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            font-family: 'Inter', sans-serif;
+            color: var(--card-ink);
+        }
+        .card p,
+        .card li {
+            font-size: 14.5px;
+            color: var(--card-ink-soft);
+            line-height: 1.5;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+            gap: 14px;
+            min-width: 0;
+        }
+        .card-grid.cols-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .card-grid.cols-3 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .card-grid.cols-4 {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+        @media (max-width:760px) {
+            .card-grid.cols-4 {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .card-grid.cols-3 {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .card-grid.cols-2 {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 26px;
+            align-items: start;
+            min-width: 0;
+        }
+        @media (max-width:760px) {
+            .two-col {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+        .two-col>* {
+            min-width: 0;
+        }
+
+        ul.ticket-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+        }
+        ul.ticket-list li {
+            position: relative;
+            padding-left: 22px;
+            font-size: 15.5px;
+            line-height: 1.5;
+            color: var(--ink);
+        }
+        ul.ticket-list li::before {
+            content: '—';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        ol.step-list {
+            list-style: none;
+            counter-reset: step;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        ol.step-list li {
+            position: relative;
+            padding-left: 40px;
+            font-size: 15.5px;
+            line-height: 1.55;
+            min-width: 0;
+        }
+        ol.step-list li::before {
+            counter-increment: step;
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            top: -1px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--card-accent);
+            color: var(--step-num-ink);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 13px;
+            transition: background var(--tick) ease;
+        }
+        ol.step-list b {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13.5px;
+            background: var(--card);
+            padding: 1px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--card-border);
+        }
+
+        .quote-block {
+            font-family: 'Fraunces', serif;
+            font-style: italic;
+            font-size: 19px;
+            line-height: 1.5;
+            color: var(--ink);
+            border-left: 3px solid var(--accent);
+            padding: 4px 0 4px 18px;
+            margin: 6px 0 20px;
+        }
+        .note {
+            background: var(--card);
+            border: 1px dashed var(--card-border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 14px;
+            color: var(--card-ink-soft);
+            margin-top: 14px;
+        }
+        .note b {
+            color: var(--card-ink);
+        }
+
+        pre.code-block {
+            background: #1e1710;
+            color: #f1e6d3;
+            border-radius: 10px;
+            padding: 18px 20px;
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-x: auto;
+            margin: 0;
+            min-width: 0;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 6px 18px var(--shadow);
+        }
+        pre.code-block code {
+            white-space: pre;
+        }
+        .tok-kw {
+            color: #e39a5a;
+            font-weight: 600;
+        }
+        .tok-str {
+            color: #a8c98f;
+        }
+        .tok-com {
+            color: #7d7166;
+            font-style: italic;
+        }
+        .tok-type {
+            color: #7fb0d6;
+        }
+        .tok-num {
+            color: #d99a6c;
+        }
+
+        .code-cap {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--ink-soft);
+            margin-bottom: 8px;
+        }
+
+        .op-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+            gap: 10px;
+            min-width: 0;
+        }
+        .op-chip {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            text-align: center;
+            min-width: 0;
+        }
+        .op-chip .sym {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--card-accent);
+        }
+        .op-chip .desc {
+            font-size: 12px;
+            color: var(--card-ink-soft);
+            margin-top: 2px;
+        }
+
+        table.type-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14.5px;
+        }
+        table.type-table th,
+        table.type-table td {
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--card-border);
+        }
+        table.type-table th {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--ink-soft);
+        }
+        table.type-table td code {
+            background: var(--card);
+            padding: 1px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--card-border);
+        }
+
+        .hud {
+            position: fixed;
+            bottom: 16px;
+            right: 20px;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .counter {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            color: var(--card-ink);
+            padding: 8px 16px;
+            border-radius: 999px;
+            box-shadow: 0 4px 14px var(--shadow);
+            transition: background var(--tick) ease, color var(--tick) ease, border-color var(--tick) ease;
+        }
+        .hint {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--ink-soft);
+            letter-spacing: 0.05em;
+            display: none;
+        }
+        @media (min-width:640px) {
+            .hint {
+                display: block;
+            }
+        }
+
+        .click-zone {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            cursor: pointer;
+        }
+
+        .slide::-webkit-scrollbar {
+            width: 8px;
+        }
+        .slide::-webkit-scrollbar-thumb {
+            background: var(--card-border);
+            border-radius: 8px;
+        }
+
+        .two-col pre.code-block {
+            max-width: 100%;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .two-col .code-block code {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .activity-box {
+            background: var(--card);
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            padding: 18px 22px;
+            margin-top: 10px;
+        }
+        .activity-box h3 {
+            font-family: 'Inter', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--card-accent);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .activity-box .prompt {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--card-ink-soft);
+        }
+        .activity-box .prompt code {
+            background: var(--bg);
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .answer-key {
+            background: var(--bg-alt);
+            border: 1px solid var(--accent);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-top: 14px;
+        }
+        .answer-key h4 {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--accent-strong);
+            margin-bottom: 8px;
+        }
+        .answer-key code {
+            background: var(--card);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            border: 1px solid var(--card-border);
+        }
+        .answer-key pre {
+            margin: 6px 0 0;
+        }
+
+        .tag {
+            display: inline-block;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            background: var(--accent);
+            color: #fff;
+            padding: 2px 10px;
+            border-radius: 999px;
+            margin-right: 6px;
+        }
+        .tag.green {
+            background: #4a8c5c;
+        }
+        .tag.blue {
+            background: #3f7a9e;
+        }
+        .tag.purple {
+            background: #7a5f9e;
+        }
+        .tag.orange {
+            background: #c27b3a;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+        <div class="roast-gauge" id="roastGauge">
+            <svg viewBox="0 0 40 40" fill="none">
+                <ellipse class="steam" cx="14" cy="6" rx="1.6" ry="4" fill="currentColor" opacity="0.5"></ellipse>
+                <ellipse class="steam s2" cx="22" cy="5" rx="1.6" ry="4" fill="currentColor" opacity="0.5"></ellipse>
+                <path id="cupFill" d="M6 14 h22 l-2.2 16 a4 4 0 0 1 -4 3.4 h-9.6 a4 4 0 0 1 -4 -3.4 Z" fill="var(--accent)" stroke="var(--ink)" stroke-width="1.4"></path>
+                <path d="M28 17 h4.5 a3.5 3.5 0 0 1 0 9 h-3" stroke="var(--ink)" stroke-width="1.4" fill="none"></path>
+                <line x1="4" y1="14" x2="30" y2="14" stroke="var(--ink)" stroke-width="1.6" stroke-linecap="round"></line>
+            </svg>
+            <span class="roast-label" id="roastLabel">Light Roast</span>
+        </div>
+
+        <div class="click-zone" id="clickZone"></div>
+        <div class="stage" id="stage"></div>
+
+        <div class="hud">
+            <span class="hint">click / → to continue</span>
+            <div class="counter" id="counter">1 / 23</div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            "use strict";
+
+            function escapeHtml(s) {
+                return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
+            var KEYWORDS = ['public', 'private', 'protected', 'static', 'void', 'final', 'class', 'new', 'if', 'else',
+                'return',
+                'for', 'while', 'do', 'int', 'double', 'float', 'long', 'short', 'byte', 'char', 'boolean', 'true', 'false',
+                'null',
+                'this', 'super', 'package', 'import', 'extends', 'implements', 'instanceof', 'try', 'catch', 'finally',
+                'throw', 'throws'
+            ];
+            var KW_RE = new RegExp('\\b(' + KEYWORDS.join('|') + ')\\b');
+            var TOKEN_RE = /(\/\/.*$)|("(?:\\.|[^"\\])*")|('(?:\\.|[^'\\])')|\b([A-Za-z_][A-Za-z0-9_]*)\b|\b(\d+\.?\d*)\b/gm;
+
+            function highlightJava(src) {
+                var esc = escapeHtml(src);
+                return esc.replace(TOKEN_RE, function(match, comment, str, chr, word, num) {
+                    if (comment !== undefined) return '<span class="tok-com">' + comment + '</span>';
+                    if (str !== undefined) return '<span class="tok-str">' + str + '</span>';
+                    if (chr !== undefined) return '<span class="tok-str">' + chr + '</span>';
+                    if (word !== undefined) {
+                        if (KW_RE.test(word)) return '<span class="tok-kw">' + word + '</span>';
+                        if (/^[A-Z]/.test(word)) return '<span class="tok-type">' + word + '</span>';
+                        return word;
+                    }
+                    if (num !== undefined) return '<span class="tok-num">' + num + '</span>';
+                    return match;
+                });
+            }
+
+            function reindentJava(src) {
+                var INDENT = '    '; // 4 spaces
+                var lines = src.split('\n').map(function(l) { return l.trim(); });
+                var depth = 0;
+                var out = [];
+                for (var i = 0; i < lines.length; i++) {
+                    var line = lines[i];
+                    if (line === '') { out.push(''); continue; }
+                    var leadingClose = /^[}\)\]]/.test(line);
+                    if (leadingClose) depth = Math.max(0, depth - 1);
+                    out.push(INDENT.repeat(depth) + line);
+                    var opens = (line.match(/[{(\[]/g) || []).length;
+                    var closes = (line.match(/[}\)\]]/g) || []).length;
+                    var net = opens - closes;
+                    if (leadingClose) net += 1; // that first close was already applied above
+                    depth = Math.max(0, depth + net);
+                }
+                return out.join('\n');
+            }
+
+            function code(src) {
+                src = src.replace(/^\n/, '').replace(/\n$/, '');
+                src = reindentJava(src);
+                return '<pre class="code-block"><code>' + highlightJava(src) + '</code></pre>';
+            }
+
+            var S = [];
+
+            // ---- SLIDE 1: TITLE ----
+            S.push({
+                eyebrow: '☕ Order No. 01 — Welcome',
+                title: 'Programming Logic &amp; Algorithms',
+                lede: 'A beginner-friendly crash course on programming logic, algorithms, and the core concepts you need to start writing Java code.',
+                body: `
+              <div class="quote-block">"Productivity Tip: Put a schedule in your flexible schedule, focus and hit your mark."</div>
+              <div class="card-grid cols-2">
+                <div class="card"><h3>🧠 Logic</h3><p>From the Greek <em>logos</em> — word, thought, idea, argument, principle, reason. It's the study of reasoning: knowing what is right and what is wrong.</p></div>
+                <div class="card"><h3>🎯 In OOP</h3><p>Logic helps you understand the purpose of classes and objects — the building blocks of object-oriented programming.</p></div>
+              </div>
+            `
+            });
+
+            // ---- SLIDE 2: Programming Logic ----
+            S.push({
+                eyebrow: 'Order No. 02 — Foundation',
+                title: 'What is Programming Logic?',
+                lede: 'Programming logic is a set of principles that describes how elements should be arranged so a computer can perform specific tasks.',
+                body: `
+              <div class="card-grid cols-2">
+                <div class="card"><h3>🧩 Logical Thinking</h3><p>Whether programming or formal, logical thinking means applying principles in a disciplined manner to achieve target results.</p></div>
+                <div class="card"><h3>💡 Why it matters</h3><p>Without logic, your code becomes a jumble of instructions. With logic, you build systems that work reliably and predictably.</p></div>
+              </div>
+              <div class="note"><b>Key takeaway:</b> Programming logic is the "why" behind the "what" — it's the reasoning that guides your code structure.</div>
+            `
+            });
+
+            // ---- SLIDE 3: Algorithm ----
+            S.push({
+                eyebrow: 'Order No. 03 — The Recipe',
+                title: 'What is an Algorithm?',
+                lede: 'An algorithm is a series of instructions telling a computer how to transform a set of facts about the world into useful information.',
+                body: `
+              <div class="quote-block">"Parang steps procedure itong si Algorithm."</div>
+              <div class="card-grid cols-2">
+                <div class="card"><h3>📋 Steps</h3><p>A sequence of well-defined steps that solve a problem or accomplish a task.</p></div>
+                <div class="card"><h3>🔄 Repeatable</h3><p>The same algorithm, given the same inputs, should always produce the same output.</p></div>
+              </div>
+              <div class="note"><b>Real-world example:</b> A recipe — follow the steps in order, and you get the same dish every time.</div>
+            `
+            });
+
+            // ---- SLIDE 4: Java Overview ----
+            S.push({
+                eyebrow: 'Order No. 04 — The Language',
+                title: 'Java Overview',
+                lede: 'Java is an object-oriented programming language that can run on different platforms. Write once, run anywhere.',
+                body: `
+              <div class="card-grid cols-2">
+                <div class="card"><h3>☕ Object-Oriented</h3><p>Everything revolves around classes and objects — data and behavior are bundled together.</p></div>
+                <div class="card"><h3>🌍 Cross-Platform</h3><p>Java programs are compiled into bytecode that runs on Windows, Linux, Mac OS, and more.</p></div>
+              </div>
+              <div class="note"><b>Bytecode:</b> The intermediate representation of your Java code. The JVM (Java Virtual Machine) interprets it on any platform.</div>
+            `
+            });
+
+            // ---- SLIDE 5: Computer Programming ----
+            S.push({
+                eyebrow: 'Order No. 05 — The Craft',
+                title: 'What is Computer Programming?',
+                lede: 'Computer Programming is a set of instructions that helps the developer perform tasks and return the desired output for valid inputs.',
+                body: `
+              <div class="two-col">
+                <div>
+                  <div class="code-cap">Example — Java</div>
+                  ${code(`for (int x = 0; x < 10; x++) {
+                  double face_of_luck = Math.random();
+                  System.out.print("luck of numbers " + face_of_luck);
+              }`)}
+            </div>
+            <div class="card"><h3>🎯 The Goal</h3><p>Understand programming logic with algorithms. We'll use a very basic question: <em>"How does the computer work?"</em></p></div>
+          </div>
+        `
+      });
+
+      // ---- SLIDE 6: How Computers Work ----
+      S.push({
+        eyebrow: 'Order No. 06 — Under the Hood',
+        title: 'How Does a Computer Work?',
+        lede: 'A computer is a machine that processes data. Data comes from input devices and is stored in memory.',
+        body: `
+          <div class="card-grid cols-2">
+            <div class="card"><h3>⌨️ Input Devices</h3><p>Keyboard, mouse, digital camera, scanner, joystick, headset, microphone — these feed data into the computer.</p></div>
+            <div class="card"><h3>🧠 Memory</h3><p>Information is stored in the computer's memory. Without storage, data would be lost as soon as it's processed.</p></div>
+          </div>
+          <div class="note"><b>Remember:</b> "Dapat merong storage si computer para ma-store ang information."</div>
+        `
+      });
+
+      // ---- SLIDE 7: RAM vs ROM ----
+      S.push({
+        eyebrow: 'Order No. 07 — Memory Types',
+        title: 'RAM &amp; ROM: The Two Types of Memory',
+        lede: 'Computer storage comes in two main flavors — each with a different role.',
+        body: `
+          <div class="card-grid cols-2">
+            <div class="card"><h3>⚡ RAM (Random Access Memory)</h3><p>Internal storage on the motherboard. Accessed quickly in any order. <b>Volatile:</b> data is lost when the computer is turned off.</p></div>
+            <div class="card"><h3>💾 ROM (Read-Only Memory)</h3><p>Data is stored permanently. <b>Non-volatile:</b> instructions are retained even when the computer is off. ROM stores the startup instructions.</p></div>
+          </div>
+          <div class="note"><b>In development:</b> Products, software, and solutions are designed as scenarios, diagrams, use cases, and data flow diagrams.</div>
+        `
+      });
+
+      // ---- SLIDE 8: Real-life Algorithm ----
+      S.push({
+        eyebrow: 'Order No. 08 — In the Wild',
+        title: 'Real-Life Example of an Algorithm',
+        lede: '"Ano ang real life example of algorithm?" — Recipes!',
+        body: `
+          <div class="two-col">
+            <div class="card"><h3>🍳 Following a Recipe</h3><p>Just like sorting papers or tying your shoes, following a recipe is a type of algorithm. The goal is to create a duplicated outcome.</p><p style="margin-top:10px;">In order to complete a recipe, you have to follow a given set of steps in order.</p></div>
+            <div class="card"><h3>🔄 Flowchart</h3><p>Start → Look for lost item → Did you find it? → Do you need it? → Stop looking.</p><p style="margin-top:10px;">This step-by-step process is an algorithm in action.</p></div>
+          </div>
+        `
+      });
+
+      // ---- SLIDE 9: Basic Programming Concepts - Intro ----
+      S.push({
+        eyebrow: 'Order No. 09 — The Toolbox',
+        title: 'Basic Programming Concepts',
+        lede: 'Beginners should have essential knowledge of these concepts to become skilled in computer programming.',
+        body: `
+          <div class="card-grid cols-3">
+            <div class="card"><h3>#1 Algorithm</h3><p>Steps to accomplish a task</p></div>
+            <div class="card"><h3>#2 Source Code</h3><p>The actual text of the program</p></div>
+            <div class="card"><h3>#3 Compiler</h3><p>Converts source to machine code</p></div>
+            <div class="card"><h3>#4 Data Type</h3><p>Classification of values</p></div>
+            <div class="card"><h3>#5 Variable</h3><p>Container for data</p></div>
+            <div class="card"><h3>#6 Conditionals</h3><p>Decision-making in code</p></div>
+            <div class="card"><h3>#7 Array</h3><p>Collection of similar elements</p></div>
+            <div class="card"><h3>#8 Loop</h3><p>Repeating code blocks</p></div>
+            <div class="card"><h3>#9 Function</h3><p>Reusable code blocks</p></div>
+            <div class="card"><h3>#10 Class</h3><p>Blueprint for objects</p></div>
+          </div>
+        `
+      });
+
+      // ---- SLIDE 10: #1 Algorithm ----
+      S.push({
+        eyebrow: 'Order No. 10 — Concept #1',
+        title: 'Algorithm',
+        lede: 'A set of steps or instruction statements to be followed to accomplish specific tasks.',
+        body: `
+          <div class="two-col">
+            <div class="card"><h3>📝 Definition</h3><p>A developer can design an algorithm to achieve the desired output. It describes the steps to be followed, but does not say how to achieve each step.</p></div>
+            <div class="card"><h3>🍰 Example</h3><p>A recipe to cook a dessert. The algorithm describes the steps, not the knife skills or oven temperature control.</p></div>
+          </div>
+          <div class="note"><b>Key insight:</b> Algorithms are about <em>what</em> to do, not <em>how</em> to do it at a mechanical level.</div>
+        `
+      });
+
+      // ---- SLIDE 11: #2 Source Code ----
+      S.push({
+        eyebrow: 'Order No. 11 — Concept #2',
+        title: 'Source Code',
+        lede: 'The actual text that is used to construct the program using the language of choice.',
+        body: `
+          <div class="two-col">
+            <div>
+              <div class="code-cap">Example — Java main method</div>
+              ${code(`public static void main(String arg[]) {
+                // Steps to be performed
+            }`)}
+          </div>
+          <div class="card"><h3>📄 Composition</h3><p>Source code is composed of a string of words, numbers, letters, and symbols that a computer programmer uses.</p><p style="margin-top:10px;">It's mandatory to have the main method in Java — this is where the program starts.</p></div>
+        </div>
+      `
+    });
+
+    // ---- SLIDE 12: #3 Compiler ----
+    S.push({
+      eyebrow: 'Order No. 12 — Concept #3',
+      title: 'Compiler',
+      lede: 'A software program that converts source code into binary or bytecode (machine language) that a computer can understand.',
+      body: `
+        <div class="card-grid cols-2">
+          <div class="card"><h3>⚙️ How it works</h3><p>The compiler translates human-readable code into machine-readable instructions.</p></div>
+          <div class="card"><h3>📦 Output</h3><p>The compiled code can be further executed using an interpreter to run the program.</p></div>
+        </div>
+        <div class="note"><b>Java's approach:</b> Compiles to bytecode, which runs on the JVM — making Java cross-platform.</div>
+      `
+    });
+
+    // ---- SLIDE 13: #4 Data Type ----
+    S.push({
+      eyebrow: 'Order No. 13 — Concept #4',
+      title: 'Data Type',
+      lede: 'A classification that specifies which type of value a variable has and what operations can be applied to it without error.',
+      body: `
+        <div class="card-grid cols-2">
+          <div class="card"><h3>📝 String</h3><p>Used to classify text. <code class="mono">"Hello, World!"</code></p></div>
+          <div class="card"><h3>🔢 Integer</h3><p>Used to classify whole numbers. <code class="mono">42</code></p></div>
+          <div class="card"><h3>💧 Double</h3><p>Used for decimal numbers. <code class="mono">3.14159</code></p></div>
+          <div class="card"><h3>✅ Boolean</h3><p>True or false. <code class="mono">true</code> / <code class="mono">false</code></p></div>
+        </div>
+        <div class="note">Data types prevent errors — you can't add a string to an integer without conversion.</div>
+      `
+    });
+
+    // ---- SLIDE 14: #5 Variable ----
+    S.push({
+      eyebrow: 'Order No. 14 — Concept #5',
+      title: 'Variable',
+      lede: 'A space holder or data holder for a value stored in memory, used throughout the application.',
+      body: `
+        <div class="two-col">
+          <div>
+            <div class="code-cap">Example</div>
+            ${code(`int grade = 85;  // grade is a variable
+              String name = "John";
+            double pi = 3.14159;`)}
+          </div>
+          <div class="card"><h3>📦 Anatomy</h3><ul class="ticket-list">
+            <li><b>Type</b> — what kind of data (int, String, etc.)</li>
+            <li><b>Name</b> — how you refer to it</li>
+            <li><b>Value</b> — the data stored</li>
+          </ul></div>
+        </div>
+      `
+    });
+
+    // ---- SLIDE 15: #6 Conditionals ----
+    S.push({
+      eyebrow: 'Order No. 15 — Concept #6',
+      title: 'Conditionals',
+      lede: 'Knowledge of how to use conditions so that code executes only when a certain condition is true.',
+      body: `
+        <div class="two-col">
+          <div>
+            <div class="code-cap">Example — if/else</div>
+            ${code(`if (grade >= 85) {
+              System.out.println("passed");
+            } else {
+              System.out.println("failed");
+            }`)}
+          </div>
+          <div class="card"><h3>⚖️ Decision Making</h3><p>If the condition is true, run the code. If false, skip it or run the alternative.</p><p style="margin-top:10px;">Conditionals are the basis of all decision-making in programming.</p></div>
+        </div>
+      `
+    });
+
+    // ---- SLIDE 16: #7 Array ----
+    S.push({
+      eyebrow: 'Order No. 16 — Concept #7',
+      title: 'Array',
+      lede: 'A variable that stores elements of a similar data type — a collection of values under one name.',
+      body: `
+        <div class="two-col">
+          <div>
+            <div class="code-cap">Example — arrays in Java</div>
+            ${code(`int[] num = {1, 2, 3, 4, 10};
+              String[] fruits = {"grape", "guava", "banana"};`)}
+          </div>
+          <div class="card"><h3>📚 Collection</h3><p>Arrays let you store multiple values without creating separate variables for each one.</p><p style="margin-top:10px;">Access elements by index: <code class="mono">num[0]</code> gives <code>1</code>.</p></div>
+        </div>
+      `
+    });
+
+    // ---- SLIDE 17: #8 Loop ----
+    S.push({
+      eyebrow: 'Order No. 17 — Concept #8',
+      title: 'Loop',
+      lede: 'A loop executes a series of code repeatedly until a condition is met.',
+      body: `
+        <div class="two-col">
+          <div>
+            <div class="code-cap">Example — for loop</div>
+            ${code(`for (int i = 0; i < 10; i++) {
+              System.out.println(i);
+            }`)}
+          </div>
+          <div class="card"><h3>🔄 Repetition</h3><p>Loops save you from writing the same code over and over. Java supports <b>for</b>, <b>while</b>, <b>do-while</b>, and <b>enhanced for</b> loops.</p></div>
+        </div>
+        <div class="note">This loop prints numbers 0 through 9. Change <code>10</code> to <code>100</code> to print 0–99.</div>
+      `
+    });
+
+    // ---- SLIDE 18: #9 Function ----
+    S.push({
+      eyebrow: 'Order No. 18 — Concept #9',
+      title: 'Function / Method',
+      lede: 'Functions (or methods) are reusable blocks of code that accomplish a specific task.',
+      body: `
+        <div class="two-col">
+          <div>
+            <div class="code-cap">Example — average function</div>
+            ${code(`int average(int a, int b, int c) {
+              return (a + b + c) / 3;
+            }`)}
+          </div>
+          <div class="card"><h3>♻️ Reuse</h3><p>Functions take parameters, process them, and return a result. Once defined, you can call them anywhere, anytime.</p><p style="margin-top:10px;">This makes code more organized and easier to maintain.</p></div>
+        </div>
+      `
+    });
+
+    // ---- SLIDE 19: #10 Class ----
+    S.push({
+      eyebrow: 'Order No. 19 — Concept #10',
+      title: 'Class',
+      lede: 'A class is like a template that contains state (fields) and behavior (methods). In OOP, everything revolves around classes and objects.',
+      body: `
+        <div class="two-col">
+          <div>
+            <div class="code-cap">Example — a simple class</div>
+            ${code(`public class Record {
+              String location;
+              String name;
+              int distance;
+
+              public Record(String loc, String nme, int dis) {
+                this.location = loc;
+                this.name = nme;
+                this.distance = dis;
+              }
+
+              void display() {
+                System.out.print(this.location + " " + this.name + " " + this.distance);
+              }
+            }`)}
+          </div>
+          <div class="card"><h3>🏗️ Blueprint</h3><p>A class defines the structure. An <b>object</b> is an actual instance created from that blueprint — like a cookie from a cutter.</p></div>
+        </div>
+      `
+    });
+
+    // ---- SLIDE 20: Recap ----
+    S.push({
+      eyebrow: '☕ Order No. 20 — Recap',
+      title: 'Programming Logic &amp; Java — What You Learned',
+      lede: 'A quick review of the key concepts we covered.',
+      body: `
+        <div class="card-grid cols-3">
+          <div class="card"><h3>🧠 Programming Logic</h3><p>Principles that guide how code is arranged to perform tasks.</p></div>
+          <div class="card"><h3>📋 Algorithm</h3><p>Step-by-step instructions to transform data into useful information.</p></div>
+          <div class="card"><h3>☕ Java</h3><p>Object-oriented, cross-platform language that runs on billions of devices.</p></div>
+          <div class="card"><h3>📄 Source Code</h3><p>The actual text you write in a programming language.</p></div>
+          <div class="card"><h3>⚙️ Compiler</h3><p>Translates source code into machine-readable bytecode.</p></div>
+          <div class="card"><h3>📦 Data Types</h3><p>int, double, String, boolean — classify values.</p></div>
+          <div class="card"><h3>📝 Variables</h3><p>Containers that store data in memory.</p></div>
+          <div class="card"><h3>⚖️ Conditionals</h3><p>if/else — make decisions in code.</p></div>
+          <div class="card"><h3>🔄 Loops</h3><p>Repeat code blocks efficiently.</p></div>
+          <div class="card"><h3>♻️ Functions</h3><p>Reusable blocks that perform specific tasks.</p></div>
+          <div class="card"><h3>🏗️ Classes</h3><p>Templates for creating objects with state and behavior.</p></div>
+          <div class="card"><h3>🧩 Objects</h3><p>Instances of classes — the real "things" in your program.</p></div>
+        </div>
+        <div class="quote-block" style="margin-top:18px;">"The basic step to writing an OOP program is to understand your Programming 1 and 2 modules."</div>
+      `
+    });
+
+    // ---- SLIDE 21: CODING ACTIVITY 1 ----
+    S.push({
+      eyebrow: '✏️ Order No. 21 — Activity 1',
+      title: 'Coding Activity: Compute Total',
+      lede: 'Time to write some code! Let\'s start with a simple computation.',
+      body: `
+        <div class="activity-box">
+          <h3>📝 Activity 1 — Compute the total</h3>
+          <div class="prompt">
+            <p><strong>Given:</strong> <code>x = 80</code> and <code>y = 21</code></p>
+            <p><strong>Task:</strong> Write a Java program that computes the total (<code>x + y</code>) and prints the result.</p>
+            <p style="margin-top:12px;"><em>Hint: You need a <code>main</code> method, two variables, and a <code>System.out.println()</code>.</em></p>
+          </div>
+        </div>
+        <div style="margin-top:16px;">
+          <div class="code-cap">Your code template — fill in the blanks</div>
+          ${code(`public class TotalCalculator {
+            public static void main(String[] args) {
+              // Declare variables
+              int x = 80;
+              int y = 21;
+              // Compute total
+              int total = ________;
+              // Print result
+              System.out.println("Total: " + ________);
+            }
+          }`)}
+        </div>
+        <div class="note"><b>💡 Tip:</b> Use the <code>+</code> operator to add the two numbers. The total should be <code>101</code>.</div>
+      `
+    });
+
+    // ---- SLIDE 22: CODING ACTIVITY 2 ----
+    S.push({
+      eyebrow: '✏️ Order No. 22 — Activity 2',
+      title: 'Coding Activity: Algorithm → Java',
+      lede: 'Convert an algorithm into working Java code. This is a core skill for any programmer.',
+      body: `
+        <div class="activity-box">
+          <h3>📝 Activity 2 — Algorithm to Java</h3>
+          <div class="prompt">
+            <p><strong>Algorithm:</strong> Find the largest of three numbers.</p>
+            <ol class="step-list" style="margin-top:8px;">
+              <li>Start</li>
+              <li>Input three numbers: <code>a</code>, <code>b</code>, <code>c</code></li>
+              <li>If <code>a >= b</code> AND <code>a >= c</code>, set <code>largest = a</code></li>
+              <li>Else if <code>b >= a</code> AND <code>b >= c</code>, set <code>largest = b</code></li>
+              <li>Else, set <code>largest = c</code></li>
+              <li>Output <code>largest</code></li>
+              <li>End</li>
+            </ol>
+            <p style="margin-top:12px;"><strong>Task:</strong> Write the Java code that implements this algorithm. Use <code>int</code> values for <code>a</code>, <code>b</code>, <code>c</code>.</p>
+          </div>
+        </div>
+        <div style="margin-top:16px;">
+          <div class="code-cap">Your code — implement the algorithm</div>
+          ${code(`public class LargestFinder {
+            public static void main(String[] args) {
+              int a = 45, b = 78, c = 23;
+              int largest;
+
+              // Your code here — use if/else if/else
+
+
+              System.out.println("The largest number is: " + largest);
+            }
+          }`)}
+        </div>
+        <div class="note"><b>💡 Hint:</b> Use <code>&&</code> (AND) to combine conditions. For example: <code>if (a >= b && a >= c)</code></div>
+      `
+    });
+
+    // ---- SLIDE 23: ANSWER KEYS ----
+    S.push({
+      eyebrow: '🔑 Order No. 23 — Answer Keys',
+      title: 'Answer Keys — Check Your Work',
+      lede: 'Review the solutions and compare with your own code. Learning from examples is key!',
+      body: `
+        <div class="card-grid cols-2">
+          <div class="card answer-key">
+            <h4>✅ Activity 1 — Compute Total</h4>
+            ${code(`public class TotalCalculator {
+              public static void main(String[] args) {
+                int x = 80;
+                int y = 21;
+                int total = x + y;
+                System.out.println("Total: " + total);
+                // Output: Total: 101
+              }
+            }`)}
+            <p style="margin-top:10px;"><b>Answer:</b> <code>101</code></p>
+          </div>
+          <div class="card answer-key">
+            <h4>✅ Activity 2 — Largest of Three</h4>
+            ${code(`public class LargestFinder {
+              public static void main(String[] args) {
+                int a = 45, b = 78, c = 23;
+                int largest;
+
+                if (a >= b && a >= c) {
+                  largest = a;
+                } else if (b >= a && b >= c) {
+                  largest = b;
+                } else {
+                  largest = c;
+                }
+
+                System.out.println("The largest number is: " + largest);
+                // Output: The largest number is: 78
+              }
+            }`)}
+            <p style="margin-top:10px;"><b>Answer:</b> The largest is <code>78</code></p>
+          </div>
+        </div>
+        <div class="quote-block" style="margin-top:18px;">"There is no bed of roses when you are writing code — but with practice, logic, and algorithms, you build mastery."</div>
+        <div class="note"><b>🎯 Next steps:</b> Keep practicing! Try modifying the values or extending the algorithm to handle more numbers.</div>
+      `
+    });
+
+    // ---- roast interpolation ----
+    var STOPS = [
+        { bg: '#F5E3B8', bgAlt: '#FBF1DA', accent: '#C27B22', accentStrong: '#9C5A15', card: '#FFF7E6',
+          cardBorder: [64, 43, 24, 0.18], shadow: [64, 43, 24, 0.15] },
+        { bg: '#C97142', bgAlt: '#E0925C', accent: '#8B3A17', accentStrong: '#6B2A10', card: '#EAC195',
+          cardBorder: [42, 23, 16, 0.28], shadow: [42, 23, 16, 0.22] },
+        { bg: '#331014', bgAlt: '#4A1B1F', accent: '#C24B4F', accentStrong: '#E06B6E', card: '#4A1E22',
+          cardBorder: [240, 220, 196, 0.18], shadow: [0, 0, 0, 0.35] }
+    ];
+    var BG_CROSSOVER_T = 11 / 22;
+    var CARD_CROSSOVER_T = 15 / 22;
+    var TEXT_DARK = '#2E1408',
+        TEXT_DARK_SOFT = '#3F2210';
+    var TEXT_LIGHT = '#FFEDDD',
+        TEXT_LIGHT_SOFT = '#F2E6D6';
+    var ACCENT_DARK_TEXT = '#33170A',
+        ACCENT_LIGHT_TEXT = '#FFEDDD';
+
+    function hexToRgb(h) { h = h.replace('#', ''); return [parseInt(h.substring(0, 2), 16), parseInt(h.substring(2, 4),
+            16), parseInt(h.substring(4, 6), 16)]; }
+
+    function rgbToHex(r, g, b) {
+        function c(x) { x = Math.round(Math.max(0, Math.min(255, x))); return x.toString(16).padStart(2, '0'); }
+        return '#' + c(r) + c(g) + c(b);
+    }
+
+    function lerp(a, b, t) { return a + (b - a) * t; }
+
+    function lerpHex(h1, h2, t) { var c1 = hexToRgb(h1),
+            c2 = hexToRgb(h2); return rgbToHex(lerp(c1[0], c2[0], t), lerp(c1[1], c2[1], t), lerp(c1[2], c2[2], t)); }
+
+    function lerpRgba(a, b, t) { return 'rgba(' + Math.round(lerp(a[0], b[0], t)) + ',' + Math.round(lerp(a[1], b[1],
+            t)) + ',' + Math.round(lerp(a[2], b[2], t)) + ',' + lerp(a[3], b[3], t).toFixed(2) + ')'; }
+
+    function roastVarsAt(t) {
+        var seg, localT;
+        if (t <= 0.5) { seg = [STOPS[0], STOPS[1]];
+            localT = t / 0.5; } else { seg = [STOPS[1], STOPS[2]];
+            localT = (t - 0.5) / 0.5; }
+        var A = seg[0],
+            B = seg[1];
+        return {
+            '--bg': lerpHex(A.bg, B.bg, localT),
+            '--bg-alt': lerpHex(A.bgAlt, B.bgAlt, localT),
+            '--accent': lerpHex(A.accent, B.accent, localT),
+            '--accent-strong': lerpHex(A.accentStrong, B.accentStrong, localT),
+            '--card': lerpHex(A.card, B.card, localT),
+            '--card-border': lerpRgba(A.cardBorder, B.cardBorder, localT),
+            '--shadow': lerpRgba(A.shadow, B.shadow, localT)
+        };
+    }
+
+    function applyRoast(t) {
+        var vars = roastVarsAt(t);
+        var root = document.documentElement.style;
+        for (var k in vars) { root.setProperty(k, vars[k]); }
+        var onBg = t < BG_CROSSOVER_T;
+        root.setProperty('--ink', onBg ? TEXT_DARK : TEXT_LIGHT);
+        root.setProperty('--ink-soft', onBg ? TEXT_DARK_SOFT : TEXT_LIGHT_SOFT);
+        root.setProperty('--eyebrow-ink', onBg ? ACCENT_DARK_TEXT : ACCENT_LIGHT_TEXT);
+        var onCard = t < CARD_CROSSOVER_T;
+        root.setProperty('--card-ink', onCard ? TEXT_DARK : TEXT_LIGHT);
+        root.setProperty('--card-ink-soft', onCard ? TEXT_DARK_SOFT : TEXT_LIGHT_SOFT);
+        root.setProperty('--card-accent', onCard ? ACCENT_DARK_TEXT : ACCENT_LIGHT_TEXT);
+        root.setProperty('--step-num-ink', onCard ? TEXT_LIGHT : TEXT_DARK);
+        var label = t < 0.34 ? 'Light Roast' : (t < 0.67 ? 'Medium Roast' : 'Dark Roast');
+        document.getElementById('roastLabel').textContent = label;
+    }
+
+    // ---- render & navigate ----
+    var stage = document.getElementById('stage');
+    var counterEl = document.getElementById('counter');
+    var progressFill = document.getElementById('progressFill');
+    var total = S.length;
+    var current = 0;
+    var animating = false;
+
+    function buildSlideEl(idx) {
+        var d = S[idx];
+        var el = document.createElement('div');
+        el.className = 'slide';
+        el.innerHTML =
+            '<div class="slide-inner">' +
+            '<div class="eyebrow">' + d.eyebrow + '</div>' +
+            '<h2 class="slide-title">' + d.title + '</h2>' +
+            (d.lede ? '<div class="lede">' + d.lede + '</div>' : '') +
+            d.body +
+            '</div>';
+        return el;
+    }
+
+    function updateHud() {
+        counterEl.textContent = (current + 1) + ' / ' + total;
+        progressFill.style.width = ((current) / (total - 1) * 100) + '%';
+        applyRoast(current / (total - 1));
+    }
+
+    var curEl = buildSlideEl(0);
+    curEl.classList.add('active');
+    stage.appendChild(curEl);
+    updateHud();
+
+    function goTo(idx, dir) {
+        if (animating || idx === current || idx < 0 || idx >= total) return;
+        animating = true;
+        var nextEl = buildSlideEl(idx);
+        nextEl.classList.add(dir > 0 ? 'enter-fwd' : 'enter-bwd');
+        stage.appendChild(nextEl);
+        void nextEl.offsetWidth;
+        var oldEl = curEl;
+        requestAnimationFrame(function() {
+            oldEl.classList.remove('active');
+            oldEl.classList.add(dir > 0 ? 'exit-fwd' : 'exit-bwd');
+            nextEl.classList.remove('enter-fwd', 'enter-bwd');
+            nextEl.classList.add('active');
+        });
+        current = idx;
+        curEl = nextEl;
+        updateHud();
+        setTimeout(function() {
+            if (oldEl && oldEl.parentNode) oldEl.parentNode.removeChild(oldEl);
+            animating = false;
+        }, 420);
+    }
+
+    function next() { goTo(current + 1, 1); }
+
+    function prev() { goTo(current - 1, -1); }
+
+    document.getElementById('clickZone').addEventListener('click', function(e) {
+        var w = window.innerWidth;
+        if (e.clientX < w * 0.25) { prev(); } else { next(); }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault();
+            next(); } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault();
+            prev(); } else if (e.key === 'Home') { e.preventDefault();
+            goTo(0, -1); } else if (e.key === 'End') { e.preventDefault();
+            goTo(total - 1, 1); } else if (e.key === 'ArrowUp') { e.preventDefault();
+            prev(); } else if (e.key === 'ArrowDown') { e.preventDefault();
+            next(); }
+    });
+})();
+</script>
+</body>
+</html>
