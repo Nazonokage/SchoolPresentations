@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M18 — Express.js Routing &amp; HTTP Methods</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0f17;--bg2:#111827;--bg3:#1a2234;--bg4:#1f2c42;
+  --accent:#60a5fa;--accent2:#34d399;--accent3:#fbbf24;--accent4:#f87171;--purple:#a78bfa;
+  --text:#e2e8f4;--text2:#94a3b8;--text3:#64748b;
+  --border:#1e2d45;--border2:#2d3f5c;
+  --code-bg:#080c14;--code-border:#182030;
+  --r:10px;--r2:6px;
+  --get:#34d399;--post:#60a5fa;--put:#fbbf24;--del:#f87171;--patch:#a78bfa;--head:#89dceb;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',system-ui,sans-serif}
+.deck{position:relative;width:100vw;height:100vh;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;padding:44px 64px 36px;opacity:0;pointer-events:none;transition:opacity 350ms ease,transform 350ms ease;transform:translateX(40px);overflow-y:auto}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.prev{opacity:0;transform:translateX(-40px)}
+@media(prefers-reduced-motion:reduce){.slide{transition:none}}
+.slide::-webkit-scrollbar{width:4px}.slide::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+#prog{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width 350ms ease;z-index:99}
+#counter{position:fixed;top:14px;right:24px;font-size:12px;color:var(--text3);z-index:99;font-variant-numeric:tabular-nums}
+
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:9px}
+h1{font-size:clamp(34px,4vw,56px);font-weight:700;line-height:1.1;letter-spacing:-.02em}
+h2{font-size:clamp(24px,2.8vw,36px);font-weight:700;line-height:1.15;letter-spacing:-.015em}
+h3{font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px}
+
+/* Cards */
+.cards{display:grid;gap:12px;margin-top:14px}
+.cols2{grid-template-columns:1fr 1fr}
+.cols3{grid-template-columns:1fr 1fr 1fr}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:15px 17px}
+.card p,.card li{font-size:13.5px;color:var(--text2);line-height:1.65}
+.card ul{padding-left:14px}
+.card.al{border-left:3px solid var(--accent)}
+.card.ag{border-left:3px solid var(--accent2)}
+.card.aa{border-left:3px solid var(--accent3)}
+.card.ar{border-left:3px solid var(--accent4)}
+.card.ap{border-left:3px solid var(--purple)}
+
+/* Code */
+.code-wrap{position:relative;background:var(--code-bg);border:1px solid var(--code-border);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column}
+.code-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#050810;border-bottom:1px solid var(--code-border);flex-shrink:0}
+.code-lang{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.copy-btn{font-size:11px;font-weight:700;color:var(--accent);background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.3);border-radius:4px;padding:3px 9px;cursor:pointer;transition:all .15s;flex-shrink:0}
+.copy-btn:hover{background:rgba(96,165,250,.22)}
+.copy-btn.ok{color:var(--accent2);border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.1)}
+pre{padding:13px 15px;overflow:auto;font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:12.5px;line-height:1.7;color:#cdd6f4;flex:1;min-height:0}
+pre::-webkit-scrollbar{height:4px;width:4px}
+pre::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* Syntax */
+.kw{color:#cba6f7}.fn{color:#89b4fa}.str{color:#a6e3a1}.cm{color:#4a5260;font-style:italic}.var{color:#f38ba8}.num{color:#fab387}.op{color:#89dceb}
+
+/* Split */
+.split-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;height:min(500px,55vh);align-items:stretch;margin-top:12px}
+.split-row .code-wrap{height:100%;overflow:hidden}
+.split-row .panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:15px 17px;overflow-y:auto;height:100%;min-height:0}
+
+/* HTTP Method badges */
+.method-badge{display:inline-flex;align-items:center;font-size:11px;font-weight:800;letter-spacing:.06em;padding:3px 9px;border-radius:4px;font-family:'JetBrains Mono',monospace}
+.m-get{background:rgba(52,211,153,.15);color:var(--get);border:1px solid rgba(52,211,153,.3)}
+.m-post{background:rgba(96,165,250,.15);color:var(--post);border:1px solid rgba(96,165,250,.3)}
+.m-put{background:rgba(251,191,36,.15);color:var(--put);border:1px solid rgba(251,191,36,.3)}
+.m-del{background:rgba(248,113,113,.15);color:var(--del);border:1px solid rgba(248,113,113,.3)}
+.m-patch{background:rgba(167,139,250,.15);color:var(--patch);border:1px solid rgba(167,139,250,.3)}
+.m-head{background:rgba(137,220,235,.15);color:var(--head);border:1px solid rgba(137,220,235,.3)}
+
+/* HTTP Methods grid */
+.methods-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;margin-top:14px}
+.method-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 15px}
+.method-card .mc-verb{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;margin-bottom:5px}
+.method-card .mc-action{font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.method-card .mc-desc{font-size:13px;color:var(--text2);line-height:1.5}
+.method-card.get{border-top:2px solid var(--get)}.method-card.get .mc-verb{color:var(--get)}
+.method-card.post{border-top:2px solid var(--post)}.method-card.post .mc-verb{color:var(--post)}
+.method-card.put{border-top:2px solid var(--put)}.method-card.put .mc-verb{color:var(--put)}
+.method-card.del{border-top:2px solid var(--del)}.method-card.del .mc-verb{color:var(--del)}
+.method-card.patch{border-top:2px solid var(--patch)}.method-card.patch .mc-verb{color:var(--patch)}
+.method-card.head{border-top:2px solid var(--head)}.method-card.head .mc-verb{color:var(--head)}
+
+/* Route anatomy */
+.route-anatomy{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:20px 24px;margin-top:14px;font-family:'JetBrains Mono',monospace;font-size:16px;text-align:center;line-height:1}
+.ra-part{display:inline-block;padding:6px 12px;border-radius:var(--r2);margin:0 4px}
+.ra-app{background:rgba(96,165,250,.1);color:var(--accent);border:1px solid rgba(96,165,250,.25)}
+.ra-method{background:rgba(52,211,153,.1);color:var(--accent2);border:1px solid rgba(52,211,153,.25)}
+.ra-path{background:rgba(251,191,36,.1);color:var(--accent3);border:1px solid rgba(251,191,36,.25)}
+.ra-handler{background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.25)}
+.ra-label{display:block;font-size:11px;margin-top:10px;color:var(--text3);font-family:'Inter',sans-serif;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+
+/* Flow diagram */
+.flow{display:flex;align-items:center;justify-content:center;gap:0;margin-top:16px;flex-wrap:wrap}
+.flow-box{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:12px 18px;text-align:center;min-width:130px}
+.flow-box .fb-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.flow-box .fb-val{font-size:14px;font-weight:600;font-family:'JetBrains Mono',monospace}
+.flow-arrow{padding:0 8px;color:var(--text3);font-size:18px}
+
+/* Analogy */
+.analogy-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;margin-top:14px}
+.ana-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 15px;text-align:center}
+.ana-icon{font-size:28px;margin-bottom:8px}
+.ana-role{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;margin-bottom:4px}
+.ana-title{font-size:14px;font-weight:700;margin-bottom:6px}
+.ana-desc{font-size:12.5px;color:var(--text2);line-height:1.5}
+
+/* Route params visual */
+.url-visual{background:var(--code-bg);border:1px solid var(--code-border);border-radius:var(--r2);padding:14px 18px;font-family:'JetBrains Mono',monospace;font-size:15px;margin-top:12px;text-align:center}
+.url-static{color:var(--accent2)}
+.url-param{color:var(--accent4);background:rgba(248,113,113,.1);padding:1px 4px;border-radius:3px}
+.url-sep{color:var(--text3)}
+
+/* Steps */
+.steps{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+.step{display:flex;gap:12px;align-items:flex-start}
+.step-num{flex-shrink:0;width:26px;height:26px;background:var(--accent);color:#000;font-weight:700;font-size:12px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.step-body h4{font-size:13.5px;font-weight:600;color:var(--text);margin-bottom:2px}
+.step-body p{font-size:12.5px;color:var(--text2);line-height:1.55}
+.step-body code{background:rgba(96,165,250,.1);color:var(--accent);padding:1px 5px;border-radius:3px;font-family:monospace;font-size:12px}
+
+/* Info/tip/warn */
+.info{background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.2);border-radius:var(--r2);padding:10px 13px;font-size:13px;color:var(--text2);line-height:1.6;margin-top:11px}
+.tip{background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2);border-radius:var(--r2);padding:10px 13px;font-size:13px;color:var(--text2);line-height:1.6;margin-top:11px}
+.warn{background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);border-radius:var(--r2);padding:10px 13px;font-size:13px;color:var(--text2);line-height:1.6;margin-top:11px}
+.info strong,.tip strong,.warn strong{color:var(--text)}
+
+/* Hero */
+.hero{flex:1;display:flex;flex-direction:column;justify-content:center}
+.hero-tag{display:inline-flex;align-items:center;gap:7px;background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.25);border-radius:20px;padding:5px 13px;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.05em;margin-bottom:22px;width:fit-content}
+.hero h1{max-width:820px;margin-bottom:14px}
+.hero .sub{font-size:15.5px;color:var(--text2);max-width:580px;line-height:1.65;margin-bottom:24px}
+.logo-row{display:flex;gap:9px;flex-wrap:wrap}
+.logo-chip{display:flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:6px 12px;font-size:12.5px;font-weight:600;color:var(--text2)}
+
+/* Table */
+table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
+th{background:var(--bg3);color:var(--accent);font-weight:600;text-align:left;padding:8px 12px;border-bottom:1px solid var(--border2)}
+td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:top}
+tr:last-child td{border-bottom:none}
+
+/* Dir tree */
+.dir{background:var(--code-bg);border:1px solid var(--code-border);border-radius:var(--r);padding:13px 17px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text2);line-height:2;margin-top:11px;white-space:pre;overflow-x:auto;display:block}
+.dir .folder{color:var(--accent3)}
+.dir .file{color:var(--accent2)}
+.dir .note{color:var(--text3)}
+
+/* Terminal */
+.terminal{background:var(--code-bg);border:1px solid var(--code-border);border-radius:var(--r2);padding:11px 14px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent2);line-height:1.9;margin-top:10px}
+
+/* Quiz */
+.quiz-q{font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px;line-height:1.5}
+.quiz-opt{display:flex;align-items:flex-start;gap:8px;padding:7px 11px;border-radius:var(--r2);border:1px solid var(--border);margin-bottom:5px;font-size:13px;color:var(--text2)}
+.opt-key{font-weight:700;color:var(--accent);min-width:16px;flex-shrink:0}
+
+/* Coding problem */
+.prob-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:11px}
+.prob-tag{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:10px;margin-bottom:7px}
+.prob-tag.fill{background:rgba(167,139,250,.15);color:var(--purple);border:1px solid rgba(167,139,250,.3)}
+.prob-tag.write{background:rgba(96,165,250,.15);color:var(--accent);border:1px solid rgba(96,165,250,.3)}
+.prob-tag.debug{background:rgba(248,113,113,.15);color:var(--accent4);border:1px solid rgba(248,113,113,.3)}
+.prob-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:5px}
+.prob-desc{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:9px}
+
+/* Answer */
+.ans-item{background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--accent2);border-radius:var(--r);padding:11px 13px;margin-bottom:8px}
+.ans-q{font-size:11.5px;color:var(--text3);margin-bottom:3px}
+.ans-a{font-size:13.5px;font-weight:700;color:var(--text)}
+.ans-exp{font-size:12.5px;color:var(--text2);margin-top:3px;line-height:1.5}
+
+code.ic{background:rgba(96,165,250,.1);color:var(--accent);padding:1px 5px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:11.5px}
+.blank{color:#f38ba8;background:rgba(243,139,168,.12);border-bottom:1px dashed #f38ba8;padding:0 4px;border-radius:2px}
+
+/* Help */
+#help{position:fixed;inset:0;background:rgba(0,0,0,.82);display:none;place-items:center;z-index:200}
+#help.show{display:grid}
+.help-box{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:28px 36px;max-width:400px;width:90%}
+.help-box h2{font-size:18px;margin-bottom:16px}
+.help-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:14px}
+.help-row:last-child{border-bottom:none}
+.help-row span:first-child{color:var(--text2)}
+kbd{background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 7px;font-size:11px;color:var(--accent);font-family:monospace}
+
+/* final */
+.final{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.final blockquote{font-size:18px;font-style:italic;color:var(--text2);max-width:560px;line-height:1.7;margin-bottom:18px;position:relative;padding:0 28px}
+.final blockquote::before{content:'\201C';font-size:52px;color:var(--accent);position:absolute;left:0;top:-8px;line-height:1}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<div id="counter">1 / 17</div>
+<div class="deck" id="deck">
+
+<!-- S0: Hero -->
+<div class="slide active">
+  <div class="hero">
+    <div class="hero-tag">🌐 Module 18 &nbsp;·&nbsp; Express.js</div>
+    <h1>Routing &amp;<br>HTTP Methods</h1>
+    <p class="sub">Define how your Express server reacts to every URL and HTTP verb — the mechanism behind every professional web application and REST API.</p>
+    <div class="logo-row">
+      <span class="logo-chip">
+        <svg width="17" height="17" viewBox="0 0 48 48" role="img" aria-label="Express.js"><rect width="48" height="48" rx="8" fill="#333"/><text x="24" y="30" text-anchor="middle" fill="#fff" font-size="10" font-weight="700" font-family="monospace">EXP</text></svg>
+        Express.js
+      </span>
+      <span class="logo-chip">
+        <svg width="17" height="17" viewBox="0 0 48 48" role="img" aria-label="Node.js"><circle cx="24" cy="24" r="24" fill="#026e00"/><text x="24" y="29" text-anchor="middle" fill="#fff" font-size="10" font-weight="700" font-family="monospace">Node</text></svg>
+        Node.js
+      </span>
+      <span class="logo-chip">
+        <svg width="17" height="17" viewBox="0 0 48 48" role="img" aria-label="npm"><rect width="48" height="48" rx="8" fill="#cb3837"/><text x="24" y="30" text-anchor="middle" fill="#fff" font-size="11" font-weight="700" font-family="monospace">npm</text></svg>
+        npm
+      </span>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:22px;flex-wrap:wrap">
+      <span class="method-badge m-get">GET</span>
+      <span class="method-badge m-post">POST</span>
+      <span class="method-badge m-put">PUT</span>
+      <span class="method-badge m-del">DELETE</span>
+      <span class="method-badge m-patch">PATCH</span>
+      <span class="method-badge m-head">HEAD</span>
+    </div>
+  </div>
+</div>
+
+<!-- S1: Review -->
+<div class="slide">
+  <div class="eyebrow">Quick Review — Module 17</div>
+  <h2>Where We Left Off</h2>
+  <div class="cards cols2" style="margin-top:14px">
+    <div class="card al">
+      <h3>✅ Previously Covered</h3>
+      <ul style="margin-top:7px">
+        <li style="font-size:13.5px;color:var(--text2);margin-bottom:5px">Installed and configured Express.js</li>
+        <li style="font-size:13.5px;color:var(--text2);margin-bottom:5px">Created our first Express server</li>
+        <li style="font-size:13.5px;color:var(--text2)">Used <code class="ic">app.listen()</code> to bind to a port</li>
+      </ul>
+    </div>
+    <div class="card ag">
+      <h3>🎯 Today's Goals</h3>
+      <ul style="margin-top:7px">
+        <li style="font-size:13.5px;color:var(--text2);margin-bottom:5px">Explain routing and how URLs map to code</li>
+        <li style="font-size:13.5px;color:var(--text2);margin-bottom:5px">Understand all HTTP methods and when to use each</li>
+        <li style="font-size:13.5px;color:var(--text2)">Build routes with static paths, dynamic params, and chaining</li>
+      </ul>
+    </div>
+  </div>
+  <div style="margin-top:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:15px 17px">
+    <h3 style="margin-bottom:8px">🧩 The Missing Piece</h3>
+    <p style="font-size:14px;color:var(--text2);line-height:1.65">A basic Express server that responds the same way to every request isn't very useful. <strong style="color:var(--text)">Routing</strong> is what lets you say: <em>"when a user visits <code class="ic">/login</code>, run this code — and when they visit <code class="ic">/products</code>, run that code."</em> It's the core mechanism behind every web application.</p>
+  </div>
+  <div class="tip" style="margin-top:12px">
+    <strong>⚙️ Prerequisite:</strong> Node.js installed + a project folder with <code class="ic">npm install express</code> already run. We set this up from scratch in the drill section.
+  </div>
+</div>
+
+<!-- S2: What is Routing -->
+<div class="slide">
+  <div class="eyebrow">Core Concept</div>
+  <h2>What Is Routing?</h2>
+  <p style="font-size:14px;color:var(--text2);margin-top:8px;line-height:1.65">Routing defines how your application's <strong style="color:var(--text)">endpoints (URLs)</strong> respond to client requests. It connects an incoming HTTP method + URL path to a specific callback function called a <strong style="color:var(--accent)">Route Handler</strong>.</p>
+
+  <div class="route-anatomy">
+    <span class="ra-part ra-app">app</span>
+    <span style="color:var(--text3)">.</span>
+    <span class="ra-part ra-method">METHOD</span>
+    <span style="color:var(--text3)">(</span>
+    <span class="ra-part ra-path">PATH</span>
+    <span style="color:var(--text3)">, </span>
+    <span class="ra-part ra-handler">HANDLER</span>
+    <span style="color:var(--text3)">);</span>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:16px">
+      <div><div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:3px">app</div><div style="font-size:12px;color:var(--text2)">Express instance</div></div>
+      <div><div style="font-size:11px;font-weight:700;color:var(--accent2);margin-bottom:3px">METHOD</div><div style="font-size:12px;color:var(--text2)">get, post, put, delete...</div></div>
+      <div><div style="font-size:11px;font-weight:700;color:var(--accent3);margin-bottom:3px">PATH</div><div style="font-size:12px;color:var(--text2)">'/users', '/about', '/:id'</div></div>
+      <div><div style="font-size:11px;font-weight:700;color:var(--purple);margin-bottom:3px">HANDLER</div><div style="font-size:12px;color:var(--text2)">(req, res) =&gt; callback</div></div>
+    </div>
+  </div>
+
+  <div class="flow" style="margin-top:18px">
+    <div class="flow-box">
+      <div class="fb-label" style="color:var(--accent2)">Client</div>
+      <div class="fb-val" style="color:var(--accent2)">Browser / App</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <div class="fb-label" style="color:var(--accent3)">Request</div>
+      <div class="fb-val" style="color:var(--accent3)">GET /users</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <div class="fb-label" style="color:var(--accent)">Router</div>
+      <div class="fb-val" style="color:var(--accent)">app.get('/users')</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <div class="fb-label" style="color:var(--purple)">Handler</div>
+      <div class="fb-val" style="color:var(--purple)">(req, res) =&gt; { }</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <div class="fb-label" style="color:var(--accent4)">Response</div>
+      <div class="fb-val" style="color:var(--accent4)">res.send(...)</div>
+    </div>
+  </div>
+
+  <div class="cards cols3" style="margin-top:14px">
+    <div class="card al">
+      <h3>req — Request Object</h3>
+      <p>Contains everything about the incoming request: URL, method, body, headers, params, query strings.</p>
+    </div>
+    <div class="card ag">
+      <h3>res — Response Object</h3>
+      <p>Used to send data back: <code class="ic">res.send()</code>, <code class="ic">res.json()</code>, <code class="ic">res.render()</code>, <code class="ic">res.redirect()</code>.</p>
+    </div>
+    <div class="card ap">
+      <h3>Route Handler</h3>
+      <p>The callback function that runs when the method + path matches. Can be a single function or a chain of middleware.</p>
+    </div>
+  </div>
+</div>
+
+<!-- S3: HTTP Methods -->
+<div class="slide">
+  <div class="eyebrow">HTTP Methods</div>
+  <h2>The Six Core HTTP Verbs</h2>
+  <p style="font-size:13.5px;color:var(--text2);margin-top:7px;line-height:1.6">HTTP methods define the <strong style="color:var(--text)">intended action</strong> a client wants to perform. Use the right verb for the right operation to build a predictable, RESTful API.</p>
+  <div class="methods-grid">
+    <div class="method-card get">
+      <div class="mc-verb">GET</div>
+      <div class="mc-action">Retrieve</div>
+      <div class="mc-desc">Fetch data — web pages, user lists, product details. Does <strong style="color:var(--text)">not</strong> modify data. Safe and idempotent.</div>
+    </div>
+    <div class="method-card post">
+      <div class="mc-verb">POST</div>
+      <div class="mc-action">Submit / Create</div>
+      <div class="mc-desc">Send new data to the server — creating accounts, posting comments, submitting forms.</div>
+    </div>
+    <div class="method-card put">
+      <div class="mc-verb">PUT</div>
+      <div class="mc-action">Replace</div>
+      <div class="mc-desc">Replace an <strong style="color:var(--text)">entire</strong> resource with new data — e.g. replacing a complete user profile.</div>
+    </div>
+    <div class="method-card del">
+      <div class="mc-verb">DELETE</div>
+      <div class="mc-action">Remove</div>
+      <div class="mc-desc">Remove a specific resource — deleting a user account or removing a cart item.</div>
+    </div>
+    <div class="method-card patch">
+      <div class="mc-verb">PATCH</div>
+      <div class="mc-action">Partial Update</div>
+      <div class="mc-desc">Update only <strong style="color:var(--text)">specific fields</strong> — changing just an email without re-sending the full profile.</div>
+    </div>
+    <div class="method-card head">
+      <div class="mc-verb">HEAD</div>
+      <div class="mc-action">Headers Only</div>
+      <div class="mc-desc">Like GET but returns <strong style="color:var(--text)">only headers</strong> — used to check if a resource exists or was modified.</div>
+    </div>
+  </div>
+  <table style="margin-top:12px">
+    <thead><tr><th>Method</th><th>Express Function</th><th>Common Use</th></tr></thead>
+    <tbody>
+      <tr><td><span class="method-badge m-get">GET</span></td><td><code class="ic">app.get()</code></td><td>Load a page, fetch a list of records</td></tr>
+      <tr><td><span class="method-badge m-post">POST</span></td><td><code class="ic">app.post()</code></td><td>Submit a form, create a new record</td></tr>
+      <tr><td><span class="method-badge m-put">PUT</span></td><td><code class="ic">app.put()</code></td><td>Replace an entire resource</td></tr>
+      <tr><td><span class="method-badge m-del">DELETE</span></td><td><code class="ic">app.delete()</code></td><td>Remove a record by ID</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- S4: Route Paths & Params -->
+<div class="slide">
+  <div class="eyebrow">Route Design</div>
+  <h2>Paths, Parameters &amp; Route Handlers</h2>
+  <div class="cards cols3" style="margin-top:12px">
+    <div class="card al">
+      <h3>1. Static Paths</h3>
+      <p>Match an exact URL string. Simple and predictable.</p>
+      <div style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--accent2)">/about<br>/users<br>/login</div>
+    </div>
+    <div class="card aa">
+      <h3>2. Dynamic Parameters</h3>
+      <p>Capture values from the URL using a colon prefix. Available in <code class="ic">req.params</code>.</p>
+      <div style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--accent3)">/users/<span style="color:var(--accent4)">:id</span><br>/posts/<span style="color:var(--accent4)">:slug</span><br>/shop/<span style="color:var(--accent4)">:category</span>/<span style="color:var(--accent4)">:id</span></div>
+    </div>
+    <div class="card ap">
+      <h3>3. Route Chaining</h3>
+      <p>Handle multiple methods for one path using <code class="ic">app.route()</code> — keeps code organized.</p>
+      <div style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--purple);line-height:1.8">app.route('/users')<br>&nbsp;.get(handler)<br>&nbsp;.post(handler)<br>&nbsp;.delete(handler)</div>
+    </div>
+  </div>
+
+  <div style="margin-top:14px">
+    <h3 style="margin-bottom:8px">URL Parameter Anatomy</h3>
+    <div class="url-visual">
+      <span class="url-static">http://localhost:3000</span><span class="url-sep">/</span><span class="url-static">users</span><span class="url-sep">/</span><span class="url-param">:id</span><span class="url-sep">/</span><span class="url-static">posts</span><span class="url-sep">/</span><span class="url-param">:postId</span>
+      <div style="display:flex;justify-content:center;gap:40px;margin-top:12px;font-size:12px">
+        <span style="color:var(--accent2)">← static segments →</span>
+        <span style="color:var(--accent4)">← dynamic params →</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+      <div class="card aa">
+        <h3>req.params</h3>
+        <p>Object containing all dynamic URL segments. <code class="ic">req.params.id</code> gives you the value from <code class="ic">:id</code> in the path.</p>
+      </div>
+      <div class="card ag">
+        <h3>req.query</h3>
+        <p>Object containing query string values from the URL. <code class="ic">/search?q=express</code> gives <code class="ic">req.query.q === 'express'</code>.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S5: Basic Routes Code -->
+<div class="slide">
+  <div class="eyebrow">Implementation</div>
+  <h2>Basic Routing — GET, POST, DELETE</h2>
+  <div class="split-row">
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JS — Basic Routes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="kw">const</span> express <span class="op">=</span> <span class="fn">require</span>(<span class="str">'express'</span>);
+<span class="kw">const</span> app     <span class="op">=</span> <span class="fn">express</span>();
+
+<span class="cm">// Middleware: parse incoming JSON bodies</span>
+app.<span class="fn">use</span>(express.<span class="fn">json</span>());
+
+<span class="cm">// 1. GET — root URL</span>
+app.<span class="fn">get</span>(<span class="str">'/'</span>, (req, res) <span class="op">=&gt;</span> {
+  res.<span class="fn">send</span>(<span class="str">'Hello, World!'</span>);
+});
+
+<span class="cm">// 2. GET — static path</span>
+app.<span class="fn">get</span>(<span class="str">'/users'</span>, (req, res) <span class="op">=&gt;</span> {
+  res.<span class="fn">send</span>(<span class="str">'Here is a list of all users.'</span>);
+});
+
+<span class="cm">// 3. GET — dynamic parameter (:id)</span>
+app.<span class="fn">get</span>(<span class="str">'/users/:id'</span>, (req, res) <span class="op">=&gt;</span> {
+  <span class="kw">const</span> userId <span class="op">=</span> req.params.id;
+  res.<span class="fn">send</span>(<span class="str">`User info for ID: ${userId}`</span>);
+});
+
+<span class="cm">// 4. POST — create new user</span>
+app.<span class="fn">post</span>(<span class="str">'/users'</span>, (req, res) <span class="op">=&gt;</span> {
+  <span class="kw">const</span> newUser <span class="op">=</span> req.body;
+  res.<span class="fn">json</span>({
+    message : <span class="str">'User created!'</span>,
+    user    : newUser
+  });
+});
+
+<span class="cm">// 5. DELETE — remove a user by ID</span>
+app.<span class="fn">delete</span>(<span class="str">'/users/:id'</span>, (req, res) <span class="op">=&gt;</span> {
+  <span class="kw">const</span> userId <span class="op">=</span> req.params.id;
+  res.<span class="fn">send</span>(<span class="str">`User ${userId} deleted.`</span>);
+});
+
+app.<span class="fn">listen</span>(<span class="num">3000</span>, () <span class="op">=&gt;</span>
+  console.<span class="fn">log</span>(<span class="str">'Server on port 3000'</span>)
+);</pre>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--accent);margin-bottom:12px">📋 Route Breakdown</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num" style="background:var(--get);color:#000">1</div>
+          <div class="step-body">
+            <h4><span class="method-badge m-get" style="font-size:10px">GET</span> / — Root Handler</h4>
+            <p>The simplest route. <code>res.send()</code> sends a plain string response. Every Express app needs at least this.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--get);color:#000">2</div>
+          <div class="step-body">
+            <h4><span class="method-badge m-get" style="font-size:10px">GET</span> /users/:id — Dynamic</h4>
+            <p><code>:id</code> captures whatever value appears in that URL segment. Access it via <code>req.params.id</code>.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--post);color:#000">3</div>
+          <div class="step-body">
+            <h4><span class="method-badge m-post" style="font-size:10px">POST</span> /users — Create</h4>
+            <p><code>express.json()</code> middleware parses the request body so <code>req.body</code> contains the sent JSON. Without it, <code>req.body</code> is undefined.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--del);color:#000">4</div>
+          <div class="step-body">
+            <h4><span class="method-badge m-del" style="font-size:10px">DELETE</span> /users/:id</h4>
+            <p>Same path as GET /users/:id but a different HTTP method — Express routes them to completely different handlers.</p>
+          </div>
+        </div>
+      </div>
+      <div class="info" style="margin-top:10px">
+        <strong>Same path, different methods:</strong> <code class="ic">GET /users/:id</code> and <code class="ic">DELETE /users/:id</code> share a path but Express calls different handlers — this is the foundation of REST API design.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S6: Route Chaining -->
+<div class="slide">
+  <div class="eyebrow">Advanced Routing</div>
+  <h2>Route Chaining &amp; Multiple Handlers</h2>
+  <div class="split-row">
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JS — app.route() Chaining</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="kw">const</span> express <span class="op">=</span> <span class="fn">require</span>(<span class="str">'express'</span>);
+<span class="kw">const</span> app     <span class="op">=</span> <span class="fn">express</span>();
+app.<span class="fn">use</span>(express.<span class="fn">json</span>());
+
+<span class="cm">// Route chaining: all methods for /users</span>
+app.<span class="fn">route</span>(<span class="str">'/users'</span>)
+  .<span class="fn">get</span>((req, res) <span class="op">=&gt;</span> {
+    res.<span class="fn">json</span>({ message: <span class="str">'GET: all users'</span> });
+  })
+  .<span class="fn">post</span>((req, res) <span class="op">=&gt;</span> {
+    res.<span class="fn">json</span>({
+      message : <span class="str">'POST: user created'</span>,
+      data    : req.body
+    });
+  });
+
+<span class="cm">// Route chaining with params: /users/:id</span>
+app.<span class="fn">route</span>(<span class="str">'/users/:id'</span>)
+  .<span class="fn">get</span>((req, res) <span class="op">=&gt;</span> {
+    res.<span class="fn">json</span>({ message: <span class="str">`GET user ${req.params.id}`</span> });
+  })
+  .<span class="fn">put</span>((req, res) <span class="op">=&gt;</span> {
+    res.<span class="fn">json</span>({
+      message : <span class="str">`PUT: replaced user ${req.params.id}`</span>,
+      data    : req.body
+    });
+  })
+  .<span class="fn">patch</span>((req, res) <span class="op">=&gt;</span> {
+    res.<span class="fn">json</span>({
+      message : <span class="str">`PATCH: updated user ${req.params.id}`</span>,
+      data    : req.body
+    });
+  })
+  .<span class="fn">delete</span>((req, res) <span class="op">=&gt;</span> {
+    res.<span class="fn">json</span>({
+      message: <span class="str">`DELETE: removed user ${req.params.id}`</span>
+    });
+  });
+
+app.<span class="fn">listen</span>(<span class="num">3000</span>, () <span class="op">=&gt;</span>
+  console.<span class="fn">log</span>(<span class="str">'Chained routes on port 3000'</span>)
+);</pre>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--purple);margin-bottom:12px">🔗 Chaining — Key Points</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num" style="background:var(--purple);color:#fff">1</div>
+          <div class="step-body">
+            <h4>DRY — Don't Repeat the Path</h4>
+            <p><code>app.route('/users/:id')</code> declares the path <strong>once</strong>. Each chained method (<code>.get()</code>, <code>.put()</code>) handles its own HTTP verb without repeating <code>'/users/:id'</code>.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--purple);color:#fff">2</div>
+          <div class="step-body">
+            <h4>PUT vs PATCH</h4>
+            <p><code>PUT</code> replaces the <strong>entire</strong> record — send all fields. <code>PATCH</code> updates only the fields you send. Use PATCH for small edits like changing an email.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--purple);color:#fff">3</div>
+          <div class="step-body">
+            <h4>res.json() vs res.send()</h4>
+            <p><code>res.json()</code> automatically sets the <code>Content-Type: application/json</code> header and serializes your object. Use it for API responses; use <code>res.send()</code> for plain strings or HTML.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--purple);color:#fff">4</div>
+          <div class="step-body">
+            <h4>Middleware per route</h4>
+            <p>You can add middleware between the path and handler: <code>app.get('/path', authCheck, handler)</code>. The middleware runs first, then calls <code>next()</code> to proceed.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S7: Drill — Project Setup -->
+<div class="slide">
+  <div class="eyebrow">Guided Drill — Phase 1</div>
+  <h2>Project Setup &amp; First GET Route</h2>
+  <div class="cards cols2" style="margin-top:14px">
+    <div>
+      <h3 style="color:var(--accent);margin-bottom:10px">📁 Steps 1–3: Scaffold</h3>
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><span class="cm"># Step 1: Create project folder</span>
+mkdir my-express-app
+cd my-express-app
+
+<span class="cm"># Step 2: Initialize npm project</span>
+npm init -y
+
+<span class="cm"># Step 3: Install Express.js</span>
+npm install express</pre>
+      </div>
+      <h3 style="color:var(--accent2);margin-top:14px;margin-bottom:8px">🗂️ Project Structure</h3>
+      <div class="dir"><span class="folder">my-express-app/</span>
+├── <span class="file">index.js</span>      <span class="note">← entry point</span>
+├── <span class="file">package.json</span>  <span class="note">← npm config</span>
+└── <span class="folder">node_modules/</span> <span class="note">← installed packages</span></div>
+    </div>
+    <div>
+      <h3 style="color:var(--accent3);margin-bottom:10px">📝 Step 4: index.js — First Routes</h3>
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">JS — index.js</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><span class="cm">// Import Express</span>
+<span class="kw">const</span> express <span class="op">=</span> <span class="fn">require</span>(<span class="str">'express'</span>);
+<span class="kw">const</span> app     <span class="op">=</span> <span class="fn">express</span>();
+<span class="kw">const</span> port    <span class="op">=</span> <span class="num">3000</span>;
+
+<span class="cm">// Static GET route</span>
+app.<span class="fn">get</span>(<span class="str">'/hello'</span>, (req, res) <span class="op">=&gt;</span> {
+  res.<span class="fn">send</span>(<span class="str">'Hello, World!'</span>);
+});
+
+<span class="cm">// Dynamic GET route with :name param</span>
+app.<span class="fn">get</span>(<span class="str">'/greet/:name'</span>, (req, res) <span class="op">=&gt;</span> {
+  <span class="kw">const</span> name <span class="op">=</span> req.params.name;
+  res.<span class="fn">send</span>(<span class="str">`Hello there, ${name}!`</span>);
+});
+
+app.<span class="fn">listen</span>(port, () <span class="op">=&gt;</span>
+  console.<span class="fn">log</span>(<span class="str">`Server started on port ${port}`</span>)
+);</pre>
+      </div>
+      <div class="code-wrap" style="margin-top:10px">
+        <div class="code-header"><span class="code-lang">bash — Run</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre>node index.js</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S8: Drill — Test Routes -->
+<div class="slide">
+  <div class="eyebrow">Guided Drill — Phase 2</div>
+  <h2>Testing Your Routes in the Browser</h2>
+  <div class="cards cols2" style="margin-top:14px">
+    <div>
+      <h3 style="color:var(--accent2);margin-bottom:10px">🧪 Step 5 — Test Static Route</h3>
+      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:14px 16px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px">BROWSER ADDRESS BAR</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--accent2)">http://localhost:3000/hello</div>
+      </div>
+      <div class="terminal">Hello, World!</div>
+      <h3 style="color:var(--accent3);margin-top:14px;margin-bottom:10px">🧪 Step 6 — Test Dynamic Route</h3>
+      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:14px 16px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px">BROWSER ADDRESS BAR</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--accent3)">http://localhost:3000/greet/Kazimiera</div>
+      </div>
+      <div class="terminal">Hello there, Kazimiera!</div>
+      <div class="tip" style="margin-top:10px">
+        <strong>💡 Try it yourself:</strong> Replace "Kazimiera" in the URL with your own name — the <code class="ic">:name</code> parameter captures whatever you put there.
+      </div>
+    </div>
+    <div>
+      <h3 style="color:var(--accent);margin-bottom:10px">🔧 Testing POST Routes</h3>
+      <p style="font-size:13.5px;color:var(--text2);margin-bottom:10px;line-height:1.6">Browsers only send <code class="ic">GET</code> requests from the address bar. To test <code class="ic">POST</code>, <code class="ic">PUT</code>, <code class="ic">DELETE</code> routes, use one of these tools:</p>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body"><h4>Postman / Insomnia</h4><p>GUI tools that let you craft any HTTP request — choose method, set headers, write a JSON body, hit Send.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body"><h4>Thunder Client (VS Code)</h4><p>A Postman-like extension built right into VS Code. Install from the Extensions panel.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body"><h4>curl (Terminal)</h4>
+            <div class="code-wrap" style="margin-top:6px">
+              <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre>curl -X POST http://localhost:3000/users \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Zoran","age":25}'</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S9: Analogy -->
+<div class="slide">
+  <div class="eyebrow">Real-World Analogy</div>
+  <h2>Routing = The Post Office</h2>
+  <p style="font-size:14px;color:var(--text2);margin-top:7px">Think of your Express server as a large post office. Every incoming request is a piece of mail that needs to be sorted and delivered.</p>
+  <div class="analogy-grid">
+    <div class="ana-card">
+      <div class="ana-icon">🏢</div>
+      <div class="ana-role" style="color:var(--accent)">Express Server</div>
+      <div class="ana-title">The Post Office</div>
+      <div class="ana-desc">Receives all incoming mail (requests) and routes them to the right handler based on address and mail type.</div>
+    </div>
+    <div class="ana-card">
+      <div class="ana-icon">🗺️</div>
+      <div class="ana-role" style="color:var(--accent2)">URL Path</div>
+      <div class="ana-title">Street Address</div>
+      <div class="ana-desc">The physical destination — <code class="ic">/users/123</code> is like "123 User Street". The router uses this to decide where to send the request.</div>
+    </div>
+    <div class="ana-card">
+      <div class="ana-icon">📬</div>
+      <div class="ana-role" style="color:var(--accent3)">HTTP Method</div>
+      <div class="ana-title">Type of Mail</div>
+      <div class="ana-desc">GET = letter asking for info. POST = new package to send. PUT/PATCH = correcting an address. DELETE = cancellation request.</div>
+    </div>
+    <div class="ana-card">
+      <div class="ana-icon">📦</div>
+      <div class="ana-role" style="color:var(--accent)">Router</div>
+      <div class="ana-title">Sorting Room</div>
+      <div class="ana-desc">Reads the address + mail type and decides which mail carrier (handler function) should deliver it.</div>
+    </div>
+    <div class="ana-card">
+      <div class="ana-icon">🧑‍💼</div>
+      <div class="ana-role" style="color:var(--purple)">Route Handler</div>
+      <div class="ana-title">Mail Carrier</div>
+      <div class="ana-desc">The function that receives the request and performs the specific action — reads the letter, delivers the package, processes the return.</div>
+    </div>
+    <div class="ana-card">
+      <div class="ana-icon">📮</div>
+      <div class="ana-role" style="color:var(--accent4)">res.send()</div>
+      <div class="ana-title">Delivery Receipt</div>
+      <div class="ana-desc">The confirmation sent back to the sender — "your request was received and processed." The server's response to the client.</div>
+    </div>
+  </div>
+  <div class="cards cols3" style="margin-top:12px">
+    <div class="card al"><h3>🛒 Blog REST API</h3><p>GET /posts (all), POST /posts (create), GET /posts/:id (one), DELETE /posts/:id (remove).</p></div>
+    <div class="card ag"><h3>🛒 E-Commerce Cart</h3><p>GET /cart, POST /cart/items (add), PATCH /cart/items/:id (quantity), DELETE /cart/items/:id (remove).</p></div>
+    <div class="card ap"><h3>🔐 Auth System</h3><p>POST /login (submit form), POST /logout (clear session), POST /register (new account).</p></div>
+  </div>
+</div>
+
+<!-- S10: FAQ -->
+<div class="slide">
+  <div class="eyebrow">Lesson Wrap-Up</div>
+  <h2>FAQs &amp; Summary</h2>
+  <div class="cards" style="margin-top:12px">
+    <div class="card al">
+      <h3>❓ What is the purpose of routing in Express.js?</h3>
+      <p>Routing lets your application respond differently to each URL + HTTP method combination. Visiting <code class="ic">/about</code> loads the About page, submitting to <code class="ic">/login</code> authenticates the user — routing connects the URL to the right function.</p>
+    </div>
+    <div class="card ag">
+      <h3>❓ How do I define a route in Express.js?</h3>
+      <p>Use <code class="ic">app.METHOD(path, handler)</code> — e.g. <code class="ic">app.get('/', (req, res) =&gt; res.send('Hello'))</code>. Replace METHOD with the appropriate HTTP verb. The handler receives <code class="ic">req</code> and <code class="ic">res</code> objects.</p>
+    </div>
+    <div class="card aa">
+      <h3>❓ Can I have multiple handlers for one route?</h3>
+      <p>Yes — use <code class="ic">app.route('/path').get(fn1).post(fn2)</code> for chaining, or pass multiple callbacks: <code class="ic">app.get('/path', middleware, handler)</code>. The middleware runs first and calls <code class="ic">next()</code> to continue.</p>
+    </div>
+  </div>
+  <div style="margin-top:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:15px 17px">
+    <h3 style="margin-bottom:8px">📋 Module Summary</h3>
+    <p style="font-size:14px;color:var(--text2);line-height:1.65">Today we unlocked the routing system of Express.js. We connected <strong style="color:var(--accent2)">HTTP methods</strong> (GET, POST, PUT, DELETE, PATCH) and <strong style="color:var(--accent3)">URL paths</strong> (static and dynamic with <code class="ic">:params</code>) to dedicated <strong style="color:var(--purple)">route handlers</strong> via <code class="ic">app.METHOD(path, handler)</code>. We also explored <strong style="color:var(--accent)">route chaining</strong> with <code class="ic">app.route()</code> to organize multiple methods under the same resource path.</p>
+  </div>
+</div>
+
+<!-- S11: Recap -->
+<div class="slide">
+  <div class="eyebrow">Recap</div>
+  <h2>Key Takeaways</h2>
+  <div class="cards cols2" style="margin-top:14px">
+    <div class="card al">
+      <h3>🔵 Route Syntax</h3>
+      <ul style="margin-top:7px">
+        <li style="font-size:13px;color:var(--text2);margin-bottom:5px"><code class="ic">app.get(path, handler)</code> — handle GET</li>
+        <li style="font-size:13px;color:var(--text2);margin-bottom:5px"><code class="ic">app.post(path, handler)</code> — handle POST</li>
+        <li style="font-size:13px;color:var(--text2);margin-bottom:5px"><code class="ic">app.put(path, handler)</code> — handle PUT</li>
+        <li style="font-size:13px;color:var(--text2)"><code class="ic">app.delete(path, handler)</code> — handle DELETE</li>
+      </ul>
+    </div>
+    <div class="card ag">
+      <h3>🔑 Request Object</h3>
+      <ul style="margin-top:7px">
+        <li style="font-size:13px;color:var(--text2);margin-bottom:5px"><code class="ic">req.params.id</code> — URL segment value from <code class="ic">:id</code></li>
+        <li style="font-size:13px;color:var(--text2);margin-bottom:5px"><code class="ic">req.query.term</code> — <code class="ic">?term=value</code> from URL</li>
+        <li style="font-size:13px;color:var(--text2)"><code class="ic">req.body</code> — JSON body (needs <code class="ic">express.json()</code>)</li>
+      </ul>
+    </div>
+    <div class="card aa">
+      <h3>📤 Response Methods</h3>
+      <ul style="margin-top:7px">
+        <li style="font-size:13px;color:var(--text2);margin-bottom:5px"><code class="ic">res.send(string)</code> — plain text or HTML</li>
+        <li style="font-size:13px;color:var(--text2);margin-bottom:5px"><code class="ic">res.json(object)</code> — JSON response</li>
+        <li style="font-size:13px;color:var(--text2);margin-bottom:5px"><code class="ic">res.render(view, data)</code> — EJS/Pug template</li>
+        <li style="font-size:13px;color:var(--text2)"><code class="ic">res.redirect(url)</code> — redirect client</li>
+      </ul>
+    </div>
+    <div class="card ap">
+      <h3>🔗 Route Chaining</h3>
+      <ul style="margin-top:7px">
+        <li style="font-size:13px;color:var(--text2);margin-bottom:5px"><code class="ic">app.route('/path')</code> — declare path once</li>
+        <li style="font-size:13px;color:var(--text2);margin-bottom:5px">Chain: <code class="ic">.get(...).post(...).delete(...)</code></li>
+        <li style="font-size:13px;color:var(--text2)">Keeps code DRY and organized by resource</li>
+      </ul>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center">
+    <span style="font-size:13px;color:var(--text3);margin-right:4px">HTTP Methods used today:</span>
+    <span class="method-badge m-get">GET</span>
+    <span class="method-badge m-post">POST</span>
+    <span class="method-badge m-put">PUT</span>
+    <span class="method-badge m-patch">PATCH</span>
+    <span class="method-badge m-del">DELETE</span>
+    <span class="method-badge m-head">HEAD</span>
+  </div>
+</div>
+
+<!-- S12: Quiz MC -->
+<div class="slide">
+  <div class="eyebrow">Skill-Building Check — Multiple Choice</div>
+  <h2>Questions 1 – 7</h2>
+  <div class="cards cols2" style="margin-top:12px">
+    <div>
+      <div class="quiz-q">1. Which Express method handles a GET request?</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>app.get()</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>app.post()</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>app.put()</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>app.delete()</div>
+
+      <div class="quiz-q" style="margin-top:11px">2. Which Express method handles a POST request?</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>app.get()</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>app.post()</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>app.put()</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>app.delete()</div>
+
+      <div class="quiz-q" style="margin-top:11px">3. Which Express method handles a PUT request?</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>app.get()</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>app.post()</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>app.put()</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>app.delete()</div>
+
+      <div class="quiz-q" style="margin-top:11px">4. Which Express method handles a DELETE request?</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>app.get()</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>app.post()</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>app.put()</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>app.delete()</div>
+    </div>
+    <div>
+      <div class="quiz-q">5. True or False: Express.js allows you to define routes for different HTTP methods.</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>True</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>False</div>
+
+      <div class="quiz-q" style="margin-top:11px">6. True or False: <code class="ic">res.send()</code> sends a response back to the client.</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>True</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>False</div>
+
+      <div class="quiz-q" style="margin-top:11px">7. True or False: <code class="ic">res.render()</code> processes a template engine and sends generated HTML.</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>True</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>False</div>
+    </div>
+  </div>
+</div>
+
+<!-- S13: Coding Problems -->
+<div class="slide">
+  <div class="eyebrow">Skill-Building Check — Coding Problems</div>
+  <h2>Questions 8 – 10</h2>
+  <p style="font-size:12.5px;color:var(--text3);margin-top:4px;margin-bottom:12px">Assume <code class="ic">express</code> is imported and <code class="ic">const app = express()</code> is already declared.</p>
+
+  <div class="prob-box">
+    <div class="prob-tag fill">✏️ Fill in the Blank</div>
+    <div class="prob-title">Question 8 — Complete the Dynamic GET Route</div>
+    <div class="prob-desc">Fill in the four blanks so this route correctly handles <code class="ic">GET /products/:id</code> and responds with a message containing the product ID.</div>
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JS — Fill in the Blanks</span></div>
+      <pre>app.<span class="blank">____</span>(<span class="str">'/products/<span class="blank">____</span>'</span>, (req, res) <span class="op">=&gt;</span> {
+  <span class="kw">const</span> productId <span class="op">=</span> req.<span class="blank">____</span>.id;
+  res.<span class="fn">send</span>(<span class="str">`Product ID is: <span class="blank">____</span>`</span>);
+});</pre>
+    </div>
+  </div>
+
+  <div class="cards cols2" style="margin-top:10px">
+    <div class="prob-box" style="margin-bottom:0">
+      <div class="prob-tag write">✍️ Write from Scratch</div>
+      <div class="prob-title">Question 9 — Build a Chained Route</div>
+      <div class="prob-desc">Using <code class="ic">app.route()</code>, write a chained route for the path <code class="ic">/posts</code> that handles both a <strong>GET</strong> request (responds with <code class="ic">'All posts returned'</code>) and a <strong>POST</strong> request (responds with <code class="ic">'Post created'</code> as JSON). Both handlers must send a response.</div>
+    </div>
+    <div class="prob-box" style="margin-bottom:0">
+      <div class="prob-tag debug">🐛 Debug the Code</div>
+      <div class="prob-title">Question 10 — Find &amp; Fix the Bugs</div>
+      <div class="prob-desc">The route below has <strong style="color:var(--accent4)">3 bugs</strong>. Identify and fix each one.</div>
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">JS — Buggy Code</span></div>
+        <pre>app.<span class="fn">gets</span>(<span class="str">'/hello'</span>, (req, res) <span class="op">=&gt;</span> {
+  res.<span class="fn">sends</span>(<span class="str">'Hello World'</span>);
+});
+
+app.<span class="fn">get</span>(<span class="str">'/greet/:name'</span>, (req, res) <span class="op">=&gt;</span> {
+  <span class="kw">const</span> name <span class="op">=</span> req.body.name;
+  res.<span class="fn">send</span>(<span class="str">`Hello ${name}!`</span>);
+});</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S14: Answer Key MC -->
+<div class="slide">
+  <div class="eyebrow">Answer Key — Part 1</div>
+  <h2>Multiple Choice Answers (Q1–7)</h2>
+  <div class="cards cols2" style="margin-top:12px">
+    <div>
+      <div class="ans-item">
+        <div class="ans-q">Q1: Which method handles a GET request?</div>
+        <div class="ans-a">✅ A — app.get()</div>
+        <div class="ans-exp">app.get() is the dedicated Express method for defining route handlers for incoming HTTP GET requests.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q2: Which method handles a POST request?</div>
+        <div class="ans-a">✅ B — app.post()</div>
+        <div class="ans-exp">app.post() handles POST requests — typically used to submit data and create new resources on the server.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q3: Which method handles a PUT request?</div>
+        <div class="ans-a">✅ C — app.put()</div>
+        <div class="ans-exp">app.put() handles PUT requests — intended to replace an entire existing resource with new data.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q4: Which method handles a DELETE request?</div>
+        <div class="ans-a">✅ D — app.delete()</div>
+        <div class="ans-exp">app.delete() handles DELETE requests — used to remove specified resources from the server.</div>
+      </div>
+    </div>
+    <div>
+      <div class="ans-item">
+        <div class="ans-q">Q5: Express allows routes for different HTTP methods?</div>
+        <div class="ans-a">✅ A — True</div>
+        <div class="ans-exp">Express provides app.get(), app.post(), app.put(), app.delete(), and more — each routes a specific HTTP verb to its own handler function.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q6: res.send() sends a response to the client?</div>
+        <div class="ans-a">✅ A — True</div>
+        <div class="ans-exp">res.send() is the primary response method — it can send strings, JSON, buffers, or HTML and automatically sets appropriate headers.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q7: res.render() processes templates and sends HTML?</div>
+        <div class="ans-a">✅ A — True</div>
+        <div class="ans-exp">res.render() works with template engines like EJS or Pug — it processes the template file with given data and sends the generated HTML to the browser.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S15: Answer Key Coding -->
+<div class="slide">
+  <div class="eyebrow">Answer Key — Part 2</div>
+  <h2>Coding Problem Answers (Q8–10)</h2>
+  <div class="cards cols2" style="margin-top:12px">
+    <div>
+      <div class="ans-item" style="border-left-color:var(--purple)">
+        <div class="ans-q">Q8 — Fill in the Blank</div>
+        <div class="ans-a" style="color:var(--purple)">✅ Blank 1: get &nbsp; Blank 2: :id &nbsp; Blank 3: params &nbsp; Blank 4: ${'{'}productId{'}'}</div>
+      </div>
+      <div class="code-wrap" style="margin-bottom:12px">
+        <div class="code-header"><span class="code-lang">JS — Q8 Answer</span></div>
+        <pre>app.<span class="fn">get</span>(<span class="str">'/products/:id'</span>, (req, res) <span class="op">=&gt;</span> {
+  <span class="kw">const</span> productId <span class="op">=</span> req.params.id;
+  res.<span class="fn">send</span>(<span class="str">`Product ID is: ${'{'}productId{'}'}`</span>);
+});</pre>
+      </div>
+      <div class="ans-item" style="border-left-color:var(--text3)">
+        <div class="ans-exp"><strong style="color:var(--text)">Blank 1:</strong> <code class="ic">get</code> — GET method. <strong style="color:var(--text)">Blank 2:</strong> <code class="ic">:id</code> — dynamic param with colon prefix. <strong style="color:var(--text)">Blank 3:</strong> <code class="ic">params</code> — URL params live in req.params. <strong style="color:var(--text)">Blank 4:</strong> template literal referencing productId.</div>
+      </div>
+    </div>
+    <div>
+      <div class="ans-item" style="border-left-color:var(--accent)">
+        <div class="ans-q">Q9 — Write from Scratch: app.route() chaining</div>
+        <div class="ans-a">✅ Reference solution</div>
+      </div>
+      <div class="code-wrap" style="margin-bottom:12px">
+        <div class="code-header"><span class="code-lang">JS — Q9 Answer</span></div>
+        <pre>app.<span class="fn">route</span>(<span class="str">'/posts'</span>)
+  .<span class="fn">get</span>((req, res) <span class="op">=&gt;</span> {
+    res.<span class="fn">send</span>(<span class="str">'All posts returned'</span>);
+  })
+  .<span class="fn">post</span>((req, res) <span class="op">=&gt;</span> {
+    res.<span class="fn">json</span>({ message: <span class="str">'Post created'</span> });
+  });</pre>
+      </div>
+      <div class="ans-item" style="border-left-color:var(--accent4)">
+        <div class="ans-q">Q10 — Debug: 3 bugs identified and fixed</div>
+        <div class="ans-a">✅ Bug list</div>
+        <div class="ans-exp">
+          <strong style="color:var(--text)">Bug 1:</strong> <code class="ic">app.gets()</code> — method doesn't exist → <code class="ic">app.get()</code><br><br>
+          <strong style="color:var(--text)">Bug 2:</strong> <code class="ic">res.sends()</code> — method doesn't exist → <code class="ic">res.send()</code><br><br>
+          <strong style="color:var(--text)">Bug 3:</strong> <code class="ic">req.body.name</code> — dynamic URL params come from <code class="ic">req.params</code>, not <code class="ic">req.body</code> → <code class="ic">req.params.name</code>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S16: Final -->
+<div class="slide">
+  <div class="final">
+    <blockquote>"The art of programming is the art of organizing complexity."</blockquote>
+    <p style="font-size:13px;color:var(--text3);margin-bottom:36px">— Edsger W. Dijkstra</p>
+    <h2 style="margin-bottom:12px">Module 18 Complete 🎉</h2>
+    <p style="font-size:15px;color:var(--text2);max-width:520px;line-height:1.7;margin-bottom:26px">You can now define routes for every HTTP method, handle dynamic URL parameters with <code class="ic">req.params</code>, and organize endpoints cleanly with <code class="ic">app.route()</code>. Your Express app is ready to power a real REST API.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:24px">
+      <span class="method-badge m-get" style="font-size:13px;padding:5px 13px">GET</span>
+      <span class="method-badge m-post" style="font-size:13px;padding:5px 13px">POST</span>
+      <span class="method-badge m-put" style="font-size:13px;padding:5px 13px">PUT</span>
+      <span class="method-badge m-patch" style="font-size:13px;padding:5px 13px">PATCH</span>
+      <span class="method-badge m-del" style="font-size:13px;padding:5px 13px">DELETE</span>
+    </div>
+    <p style="font-size:12px;color:var(--text3)">Press <kbd style="background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 7px;color:var(--accent);font-family:monospace">?</kbd> for navigation shortcuts</p>
+  </div>
+</div>
+
+</div><!-- end deck -->
+
+<div id="help">
+  <div class="help-box">
+    <h2>Keyboard Shortcuts</h2>
+    <div class="help-row"><span>Next slide</span><span><kbd>→</kbd> or <kbd>Right-click</kbd></span></div>
+    <div class="help-row"><span>Previous slide</span><span><kbd>←</kbd></span></div>
+    <div class="help-row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="help-row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="help-row"><span>Close this</span><span><kbd>?</kbd> or <kbd>Esc</kbd></span></div>
+  </div>
+</div>
+
+<script>
+const slides = Array.from(document.querySelectorAll('.slide'));
+const total = slides.length;
+let cur = 0;
+
+function go(n) {
+  n = Math.max(0, Math.min(total - 1, n));
+  if (n === cur) return;
+  const prev = cur;
+  slides[prev].classList.remove('active');
+  if (n > prev) slides[prev].classList.add('prev');
+  setTimeout(() => slides[prev].classList.remove('prev'), 360);
+  cur = n;
+  slides[cur].classList.add('active');
+  slides[cur].classList.remove('prev');
+  document.getElementById('prog').style.width = ((cur + 1) / total * 100) + '%';
+  document.getElementById('counter').textContent = (cur + 1) + ' / ' + total;
+}
+
+document.addEventListener('keydown', e => {
+  const help = document.getElementById('help');
+  if (help.classList.contains('show')) {
+    if (e.key === 'Escape' || e.key === '?') help.classList.remove('show');
+    return;
+  }
+  if (e.key === 'ArrowRight') go(cur + 1);
+  else if (e.key === 'ArrowLeft') go(cur - 1);
+  else if (e.key === 'Home') go(0);
+  else if (e.key === 'End') go(total - 1);
+  else if (e.key === '?') document.getElementById('help').classList.toggle('show');
+});
+
+document.addEventListener('mousedown', e => {
+  if (e.target.closest('button, a, input, select, textarea, pre')) return;
+  if (e.button === 2) { e.preventDefault(); e.stopImmediatePropagation(); go(cur + 1); }
+  else if (e.button === 3) { e.preventDefault(); e.stopImmediatePropagation(); go(cur - 1); }
+  else if (e.button === 4) { e.preventDefault(); e.stopImmediatePropagation(); go(cur + 1); }
+}, true);
+document.addEventListener('contextmenu', e => { if (!e.target.closest('button, a, input, select, textarea, pre')) e.preventDefault(); }, true);
+document.addEventListener('auxclick', e => { if (e.button !== 1) e.preventDefault(); }, true);
+
+let tx = 0;
+document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - tx;
+  if (Math.abs(dx) > 50) go(dx < 0 ? cur + 1 : cur - 1);
+}, { passive: true });
+
+function copyCode(btn) {
+  const code = btn.closest('.code-wrap').querySelector('pre').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('ok'); }, 1800);
+  });
+}
+
+document.getElementById('prog').style.width = (1 / total * 100) + '%';
+</script>
+</body>
+</html>

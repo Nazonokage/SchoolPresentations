@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M19 — Express.js: Building RESTful APIs</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0f17;--bg2:#111827;--bg3:#1a2234;--bg4:#1f2c42;
+  --accent:#60a5fa;--accent2:#34d399;--accent3:#fbbf24;--accent4:#f87171;--purple:#a78bfa;
+  --text:#e2e8f4;--text2:#94a3b8;--text3:#64748b;
+  --border:#1e2d45;--border2:#2d3f5c;
+  --code-bg:#080c14;--code-border:#182030;
+  --r:10px;--r2:6px;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',system-ui,sans-serif}
+.deck{position:relative;width:100vw;height:100vh;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;padding:44px 66px 36px;opacity:0;pointer-events:none;transition:opacity 350ms ease,transform 350ms ease;transform:translateX(40px);overflow-y:auto}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.prev{opacity:0;transform:translateX(-40px)}
+@media(prefers-reduced-motion:reduce){.slide{transition:none}}
+.slide::-webkit-scrollbar{width:4px}.slide::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+#prog{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width 350ms ease;z-index:99}
+#counter{position:fixed;top:14px;right:24px;font-size:13px;color:var(--text3);z-index:99;font-variant-numeric:tabular-nums}
+
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+h1{font-size:clamp(36px,4.2vw,58px);font-weight:700;line-height:1.1;letter-spacing:-.02em}
+h2{font-size:clamp(26px,3vw,38px);font-weight:700;line-height:1.15;letter-spacing:-.015em}
+h3{font-size:18px;font-weight:600;color:var(--text);margin-bottom:7px}
+
+/* Global 16px minimum */
+p,li,td,th,.card p,.card li,
+.step-body p,.step-body h4,
+.quiz-opt,.quiz-q,
+.ans-exp,.prob-desc{font-size:16px;line-height:1.7}
+
+/* Cards */
+.cards{display:grid;gap:14px;margin-top:16px}
+.cols2{grid-template-columns:1fr 1fr}
+.cols3{grid-template-columns:1fr 1fr 1fr}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px}
+.card p,.card li{font-size:16px;color:var(--text2);line-height:1.65}
+.card ul{padding-left:16px}
+.card.al{border-left:3px solid var(--accent)}
+.card.ag{border-left:3px solid var(--accent2)}
+.card.aa{border-left:3px solid var(--accent3)}
+.card.ar{border-left:3px solid var(--accent4)}
+.card.ap{border-left:3px solid var(--purple)}
+
+/* Code */
+.code-wrap{position:relative;background:var(--code-bg);border:1px solid var(--code-border);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column}
+.code-header{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:#050810;border-bottom:1px solid var(--code-border);flex-shrink:0}
+.code-lang{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.copy-btn{font-size:12px;font-weight:700;color:var(--accent);background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.3);border-radius:4px;padding:4px 10px;cursor:pointer;transition:all .15s;flex-shrink:0}
+.copy-btn:hover{background:rgba(96,165,250,.22)}
+.copy-btn.ok{color:var(--accent2);border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.1)}
+pre{padding:14px 16px;overflow:auto;font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:13.5px;line-height:1.75;color:#cdd6f4;flex:1;min-height:0}
+pre::-webkit-scrollbar{height:4px;width:4px}
+pre::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* Syntax */
+.kw{color:#cba6f7}.fn{color:#89b4fa}.str{color:#a6e3a1}.cm{color:#4a5260;font-style:italic}.var{color:#f38ba8}.num{color:#fab387}.op{color:#89dceb}.key{color:#89b4fa}.val{color:#a6e3a1}.bool{color:#fab387}
+
+/* Split */
+.split-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;height:min(510px,56vh);align-items:stretch;margin-top:14px}
+.split-row .code-wrap{height:100%;overflow:hidden}
+.split-row .panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;overflow-y:auto;height:100%;min-height:0}
+
+/* Hero */
+.hero{flex:1;display:flex;flex-direction:column;justify-content:center}
+.hero-tag{display:inline-flex;align-items:center;gap:8px;background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.25);border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.05em;margin-bottom:24px;width:fit-content}
+.hero h1{max-width:820px;margin-bottom:16px}
+.hero .sub{font-size:18px;color:var(--text2);max-width:620px;line-height:1.65;margin-bottom:26px}
+.logo-row{display:flex;gap:10px;flex-wrap:wrap}
+.logo-chip{display:flex;align-items:center;gap:7px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:7px 14px;font-size:14px;font-weight:600;color:var(--text2)}
+
+/* Table */
+table{width:100%;border-collapse:collapse;margin-top:14px;font-size:16px}
+th{background:var(--bg3);color:var(--accent);font-weight:600;text-align:left;padding:10px 14px;border-bottom:1px solid var(--border2)}
+td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:top;font-size:16px}
+tr:last-child td{border-bottom:none}
+td strong{color:var(--text)}
+
+/* Steps */
+.steps{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+.step{display:flex;gap:14px;align-items:flex-start}
+.step-num{flex-shrink:0;width:30px;height:30px;background:var(--accent);color:#000;font-weight:700;font-size:13px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.step-body h4{font-size:16px;font-weight:600;color:var(--text);margin-bottom:3px}
+.step-body p{font-size:16px;color:var(--text2);line-height:1.6}
+.step-body code{background:rgba(96,165,250,.1);color:var(--accent);padding:1px 6px;border-radius:3px;font-family:monospace;font-size:14px}
+
+/* Info/tip/warn */
+.info{background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.2);border-radius:var(--r2);padding:12px 16px;font-size:16px;color:var(--text2);line-height:1.65;margin-top:13px}
+.tip{background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2);border-radius:var(--r2);padding:12px 16px;font-size:16px;color:var(--text2);line-height:1.65;margin-top:13px}
+.warn{background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);border-radius:var(--r2);padding:12px 16px;font-size:16px;color:var(--text2);line-height:1.65;margin-top:13px}
+.info strong,.tip strong,.warn strong{color:var(--text)}
+
+/* API anatomy */
+.anatomy-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.anatomy-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;display:flex;gap:14px;align-items:flex-start}
+.anatomy-num{flex-shrink:0;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.anatomy-body h4{font-size:17px;font-weight:600;color:var(--text);margin-bottom:4px}
+.anatomy-body p{font-size:16px;color:var(--text2);line-height:1.6}
+
+/* Flow diagram */
+.flow{display:flex;align-items:center;justify-content:center;gap:0;margin-top:16px;flex-wrap:wrap}
+.flow-box{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:14px 18px;text-align:center;min-width:130px}
+.flow-box .fb-label{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
+.flow-box .fb-val{font-size:15px;font-weight:600;font-family:'JetBrains Mono',monospace}
+.flow-arrow{padding:0 8px;color:var(--text3);font-size:20px}
+
+/* JSON syntax highlight */
+.json-block{background:var(--code-bg);border:1px solid var(--code-border);border-radius:var(--r);padding:16px 18px;font-family:'JetBrains Mono',monospace;font-size:13.5px;line-height:1.8;margin-top:12px}
+
+/* API types */
+.type-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.type-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px}
+.type-card .tc-tag{display:inline-flex;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 9px;border-radius:10px;margin-bottom:9px}
+.type-card h3{font-size:16px;margin-bottom:6px}
+.type-card p{font-size:16px;color:var(--text2);line-height:1.6}
+
+/* Terminal */
+.terminal{background:var(--code-bg);border:1px solid var(--code-border);border-radius:var(--r2);padding:12px 16px;font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--accent2);line-height:2;margin-top:10px}
+
+/* Dir tree */
+.dir{background:var(--code-bg);border:1px solid var(--code-border);border-radius:var(--r);padding:14px 18px;font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--text2);line-height:2.1;margin-top:12px;white-space:pre;overflow-x:auto;display:block}
+.dir .folder{color:var(--accent3)}.dir .file{color:var(--accent2)}.dir .note{color:var(--text3)}
+
+/* Quiz */
+.quiz-q{font-size:16px;font-weight:600;color:var(--text);margin-bottom:9px;line-height:1.55}
+.quiz-opt{display:flex;align-items:flex-start;gap:9px;padding:9px 13px;border-radius:var(--r2);border:1px solid var(--border);margin-bottom:7px;font-size:16px;color:var(--text2)}
+.opt-key{font-weight:700;color:var(--accent);min-width:18px;flex-shrink:0}
+
+/* Coding problem */
+.prob-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;margin-bottom:12px}
+.prob-tag{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:10px;margin-bottom:8px}
+.prob-tag.fill{background:rgba(167,139,250,.15);color:var(--purple);border:1px solid rgba(167,139,250,.3)}
+.prob-tag.write{background:rgba(96,165,250,.15);color:var(--accent);border:1px solid rgba(96,165,250,.3)}
+.prob-tag.debug{background:rgba(248,113,113,.15);color:var(--accent4);border:1px solid rgba(248,113,113,.3)}
+.prob-title{font-size:17px;font-weight:600;color:var(--text);margin-bottom:6px}
+.prob-desc{font-size:16px;color:var(--text2);line-height:1.65;margin-bottom:10px}
+.blank{color:#f38ba8;background:rgba(243,139,168,.12);border-bottom:1px dashed #f38ba8;padding:0 4px;border-radius:2px}
+
+/* Answer */
+.ans-item{background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--accent2);border-radius:var(--r);padding:13px 15px;margin-bottom:10px}
+.ans-q{font-size:13px;color:var(--text3);margin-bottom:4px}
+.ans-a{font-size:16px;font-weight:700;color:var(--text)}
+.ans-exp{font-size:16px;color:var(--text2);margin-top:4px;line-height:1.6}
+
+code.ic{background:rgba(96,165,250,.1);color:var(--accent);padding:1px 6px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:14px}
+
+/* Help */
+#help{position:fixed;inset:0;background:rgba(0,0,0,.82);display:none;place-items:center;z-index:200}
+#help.show{display:grid}
+.help-box{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:30px 38px;max-width:420px;width:90%}
+.help-box h2{font-size:20px;margin-bottom:18px}
+.help-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:16px}
+.help-row:last-child{border-bottom:none}
+.help-row span:first-child{color:var(--text2)}
+kbd{background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-size:12px;color:var(--accent);font-family:monospace}
+
+/* Final */
+.final{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.final blockquote{font-size:20px;font-style:italic;color:var(--text2);max-width:600px;line-height:1.7;margin-bottom:22px;position:relative;padding:0 34px}
+.final blockquote::before{content:'\201C';font-size:60px;color:var(--accent);position:absolute;left:0;top:-10px;line-height:1}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<div id="counter">1 / 17</div>
+<div class="deck" id="deck">
+
+<!-- S0: Hero -->
+<div class="slide active">
+  <div class="hero">
+    <div class="hero-tag">🌐 Module 19 &nbsp;·&nbsp; Express.js</div>
+    <h1>Building<br>RESTful APIs</h1>
+    <p class="sub">Connect your Express server to the broader digital world — learn what APIs are, how JSON powers them, and build a fully working REST endpoint that sends and receives structured data.</p>
+    <div class="logo-row">
+      <span class="logo-chip">
+        <svg width="20" height="20" viewBox="0 0 48 48" role="img" aria-label="Express.js"><rect width="48" height="48" rx="8" fill="#333"/><text x="24" y="30" text-anchor="middle" fill="#fff" font-size="10" font-weight="700" font-family="monospace">EXP</text></svg>
+        Express.js
+      </span>
+      <span class="logo-chip">
+        <svg width="20" height="20" viewBox="0 0 48 48" role="img" aria-label="Node.js"><circle cx="24" cy="24" r="24" fill="#026e00"/><text x="24" y="29" text-anchor="middle" fill="#fff" font-size="10" font-weight="700" font-family="monospace">Node</text></svg>
+        Node.js
+      </span>
+      <span class="logo-chip">
+        <svg width="20" height="20" viewBox="0 0 48 48" role="img" aria-label="JSON"><rect width="48" height="48" rx="8" fill="#292929"/><text x="24" y="30" text-anchor="middle" fill="#f7df1e" font-size="9" font-weight="700" font-family="monospace">JSON</text></svg>
+        JSON
+      </span>
+      <span class="logo-chip">
+        <svg width="20" height="20" viewBox="0 0 48 48" role="img" aria-label="REST API"><rect width="48" height="48" rx="8" fill="#1a2234"/><text x="24" y="30" text-anchor="middle" fill="#60a5fa" font-size="9" font-weight="700" font-family="monospace">REST</text></svg>
+        REST API
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- S1: Review -->
+<div class="slide">
+  <div class="eyebrow">Quick Review — Module 18</div>
+  <h2>Where We Left Off</h2>
+  <div class="cards cols3" style="margin-top:16px">
+    <div class="card al">
+      <h3>✅ Previously Covered</h3>
+      <ul style="margin-top:8px">
+        <li style="margin-bottom:6px">Routing in Express.js</li>
+        <li style="margin-bottom:6px">HTTP methods: GET, POST, PUT, DELETE</li>
+        <li>Dynamic URL parameters with <code class="ic">req.params</code></li>
+      </ul>
+    </div>
+    <div class="card ag">
+      <h3>🎯 Today's Goals</h3>
+      <ul style="margin-top:8px">
+        <li style="margin-bottom:6px">Explain what APIs are and why they matter</li>
+        <li style="margin-bottom:6px">Understand the different types of APIs</li>
+        <li>Build a JSON REST API endpoint in Express</li>
+      </ul>
+    </div>
+    <div class="card aa">
+      <h3>🔗 How This Connects</h3>
+      <p>In M18 we handled routing. Today we put that routing to work — building a <strong style="color:var(--text)">RESTful API</strong> that sends and receives structured <strong style="color:var(--text)">JSON data</strong>, the foundation of every modern web and mobile backend.</p>
+    </div>
+  </div>
+  <div style="margin-top:16px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px">
+    <h3 style="margin-bottom:8px">🧩 The Upgrade</h3>
+    <p style="font-size:16px;color:var(--text2);line-height:1.65">So far our server sends plain text responses like <code class="ic">'Hello World'</code>. Today we transform it into a <strong style="color:var(--accent)">real API</strong> that accepts JSON from clients, processes it, and replies with structured JSON data — exactly how Twitter, Stripe, and Google Maps work behind the scenes.</p>
+  </div>
+</div>
+
+<!-- S2: What is an API -->
+<div class="slide">
+  <div class="eyebrow">Core Concept</div>
+  <h2>What Is an API?</h2>
+  <p style="font-size:16px;color:var(--text2);margin-top:10px;line-height:1.65"><strong style="color:var(--text)">API</strong> stands for <strong style="color:var(--text)">Application Programming Interface</strong>. It's a set of rules and protocols that allows different software systems to communicate with each other — without exposing the internal workings of either system.</p>
+
+  <div class="flow" style="margin-top:20px">
+    <div class="flow-box">
+      <div class="fb-label" style="color:var(--accent2)">Your App</div>
+      <div class="fb-val" style="color:var(--accent2)">Client</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="background:rgba(96,165,250,.08);border-color:rgba(96,165,250,.3)">
+      <div class="fb-label" style="color:var(--accent)">API Request</div>
+      <div class="fb-val" style="color:var(--accent)">POST /api/users</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <div class="fb-label" style="color:var(--purple)">API Layer</div>
+      <div class="fb-val" style="color:var(--purple)">Express Route</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <div class="fb-label" style="color:var(--accent3)">Backend</div>
+      <div class="fb-val" style="color:var(--accent3)">DB / Logic</div>
+    </div>
+    <div class="flow-arrow">←</div>
+    <div class="flow-box" style="background:rgba(52,211,153,.08);border-color:rgba(52,211,153,.3)">
+      <div class="fb-label" style="color:var(--accent2)">JSON Response</div>
+      <div class="fb-val" style="color:var(--accent2)">{"{"}status: 'ok'{"}"}</div>
+    </div>
+  </div>
+
+  <div class="cards cols3" style="margin-top:16px">
+    <div class="card al">
+      <h3>🔌 Intermediary</h3>
+      <p>An API sits between two systems. It abstracts away complex internal implementation so developers don't need to know how a third-party service works under the hood.</p>
+    </div>
+    <div class="card ag">
+      <h3>📋 Standardized Rules</h3>
+      <p>APIs define exactly what requests are accepted, what format data must be in, and what responses will be returned — like a contract between systems.</p>
+    </div>
+    <div class="card ap">
+      <h3>🔄 Interoperability</h3>
+      <p>Different apps built in different languages (Python, Java, JavaScript) can all talk to the same API because they share a common language: HTTP + JSON.</p>
+    </div>
+  </div>
+</div>
+
+<!-- S3: Types of APIs -->
+<div class="slide">
+  <div class="eyebrow">API Types</div>
+  <h2>The 5 Types of APIs</h2>
+  <div class="type-grid">
+    <div class="type-card">
+      <div class="tc-tag" style="background:rgba(96,165,250,.15);color:var(--accent);border:1px solid rgba(96,165,250,.3)">🌐 Web APIs (REST/HTTP)</div>
+      <h3>Web / RESTful APIs</h3>
+      <p>Communicate over the internet using standard HTTP methods. The backbone of modern web apps — <strong style="color:var(--text)">what we build today</strong>.</p>
+      <p style="margin-top:6px;font-size:15px;color:var(--text3)">Examples: Twitter API, Google Maps API, GitHub API</p>
+    </div>
+    <div class="type-card">
+      <div class="tc-tag" style="background:rgba(52,211,153,.15);color:var(--accent2);border:1px solid rgba(52,211,153,.3)">📚 Library APIs</div>
+      <h3>Library / Framework APIs</h3>
+      <p>Built-in functions provided by languages or frameworks to help with common tasks.</p>
+      <p style="margin-top:6px;font-size:15px;color:var(--text3)">Examples: JavaScript's <code class="ic">Math.sqrt()</code>, Python's <code class="ic">print()</code></p>
+    </div>
+    <div class="type-card">
+      <div class="tc-tag" style="background:rgba(251,191,36,.15);color:var(--accent3);border:1px solid rgba(251,191,36,.3)">🖥️ OS APIs</div>
+      <h3>Operating System APIs</h3>
+      <p>Allow applications to interact with underlying system resources like the file system, network hardware, and device drivers.</p>
+      <p style="margin-top:6px;font-size:15px;color:var(--text3)">Examples: Windows Win32, POSIX on Linux/macOS</p>
+    </div>
+    <div class="type-card">
+      <div class="tc-tag" style="background:rgba(167,139,250,.15);color:var(--purple);border:1px solid rgba(167,139,250,.3)">🗄️ Database APIs</div>
+      <h3>Database APIs</h3>
+      <p>Allow developers to query, insert, update, and delete data from databases programmatically.</p>
+      <p style="margin-top:6px;font-size:15px;color:var(--text3)">Examples: MySQL driver for Node.js, Mongoose for MongoDB</p>
+    </div>
+  </div>
+  <div class="card ar" style="margin-top:12px">
+    <h3>💳 Third-Party APIs</h3>
+    <p>Provided by external companies to let developers integrate their specific functionalities. Payment gateways (Stripe, PayPal), social logins (Google, Facebook), mapping (Google Maps), weather data, and more.</p>
+  </div>
+</div>
+
+<!-- S4: REST API Anatomy -->
+<div class="slide">
+  <div class="eyebrow">REST API Design</div>
+  <h2>Anatomy of a REST API</h2>
+  <p style="font-size:16px;color:var(--text2);margin-top:8px;line-height:1.65">Every REST API request and response has four core components. Understanding these is the foundation of building and consuming any API.</p>
+  <div class="anatomy-grid">
+    <div class="anatomy-item">
+      <div class="anatomy-num" style="background:rgba(96,165,250,.15);color:var(--accent)">1</div>
+      <div class="anatomy-body">
+        <h4>Endpoints (URLs)</h4>
+        <p>Specific URLs that represent different resources or functionalities. Each endpoint is a door into your application's data.<br><span style="font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--accent2)">/api/users &nbsp; /api/products/:id</span></p>
+      </div>
+    </div>
+    <div class="anatomy-item">
+      <div class="anatomy-num" style="background:rgba(52,211,153,.15);color:var(--accent2)">2</div>
+      <div class="anatomy-body">
+        <h4>HTTP Methods (Verbs)</h4>
+        <p>Specify the action the client wants to perform on the resource.</p>
+        <p style="font-family:'JetBrains Mono',monospace;font-size:14px;margin-top:4px"><span style="color:#34d399">GET</span> · <span style="color:#60a5fa">POST</span> · <span style="color:#fbbf24">PUT</span> · <span style="color:#f87171">DELETE</span></p>
+      </div>
+    </div>
+    <div class="anatomy-item">
+      <div class="anatomy-num" style="background:rgba(251,191,36,.15);color:var(--accent3)">3</div>
+      <div class="anatomy-body">
+        <h4>Parameters</h4>
+        <p>Extra data sent with the request to customize the query.</p>
+        <ul style="margin-top:6px;padding-left:14px">
+          <li style="font-size:15px;color:var(--text2);margin-bottom:3px">URL params: <code class="ic">/users/:id</code></li>
+          <li style="font-size:15px;color:var(--text2);margin-bottom:3px">Query strings: <code class="ic">?page=2&limit=10</code></li>
+          <li style="font-size:15px;color:var(--text2)">Request body: JSON payload</li>
+        </ul>
+      </div>
+    </div>
+    <div class="anatomy-item">
+      <div class="anatomy-num" style="background:rgba(167,139,250,.15);color:var(--purple)">4</div>
+      <div class="anatomy-body">
+        <h4>Responses</h4>
+        <p>Data the server returns after processing a request — always JSON in REST APIs, always paired with an HTTP status code.</p>
+        <p style="font-family:'JetBrains Mono',monospace;font-size:14px;margin-top:4px"><span style="color:#34d399">200</span> OK · <span style="color:#60a5fa">201</span> Created · <span style="color:#f87171">404</span> Not Found</p>
+      </div>
+    </div>
+  </div>
+  <div class="tip" style="margin-top:14px">
+    <strong>API vs REST API:</strong> "API" is a general term for any interface between two systems. A "REST API" is a specific style that uses HTTP methods, treats data as resources at URLs, and is stateless — each request is independent.
+  </div>
+</div>
+
+<!-- S5: JSON -->
+<div class="slide">
+  <div class="eyebrow">Data Format</div>
+  <h2>JSON — The Language of REST APIs</h2>
+  <p style="font-size:16px;color:var(--text2);margin-top:8px;line-height:1.65"><strong style="color:var(--text)">JSON</strong> (JavaScript Object Notation) is the de facto standard for sending and receiving data in web APIs. It's lightweight, human-readable, and natively compatible with JavaScript.</p>
+  <div class="cards cols2" style="margin-top:14px">
+    <div>
+      <h3 style="color:var(--accent2);margin-bottom:10px">📋 JSON Syntax Rules</h3>
+      <div class="cards" style="margin-top:0">
+        <div class="card al"><p><strong style="color:var(--text)">Keys in double quotes:</strong> <code class="ic">"name": "value"</code> — not single quotes</p></div>
+        <div class="card ag"><p><strong style="color:var(--text)">Objects</strong> wrapped in curly braces <code class="ic">{"{"}{"}"}</code></p></div>
+        <div class="card aa"><p><strong style="color:var(--text)">Arrays</strong> wrapped in square brackets <code class="ic">[]</code></p></div>
+        <div class="card ap"><p><strong style="color:var(--text)">Supported types:</strong> String, Number, Boolean, Array, Object, null</p></div>
+      </div>
+    </div>
+    <div>
+      <h3 style="color:var(--accent3);margin-bottom:10px">📄 Valid JSON Example</h3>
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">JSON</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre>{
+  <span class="key">"name"</span>    : <span class="val">"Celestyna Kowalski"</span>,
+  <span class="key">"age"</span>     : <span class="num">28</span>,
+  <span class="key">"email"</span>   : <span class="val">"c.kowalski@example.com"</span>,
+  <span class="key">"hobbies"</span> : [<span class="val">"reading"</span>, <span class="val">"coding"</span>, <span class="val">"hiking"</span>],
+  <span class="key">"isActive"</span>: <span class="bool">true</span>,
+  <span class="key">"address"</span> : {
+    <span class="key">"city"</span>   : <span class="val">"Krakow"</span>,
+    <span class="key">"country"</span>: <span class="val">"Poland"</span>
+  }
+}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S6: JSON.stringify / JSON.parse -->
+<div class="slide">
+  <div class="eyebrow">JSON in JavaScript</div>
+  <h2>JSON.stringify() &amp; JSON.parse()</h2>
+  <p style="font-size:16px;color:var(--text2);margin-top:8px;line-height:1.65">JSON is a <strong style="color:var(--text)">string format</strong> — not a JavaScript object. To move between the two, JavaScript provides two built-in conversion methods.</p>
+  <div class="split-row">
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JS — Conversion Example</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cm">// A plain JavaScript object</span>
+<span class="kw">const</span> person <span class="op">=</span> {
+  name : <span class="str">'Celestyna Kowalski'</span>,
+  age  : <span class="num">28</span>,
+  city : <span class="str">'Krakow'</span>
+};
+
+<span class="cm">// JSON.stringify() — JS object → JSON string</span>
+<span class="cm">// Used when SENDING data over the network</span>
+<span class="kw">const</span> jsonString <span class="op">=</span> JSON.<span class="fn">stringify</span>(person);
+console.<span class="fn">log</span>(jsonString);
+<span class="cm">// {"name":"Celestyna Kowalski","age":28,"city":"Krakow"}</span>
+
+<span class="cm">// JSON.parse() — JSON string → JS object</span>
+<span class="cm">// Used when RECEIVING data from the network</span>
+<span class="kw">const</span> parsed <span class="op">=</span> JSON.<span class="fn">parse</span>(jsonString);
+console.<span class="fn">log</span>(parsed.name);  <span class="cm">// Celestyna Kowalski</span>
+console.<span class="fn">log</span>(parsed.age);   <span class="cm">// 28</span>
+console.<span class="fn">log</span>(parsed.city);  <span class="cm">// Krakow</span>
+
+<span class="cm">// Express does both automatically:</span>
+<span class="cm">// express.json()  → parses incoming JSON (parse)</span>
+<span class="cm">// res.json(obj)   → stringifies outgoing obj (stringify)</span></pre>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--accent);margin-bottom:14px">🔄 When to Use Each</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num" style="background:var(--accent2);color:#000">1</div>
+          <div class="step-body">
+            <h4>JSON.stringify(obj) — Sending Data</h4>
+            <p>Used when sending a JS object over the network — converts to a string the browser's <code>fetch()</code> or HTTP client can transmit.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--accent3);color:#000">2</div>
+          <div class="step-body">
+            <h4>JSON.parse(str) — Receiving Data</h4>
+            <p>Used when receiving a JSON string from a server — converts it back to a JS object so you can access properties with dot notation.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--purple);color:#fff">3</div>
+          <div class="step-body">
+            <h4>Express handles both automatically</h4>
+            <p><code>express.json()</code> middleware runs <code>JSON.parse()</code> on incoming bodies. <code>res.json()</code> runs <code>JSON.stringify()</code> on your response object.</p>
+          </div>
+        </div>
+      </div>
+      <div class="warn" style="margin-top:12px">
+        <strong>⚠️ Common mistake:</strong> JSON keys must be in <strong>double quotes</strong> — <code class="ic">"name"</code> not <code class="ic">'name'</code>. Single-quoted keys are valid JavaScript but invalid JSON — <code>JSON.parse()</code> will throw an error.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S7: Sending JSON from Client -->
+<div class="slide">
+  <div class="eyebrow">Client Side</div>
+  <h2>Sending JSON to Your API</h2>
+  <p style="font-size:16px;color:var(--text2);margin-top:8px;line-height:1.65">When a client (browser, mobile app) sends JSON data, it must include two things: the <code class="ic">Content-Type: application/json</code> header and the data stringified in the request body.</p>
+  <div class="split-row">
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JS — Client fetch() Request</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cm">// Client-side: sending JSON with fetch()</span>
+<span class="kw">const</span> userData <span class="op">=</span> {
+  name  : <span class="str">'Zbigniew Hartmann'</span>,
+  age   : <span class="num">32</span>,
+  email : <span class="str">'z.hartmann@example.com'</span>
+};
+
+<span class="fn">fetch</span>(<span class="str">'/api/users'</span>, {
+  method  : <span class="str">'POST'</span>,
+  headers : {
+    <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span>
+  },
+  body    : JSON.<span class="fn">stringify</span>(userData) <span class="cm">// ← must stringify!</span>
+})
+.<span class="fn">then</span>(response <span class="op">=&gt;</span> response.<span class="fn">json</span>())  <span class="cm">// parse the response</span>
+.<span class="fn">then</span>(data <span class="op">=&gt;</span> {
+  console.<span class="fn">log</span>(<span class="str">'Server replied:'</span>, data);
+})
+.<span class="fn">catch</span>(error <span class="op">=&gt;</span> {
+  console.<span class="fn">error</span>(<span class="str">'Error:'</span>, error);
+});</pre>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--accent);margin-bottom:14px">📤 Request Breakdown</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h4>method: 'POST'</h4>
+            <p>Tells the server we're <strong style="color:var(--text)">creating</strong> a new resource. GET is read-only — sending a body with GET is non-standard.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h4>Content-Type: application/json</h4>
+            <p>This header tells the server what format the body is in. Without it, the server won't know to parse the body as JSON — <code>req.body</code> will be empty.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h4>JSON.stringify(userData)</h4>
+            <p>The <code>body</code> must be a string — not a JavaScript object. <code>JSON.stringify()</code> converts the object to the valid JSON string format required for HTTP transport.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h4>.then(res =&gt; res.json())</h4>
+            <p>The server sends back a JSON string. <code>.json()</code> on the fetch response parses it back into a JavaScript object so you can use <code>data.message</code> etc.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S8: Receiving JSON on Server -->
+<div class="slide">
+  <div class="eyebrow">Server Side</div>
+  <h2>Receiving &amp; Responding with JSON</h2>
+  <p style="font-size:16px;color:var(--text2);margin-top:8px;line-height:1.65">On the server, add <code class="ic">express.json()</code> middleware <strong style="color:var(--accent4)">before</strong> your routes — it parses the JSON body and attaches it to <code class="ic">req.body</code>.</p>
+  <div class="split-row">
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JS — Express POST Handler</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="kw">const</span> express <span class="op">=</span> <span class="fn">require</span>(<span class="str">'express'</span>);
+<span class="kw">const</span> app     <span class="op">=</span> <span class="fn">express</span>();
+
+<span class="cm">// ✅ MUST come BEFORE your routes</span>
+app.<span class="fn">use</span>(express.<span class="fn">json</span>());
+
+<span class="cm">// GET — return a list (read-only)</span>
+app.<span class="fn">get</span>(<span class="str">'/api/users'</span>, (req, res) <span class="op">=&gt;</span> {
+  res.<span class="fn">json</span>([
+    { id: <span class="num">1</span>, name: <span class="str">'Celestyna'</span> },
+    { id: <span class="num">2</span>, name: <span class="str">'Zbigniew'</span>  }
+  ]);
+});
+
+<span class="cm">// POST — receive JSON body and respond</span>
+app.<span class="fn">post</span>(<span class="str">'/api/users'</span>, (req, res) <span class="op">=&gt;</span> {
+  <span class="kw">const</span> userData <span class="op">=</span> req.body; <span class="cm">// ← parsed by express.json()</span>
+
+  console.<span class="fn">log</span>(<span class="str">'Received:'</span>, userData);
+
+  <span class="cm">// In a real app: save to database here</span>
+
+  <span class="cm">// Respond with 201 Created + JSON body</span>
+  res.<span class="fn">status</span>(<span class="num">201</span>).<span class="fn">json</span>({
+    message : <span class="str">'User created successfully'</span>,
+    data    : userData
+  });
+});
+
+app.<span class="fn">listen</span>(<span class="num">3000</span>, () <span class="op">=&gt;</span>
+  console.<span class="fn">log</span>(<span class="str">'API running on port 3000'</span>)
+);</pre>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--accent2);margin-bottom:14px">⚙️ Server-Side Breakdown</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num" style="background:var(--accent4);color:#000">!</div>
+          <div class="step-body">
+            <h4>express.json() before routes</h4>
+            <p>This middleware runs on every request. If it comes after your routes, the POST handler fires first and <code>req.body</code> is <code>undefined</code>. Order matters.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--accent2);color:#000">2</div>
+          <div class="step-body">
+            <h4>req.body — the parsed data</h4>
+            <p>After <code>express.json()</code> runs, <code>req.body</code> holds your parsed JavaScript object. Access fields directly: <code>req.body.name</code>, <code>req.body.age</code>.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--accent2);color:#000">3</div>
+          <div class="step-body">
+            <h4>res.status(201)</h4>
+            <p>Chain status codes before <code>.json()</code>. <code>201 Created</code> is the correct REST status for a successful POST that creates a resource — not <code>200 OK</code>.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--accent2);color:#000">4</div>
+          <div class="step-body">
+            <h4>res.json(object)</h4>
+            <p>Automatically stringifies the object, sets <code>Content-Type: application/json</code>, and sends the response. No manual <code>JSON.stringify()</code> needed.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S9: Drill -->
+<div class="slide">
+  <div class="eyebrow">Guided Drill</div>
+  <h2>Build &amp; Test a JSON API Endpoint</h2>
+  <div class="cards cols2" style="margin-top:14px">
+    <div>
+      <h3 style="color:var(--accent);margin-bottom:12px">🛠️ Steps 1–3: Build</h3>
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><span class="cm"># Step 1: Create project</span>
+mkdir rest-api-demo
+cd rest-api-demo
+npm init -y
+npm install express
+
+<span class="cm"># Step 3: Run the server</span>
+node server.js</pre>
+      </div>
+      <h3 style="color:var(--accent2);margin-top:14px;margin-bottom:10px">📝 server.js</h3>
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">JS — server.js</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><span class="kw">const</span> express <span class="op">=</span> <span class="fn">require</span>(<span class="str">'express'</span>);
+<span class="kw">const</span> app     <span class="op">=</span> <span class="fn">express</span>();
+app.<span class="fn">use</span>(express.<span class="fn">json</span>());
+
+app.<span class="fn">post</span>(<span class="str">'/api/users'</span>, (req, res) <span class="op">=&gt;</span> {
+  <span class="kw">const</span> userData <span class="op">=</span> req.body;
+  console.<span class="fn">log</span>(<span class="str">'Received:'</span>, userData);
+  res.<span class="fn">status</span>(<span class="num">201</span>).<span class="fn">json</span>({
+    message : <span class="str">'User created successfully'</span>,
+    data    : userData
+  });
+});
+
+<span class="kw">const</span> port <span class="op">=</span> <span class="num">3000</span>;
+app.<span class="fn">listen</span>(port, () <span class="op">=&gt;</span>
+  console.<span class="fn">log</span>(<span class="str">`Server listening on port ${port}`</span>)
+);</pre>
+      </div>
+    </div>
+    <div>
+      <h3 style="color:var(--accent3);margin-bottom:12px">🧪 Step 4: Test the API</h3>
+      <p style="font-size:16px;color:var(--text2);margin-bottom:12px;line-height:1.6">POST requests can't be tested with a browser URL bar. Use one of these tools:</p>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">A</div>
+          <div class="step-body">
+            <h4>cURL (Terminal)</h4>
+            <div class="code-wrap" style="margin-top:6px">
+              <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre>curl -X POST http://localhost:3000/api/users \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Zbigniew","age":30}'</pre>
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">B</div>
+          <div class="step-body">
+            <h4>Postman / Thunder Client</h4>
+            <p>Set method to POST, URL to <code class="ic">http://localhost:3000/api/users</code>, Body → raw → JSON, paste your data, click Send.</p>
+          </div>
+        </div>
+      </div>
+      <h3 style="margin-top:14px;margin-bottom:7px">Expected Response</h3>
+      <div class="terminal">
+{<br>
+&nbsp;&nbsp;"message": "User created successfully",<br>
+&nbsp;&nbsp;"data": {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"name": "Zbigniew",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"age": 30<br>
+&nbsp;&nbsp;}<br>
+}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S10: Analogy -->
+<div class="slide">
+  <div class="eyebrow">Real-World Analogy</div>
+  <h2>APIs in the Real World</h2>
+  <div class="cards cols2" style="margin-top:14px">
+    <div class="card al">
+      <h3>🍽️ The Restaurant (Third-Party API)</h3>
+      <p>You don't walk into the kitchen and cook yourself. Instead you read the <strong style="color:var(--text)">menu (API docs)</strong>, tell the <strong style="color:var(--text)">waiter (endpoint)</strong> what you want in plain language <span style="font-family:monospace;font-size:14px;color:var(--accent3)">{"{"}meal: "steak"{"}"}</span>, and receive your food (JSON response) without ever knowing how the kitchen works.</p>
+    </div>
+    <div class="card ap">
+      <h3>📺 The Universal Remote (REST/JSON Standard)</h3>
+      <p>JSON + REST acts like a universal remote for software. A TV (Google Maps), a soundbar (Payment API), and a DVD player (Auth API) all speak the same HTTP protocol — so your app can control them all without knowing their internal circuitry.</p>
+    </div>
+  </div>
+  <h3 style="margin-top:18px;margin-bottom:12px">📱 Real-World Use Cases</h3>
+  <div class="cards cols3" style="margin-top:0">
+    <div class="card ag">
+      <h3>Twitter Mobile App</h3>
+      <p>The app doesn't store millions of tweets. It calls <code class="ic">GET /tweets</code> to fetch them and <code class="ic">POST /tweets</code> to create new ones — all via JSON responses from a REST API.</p>
+    </div>
+    <div class="card aa">
+      <h3>"Log in with Google"</h3>
+      <p>Clicking that button sends a request to Google's Auth API. If successful, Google returns a unique JSON token — the third-party site never touches your password.</p>
+    </div>
+    <div class="card ar">
+      <h3>E-Commerce Checkout</h3>
+      <p>Your site POSTs card info to Stripe's API. Stripe processes it and returns <code class="ic">{"{"}"status":"success"{"}"}</code> — the website never directly handles sensitive financial data.</p>
+    </div>
+  </div>
+</div>
+
+<!-- S11: Benefits + FAQ -->
+<div class="slide">
+  <div class="eyebrow">Why APIs Matter</div>
+  <h2>Benefits &amp; FAQs</h2>
+  <div class="cards cols2" style="margin-top:14px">
+    <div>
+      <h3 style="margin-bottom:12px">🌟 Key Benefits of APIs</h3>
+      <div class="steps" style="margin-top:0">
+        <div class="step">
+          <div class="step-num" style="background:var(--accent2);color:#000">✓</div>
+          <div class="step-body"><h4>Integration &amp; Interoperability</h4><p>Different systems built in different languages can communicate via a shared HTTP + JSON protocol.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--accent2);color:#000">✓</div>
+          <div class="step-body"><h4>Modularity &amp; Reusability</h4><p>Encapsulate functionality (payments, auth, maps) and reuse it across multiple apps without duplication.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--accent2);color:#000">✓</div>
+          <div class="step-body"><h4>Mobile App Support</h4><p>APIs bridge the mobile UI to the backend server — the app calls an endpoint and renders the JSON data.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--accent2);color:#000">✓</div>
+          <div class="step-body"><h4>Scalability</h4><p>Frontend and backend can scale independently when connected via a REST API — no tight coupling.</p></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card al" style="margin-bottom:12px">
+        <h3>❓ How do I handle incoming JSON in Express?</h3>
+        <p>Add <code class="ic">app.use(express.json())</code> <strong style="color:var(--accent4)">before</strong> your routes. This middleware parses the incoming JSON body and makes it available in <code class="ic">req.body</code>.</p>
+      </div>
+      <div class="card ag" style="margin-bottom:12px">
+        <h3>❓ How do I send a JSON response?</h3>
+        <p>Use <code class="ic">res.json(object)</code>. It automatically sets <code class="ic">Content-Type: application/json</code> and stringifies the object — no manual <code class="ic">JSON.stringify()</code> needed.</p>
+      </div>
+      <div class="card ap">
+        <h3>❓ How do I validate JSON data?</h3>
+        <p><code class="ic">express.json()</code> parses but doesn't validate. Use libraries like <strong style="color:var(--text)">Joi</strong>, <strong style="color:var(--text)">Yup</strong>, or <strong style="color:var(--text)">Validator.js</strong> to enforce rules like "email must be valid" or "age must be a number."</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S12: Recap -->
+<div class="slide">
+  <div class="eyebrow">Recap</div>
+  <h2>Key Takeaways</h2>
+  <div class="cards cols2" style="margin-top:16px">
+    <div class="card al">
+      <h3>🌐 What an API Is</h3>
+      <ul style="margin-top:8px">
+        <li style="margin-bottom:6px">Rules/protocols for systems to communicate</li>
+        <li style="margin-bottom:6px">Acts as a standardized intermediary layer</li>
+        <li>Types: Web, Library, OS, Database, Third-Party</li>
+      </ul>
+    </div>
+    <div class="card ag">
+      <h3>📄 JSON Rules</h3>
+      <ul style="margin-top:8px">
+        <li style="margin-bottom:6px">Keys in <strong>double quotes</strong> only</li>
+        <li style="margin-bottom:6px"><code class="ic">JSON.stringify()</code> — object → string (sending)</li>
+        <li><code class="ic">JSON.parse()</code> — string → object (receiving)</li>
+      </ul>
+    </div>
+    <div class="card aa">
+      <h3>⚙️ Express Middleware</h3>
+      <ul style="margin-top:8px">
+        <li style="margin-bottom:6px"><code class="ic">app.use(express.json())</code> before routes</li>
+        <li style="margin-bottom:6px">Parses body → populates <code class="ic">req.body</code></li>
+        <li>Without it: <code class="ic">req.body</code> is <code class="ic">undefined</code></li>
+      </ul>
+    </div>
+    <div class="card ap">
+      <h3>📤 Sending Responses</h3>
+      <ul style="margin-top:8px">
+        <li style="margin-bottom:6px"><code class="ic">res.json(obj)</code> — auto stringify + headers</li>
+        <li style="margin-bottom:6px"><code class="ic">res.status(201).json(obj)</code> — set status code</li>
+        <li>Use <code class="ic">201</code> for POST create, <code class="ic">200</code> for GET</li>
+      </ul>
+    </div>
+  </div>
+  <div style="margin-top:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px">
+    <h3 style="margin-bottom:8px">📋 Summary</h3>
+    <p style="font-size:16px;color:var(--text2);line-height:1.65">An API is the standard messenger between software systems. We built a RESTful API with Express.js, explored JSON as the universal data format, used <strong style="color:var(--accent)">express.json()</strong> middleware to parse incoming data, and responded with structured JSON using <strong style="color:var(--accent2)">res.json()</strong>. This is the foundation of every modern backend that serves data to any frontend client.</p>
+  </div>
+</div>
+
+<!-- S13: Quiz MC -->
+<div class="slide">
+  <div class="eyebrow">Skill-Building Check — Multiple Choice</div>
+  <h2>Questions 1 – 7</h2>
+  <div class="cards cols2" style="margin-top:12px">
+    <div>
+      <div class="quiz-q">1. The <code class="ic">express.json()</code> middleware is used to parse ___ data from the request body.</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>XML</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>HTML</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>JSON</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>Plain text</div>
+
+      <div class="quiz-q" style="margin-top:12px">2. To send a JSON response in Express.js, we use the ___ method.</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>res.send()</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>res.text()</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>res.redirect()</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>res.json()</div>
+
+      <div class="quiz-q" style="margin-top:12px">3. The HTTP method used to create a new resource in a REST API is ___.</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>POST</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>GET</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>PUT</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>DELETE</div>
+
+      <div class="quiz-q" style="margin-top:12px">4. ___ is the most common data format used for exchanging data in REST APIs.</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>JSON</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>CSV</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>XML</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>YAML</div>
+    </div>
+    <div>
+      <div class="quiz-q">5. True or False: <code class="ic">express.json()</code> is primarily used for parsing XML data.</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>True</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>False</div>
+
+      <div class="quiz-q" style="margin-top:12px">6. True or False: Express.js provides built-in routing methods for handling different HTTP methods.</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>True</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>False</div>
+
+      <div class="quiz-q" style="margin-top:12px">7. True or False: Express.js supports only the GET and POST HTTP methods.</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>True</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>False</div>
+    </div>
+  </div>
+</div>
+
+<!-- S14: Coding Problems -->
+<div class="slide">
+  <div class="eyebrow">Skill-Building Check — Coding Problems</div>
+  <h2>Questions 8 – 10</h2>
+  <p style="font-size:15px;color:var(--text3);margin-top:4px;margin-bottom:14px">Assume <code class="ic">express</code> is imported, <code class="ic">const app = express()</code> is declared, and the server listens on port 3000.</p>
+
+  <div class="prob-box">
+    <div class="prob-tag fill">✏️ Fill in the Blank</div>
+    <div class="prob-title">Question 8 — Complete the POST Handler</div>
+    <div class="prob-desc">Fill in the five blanks so this route correctly parses an incoming JSON body and responds with status 201 and a JSON object containing the received data.</div>
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JS — Fill in the Blanks</span></div>
+      <pre>app.<span class="fn">use</span>(express.<span class="blank">____</span>());
+
+app.<span class="blank">____</span>(<span class="str">'/api/products'</span>, (req, res) <span class="op">=&gt;</span> {
+  <span class="kw">const</span> productData <span class="op">=</span> req.<span class="blank">____</span>;
+
+  res.<span class="fn">status</span>(<span class="blank">____</span>).<span class="fn">json</span>({
+    message : <span class="str">'Product created'</span>,
+    data    : <span class="blank">____</span>
+  });
+});</pre>
+    </div>
+  </div>
+
+  <div class="cards cols2" style="margin-top:11px">
+    <div class="prob-box" style="margin-bottom:0">
+      <div class="prob-tag write">✍️ Write from Scratch</div>
+      <div class="prob-title">Question 9 — Build a GET Endpoint</div>
+      <div class="prob-desc">Write a <code class="ic">GET /api/status</code> route that responds with a JSON object containing: <code class="ic">status</code> set to <code class="ic">"running"</code>, <code class="ic">port</code> set to <code class="ic">3000</code>, and <code class="ic">timestamp</code> set to <code class="ic">new Date().toISOString()</code>. Use the correct HTTP status code for a successful GET.</div>
+    </div>
+    <div class="prob-box" style="margin-bottom:0">
+      <div class="prob-tag debug">🐛 Debug the Code</div>
+      <div class="prob-title">Question 10 — Find &amp; Fix the Bugs</div>
+      <div class="prob-desc">The POST handler below has <strong style="color:var(--accent4)">3 bugs</strong>. Identify and correct each one.</div>
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">JS — Buggy Code</span></div>
+        <pre>app.<span class="fn">post</span>(<span class="str">'/api/users'</span>, (req, res) <span class="op">=&gt;</span> {
+  <span class="kw">const</span> data <span class="op">=</span> req.params;
+
+  res.<span class="fn">status</span>(<span class="num">200</span>).<span class="fn">json</span>({
+    message : <span class="str">'User created'</span>,
+    data    : data
+  });
+});
+
+<span class="cm">// app.use(express.json()) is missing</span></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S15: Answer Key MC -->
+<div class="slide">
+  <div class="eyebrow">Answer Key — Part 1</div>
+  <h2>Multiple Choice Answers (Q1–7)</h2>
+  <div class="cards cols2" style="margin-top:14px">
+    <div>
+      <div class="ans-item">
+        <div class="ans-q">Q1: express.json() parses ___ data</div>
+        <div class="ans-a">✅ C — JSON</div>
+        <div class="ans-exp">express.json() looks for Content-Type: application/json, parses the stringified body, and populates req.body with the resulting JavaScript object.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q2: Method to send a JSON response</div>
+        <div class="ans-a">✅ D — res.json()</div>
+        <div class="ans-exp">res.json() is the dedicated method — it reliably sets Content-Type: application/json and stringifies the output. res.send() can accept objects but doesn't guarantee the correct header.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q3: HTTP method to create a new resource</div>
+        <div class="ans-a">✅ A — POST</div>
+        <div class="ans-exp">In RESTful architecture, POST is the standard verb for sending data to create a new resource on the server.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q4: Common data format for REST APIs</div>
+        <div class="ans-a">✅ A — JSON</div>
+        <div class="ans-exp">While XML was historically used, JSON has become universally preferred for REST APIs due to its lightweight nature and native JavaScript compatibility.</div>
+      </div>
+    </div>
+    <div>
+      <div class="ans-item">
+        <div class="ans-q">Q5: express.json() parses XML?</div>
+        <div class="ans-a">✅ B — False</div>
+        <div class="ans-exp">express.json() is exclusively for JSON. Parsing XML requires a third-party package like express-xml-bodyparser.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q6: Express has built-in HTTP method routing?</div>
+        <div class="ans-a">✅ A — True</div>
+        <div class="ans-exp">Express includes native methods for every standard HTTP verb: app.get(), app.post(), app.put(), app.delete(), app.patch(), and more — no third-party routing needed.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q7: Express supports only GET and POST?</div>
+        <div class="ans-a">✅ B — False</div>
+        <div class="ans-exp">Express supports GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS, and several others — making it fully REST-compatible out of the box.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S16: Answer Key Coding -->
+<div class="slide">
+  <div class="eyebrow">Answer Key — Part 2</div>
+  <h2>Coding Problem Answers (Q8–10)</h2>
+  <div class="cards cols2" style="margin-top:14px">
+    <div>
+      <div class="ans-item" style="border-left-color:var(--purple)">
+        <div class="ans-q">Q8 — Fill in the Blank: POST /api/products</div>
+        <div class="ans-a" style="color:var(--purple)">✅ Completed handler</div>
+      </div>
+      <div class="code-wrap" style="margin-bottom:12px">
+        <div class="code-header"><span class="code-lang">JS — Q8 Answer</span></div>
+        <pre>app.<span class="fn">use</span>(express.<span class="fn">json</span>());
+
+app.<span class="fn">post</span>(<span class="str">'/api/products'</span>, (req, res) <span class="op">=&gt;</span> {
+  <span class="kw">const</span> productData <span class="op">=</span> req.body;
+
+  res.<span class="fn">status</span>(<span class="num">201</span>).<span class="fn">json</span>({
+    message : <span class="str">'Product created'</span>,
+    data    : productData
+  });
+});</pre>
+      </div>
+      <div class="ans-item" style="border-left-color:var(--text3)">
+        <div class="ans-exp"><strong style="color:var(--text)">Blank 1:</strong> <code class="ic">json</code> &nbsp; <strong style="color:var(--text)">Blank 2:</strong> <code class="ic">post</code> &nbsp; <strong style="color:var(--text)">Blank 3:</strong> <code class="ic">body</code> &nbsp; <strong style="color:var(--text)">Blank 4:</strong> <code class="ic">201</code> &nbsp; <strong style="color:var(--text)">Blank 5:</strong> <code class="ic">productData</code></div>
+      </div>
+    </div>
+    <div>
+      <div class="ans-item" style="border-left-color:var(--accent)">
+        <div class="ans-q">Q9 — Write from Scratch: GET /api/status</div>
+        <div class="ans-a">✅ Reference solution</div>
+      </div>
+      <div class="code-wrap" style="margin-bottom:12px">
+        <div class="code-header"><span class="code-lang">JS — Q9 Answer</span></div>
+        <pre>app.<span class="fn">get</span>(<span class="str">'/api/status'</span>, (req, res) <span class="op">=&gt;</span> {
+  res.<span class="fn">status</span>(<span class="num">200</span>).<span class="fn">json</span>({
+    status    : <span class="str">'running'</span>,
+    port      : <span class="num">3000</span>,
+    timestamp : <span class="kw">new</span> <span class="fn">Date</span>().<span class="fn">toISOString</span>()
+  });
+});</pre>
+      </div>
+      <div class="ans-item" style="border-left-color:var(--accent4)">
+        <div class="ans-q">Q10 — Debug: 3 bugs found and fixed</div>
+        <div class="ans-a">✅ Bug list</div>
+        <div class="ans-exp">
+          <strong style="color:var(--text)">Bug 1:</strong> <code class="ic">app.use(express.json())</code> is missing — without it <code class="ic">req.body</code> is <code class="ic">undefined</code>. Must be added before routes.<br><br>
+          <strong style="color:var(--text)">Bug 2:</strong> <code class="ic">req.params</code> → should be <code class="ic">req.body</code>. <code class="ic">req.params</code> holds URL segment values (<code class="ic">:id</code>), not the JSON body.<br><br>
+          <strong style="color:var(--text)">Bug 3:</strong> <code class="ic">res.status(200)</code> → should be <code class="ic">res.status(201)</code>. The correct REST status for a successful resource creation is <strong>201 Created</strong>, not 200 OK.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S17: Final -->
+<div class="slide">
+  <div class="final">
+    <blockquote>"The internet is becoming the town square for the global village of tomorrow."</blockquote>
+    <p style="font-size:14px;color:var(--text3);margin-bottom:38px">— Bill Gates</p>
+    <h2 style="margin-bottom:14px">Module 19 Complete 🎉</h2>
+    <p style="font-size:17px;color:var(--text2);max-width:540px;line-height:1.7;margin-bottom:28px">You've built a working REST API that accepts, processes, and returns structured JSON data. Your Express server can now communicate with any client — browser, mobile app, or another service — using the universal language of the web.</p>
+    <div class="cards cols3" style="max-width:580px;margin:0 auto 28px">
+      <div class="card al" style="text-align:center;padding:14px">
+        <div style="font-size:22px;margin-bottom:6px">🧩</div>
+        <div style="font-size:15px;font-weight:600">express.json()</div>
+        <div style="font-size:14px;color:var(--text3)">parse incoming</div>
+      </div>
+      <div class="card aa" style="text-align:center;padding:14px">
+        <div style="font-size:22px;margin-bottom:6px">📥</div>
+        <div style="font-size:15px;font-weight:600">req.body</div>
+        <div style="font-size:14px;color:var(--text3)">access data</div>
+      </div>
+      <div class="card ag" style="text-align:center;padding:14px">
+        <div style="font-size:22px;margin-bottom:6px">📤</div>
+        <div style="font-size:15px;font-weight:600">res.json()</div>
+        <div style="font-size:14px;color:var(--text3)">send response</div>
+      </div>
+    </div>
+    <p style="font-size:13px;color:var(--text3)">Press <kbd>?</kbd> for navigation shortcuts</p>
+  </div>
+</div>
+
+</div><!-- end deck -->
+
+<div id="help">
+  <div class="help-box">
+    <h2>Keyboard Shortcuts</h2>
+    <div class="help-row"><span>Next slide</span><span><kbd>→</kbd> or <kbd>Right-click</kbd></span></div>
+    <div class="help-row"><span>Previous slide</span><span><kbd>←</kbd></span></div>
+    <div class="help-row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="help-row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="help-row"><span>Close this</span><span><kbd>?</kbd> or <kbd>Esc</kbd></span></div>
+  </div>
+</div>
+
+<script>
+const slides = Array.from(document.querySelectorAll('.slide'));
+const total = slides.length;
+let cur = 0;
+
+function go(n) {
+  n = Math.max(0, Math.min(total - 1, n));
+  if (n === cur) return;
+  const prev = cur;
+  slides[prev].classList.remove('active');
+  if (n > prev) slides[prev].classList.add('prev');
+  setTimeout(() => slides[prev].classList.remove('prev'), 360);
+  cur = n;
+  slides[cur].classList.add('active');
+  slides[cur].classList.remove('prev');
+  document.getElementById('prog').style.width = ((cur + 1) / total * 100) + '%';
+  document.getElementById('counter').textContent = (cur + 1) + ' / ' + total;
+}
+
+document.addEventListener('keydown', e => {
+  const help = document.getElementById('help');
+  if (help.classList.contains('show')) {
+    if (e.key === 'Escape' || e.key === '?') help.classList.remove('show');
+    return;
+  }
+  if (e.key === 'ArrowRight') go(cur + 1);
+  else if (e.key === 'ArrowLeft') go(cur - 1);
+  else if (e.key === 'Home') go(0);
+  else if (e.key === 'End') go(total - 1);
+  else if (e.key === '?') document.getElementById('help').classList.toggle('show');
+});
+
+document.addEventListener('mousedown', e => {
+  if (e.target.closest('button, a, input, select, textarea, pre')) return;
+  if (e.button === 2) { e.preventDefault(); e.stopImmediatePropagation(); go(cur + 1); }
+  else if (e.button === 3) { e.preventDefault(); e.stopImmediatePropagation(); go(cur - 1); }
+  else if (e.button === 4) { e.preventDefault(); e.stopImmediatePropagation(); go(cur + 1); }
+}, true);
+document.addEventListener('contextmenu', e => { if (!e.target.closest('button, a, input, select, textarea, pre')) e.preventDefault(); }, true);
+document.addEventListener('auxclick', e => { if (e.button !== 1) e.preventDefault(); }, true);
+
+let tx = 0;
+document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - tx;
+  if (Math.abs(dx) > 50) go(dx < 0 ? cur + 1 : cur - 1);
+}, { passive: true });
+
+function copyCode(btn) {
+  const code = btn.closest('.code-wrap').querySelector('pre').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('ok'); }, 1800);
+  });
+}
+
+document.getElementById('prog').style.width = (1 / total * 100) + '%';
+</script>
+</body>
+</html>

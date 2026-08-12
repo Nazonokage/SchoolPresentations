@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>M10–11 · Node.js Introduction</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0A1628;--s1:#0F1E35;--s2:#152540;--s3:#1B2F50;
+  --b1:#1E3A5A;--b2:#2A5080;
+  --grn:#68D391;--grn2:#38A169;
+  --cyn:#63B3ED;--cyn2:#3182CE;
+  --amb:#F6AD55;--amb2:#DD6B20;
+  --rose:#FC8181;--rose2:#C53030;
+  --pur:#B794F4;
+  --txt:#EDF2F7;--txt2:#718096;--txt3:#CBD5E0;
+  --node:#539E43;
+  --mono:'Cascadia Code','Fira Code','Consolas',monospace;
+  --sans:'Segoe UI',system-ui,sans-serif;
+  --ra:8px;--rb:14px;
+  --tr:340ms cubic-bezier(.4,0,.2,1);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:var(--sans)}
+#bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--node),var(--cyn));z-index:99;transition:width .28s;border-radius:0 2px 2px 0}
+#ctr{position:fixed;top:9px;right:14px;font-size:11px;color:var(--txt2);z-index:99;font-family:var(--mono);letter-spacing:.4px}
+#deck{width:100%;height:100vh;position:relative;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;padding:44px 58px 28px;opacity:0;pointer-events:none;transform:translateX(44px);transition:opacity var(--tr),transform var(--tr);overflow-y:auto}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.ol{opacity:0;transform:translateX(-44px)}.slide.or{opacity:0;transform:translateX(44px)}
+@media(prefers-reduced-motion:reduce){.slide{transition:opacity .12s;transform:none!important}}
+/* TYPE */
+.ey{font-size:10.5px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--node);margin-bottom:8px;display:flex;align-items:center;gap:9px}
+.ey::before{content:'';width:18px;height:2px;background:var(--node);border-radius:1px;display:inline-block;flex-shrink:0}
+.ey.c{color:var(--cyn)}.ey.c::before{background:var(--cyn)}
+.ttl{font-size:clamp(25px,2.8vw,41px);font-weight:800;line-height:1.1;letter-spacing:-.3px;color:var(--txt);margin-bottom:4px}
+.sub{font-size:14.5px;color:var(--txt2);margin-bottom:16px}
+.rule{height:1px;background:linear-gradient(90deg,var(--b2),transparent);border:none;margin-bottom:16px}
+/* LAYOUT */
+.cnt{flex:1;display:flex;flex-direction:column;gap:11px;min-height:0}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:11px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.sp{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:13px;flex:1;min-height:0}
+.sp>*{min-width:0;display:flex;flex-direction:column;gap:8px}
+.col{display:flex;flex-direction:column;gap:8px;min-width:0}
+.f1{flex:1}
+/* FIXED-HEIGHT CODE PANEL */
+.codepanel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:13px;height:min(520px,60vh);align-items:stretch}
+.codepanel>*{min-width:0;height:100%;display:flex;flex-direction:column}
+/* CARD */
+.card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--rb);padding:13px 15px}
+.card h3{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--node);margin-bottom:8px}
+.card h3.c{color:var(--cyn)}
+.card p,.card li{font-size:14.5px;color:var(--txt3);line-height:1.62}
+.card ul{padding-left:15px}.card li{margin-bottom:3px}
+/* CODE */
+.cw{position:relative;background:#060F1C;border:1px solid var(--b1);border-radius:var(--ra);overflow:hidden;display:flex;flex-direction:column;flex:1}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:5px 11px;background:#080E1A;border-bottom:1px solid var(--b1);font-size:10px;color:var(--txt2);font-family:var(--mono);flex-shrink:0}
+.ch .lb{color:var(--amb)}
+.cw pre{padding:11px 13px;overflow:auto;font-family:var(--mono);font-size:13px;line-height:1.73;white-space:pre;flex:1;min-height:0}
+.cpb{padding:2px 9px;font-size:10px;font-family:var(--sans);background:var(--s3);border:1px solid var(--b2);color:var(--txt2);border-radius:3px;cursor:pointer;transition:all .16s}
+.cpb:hover{background:var(--node);color:#fff;border-color:var(--node)}
+.cpb.ok{background:var(--grn);color:#060F1C;border-color:var(--grn)}
+/* SYNTAX */
+.k{color:#F687B3}.s{color:#9AE6B4}.f{color:#BEE3F8}.n{color:#90CDF4}
+.cm{color:#2D4A65;font-style:italic}.tp{color:#FBB6CE}.b{color:#FAF089}
+/* BREAKDOWN */
+.bd{display:flex;flex-direction:column;gap:6px}
+.bi{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;background:var(--s1);border:1px solid var(--b1);border-radius:6px;border-left:3px solid var(--node)}
+.bi.c{border-left-color:var(--cyn)}.bi.a{border-left-color:var(--amb)}
+.bi.r{border-left-color:var(--rose)}.bi.g{border-left-color:var(--grn)}
+.bl{font-family:var(--mono);font-size:10px;color:var(--node);background:#060F1C;padding:2px 6px;border-radius:3px;white-space:nowrap;align-self:flex-start;margin-top:1px;flex-shrink:0}
+.bl.c{color:var(--cyn)}
+.bt{font-size:13.5px;color:var(--txt3);line-height:1.52}.bt strong{color:var(--txt);font-weight:600}
+/* STEP */
+.step{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--s1);border:1px solid var(--b1);border-radius:var(--ra)}
+.sn{width:25px;height:25px;border-radius:50%;background:var(--node);color:#fff;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.sb h4{font-size:14px;font-weight:700;color:var(--txt);margin-bottom:2px}
+.sb p{font-size:13px;color:var(--txt2);line-height:1.48}
+/* TABLE */
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{background:var(--s2);color:var(--node);padding:7px 11px;text-align:left;font-weight:700;font-size:10px;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--b1)}
+td{padding:7px 11px;border-bottom:1px solid var(--b1);color:var(--txt3);line-height:1.45;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.012)}
+/* PILLS */
+.pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--b1);color:var(--txt2);margin:2px}
+.pg{border-color:var(--grn);color:var(--grn);background:rgba(104,211,145,.07)}
+.pc{border-color:var(--cyn);color:var(--cyn);background:rgba(99,179,237,.07)}
+.pa{border-color:var(--amb);color:var(--amb);background:rgba(246,173,85,.07)}
+.pn{border-color:var(--node);color:var(--node);background:rgba(83,158,67,.07)}
+/* SCENARIO TAG */
+.stag{display:inline-block;padding:2px 10px;border-radius:4px;font-size:10.5px;font-weight:700;font-family:var(--mono);background:rgba(246,173,85,.12);color:var(--amb);border:1px solid rgba(246,173,85,.25);margin-bottom:8px}
+/* HERO */
+.hbg{background:radial-gradient(ellipse at 12% 60%,rgba(83,158,67,.1) 0%,transparent 52%),radial-gradient(ellipse at 85% 15%,rgba(99,179,237,.07) 0%,transparent 46%),var(--bg)}
+.ht{font-size:clamp(42px,4.8vw,68px);font-weight:900;line-height:1.02;letter-spacing:-1.2px}
+.hs{font-size:17px;color:var(--txt2);max-width:520px;line-height:1.65;margin:12px 0 17px}
+.dots{position:absolute;inset:0;background-image:radial-gradient(rgba(83,158,67,.04) 1px,transparent 1px);background-size:28px 28px;pointer-events:none}
+/* FLOW DIAGRAM */
+.flow{display:flex;align-items:center;flex-wrap:wrap;gap:0;margin:8px 0}
+.fb{background:var(--s2);border:1px solid var(--b2);border-radius:6px;padding:6px 12px;font-size:13px;color:var(--txt3);font-weight:500}
+.fb.hi{border-color:var(--node);color:var(--node)}
+.fa{color:var(--node);padding:0 6px;font-size:15px}
+/* COMPARE */
+.cmp{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:11px}
+.cmp-box{border-radius:var(--ra);padding:13px 15px;border:1px solid var(--b1)}
+.cmp-box.old{background:rgba(252,129,129,.05);border-color:rgba(252,129,129,.2)}
+.cmp-box.new{background:rgba(83,158,67,.05);border-color:rgba(83,158,67,.2)}
+.cmp-box h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:9px}
+.cmp-box.old h4{color:var(--rose)}.cmp-box.new h4{color:var(--node)}
+.cmp-box p,.cmp-box li{font-size:14px;color:var(--txt3);line-height:1.6}
+.cmp-box ul{padding-left:14px}
+/* BADGE ROW */
+.badge-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}
+.badge-ico{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:6px;background:var(--s2);border:1px solid var(--b1);font-size:12.5px;color:var(--txt3);font-weight:600}
+/* QUIZ */
+.mc-item{background:var(--s1);border:1px solid var(--b1);border-radius:var(--ra);padding:11px 13px}
+.mc-q{font-size:14px;font-weight:600;color:var(--txt);margin-bottom:8px;line-height:1.48}
+.qn{color:var(--node);margin-right:5px;font-weight:800}
+.mc-opts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px}
+.mc-o{padding:6px 9px;border-radius:4px;border:1px solid var(--b1);font-size:13px;color:var(--txt3);cursor:pointer;transition:all .14s;background:var(--s2);line-height:1.35}
+.mc-o:hover{border-color:var(--node);color:var(--txt)}
+.mc-o.sel{border-color:var(--node);background:rgba(83,158,67,.1);color:var(--node)}
+/* ANS */
+.ab2{border:1px solid var(--b1);border-radius:var(--rb);overflow:hidden;flex:1}
+.ar{display:flex;gap:8px;padding:7px 11px;border-bottom:1px solid var(--b1);font-size:13px;align-items:flex-start}
+.ar:last-child{border:none}
+.ar:nth-child(even){background:rgba(255,255,255,.01)}
+.an{font-weight:800;min-width:21px;font-family:var(--mono);font-size:11px;flex-shrink:0;margin-top:1px;color:var(--node)}
+.ab{color:var(--txt3);line-height:1.48;flex:1;min-width:0}
+.ab strong{color:var(--grn)}
+/* QUOTE */
+.qc{background:linear-gradient(135deg,var(--s1),var(--s2));border-left:3px solid var(--node);border-radius:0 var(--ra) var(--ra) 0;padding:12px 16px;margin-bottom:9px}
+.qt{font-size:15px;color:var(--txt3);line-height:1.68;font-style:italic}
+.qs{font-size:10px;color:var(--node);margin-top:5px;font-style:normal;font-weight:700;letter-spacing:.5px}
+/* RECAP */
+.rcg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.rc{background:var(--s1);border:1px solid var(--b1);border-radius:var(--rb);padding:13px;text-align:center}
+.rc .ico{font-size:22px;margin-bottom:6px}
+.rc h4{font-size:10px;font-weight:700;color:var(--node);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.rc p{font-size:12px;color:var(--txt2);line-height:1.5}
+/* MODAL */
+#mod{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:999;align-items:center;justify-content:center}
+#mod.open{display:flex}
+.mb{background:var(--s1);border:1px solid var(--b2);border-radius:13px;padding:22px 26px;min-width:300px}
+.mb h3{font-size:13.5px;font-weight:700;color:var(--node);margin-bottom:12px}
+.sr{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--b1);font-size:12px;color:var(--txt3)}
+.sr:last-of-type{border:none}
+.sr kbd{background:var(--s2);border:1px solid var(--b2);border-radius:3px;padding:1px 6px;font-family:var(--mono);font-size:10px;color:var(--txt)}
+.mcl{margin-top:13px;width:100%;padding:8px;background:var(--node);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--sans)}
+#hint{position:fixed;bottom:11px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--txt2);pointer-events:none;opacity:.35;font-family:var(--mono);letter-spacing:.3px}
+ic{background:var(--s2);padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:11.5px;color:var(--pur);border:1px solid var(--b1)}
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<div id="ctr"></div>
+<div id="deck"></div>
+<div id="hint">right-click or → &nbsp;·&nbsp; ? for shortcuts</div>
+<div id="mod">
+  <div class="mb">
+    <h3>⌨ Shortcuts</h3>
+    <div class="sr"><span>Next</span><span><kbd>→</kbd> / <kbd>Right-click</kbd></span></div>
+    <div class="sr"><span>Prev</span><span><kbd>←</kbd></span></div>
+    <div class="sr"><span>First / Last</span><span><kbd>Home</kbd> / <kbd>End</kbd></span></div>
+    <div class="sr"><span>Shortcuts</span><span><kbd>?</kbd></span></div>
+    <div class="sr"><span>Close</span><span><kbd>Esc</kbd></span></div>
+    <button class="mcl" onclick="document.getElementById('mod').classList.remove('open')">Close</button>
+  </div>
+</div>
+<script>
+// ── TOKENIZER ─────────────────────────────────────────────────────────
+function hl(raw){
+  const KW=/^(const|let|var|function|return|async|await|try|catch|throw|new|class|if|else|for|while|import|export|default|from|require|module|true|false|null|undefined)\b/;
+  const TY=/^(console|process|fs|http|path|os|JSON|Math|Promise|Error|setTimeout|clearTimeout|EventEmitter|Buffer)\b/;
+  const NUM=/^\b\d+(\.\d+)?\b/;
+  function e(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+  let i=0,o='';
+  while(i<raw.length){
+    if(raw[i]==='/'&&raw[i+1]==='/'){const end=raw.indexOf('\n',i);const ch=end<0?raw.slice(i):raw.slice(i,end);o+='<span class="cm">'+e(ch)+'</span>';i+=ch.length;continue;}
+    if(raw[i]==='`'){let j=i+1;while(j<raw.length&&raw[j]!=='`'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    if(raw[i]==="'"){let j=i+1;while(j<raw.length&&raw[j]!=="'"&&raw[j]!=='\n'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    if(raw[i]==='"'){let j=i+1;while(j<raw.length&&raw[j]!=='"'&&raw[j]!=='\n'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    const rest=raw.slice(i);let m;
+    if((m=rest.match(KW))){o+='<span class="k">'+m[0]+'</span>';i+=m[0].length;continue;}
+    if((m=rest.match(TY))){o+='<span class="tp">'+m[0]+'</span>';i+=m[0].length;continue;}
+    if((m=rest.match(NUM))){o+='<span class="n">'+m[0]+'</span>';i+=m[0].length;continue;}
+    o+=e(raw[i]);i++;
+  }
+  return o;
+}
+function cw(code,lang,label,mh){
+  const id='c'+Math.random().toString(36).slice(2);
+  const body=(lang==='js'||lang==='bash'||lang==='json')?hl(code):code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const style=mh?'max-height:'+mh+'px':'';
+  return '<div class="cw"><div class="ch"><span class="lb">'+(label||lang)+'</span><button class="cpb" onclick="docp(\''+id+'\',this)">Copy</button></div><pre id="'+id+'" style="'+style+'">'+body+'</pre></div>';
+}
+function docp(id,btn){
+  navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>{
+    btn.textContent='Copied!';btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('ok');},1800);
+  });
+}
+
+// Node.js logo as inline SVG data-URI
+const NODE_LOGO=`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' role='img' aria-label='Node.js logo'>
+  <polygon points='24,4 44,15 44,33 24,44 4,33 4,15' fill='#539E43'/>
+  <text x='24' y='30' font-family='Arial,sans-serif' font-weight='900' font-size='14' fill='white' text-anchor='middle'>node</text>
+</svg>`;
+const NPM_LOGO=`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' role='img' aria-label='npm logo'>
+  <rect width='48' height='48' rx='6' fill='#CB3837'/>
+  <text x='24' y='32' font-family='Arial,sans-serif' font-weight='900' font-size='18' fill='white' text-anchor='middle'>npm</text>
+</svg>`;
+const V8_LOGO=`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' role='img' aria-label='V8 engine logo'>
+  <circle cx='24' cy='24' r='22' fill='#4285F4'/>
+  <text x='24' y='31' font-family='Arial,sans-serif' font-weight='900' font-size='18' fill='white' text-anchor='middle'>V8</text>
+</svg>`;
+
+// ── SLIDES ────────────────────────────────────────────────────────────
+const S=[];
+
+// 0 ── TITLE
+S.push({cls:'hbg',h:`
+<div class="dots"></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;position:relative">
+  <div class="ey" style="margin-bottom:12px">Web Systems · M10–11</div>
+  <div style="display:flex;align-items:center;gap:20px;margin-bottom:10px">
+    <img src="https://nodejs.org/static/images/logo.svg" alt="Node.js logo" style="height:56px;filter:brightness(1.1)" onerror="this.style.display='none'"/>
+  </div>
+  <div class="ht"><span style="color:var(--txt)">Node.js</span><br/><span style="color:var(--node)">Foundations</span></div>
+  <div class="hs">Architecture, the V8 engine, non-blocking I/O, NPM, and your first real server-side programs — condensed for developers who already have Node installed.</div>
+  <div>
+    <span class="pill pn">V8 Engine</span>
+    <span class="pill pn">Event Loop</span>
+    <span class="pill pn">Non-blocking I/O</span>
+    <span class="pill pa">NPM</span>
+    <span class="pill pc">package.json</span>
+    <span class="pill pg">IRL Coding Activity</span>
+  </div>
+</div>`});
+
+// 1 ── WHAT IS NODE.JS
+S.push({h:`
+<div class="ey">M10 · What is Node.js</div>
+<div class="ttl">JavaScript, Everywhere</div>
+<hr class="rule"/>
+<div class="cnt">
+  <div class="g2" style="margin-bottom:2px">
+    <div class="card">
+      <h3>The One-Line Definition</h3>
+      <p style="font-size:15.5px;line-height:1.7;margin-bottom:10px">Node.js is an <strong style="color:var(--txt)">open-source, cross-platform JavaScript runtime</strong> built on Chrome's V8 engine. It lets you run JavaScript <em>outside</em> the browser — on a server, your laptop, a Raspberry Pi.</p>
+      <div class="badge-row">
+        <div class="badge-ico">
+          <svg width="22" height="22" viewBox="0 0 48 48"><polygon points="24,4 44,15 44,33 24,44 4,33 4,15" fill="#539E43"/><text x="24" y="30" font-family="Arial" font-weight="900" font-size="13" fill="white" text-anchor="middle">N</text></svg>
+          Node.js
+        </div>
+        <div class="badge-ico">
+          <svg width="22" height="22" viewBox="0 0 48 48"><circle cx="24" cy="24" r="22" fill="#4285F4"/><text x="24" y="31" font-family="Arial" font-weight="900" font-size="16" fill="white" text-anchor="middle">V8</text></svg>
+          V8 Engine
+        </div>
+        <div class="badge-ico">
+          <svg width="22" height="22" viewBox="0 0 48 48"><rect width="48" height="48" rx="5" fill="#CB3837"/><text x="24" y="32" font-family="Arial" font-weight="900" font-size="16" fill="white" text-anchor="middle">npm</text></svg>
+          NPM
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Before vs After Node.js</h3>
+      <table>
+        <tr><th></th><th>Before Node.js</th><th>With Node.js</th></tr>
+        <tr><td>Front-end</td><td>JavaScript</td><td style="color:var(--grn)">JavaScript</td></tr>
+        <tr><td>Back-end</td><td>PHP / Java / Ruby</td><td style="color:var(--grn)">JavaScript</td></tr>
+        <tr><td>Context switch</td><td style="color:var(--rose)">High — two languages</td><td style="color:var(--grn)">Zero — same language</td></tr>
+        <tr><td>Code reuse</td><td style="color:var(--rose)">Hard</td><td style="color:var(--grn)">Easy</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="g2" style="flex:1">
+    <div class="card"><h3>How V8 Fits In</h3>
+      <p style="margin-bottom:8px">V8 is the JavaScript engine Google built for Chrome. It compiles JS directly to machine code — no interpretation line by line.</p>
+      <div class="flow">
+        <div class="fb">Your JS file</div><div class="fa">→</div>
+        <div class="fb">V8 compiles</div><div class="fa">→</div>
+        <div class="fb">Machine code</div><div class="fa">→</div>
+        <div class="fb hi">CPU executes</div>
+      </div>
+      <p style="margin-top:8px;font-size:13.5px;color:var(--txt2)">Node.js wraps V8 and adds file system access, networking, timers, and the event loop — things the browser sandbox wouldn't allow.</p>
+    </div>
+    <div class="card"><h3>What Node.js Is NOT</h3>
+      <ul>
+        <li>Not a programming language — JavaScript is the language</li>
+        <li>Not a web framework — Express, Fastify, Hono are frameworks</li>
+        <li>Not the same as browser JS — no <ic>window</ic>, no <ic>document</ic>, no DOM</li>
+        <li>Not multi-threaded by default — but it doesn't need to be</li>
+      </ul>
+    </div>
+  </div>
+</div>`});
+
+// 2 ── BLOCKING VS NON-BLOCKING
+S.push({h:`
+<div class="ey">M10 · Architecture</div>
+<div class="ttl">Blocking vs Non-Blocking I/O</div>
+<hr class="rule"/>
+<div class="cnt">
+  <div class="cmp" style="margin-bottom:4px">
+    <div class="cmp-box old">
+      <h4>❌ Traditional Servers (Blocking)</h4>
+      <p style="margin-bottom:8px">PHP · Java · Ruby on Rails</p>
+      <ol style="padding-left:16px;font-size:14px;color:var(--txt3);line-height:2">
+        <li>Request arrives</li>
+        <li>Thread assigned to handle it</li>
+        <li>Thread <strong style="color:var(--rose)">waits</strong> while file/DB reads</li>
+        <li>Response sent, thread released</li>
+        <li>Next request needs its own thread</li>
+      </ol>
+      <p style="margin-top:9px;font-size:13px;color:var(--rose)">1000 users = 1000 threads = high memory</p>
+    </div>
+    <div class="cmp-box new">
+      <h4>✅ Node.js (Non-Blocking)</h4>
+      <p style="margin-bottom:8px">Single thread · Event Loop</p>
+      <ol style="padding-left:16px;font-size:14px;color:var(--txt3);line-height:2">
+        <li>Request arrives</li>
+        <li>I/O operation kicked off to OS</li>
+        <li>Node <strong style="color:var(--grn)">immediately</strong> handles next request</li>
+        <li>OS signals when I/O is done</li>
+        <li>Callback fires — response sent</li>
+      </ol>
+      <p style="margin-top:9px;font-size:13px;color:var(--grn)">1000 users = 1 thread + event loop = low memory</p>
+    </div>
+  </div>
+  <div class="sp" style="flex:1">
+    <div class="card f1">
+      <h3>The Analogy</h3>
+      <p style="margin-bottom:8px;font-size:14.5px;line-height:1.65"><strong style="color:var(--txt)">Blocking (old server):</strong> A single waiter takes your order, walks to the kitchen, <em>stands there watching the chef cook</em>, then walks back to serve you. Only then does he take the next table's order.</p>
+      <p style="font-size:14.5px;line-height:1.65"><strong style="color:var(--node)">Non-blocking (Node.js):</strong> A single waiter takes your order, passes it to the kitchen, <em>immediately</em> goes to the next table. When the kitchen rings the bell, he picks up and serves. One waiter, many tables, all moving.</p>
+    </div>
+    <div class="col f1">
+      <div class="card"><h3>What is I/O?</h3>
+        <p style="font-size:14px;line-height:1.65">Input/Output operations are anything that <em>waits on an external resource</em>: reading a file, querying a database, making an HTTP request. These are <strong style="color:var(--txt)">slow compared to CPU calculations</strong> — non-blocking I/O avoids wasting time waiting.</p>
+      </div>
+      <div class="card"><h3>When Blocking IS Fine</h3>
+        <p style="font-size:14px;line-height:1.65">CPU-heavy tasks — image processing, video encoding, large calculations — don't benefit from non-blocking I/O because the CPU itself is the bottleneck, not waiting. Node has <ic>worker_threads</ic> for those cases.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 3 ── EVENT LOOP
+S.push({h:`
+<div class="ey">M10 · How Node Works</div>
+<div class="ttl">The Event Loop</div>
+<hr class="rule"/>
+<div class="cnt">
+  <div class="sp" style="flex:1">
+    <div>
+      <div class="card" style="flex-shrink:0;margin-bottom:0"><h3>Execution Order — Code Demo</h3></div>
+      ${cw(`// event-loop-demo.js
+console.log('1 — sync start');
+
+setTimeout(() => {
+  console.log('4 — setTimeout (timers phase)');
+}, 0);
+
+Promise.resolve().then(() => {
+  console.log('3 — Promise microtask');
+});
+
+process.nextTick(() => {
+  console.log('2 — nextTick (highest priority)');
+});
+
+console.log('5 — sync end... wait, not 5?');
+
+// Actual output:
+// 1 — sync start
+// 5 — sync end... wait, not 5?
+// 2 — nextTick
+// 3 — Promise microtask
+// 4 — setTimeout`,'js','event-loop-demo.js',220)}
+    </div>
+    <div>
+      <div class="card" style="flex-shrink:0;margin-bottom:0"><h3>The 4-Phase Cheat Sheet</h3></div>
+      <div class="bd f1">
+        <div class="bi"><div class="bl">1. Call Stack</div><div class="bt">Synchronous JS runs first, completely. The event loop doesn't touch async until the stack is <strong>empty</strong>.</div></div>
+        <div class="bi c"><div class="bl c">2. nextTick / Microtasks</div><div class="bt">After each stack frame: <ic>process.nextTick()</ic> fires first, then <ic>Promise.then()</ic>. Both run before any I/O or timers.</div></div>
+        <div class="bi a"><div class="bl">3. Timers</div><div class="bt"><ic>setTimeout</ic> and <ic>setInterval</ic> callbacks. Even <ic>setTimeout(fn, 0)</ic> waits until after microtasks.</div></div>
+        <div class="bi g"><div class="bl">4. I/O → Check → Close</div><div class="bt">File reads, network — then <ic>setImmediate()</ic> — then stream close events. The loop keeps spinning until nothing is pending.</div></div>
+      </div>
+      <div class="card" style="flex-shrink:0"><h3>Why This Matters</h3>
+        <p style="font-size:13.5px;line-height:1.62">Understanding this order prevents bugs where you assume a callback has already run when you try to use its result. UI bugs, race conditions, and stale data almost always come from misjudging event loop order.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 4 ── NODE GLOBALS + FIRST PROGRAM
+S.push({h:`
+<div class="ey">M10 · Core Concepts</div>
+<div class="ttl">Globals, Modules &amp; Your First Program</div>
+<hr class="rule"/>
+<div class="cnt">
+  <div class="codepanel">
+    <div>
+      <div class="card" style="flex-shrink:0;margin-bottom:8px"><h3>Node.js Globals (no import needed)</h3>
+        <div class="bd" style="gap:5px">
+          <div class="bi" style="padding:5px 8px"><div class="bl">process</div><div class="bt" style="font-size:13px">CLI args, env vars, exit code, current PID</div></div>
+          <div class="bi c" style="padding:5px 8px"><div class="bl c">__dirname</div><div class="bt" style="font-size:13px">Absolute path of the current file's directory</div></div>
+          <div class="bi a" style="padding:5px 8px"><div class="bl">__filename</div><div class="bt" style="font-size:13px">Absolute path of the current file</div></div>
+          <div class="bi g" style="padding:5px 8px"><div class="bl">module / require</div><div class="bt" style="font-size:13px">CommonJS module system — export and import</div></div>
+          <div class="bi" style="padding:5px 8px"><div class="bl">console</div><div class="bt" style="font-size:13px">Same as the browser — log, warn, error, time</div></div>
+        </div>
+      </div>
+      <div class="cw" style="flex:1">
+        <div class="ch"><span class="lb">app.js — run with: node app.js</span><button class="cpb" onclick="docp('c-first',this)">Copy</button></div>
+        <pre id="c-first">${hl(`// Your first real Node.js program
+console.log('Node version:', process.version);
+console.log('Platform:    ', process.platform);
+console.log('Directory:   ', __dirname);
+console.log('File:        ', __filename);
+
+// Read CLI arguments
+const args = process.argv.slice(2);
+if (args.length > 0) {
+  console.log('You passed:', args.join(', '));
+} else {
+  console.log('No arguments passed.');
+}
+
+// Environment variable (try: PORT=8080 node app.js)
+const port = process.env.PORT || 3000;
+console.log('Server would start on port:', port);`)}</pre>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="flex-shrink:0;margin-bottom:8px"><h3>Expected Output</h3>
+        <div style="background:#060F1C;border-radius:6px;padding:10px;font-family:var(--mono);font-size:12.5px;color:var(--txt3);line-height:1.8">
+          <span style="color:var(--node)">$</span> node app.js hello world<br/>
+          Node version: &nbsp;v20.x.x<br/>
+          Platform: &nbsp;&nbsp;&nbsp;&nbsp;linux (or win32)<br/>
+          Directory: &nbsp;&nbsp;&nbsp;/home/user/project<br/>
+          File: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/home/user/project/app.js<br/>
+          You passed: &nbsp;&nbsp;hello, world<br/>
+          Server would start on port: 3000
+        </div>
+      </div>
+      <div class="card f1"><h3>CommonJS Modules</h3>
+        ${cw(`// math.js — exporting
+function add(a, b) { return a + b; }
+function multiply(a, b) { return a * b; }
+module.exports = { add, multiply };
+
+// main.js — importing
+const { add, multiply } = require('./math');
+console.log(add(3, 4));       // 7
+console.log(multiply(3, 4));  // 12`,'js','modules',130)}
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 5 ── NPM & PACKAGE.JSON
+S.push({h:`
+<div class="ey">M11 · NPM</div>
+<div class="ttl">NPM &amp; package.json</div>
+<hr class="rule"/>
+<div class="cnt">
+  <div class="sp" style="flex:1">
+    <div>
+      <div class="card" style="flex-shrink:0;margin-bottom:0"><h3>Key NPM Commands</h3>
+        <table>
+          <tr><th>Command</th><th>What It Does</th></tr>
+          <tr><td><ic>npm init -y</ic></td><td>Create package.json with defaults</td></tr>
+          <tr><td><ic>npm install axios</ic></td><td>Install a package &amp; save to dependencies</td></tr>
+          <tr><td><ic>npm install jest --save-dev</ic></td><td>Dev-only dependency</td></tr>
+          <tr><td><ic>npm install</ic></td><td>Install all deps from package.json</td></tr>
+          <tr><td><ic>npm run start</ic></td><td>Run the "start" script</td></tr>
+          <tr><td><ic>npm uninstall axios</ic></td><td>Remove a package</td></tr>
+          <tr><td><ic>node -v</ic></td><td>Check Node version</td></tr>
+          <tr><td><ic>npm -v</ic></td><td>Check NPM version</td></tr>
+        </table>
+      </div>
+      <div class="cw" style="flex:1">
+        <div class="ch"><span class="lb">package.json — annotated</span><button class="cpb" onclick="docp('c-pkg',this)">Copy</button></div>
+        <pre id="c-pkg">${hl(`{
+  "name": "my-node-app",
+  "version": "1.0.0",
+  "description": "My first Node project",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev":   "nodemon index.js",
+    "test":  "jest"
+  },
+  "dependencies": {
+    "axios": "^1.7.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0",
+    "jest":    "^29.7.0"
+  }
+}`)}</pre>
+      </div>
+    </div>
+    <div>
+      <div class="bd" style="flex-shrink:0">
+        <div class="bi"><div class="bl">scripts</div><div class="bt">Custom commands run with <ic>npm run &lt;name&gt;</ic>. The "start" script is special — runs with just <ic>npm start</ic>.</div></div>
+        <div class="bi c"><div class="bl c">^1.7.2</div><div class="bt">The caret <ic>^</ic> means "minor &amp; patch updates OK." <ic>~1.7.2</ic> = patch only. <ic>1.7.2</ic> = exact version locked.</div></div>
+        <div class="bi a"><div class="bl">devDependencies</div><div class="bt">Tools only needed during development (testing, linting, hot-reload). NOT installed in production via <ic>npm install --production</ic>.</div></div>
+        <div class="bi g"><div class="bl">node_modules</div><div class="bt">Folder created by <ic>npm install</ic>. <strong>Never commit this</strong> — it can be 300MB+. Add it to <ic>.gitignore</ic>.</div></div>
+      </div>
+      <div class="card f1"><h3>.gitignore Essentials</h3>
+        ${cw(`# .gitignore — create this in project root
+node_modules/
+.env
+.env.local
+dist/
+*.log`,'bash','.gitignore',110)}
+        <p style="font-size:13px;color:var(--txt2);margin-top:8px">Anyone who clones your repo runs <ic>npm install</ic> to recreate node_modules locally — no need to commit it.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 6 ── REAL-WORLD USE CASES
+S.push({h:`
+<div class="ey">M10 · Why Node</div>
+<div class="ttl">Where Node.js Shines in the Real World</div>
+<hr class="rule"/>
+<div class="cnt">
+  <div class="g3" style="margin-bottom:4px">
+    <div class="card"><div style="font-size:28px;margin-bottom:7px">⚡</div><h3>Real-time Apps</h3>
+      <p>Chat apps, live notifications, collaborative editors. Non-blocking + WebSockets = thousands of open connections at near-zero extra cost.</p>
+      <p style="margin-top:8px;font-size:13px;color:var(--txt2)">Discord, Slack, Figma live cursors</p>
+    </div>
+    <div class="card"><div style="font-size:28px;margin-bottom:7px">🌊</div><h3>Streaming</h3>
+      <p>Large file uploads/downloads, video on demand. Node's Stream API processes data in chunks — memory stays flat regardless of file size.</p>
+      <p style="margin-top:8px;font-size:13px;color:var(--txt2)">Netflix backend services</p>
+    </div>
+    <div class="card"><div style="font-size:28px;margin-bottom:7px">🔗</div><h3>API Gateways</h3>
+      <p>A single Node server fans out requests to multiple microservices, aggregates responses, and handles auth — all without blocking.</p>
+      <p style="margin-top:8px;font-size:13px;color:var(--txt2)">LinkedIn, PayPal API layers</p>
+    </div>
+  </div>
+  <div class="g3">
+    <div class="card"><div style="font-size:28px;margin-bottom:7px">🏗</div><h3>Dev Tools</h3>
+      <p>Webpack, Vite, ESLint, Prettier, Jest — the entire modern front-end toolchain is built on Node.js. You already use it every time you run <ic>npm run dev</ic>.</p>
+    </div>
+    <div class="card"><div style="font-size:28px;margin-bottom:7px">🌐</div><h3>SPAs &amp; SSR</h3>
+      <p>Serving React/Vue apps, running Next.js server-side rendering, proxying API calls. The "N" in MERN/MEAN stack.</p>
+      <p style="margin-top:8px;font-size:13px;color:var(--txt2)">Vercel, Netlify, Next.js</p>
+    </div>
+    <div class="card"><div style="font-size:28px;margin-bottom:7px">📡</div><h3>IoT &amp; CLIs</h3>
+      <p>Handling thousands of device heartbeats per second, or building command-line tools (like <ic>create-react-app</ic> or <ic>npm</ic> itself).</p>
+      <p style="margin-top:8px;font-size:13px;color:var(--txt2)">NASA telemetry, Arduino bridges</p>
+    </div>
+  </div>
+</div>`});
+
+// 7 ── ANALOGIES
+S.push({h:`
+<div class="ey">Analogies</div>
+<div class="ttl">Node.js in Plain Language</div>
+<hr class="rule"/>
+<div class="cnt">
+  <div class="g2" style="flex:1">
+    <div class="col">
+      <div class="card f1"><h3>🏋 V8 = The Gym Trainer</h3>
+        <p>Your JavaScript code is a workout plan. V8 is the trainer who turns that plan into actual physical reps (machine code) your muscles (CPU) can execute. Without V8, you just have words on paper. Node.js hired this trainer and brought them out of the Chrome gym into the real world.</p>
+      </div>
+      <div class="card f1"><h3>🎯 Event Loop = Bullet Journal</h3>
+        <p>You have a bullet journal. You write tasks. When a task says "wait for the package to arrive," you don't sit by the door — you move to the next task and put a check-back note. When the doorbell rings, you complete that entry. The journal (event loop) keeps you productive the whole time.</p>
+      </div>
+      <div class="card f1"><h3>📦 NPM = IKEA Warehouse</h3>
+        <p>Your project is a room you're decorating. Instead of building every piece of furniture from scratch, you browse the warehouse (npm registry), pick what you need (axios, express, lodash), and it's delivered to your <ic>node_modules</ic> shelf. Your <ic>package.json</ic> is the shopping list — anyone can recreate your room from it.</p>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card f1"><h3>🍽 Non-blocking = Restaurant Service</h3>
+        <p>One experienced waiter handles twelve tables because they never stand in the kitchen watching food cook. They drop the order, serve another table, and the kitchen (OS) signals them when the food is ready. Traditional blocking servers have one waiter per table — fine for two tables, catastrophic for two hundred.</p>
+      </div>
+      <div class="card f1"><h3>🔑 module.exports = Borrowing a Book</h3>
+        <p>A file that does <ic>module.exports = { add, multiply }</ic> is a library putting books on a public shelf. Another file doing <ic>require('./math')</ic> is borrowing those books. The math file's private variables stay private — only what's on the shelf can be borrowed.</p>
+      </div>
+      <div class="card f1"><h3>🌱 package.json = Seed Packet</h3>
+        <p>A seed packet doesn't contain the full-grown plant — it contains the <em>instructions</em> to grow it. <ic>package.json</ic> is the same: it doesn't contain <ic>node_modules</ic>, but <ic>npm install</ic> reads it and grows the full dependency tree on any machine, reproducibly.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 8 ── KEY QUOTES
+S.push({h:`
+<div class="ey">Key Quotes</div>
+<div class="ttl">Worth Remembering</div>
+<hr class="rule"/>
+<div class="cnt">
+  <div class="qc"><div class="qt">"Node.js is not a silver bullet new platform that will dominate the web development world. Instead, it's a platform that fills a particular need. And understanding this is the key to understanding Node.js."</div><div class="qs">— Ryan Dahl, creator of Node.js</div></div>
+  <div class="qc"><div class="qt">"I/O needs to be done differently. We were doing it wrong. There's a better way. And the event-loop architecture is that better way."</div><div class="qs">— Node.js core philosophy</div></div>
+  <div class="qc"><div class="qt">"Non-blocking I/O is not about being faster at any single task. It is about being efficient when tasks require waiting — and most real-world tasks require a lot of waiting."</div><div class="qs">— Event-driven architecture principles</div></div>
+  <div class="qc"><div class="qt">"The beauty of Node.js is that it lets developers use JavaScript everywhere — on the front-end, back-end, command-line tools, and even IoT devices — eliminating context switching between languages."</div><div class="qs">— Full-stack JavaScript philosophy</div></div>
+</div>`});
+
+// 9 ── RECAP
+S.push({h:`
+<div class="ey">Recap</div>
+<div class="ttl">M10–11 Summary</div>
+<hr class="rule"/>
+<div class="cnt">
+  <div class="rcg" style="flex:1">
+    <div class="rc"><div class="ico">⚡</div><h4>Node.js</h4><p>JS runtime built on V8. Runs JS outside the browser — server, CLI, IoT.</p></div>
+    <div class="rc"><div class="ico">🔄</div><h4>Non-blocking I/O</h4><p>I/O is handed to the OS. Node moves on immediately. Callback fires when done.</p></div>
+    <div class="rc"><div class="ico">🌀</div><h4>Event Loop</h4><p>Sync → nextTick → Promises → Timers → I/O. Stack must be empty first.</p></div>
+    <div class="rc"><div class="ico">🌐</div><h4>Globals</h4><p>process, __dirname, __filename, console, module, require — no import needed.</p></div>
+    <div class="rc"><div class="ico">📦</div><h4>NPM</h4><p>World's largest JS registry. npm init, install, run. Never commit node_modules.</p></div>
+    <div class="rc"><div class="ico">📋</div><h4>package.json</h4><p>Project manifest. Tracks name, scripts, dependencies, devDependencies.</p></div>
+  </div>
+  <div class="g2" style="margin-top:4px">
+    <div class="card"><h3>The One-Line Summary</h3>
+      <p style="font-size:15px;line-height:1.7">Node.js uses a <strong style="color:var(--txt)">single thread</strong> and a <strong style="color:var(--txt)">non-blocking event loop</strong> to handle thousands of concurrent I/O operations efficiently — no extra threads needed, because it never <em>waits</em>.</p>
+    </div>
+    <div class="card"><h3>What's Next</h3>
+      <ul>
+        <li>M12 — Express.js: routing, middleware, REST APIs</li>
+        <li>M13 — MongoDB + Mongoose: schema, CRUD</li>
+        <li>M14 — React frontend connecting to your Express API</li>
+        <li>Finals — Full MERN capstone project</li>
+      </ul>
+    </div>
+  </div>
+</div>`});
+
+// 10 ── ACTIVITY INTRO
+S.push({h:`
+<div class="ey">Activities</div>
+<div class="ttl">M10–11 Assessment</div>
+<hr class="rule"/>
+<div class="cnt" style="justify-content:center">
+  <div class="g2">
+    <div class="card"><h3>📋 Multiple Choice</h3><ul><li>5 questions · 1 pt each</li><li>Node architecture, NPM, event loop</li><li style="color:var(--node);font-weight:700;margin-top:5px">5 pts</li></ul></div>
+    <div class="card"><h3>✍ Coding Problem</h3><ul><li>Write a function from a scenario description</li><li>Uses basic JS function syntax only</li><li>Scored by correctness + logic</li><li style="color:var(--grn);font-weight:700;margin-top:5px">5 pts</li></ul></div>
+  </div>
+  <div class="card" style="text-align:center;padding:20px;margin-top:4px">
+    <div style="font-size:50px;font-weight:900;color:var(--node);line-height:1">10</div>
+    <div style="font-size:13px;color:var(--txt2);margin-top:3px">Total Points</div>
+  </div>
+  <div class="card"><h3>💡 Reminder</h3><p>Answer key is on the second-to-last slide. Attempt everything before checking!</p></div>
+</div>`});
+
+// 11 ── MC
+S.push({init(el){
+  const qs=[
+    {q:"What JavaScript engine powers Node.js?",opts:["SpiderMonkey","Chakra","V8 JavaScript Engine","Rhino"]},
+    {q:"Which best describes non-blocking I/O?",opts:["The server waits for a DB query before the next request","The server starts an operation and immediately moves on, using a callback when done","Operations execute strictly one at a time","The server blocks all traffic during heavy tasks"]},
+    {q:"What does package.json track in a Node.js project?",opts:["It runs the application directly","It installs the Node.js runtime","Project metadata, dependencies, and npm scripts","Database credentials and API keys"]},
+    {q:"Which command executes a Node.js file named server.js?",opts:["execute server.js","run server.js","node server.js","start server.js"]},
+    {q:"Node.js is ideal for real-time chat apps because:",opts:["It uses multi-threading to handle many users","Its event-driven architecture maintains persistent connections without blocking","It compiles code faster than Python","It uses a blocking I/O model for quick responses"]},
+  ];
+  const pg=el.querySelector('#mc-pg');
+  const left=qs.slice(0,3);
+  const right=qs.slice(3);
+  function makeItems(arr,offset,col){
+    arr.forEach((q,i)=>{
+      const n=i+offset+1;
+      const d=document.createElement('div');d.className='mc-item';
+      d.innerHTML='<div class="mc-q"><span class="qn">'+n+'.</span>'+q.q+'</div><div class="mc-opts">'+q.opts.map(o=>'<div class="mc-o" onclick="this.closest(\'.mc-opts\').querySelectorAll(\'.mc-o\').forEach(x=>x.classList.remove(\'sel\'));this.classList.add(\'sel\')">'+o+'</div>').join('')+'</div>';
+      col.appendChild(d);
+    });
+  }
+  const lc=document.createElement('div');lc.className='col';
+  const rc=document.createElement('div');rc.className='col';
+  makeItems(left,0,lc);makeItems(right,3,rc);
+  pg.appendChild(lc);pg.appendChild(rc);
+},h:`
+<div class="ey">Activities — Multiple Choice</div>
+<div class="ttl">Questions 1–5 <span style="font-size:13.5px;color:var(--txt2);font-weight:400">Choose the best answer · 1 pt each</span></div>
+<hr class="rule"/>
+<div class="g2" style="flex:1;align-items:start" id="mc-pg"></div>`});
+
+// 12 ── FUNCTION SYNTAX + CODING PROBLEM
+S.push({h:`
+<div class="ey">Activities — Coding Problem</div>
+<div class="ttl">Writing a Function in Node.js <span style="font-size:13.5px;color:var(--txt2);font-weight:400">5 pts</span></div>
+<hr class="rule"/>
+<div class="cnt">
+  <div class="g2" style="margin-bottom:4px">
+    <div class="card">
+      <h3>Function Syntax — How to Write One</h3>
+      <div style="background:#060F1C;border:1px solid var(--b1);border-radius:var(--ra);padding:14px 16px;font-family:var(--mono);font-size:13.5px;line-height:2.1;color:var(--txt3)">
+        <span style="color:var(--node)">function</span> <span style="color:var(--cyn)">functionName</span>(<span style="color:var(--amb)">parameter1</span>, <span style="color:var(--amb)">parameter2</span>) {<br/>
+        &nbsp;&nbsp;<span style="color:var(--txt2)">// code to run</span><br/>
+        &nbsp;&nbsp;<span style="color:var(--node)">return</span> <span style="color:var(--amb)">result</span>;<br/>
+        }<br/><br/>
+        <span style="color:var(--txt2)">// call it like this:</span><br/>
+        <span style="color:var(--cyn)">functionName</span>(<span style="color:var(--grn)">'value1'</span>, <span style="color:var(--grn)">'value2'</span>);
+      </div>
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
+        <div class="bi" style="padding:7px 10px"><div class="bl">function</div><div class="bt" style="font-size:13px">Keyword that declares a function</div></div>
+        <div class="bi c" style="padding:7px 10px"><div class="bl c">parameters</div><div class="bt" style="font-size:13px">Inputs the function receives — like variables</div></div>
+        <div class="bi a" style="padding:7px 10px"><div class="bl">return</div><div class="bt" style="font-size:13px">Sends a value back to whoever called the function</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Quick Example</h3>
+      <div style="background:#060F1C;border:1px solid var(--b1);border-radius:var(--ra);padding:14px 16px;font-family:var(--mono);font-size:13.5px;line-height:2.1;color:var(--txt3)">
+        <span style="color:var(--node)">function</span> <span style="color:var(--cyn)">greetStudent</span>(<span style="color:var(--amb)">name</span>) {<br/>
+        &nbsp;&nbsp;<span style="color:var(--node)">return</span> <span style="color:var(--grn)">'Hello, '</span> + <span style="color:var(--amb)">name</span> + <span style="color:var(--grn)">'!'</span>;<br/>
+        }<br/><br/>
+        <span style="color:var(--txt2)">// calling the function:</span><br/>
+        <span style="color:var(--cyn)">greetStudent</span>(<span style="color:var(--grn)">'Marisol'</span>);<br/>
+        <span style="color:var(--txt2)">// returns: 'Hello, Marisol!'</span>
+      </div>
+      <div class="card" style="margin-top:10px;background:var(--s2)">
+        <h3 style="color:var(--grn)">What you write = a recipe</h3>
+        <p style="font-size:14px;line-height:1.65">Defining a function is writing the recipe. Calling it is actually cooking. You write the recipe once, cook it as many times as you need — just change the ingredients (parameters).</p>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="border-color:rgba(246,173,85,.3);background:rgba(246,173,85,.04)">
+    <div class="stag">Scenario · Canteen Bill Splitter</div>
+    <div class="g2" style="gap:16px;margin-top:4px">
+      <div>
+        <p style="font-size:15px;line-height:1.75;color:var(--txt3);margin-bottom:10px">The school canteen wants a simple helper that calculates how much each person pays when a group splits a bill equally.</p>
+        <p style="font-size:15px;line-height:1.75;color:var(--txt3)"><strong style="color:var(--txt)">Write a function</strong> called <ic>splitBill</ic> that:</p>
+        <ul style="padding-left:16px;margin-top:8px;display:flex;flex-direction:column;gap:6px">
+          <li style="font-size:14.5px;color:var(--txt3)">Takes two parameters: <ic>totalAmount</ic> and <ic>numberOfPeople</ic></li>
+          <li style="font-size:14.5px;color:var(--txt3)">Divides the total evenly among the group</li>
+          <li style="font-size:14.5px;color:var(--txt3)">Returns the amount each person should pay</li>
+        </ul>
+      </div>
+      <div>
+        <p style="font-size:13px;color:var(--txt2);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:1px">Expected behavior:</p>
+        <div style="background:#060F1C;border:1px solid var(--b1);border-radius:var(--ra);padding:12px 14px;font-family:var(--mono);font-size:13px;line-height:2;color:var(--txt3)">
+          splitBill(500, 4)<br/>
+          <span style="color:var(--grn)">→ returns 125</span><br/><br/>
+          splitBill(750, 3)<br/>
+          <span style="color:var(--grn)">→ returns 250</span><br/><br/>
+          splitBill(1200, 5)<br/>
+          <span style="color:var(--grn)">→ returns 240</span>
+        </div>
+        <p style="font-size:12.5px;color:var(--txt2);margin-top:8px">Write your function below or on paper. No libraries needed — just basic arithmetic and a return statement.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 13 ── ANSWER KEY
+S.push({h:`
+<div class="ey">Answer Key</div>
+<div class="ttl">M10–11 — Answers &amp; Explanations</div>
+<hr class="rule"/>
+<div class="cnt">
+  <div class="g2" style="flex:1">
+    <div class="col">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--node);margin-bottom:5px">Multiple Choice (1 pt each)</div>
+      <div class="ab2">
+        <div class="ar"><span class="an">1.</span><div class="ab"><strong>V8 JavaScript Engine.</strong> Built by Google for Chrome. Compiles JS to machine code. Node.js wraps V8 and adds server-side APIs on top.</div></div>
+        <div class="ar"><span class="an">2.</span><div class="ab"><strong>Starts an operation and moves on immediately, using a callback when done.</strong> The OS handles the I/O wait. Node's thread stays free to process other requests.</div></div>
+        <div class="ar"><span class="an">3.</span><div class="ab"><strong>Project metadata, dependencies, and npm scripts.</strong> Created by <ic>npm init</ic>. Lets anyone recreate your project by running <ic>npm install</ic>.</div></div>
+        <div class="ar"><span class="an">4.</span><div class="ab"><strong>node server.js.</strong> The <ic>node</ic> command tells the runtime to load and execute that file. <ic>execute</ic>, <ic>run</ic>, and <ic>start</ic> are not valid Node commands.</div></div>
+        <div class="ar"><span class="an">5.</span><div class="ab"><strong>Event-driven architecture maintains persistent connections without blocking.</strong> Non-blocking I/O + WebSockets = one thread serving thousands of open chat connections simultaneously.</div></div>
+      </div>
+    </div>
+    <div class="col">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--grn);margin-bottom:5px">Coding Problem — splitBill (5 pts)</div>
+      <div class="card" style="margin-bottom:0">
+        <h3>Accepted Answer</h3>
+        <div style="background:#060F1C;border:1px solid var(--b1);border-radius:var(--ra);padding:14px 16px;font-family:var(--mono);font-size:13.5px;line-height:2.1;color:var(--txt3)">
+          <span style="color:var(--node)">function</span> <span style="color:var(--cyn)">splitBill</span>(<span style="color:var(--amb)">totalAmount</span>, <span style="color:var(--amb)">numberOfPeople</span>) {<br/>
+          &nbsp;&nbsp;<span style="color:var(--node)">return</span> <span style="color:var(--amb)">totalAmount</span> / <span style="color:var(--amb)">numberOfPeople</span>;<br/>
+          }
+        </div>
+      </div>
+      <div class="card f1">
+        <h3>Scoring Rubric</h3>
+        <table>
+          <tr><th>Criteria</th><th>Pts</th></tr>
+          <tr><td>Function is declared using <ic>function</ic> keyword</td><td style="color:var(--grn);font-weight:700">1</td></tr>
+          <tr><td>Correct function name: <ic>splitBill</ic></td><td style="color:var(--grn);font-weight:700">1</td></tr>
+          <tr><td>Two parameters present (any valid names)</td><td style="color:var(--grn);font-weight:700">1</td></tr>
+          <tr><td>Division logic is correct (<ic>total / people</ic>)</td><td style="color:var(--grn);font-weight:700">1</td></tr>
+          <tr><td>Uses <ic>return</ic> to send back the result</td><td style="color:var(--grn);font-weight:700">1</td></tr>
+        </table>
+        <p style="font-size:12.5px;color:var(--txt2);margin-top:10px">Parameter names do not need to match exactly — <ic>total</ic> and <ic>people</ic> are equally valid. Accept any correct division expression with a return statement.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 15 ── CLOSING
+S.push({cls:'hbg',h:`
+<div class="dots"></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;position:relative;max-width:700px">
+  <div class="ey">M10–11 Complete</div>
+  <div style="font-size:clamp(28px,3.2vw,46px);font-weight:900;line-height:1.15;letter-spacing:-.4px">
+    <span style="color:var(--txt)">JavaScript left the browser.</span><br/>
+    <span style="color:var(--node)">Now it runs the world.</span>
+  </div>
+  <div class="qc" style="margin:0">
+    <div class="qt">"Any application that can be written in JavaScript, will eventually be written in JavaScript."</div>
+    <div class="qs">— Jeff Atwood's Law, 2007 · More true every year.</div>
+  </div>
+  <div class="card" style="background:rgba(83,158,67,.05);border-color:rgba(83,158,67,.2)">
+    <h3>Coming Up — Express.js</h3>
+    <p style="font-size:14px;line-height:1.65">Next session: <ic>express()</ic> replaces your manual <ic>http.createServer()</ic>. Routing, middleware, REST API design — the scaffolding that every Node.js backend project actually uses.</p>
+  </div>
+  <div style="display:flex;gap:7px;flex-wrap:wrap">
+    <span class="pill pg">V8 + Event Loop ✓</span>
+    <span class="pill pg">Non-blocking I/O ✓</span>
+    <span class="pill pg">NPM + package.json ✓</span>
+    <span class="pill pg">Modules ✓</span>
+    <span class="pill pa">Express.js → next</span>
+  </div>
+</div>`});
+
+// ── ENGINE ─────────────────────────────────────────────────────────────
+let cur=0;
+const deck=document.getElementById('deck');
+const bar=document.getElementById('bar');
+const ctr=document.getElementById('ctr');
+function build(){
+  S.forEach((s,i)=>{
+    const el=document.createElement('div');
+    el.className='slide'+(s.cls?' '+s.cls:'');
+    el.innerHTML=s.h||'';
+    if(i===0)el.classList.add('active');
+    deck.appendChild(el);
+    if(s.init)s.init(el);
+  });
+}
+function go(n){
+  if(n<0||n>=S.length||n===cur)return;
+  const els=deck.querySelectorAll('.slide');
+  const fwd=n>cur;
+  els[cur].classList.remove('active');
+  els[cur].classList.add(fwd?'ol':'or');
+  setTimeout(()=>els[cur].classList.remove('ol','or'),420);
+  cur=n;els[cur].classList.add('active');els[cur].scrollTop=0;tick();
+}
+function tick(){
+  bar.style.width=(S.length>1?(cur/(S.length-1)*100):100)+'%';
+  ctr.textContent=(cur+1)+' / '+S.length;
+}
+document.addEventListener('keydown',e=>{
+  const m=document.getElementById('mod');
+  if(m.classList.contains('open')){if(e.key==='Escape')m.classList.remove('open');return;}
+  const t=document.activeElement.tagName;
+  if(t==='INPUT'||t==='TEXTAREA')return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')go(cur+1);
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(cur-1);
+  else if(e.key==='Home')go(0);
+  else if(e.key==='End')go(S.length-1);
+  else if(e.key==='?')m.classList.add('open');
+  else if(e.key==='Escape')m.classList.remove('open');
+});
+document.addEventListener('mousedown',e=>{
+  if(e.target.closest('button,input,a,.mc-o,.gto-ta'))return;
+  if(e.button===2){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+  else if(e.button===3){e.preventDefault();e.stopImmediatePropagation();go(cur-1);}
+  else if(e.button===4){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+},true);
+document.addEventListener('contextmenu',e=>{
+  if(e.target.closest('button,input,a'))return;
+  e.preventDefault();e.stopImmediatePropagation();
+},true);
+document.addEventListener('auxclick',e=>{
+  if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation();}
+},true);
+let tx=0;
+document.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+document.addEventListener('touchend',e=>{const d=e.changedTouches[0].clientX-tx;if(Math.abs(d)>50){d<0?go(cur+1):go(cur-1);}},{passive:true});
+build();tick();
+</script>
+</body>
+</html>

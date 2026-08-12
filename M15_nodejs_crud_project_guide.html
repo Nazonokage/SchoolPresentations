@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M15 — Node.js CRUD Project Guide</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0f17;--bg2:#111827;--bg3:#1a2234;--bg4:#1f2c42;
+  --accent:#60a5fa;--accent2:#34d399;--accent3:#fbbf24;--accent4:#f87171;--purple:#a78bfa;
+  --text:#e2e8f4;--text2:#94a3b8;--text3:#64748b;
+  --border:#1e2d45;--border2:#2d3f5c;
+  --code-bg:#080c14;--code-border:#182030;
+  --r:10px;--r2:6px;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',system-ui,sans-serif}
+.deck{position:relative;width:100vw;height:100vh;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;padding:44px 64px 36px;opacity:0;pointer-events:none;transition:opacity 350ms ease,transform 350ms ease;transform:translateX(40px);overflow-y:auto}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.prev{opacity:0;transform:translateX(-40px)}
+@media(prefers-reduced-motion:reduce){.slide{transition:none}}
+.slide::-webkit-scrollbar{width:4px}.slide::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+#prog{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width 350ms ease;z-index:99}
+#counter{position:fixed;top:14px;right:24px;font-size:12px;color:var(--text3);z-index:99;font-variant-numeric:tabular-nums}
+
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:9px}
+h1{font-size:clamp(34px,4vw,56px);font-weight:700;line-height:1.1;letter-spacing:-.02em}
+h2{font-size:clamp(24px,2.8vw,36px);font-weight:700;line-height:1.15;letter-spacing:-.015em}
+h3{font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px}
+
+/* Cards */
+.cards{display:grid;gap:12px;margin-top:14px}
+.cols2{grid-template-columns:1fr 1fr}
+.cols3{grid-template-columns:1fr 1fr 1fr}
+.cols4{grid-template-columns:1fr 1fr 1fr 1fr}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:15px 17px}
+.card p,.card li{font-size:13.5px;color:var(--text2);line-height:1.65}
+.card ul{padding-left:14px}
+.card.al{border-left:3px solid var(--accent)}
+.card.ag{border-left:3px solid var(--accent2)}
+.card.aa{border-left:3px solid var(--accent3)}
+.card.ar{border-left:3px solid var(--accent4)}
+.card.ap{border-left:3px solid var(--purple)}
+
+/* Code */
+.code-wrap{position:relative;background:var(--code-bg);border:1px solid var(--code-border);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column}
+.code-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#050810;border-bottom:1px solid var(--code-border);flex-shrink:0}
+.code-lang{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.copy-btn{font-size:11px;font-weight:700;color:var(--accent);background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.3);border-radius:4px;padding:3px 9px;cursor:pointer;transition:all .15s;flex-shrink:0}
+.copy-btn:hover{background:rgba(96,165,250,.22)}
+.copy-btn.ok{color:var(--accent2);border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.1)}
+pre{padding:13px 15px;overflow:auto;font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:12.5px;line-height:1.7;color:#cdd6f4;flex:1;min-height:0}
+pre::-webkit-scrollbar{height:4px;width:4px}
+pre::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* Syntax */
+.kw{color:#cba6f7}.fn{color:#89b4fa}.str{color:#a6e3a1}.cm{color:#4a5260;font-style:italic}.var{color:#f38ba8}.num{color:#fab387}.op{color:#89dceb}.blank{color:#f38ba8;background:rgba(243,139,168,.12);border-bottom:1px dashed #f38ba8;padding:0 4px;border-radius:2px}
+
+/* Split */
+.split-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;height:min(500px,55vh);align-items:stretch;margin-top:12px}
+.split-row .code-wrap{height:100%;overflow:hidden}
+.split-row .panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:15px 17px;overflow-y:auto;height:100%;min-height:0}
+
+/* CRUD badges */
+.crud-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:11px;margin-top:16px}
+.crud-badge{border-radius:var(--r);padding:16px 14px;text-align:center}
+.crud-badge .op-letter{font-size:32px;font-weight:800;line-height:1;margin-bottom:5px}
+.crud-badge .op-name{font-size:12px;font-weight:700;letter-spacing:.06em;margin-bottom:3px}
+.crud-badge .op-sql{font-family:'JetBrains Mono',monospace;font-size:11px;opacity:.8}
+.crud-badge.cc{background:rgba(96,165,250,.1);border:1.5px solid rgba(96,165,250,.3);color:var(--accent)}
+.crud-badge.rc{background:rgba(52,211,153,.1);border:1.5px solid rgba(52,211,153,.3);color:var(--accent2)}
+.crud-badge.uc{background:rgba(251,191,36,.1);border:1.5px solid rgba(251,191,36,.3);color:var(--accent3)}
+.crud-badge.dc{background:rgba(248,113,113,.1);border:1.5px solid rgba(248,113,113,.3);color:var(--accent4)}
+
+/* Table */
+table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
+th{background:var(--bg3);color:var(--accent);font-weight:600;text-align:left;padding:8px 12px;border-bottom:1px solid var(--border2)}
+td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:top}
+tr:last-child td{border-bottom:none}
+td strong{color:var(--text)}
+
+/* Steps */
+.steps{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+.step{display:flex;gap:12px;align-items:flex-start}
+.step-num{flex-shrink:0;width:26px;height:26px;background:var(--accent);color:#000;font-weight:700;font-size:12px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.step-body h4{font-size:13.5px;font-weight:600;color:var(--text);margin-bottom:2px}
+.step-body p{font-size:12.5px;color:var(--text2);line-height:1.55}
+
+/* Info/tip/warn */
+.info{background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.2);border-radius:var(--r2);padding:10px 13px;font-size:13px;color:var(--text2);line-height:1.6;margin-top:11px}
+.tip{background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2);border-radius:var(--r2);padding:10px 13px;font-size:13px;color:var(--text2);line-height:1.6;margin-top:11px}
+.warn{background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.2);border-radius:var(--r2);padding:10px 13px;font-size:13px;color:var(--text2);line-height:1.6;margin-top:11px}
+.info strong,.tip strong,.warn strong{color:var(--text)}
+
+/* Security compare */
+.sec-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.sec-box{border-radius:var(--r);padding:13px 15px}
+.sec-box.bad{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25)}
+.sec-box.good{background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.25)}
+.sec-box .sec-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px}
+.sec-box.bad .sec-label{color:var(--accent4)}
+.sec-box.good .sec-label{color:var(--accent2)}
+.sec-box code{font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.7;color:var(--text2);white-space:pre-wrap;display:block}
+
+/* Hero */
+.hero{flex:1;display:flex;flex-direction:column;justify-content:center}
+.hero-tag{display:inline-flex;align-items:center;gap:7px;background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.25);border-radius:20px;padding:5px 13px;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.05em;margin-bottom:22px;width:fit-content}
+.hero h1{max-width:800px;margin-bottom:14px}
+.hero .sub{font-size:15.5px;color:var(--text2);max-width:580px;line-height:1.65;margin-bottom:24px}
+.logo-row{display:flex;gap:9px;flex-wrap:wrap}
+.logo-chip{display:flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:6px 12px;font-size:12.5px;font-weight:600;color:var(--text2)}
+
+/* Dir tree */
+.dir{background:var(--code-bg);border:1px solid var(--code-border);border-radius:var(--r);padding:13px 17px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text2);line-height:2;margin-top:11px;white-space:pre;overflow-x:auto;display:block}
+.dir .folder{color:var(--accent3)}
+.dir .file{color:var(--accent2)}
+.dir .note{color:var(--text3)}
+
+/* Phase banner */
+.phase{display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);padding:9px 14px;margin-bottom:14px}
+.phase-num{background:var(--accent);color:#000;font-weight:700;font-size:12px;padding:2px 8px;border-radius:4px}
+.phase-label{font-size:13px;font-weight:600;color:var(--text)}
+.phase-sub{font-size:12px;color:var(--text3);margin-left:auto}
+
+/* Quiz */
+.quiz-q{font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px;line-height:1.5}
+.quiz-opt{display:flex;align-items:flex-start;gap:8px;padding:7px 11px;border-radius:var(--r2);border:1px solid var(--border);margin-bottom:5px;font-size:13px;color:var(--text2)}
+.opt-key{font-weight:700;color:var(--accent);min-width:16px;flex-shrink:0}
+
+/* Coding problem */
+.prob-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:15px 17px;margin-bottom:12px}
+.prob-tag{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:10px;margin-bottom:8px}
+.prob-tag.fill{background:rgba(167,139,250,.15);color:var(--purple);border:1px solid rgba(167,139,250,.3)}
+.prob-tag.write{background:rgba(96,165,250,.15);color:var(--accent);border:1px solid rgba(96,165,250,.3)}
+.prob-tag.debug{background:rgba(248,113,113,.15);color:var(--accent4);border:1px solid rgba(248,113,113,.3)}
+.prob-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px}
+.prob-desc{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:10px}
+
+/* Answer */
+.ans-item{background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--accent2);border-radius:var(--r);padding:11px 13px;margin-bottom:8px}
+.ans-q{font-size:11.5px;color:var(--text3);margin-bottom:3px}
+.ans-a{font-size:13.5px;font-weight:700;color:var(--text)}
+.ans-exp{font-size:12.5px;color:var(--text2);margin-top:3px;line-height:1.5}
+
+code.ic{background:rgba(96,165,250,.1);color:var(--accent);padding:1px 5px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:11.5px}
+
+/* terminal output */
+.terminal{background:var(--code-bg);border:1px solid var(--code-border);border-radius:var(--r2);padding:11px 14px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent2);line-height:1.9;margin-top:10px}
+
+/* Help */
+#help{position:fixed;inset:0;background:rgba(0,0,0,.82);display:none;place-items:center;z-index:200}
+#help.show{display:grid}
+.help-box{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:28px 36px;max-width:400px;width:90%}
+.help-box h2{font-size:18px;margin-bottom:16px}
+.help-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:14px}
+.help-row:last-child{border-bottom:none}
+.help-row span:first-child{color:var(--text2)}
+kbd{background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 7px;font-size:11px;color:var(--accent);font-family:monospace}
+
+/* final */
+.final{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.final blockquote{font-size:18px;font-style:italic;color:var(--text2);max-width:560px;line-height:1.7;margin-bottom:18px;position:relative;padding:0 28px}
+.final blockquote::before{content:'\201C';font-size:52px;color:var(--accent);position:absolute;left:0;top:-8px;line-height:1}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<div id="counter">1 / 18</div>
+<div class="deck" id="deck">
+
+<!-- S0: Hero -->
+<div class="slide active">
+  <div class="hero">
+    <div class="hero-tag">🗄️ Module 15 &nbsp;·&nbsp; Node.js Project Guide</div>
+    <h1>CRUD Operations<br>with MySQL</h1>
+    <p class="sub">A complete step-by-step project guide — from environment setup to a fully working Create, Read, Update, and Delete application in Node.js.</p>
+    <div class="logo-row">
+      <span class="logo-chip">
+        <svg width="17" height="17" viewBox="0 0 48 48" role="img" aria-label="Node.js"><circle cx="24" cy="24" r="24" fill="#026e00"/><text x="24" y="29" text-anchor="middle" fill="#fff" font-size="10" font-weight="700" font-family="monospace">Node</text></svg>
+        Node.js
+      </span>
+      <span class="logo-chip">
+        <svg width="17" height="17" viewBox="0 0 48 48" role="img" aria-label="MySQL"><rect width="48" height="48" rx="8" fill="#00758f"/><text x="24" y="30" text-anchor="middle" fill="#fff" font-size="9" font-weight="700" font-family="monospace">MySQL</text></svg>
+        MySQL
+      </span>
+      <span class="logo-chip">
+        <svg width="17" height="17" viewBox="0 0 48 48" role="img" aria-label="npm"><rect width="48" height="48" rx="8" fill="#cb3837"/><text x="24" y="30" text-anchor="middle" fill="#fff" font-size="11" font-weight="700" font-family="monospace">npm</text></svg>
+        npm
+      </span>
+      <span class="logo-chip">
+        <svg width="17" height="17" viewBox="0 0 48 48" role="img" aria-label="JavaScript"><rect width="48" height="48" rx="8" fill="#f7df1e"/><text x="24" y="30" text-anchor="middle" fill="#333" font-size="11" font-weight="700" font-family="monospace">JS</text></svg>
+        JavaScript
+      </span>
+    </div>
+    <div class="crud-row" style="margin-top:28px;max-width:480px">
+      <div class="crud-badge cc"><div class="op-letter">C</div><div class="op-name">Create</div><div class="op-sql">INSERT</div></div>
+      <div class="crud-badge rc"><div class="op-letter">R</div><div class="op-name">Read</div><div class="op-sql">SELECT</div></div>
+      <div class="crud-badge uc"><div class="op-letter">U</div><div class="op-name">Update</div><div class="op-sql">UPDATE</div></div>
+      <div class="crud-badge dc"><div class="op-letter">D</div><div class="op-name">Delete</div><div class="op-sql">DELETE</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- S1: What is CRUD -->
+<div class="slide">
+  <div class="eyebrow">Core Concept</div>
+  <h2>What Are CRUD Operations?</h2>
+  <p style="font-size:14px;color:var(--text2);margin-top:8px;line-height:1.65">CRUD is the standard vocabulary for interacting with any persistent database. Every web application — from social media to banking — is built on these four operations.</p>
+  <table>
+    <thead><tr><th>Letter</th><th>Operation</th><th>SQL Command</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><strong style="color:var(--accent)">C</strong></td><td>Create</td><td><code class="ic">INSERT INTO</code></td><td>Add new records to a table</td></tr>
+      <tr><td><strong style="color:var(--accent2)">R</strong></td><td>Read</td><td><code class="ic">SELECT</code></td><td>Retrieve data for display or analysis</td></tr>
+      <tr><td><strong style="color:var(--accent3)">U</strong></td><td>Update</td><td><code class="ic">UPDATE SET</code></td><td>Modify specific fields in existing records</td></tr>
+      <tr><td><strong style="color:var(--accent4)">D</strong></td><td>Delete</td><td><code class="ic">DELETE FROM</code></td><td>Remove records based on specific criteria</td></tr>
+    </tbody>
+  </table>
+  <div class="cards cols2" style="margin-top:14px">
+    <div class="card al">
+      <h3>⚡ Why Node.js + MySQL?</h3>
+      <p>Node.js provides an <strong style="color:var(--text)">asynchronous, event-driven</strong> runtime for fast server-side logic. MySQL is a <strong style="color:var(--text)">reliable, open-source RDBMS</strong> for structured data. Together they power the majority of real-world web applications.</p>
+    </div>
+    <div class="card ag">
+      <h3>🎯 What This Guide Builds</h3>
+      <p>By the end you will have a <strong style="color:var(--text)">single runnable Node.js script</strong> that connects to MySQL, creates a <code class="ic">products</code> table, and performs all four CRUD operations — fully wired, fully tested.</p>
+    </div>
+  </div>
+  <div class="info" style="margin-top:12px">
+    <strong>📋 Prerequisites:</strong> Node.js and MySQL Server must be installed. We install the MySQL npm driver in Phase 1 below.
+  </div>
+</div>
+
+<!-- S2: Phase 1 — Environment Setup -->
+<div class="slide">
+  <div class="eyebrow">Phase 1 — Environment Setup</div>
+  <h2>Installing Node.js, MySQL &amp; the Driver</h2>
+  <div class="cards cols2" style="margin-top:14px">
+    <div>
+      <h3 style="color:var(--accent);margin-bottom:10px">🖥️ Install Node.js</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body"><h4>Download Node.js</h4><p>Go to <strong style="color:var(--text)">nodejs.org</strong> and download the LTS version for your OS. Run the installer and follow the prompts.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body"><h4>Verify installation</h4>
+            <div class="code-wrap" style="margin-top:6px">
+              <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre>node --version
+npm --version</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h3 style="color:var(--accent2);margin-top:16px;margin-bottom:10px">🗄️ Install MySQL Server</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body"><h4>Download MySQL</h4><p>Go to <strong style="color:var(--text)">dev.mysql.com/downloads/mysql</strong>. Download MySQL Community Server. Run installer — note the <strong style="color:var(--accent3)">root password</strong> you set.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body"><h4>Create the database</h4>
+            <div class="code-wrap" style="margin-top:6px">
+              <div class="code-header"><span class="code-lang">SQL — MySQL Shell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre><span class="kw">CREATE DATABASE</span> shop_db;
+<span class="kw">USE</span> shop_db;
+
+<span class="kw">CREATE TABLE</span> products (
+  id       <span class="op">INT</span> <span class="kw">AUTO_INCREMENT PRIMARY KEY</span>,
+  name     <span class="op">VARCHAR</span>(<span class="num">100</span>) <span class="kw">NOT NULL</span>,
+  price    <span class="op">DECIMAL</span>(<span class="num">10</span>,<span class="num">2</span>) <span class="kw">NOT NULL</span>,
+  stock    <span class="op">INT</span> <span class="kw">DEFAULT</span> <span class="num">0</span>
+);</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h3 style="color:var(--accent3);margin-bottom:10px">📦 Create Project &amp; Install Driver</h3>
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">bash — Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><span class="cm"># Step 5: Create project folder</span>
+mkdir node-mysql-crud
+cd node-mysql-crud
+
+<span class="cm"># Step 6: Initialize npm project</span>
+npm init -y
+
+<span class="cm"># Step 7: Install the MySQL driver</span>
+npm install mysql</pre>
+      </div>
+      <h3 style="color:var(--accent4);margin-top:14px;margin-bottom:8px">🗂️ Project Structure</h3>
+      <div class="dir"><span class="folder">node-mysql-crud/</span>
+├── <span class="file">config.js</span>     <span class="note">← DB credentials</span>
+├── <span class="file">db.js</span>         <span class="note">← Connection setup</span>
+├── <span class="file">crud.js</span>       <span class="note">← All CRUD ops</span>
+├── <span class="file">package.json</span>  <span class="note">← npm config</span>
+└── <span class="folder">node_modules/</span> <span class="note">← installed packages</span></div>
+      <div class="tip" style="margin-top:10px">
+        <strong>💡 Never commit credentials.</strong> In production use <code class="ic">dotenv</code> and a <code class="ic">.env</code> file — add it to <code class="ic">.gitignore</code>.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S3: Phase 2 — Config + Connection -->
+<div class="slide">
+  <div class="eyebrow">Phase 2 — Database Connection</div>
+  <h2>config.js &amp; db.js — Wiring the Connection</h2>
+  <div class="split-row">
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JS — config.js + db.js</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cm">// config.js — database credentials</span>
+module.exports <span class="op">=</span> {
+  host     : <span class="str">'localhost'</span>,
+  user     : <span class="str">'root'</span>,
+  password : <span class="str">'your_password'</span>, <span class="cm">// replace this</span>
+  database : <span class="str">'shop_db'</span>
+};
+
+<span class="cm">// ─────────────────────────────────────────</span>
+
+<span class="cm">// db.js — reusable connection module</span>
+<span class="kw">const</span> mysql  <span class="op">=</span> <span class="fn">require</span>(<span class="str">'mysql'</span>);
+<span class="kw">const</span> config <span class="op">=</span> <span class="fn">require</span>(<span class="str">'./config'</span>);
+
+<span class="kw">const</span> connection <span class="op">=</span> mysql.<span class="fn">createConnection</span>(config);
+
+connection.<span class="fn">connect</span>((err) <span class="op">=&gt;</span> {
+  <span class="kw">if</span> (err) {
+    console.<span class="fn">error</span>(<span class="str">'Connection failed:'</span>, err.message);
+    process.<span class="fn">exit</span>(<span class="num">1</span>); <span class="cm">// stop the app on failure</span>
+  }
+  console.<span class="fn">log</span>(<span class="str">'✅ Connected to MySQL — shop_db'</span>);
+});
+
+module.exports <span class="op">=</span> connection;</pre>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--accent);margin-bottom:12px">🔌 Connection Breakdown</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body"><h4>Separate config from logic</h4><p>Keeping credentials in <code class="ic">config.js</code> means you only update one file when credentials change — no hunting through code.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body"><h4>mysql.createConnection()</h4><p>Accepts an object with <code class="ic">host</code>, <code class="ic">user</code>, <code class="ic">password</code>, <code class="ic">database</code>. Returns a connection object used for all queries.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body"><h4>process.exit(1) on failure</h4><p>If the connection fails on startup, there's no point continuing. Exit immediately with a non-zero code so the system knows the app crashed.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body"><h4>module.exports = connection</h4><p>Exporting the connection object lets <code class="ic">crud.js</code> import and reuse it — no need to reconnect for every operation.</p></div>
+        </div>
+      </div>
+      <div class="warn" style="margin-top:10px">
+        <strong>⚠️ createConnection vs createPool:</strong> For learning, <code class="ic">createConnection</code> is perfect. In production, use <code class="ic">mysql.createPool()</code> to reuse a set of connections and handle concurrent requests efficiently.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S4: Phase 3 — Security -->
+<div class="slide">
+  <div class="eyebrow">Phase 3 — Security First</div>
+  <h2>Parameterized Queries — Never Skip This</h2>
+  <p style="font-size:14px;color:var(--text2);margin-top:7px;line-height:1.65">SQL Injection is the #1 web security vulnerability. It happens when user input is concatenated directly into SQL strings, letting attackers manipulate your database.</p>
+  <div class="sec-grid">
+    <div class="sec-box bad">
+      <div class="sec-label">❌ Vulnerable — DO NOT DO THIS</div>
+      <code>const id = req.body.id;
+// Attacker sends:
+// id = "1 OR 1=1; DROP TABLE products; --"
+// This wipes your entire products table!
+
+connection.query(
+  "SELECT * FROM products WHERE id = " + id
+  // User input directly in SQL string = disaster
+);</code>
+    </div>
+    <div class="sec-box good">
+      <div class="sec-label">✅ Safe — Always Use This Pattern</div>
+      <code>const id = req.body.id;
+// The ? is a placeholder.
+// mysql driver escapes the value before
+// substituting it — injection neutralized.
+
+connection.query(
+  "SELECT * FROM products WHERE id = ?",
+  [id],      // values array — separate from SQL
+  (err, results) => { ... }
+);</code>
+    </div>
+  </div>
+  <div class="cards cols3" style="margin-top:12px">
+    <div class="card ar">
+      <h3>🛡️ How ? Escaping Works</h3>
+      <p>The <code class="ic">mysql</code> module wraps string values in quotes and escapes special characters. Even if a user types <code class="ic">'; DROP TABLE--</code>, it becomes a harmless string literal.</p>
+    </div>
+    <div class="card aa">
+      <h3>📋 Full Security Checklist</h3>
+      <ul style="margin-top:5px">
+        <li style="font-size:12.5px;color:var(--text2);margin-bottom:4px">Always use <code class="ic">?</code> placeholders</li>
+        <li style="font-size:12.5px;color:var(--text2);margin-bottom:4px">Validate data types before querying</li>
+        <li style="font-size:12.5px;color:var(--text2);margin-bottom:4px">Store credentials in <code class="ic">.env</code> files</li>
+        <li style="font-size:12.5px;color:var(--text2)">Handle every <code class="ic">err</code> argument</li>
+      </ul>
+    </div>
+    <div class="card ag">
+      <h3>🔑 Credential Safety</h3>
+      <p>Never push passwords to GitHub. Install <code class="ic">dotenv</code>, create a <code class="ic">.env</code> file, and add it to <code class="ic">.gitignore</code>. Read values via <code class="ic">process.env.DB_PASS</code>.</p>
+    </div>
+  </div>
+</div>
+
+<!-- S5: Phase 4 — Create -->
+<div class="slide">
+  <div class="eyebrow">Phase 4 — CRUD · Create</div>
+  <h2>Create — <span style="color:var(--accent)">INSERT INTO products</span></h2>
+  <div class="split-row">
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JS — Create Operation</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cm">// crud.js — CREATE section</span>
+<span class="kw">const</span> connection <span class="op">=</span> <span class="fn">require</span>(<span class="str">'./db'</span>);
+
+<span class="cm">/**
+ * Creates a new product record.
+ * @param {object} product - { name, price, stock }
+ */</span>
+<span class="kw">const</span> <span class="fn">createProduct</span> <span class="op">=</span> (product) <span class="op">=&gt;</span> {
+  <span class="kw">const</span> sql <span class="op">=</span> <span class="str">'INSERT INTO products SET ?'</span>;
+
+  connection.<span class="fn">query</span>(sql, product, (err, result) <span class="op">=&gt;</span> {
+    <span class="kw">if</span> (err) {
+      console.<span class="fn">error</span>(<span class="str">'CREATE error:'</span>, err.message);
+      <span class="kw">return</span>;
+    }
+    console.<span class="fn">log</span>(
+      <span class="str">`✅ Product created — ID: ${result.insertId}`</span>
+    );
+  });
+};
+
+<span class="cm">// Usage: insert a new product</span>
+<span class="fn">createProduct</span>({
+  name  : <span class="str">'Wireless Keyboard'</span>,
+  price : <span class="num">49.99</span>,
+  stock : <span class="num">100</span>
+});
+
+<span class="fn">createProduct</span>({
+  name  : <span class="str">'USB-C Hub'</span>,
+  price : <span class="num">29.50</span>,
+  stock : <span class="num">250</span>
+});</pre>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--accent);margin-bottom:10px">🔵 Create — Key Points</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body"><h4>INSERT INTO ... SET ?</h4><p>Passing an object to <code class="ic">SET ?</code> auto-expands it into <code class="ic">name='...', price=..., stock=...</code> — no need to list columns manually.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body"><h4>result.insertId</h4><p>After a successful INSERT, MySQL returns the auto-incremented primary key in <code class="ic">result.insertId</code>. Use it to immediately reference the new row.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body"><h4>Object keys = column names</h4><p>The object property names must exactly match your table column names. Mismatches cause a <code class="ic">ER_BAD_FIELD_ERROR</code>.</p></div>
+        </div>
+      </div>
+      <div class="terminal">
+✅ Connected to MySQL — shop_db<br>
+✅ Product created — ID: 1<br>
+✅ Product created — ID: 2
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S6: Phase 4 — Read -->
+<div class="slide">
+  <div class="eyebrow">Phase 4 — CRUD · Read</div>
+  <h2>Read — <span style="color:var(--accent2)">SELECT FROM products</span></h2>
+  <div class="split-row">
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JS — Read Operation</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cm">// crud.js — READ section</span>
+<span class="kw">const</span> connection <span class="op">=</span> <span class="fn">require</span>(<span class="str">'./db'</span>);
+
+<span class="cm">// READ ALL: fetch every product</span>
+<span class="kw">const</span> <span class="fn">getAllProducts</span> <span class="op">=</span> () <span class="op">=&gt;</span> {
+  connection.<span class="fn">query</span>(
+    <span class="str">'SELECT * FROM products'</span>,
+    (err, results) <span class="op">=&gt;</span> {
+      <span class="kw">if</span> (err) { console.<span class="fn">error</span>(err.message); <span class="kw">return</span>; }
+      console.<span class="fn">log</span>(<span class="str">'📋 All products:'</span>, results);
+    }
+  );
+};
+
+<span class="cm">// READ ONE: fetch a single product by ID</span>
+<span class="kw">const</span> <span class="fn">getProductById</span> <span class="op">=</span> (id) <span class="op">=&gt;</span> {
+  connection.<span class="fn">query</span>(
+    <span class="str">'SELECT * FROM products WHERE id = ?'</span>,
+    [id],
+    (err, results) <span class="op">=&gt;</span> {
+      <span class="kw">if</span> (err) { console.<span class="fn">error</span>(err.message); <span class="kw">return</span>; }
+      <span class="kw">if</span> (results.length <span class="op">===</span> <span class="num">0</span>) {
+        console.<span class="fn">log</span>(<span class="str">'⚠️ Product not found.'</span>);
+        <span class="kw">return</span>;
+      }
+      console.<span class="fn">log</span>(<span class="str">'🔍 Found:'</span>, results[<span class="num">0</span>]);
+    }
+  );
+};
+
+<span class="cm">// READ FILTER: products below a price</span>
+<span class="kw">const</span> <span class="fn">getAffordable</span> <span class="op">=</span> (maxPrice) <span class="op">=&gt;</span> {
+  connection.<span class="fn">query</span>(
+    <span class="str">'SELECT * FROM products WHERE price &lt; ?'</span>,
+    [maxPrice],
+    (err, results) <span class="op">=&gt;</span> {
+      <span class="kw">if</span> (err) { console.<span class="fn">error</span>(err.message); <span class="kw">return</span>; }
+      console.<span class="fn">log</span>(<span class="str">`Under $${maxPrice}:`</span>, results);
+    }
+  );
+};
+
+<span class="fn">getAllProducts</span>();
+<span class="fn">getProductById</span>(<span class="num">1</span>);
+<span class="fn">getAffordable</span>(<span class="num">40</span>);</pre>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--accent2);margin-bottom:10px">🟢 Read — Key Points</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num" style="background:var(--accent2);color:#000">1</div>
+          <div class="step-body"><h4>results is always an array</h4><p>Even a single-row SELECT returns an array. Access the first row with <code class="ic">results[0]</code> and always check <code class="ic">results.length</code> before using it.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--accent2);color:#000">2</div>
+          <div class="step-body"><h4>Empty = [] not null</h4><p>If no rows match, <code class="ic">results</code> is an empty array <code class="ic">[]</code>. Check <code class="ic">results.length === 0</code> to handle "not found" gracefully.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--accent2);color:#000">3</div>
+          <div class="step-body"><h4>? for every WHERE value</h4><p>Even for reads — user-supplied filter values like IDs or search terms must always go through <code class="ic">?</code> placeholders.</p></div>
+        </div>
+      </div>
+      <div class="terminal">
+📋 All products: [<br>
+&nbsp; { id:1, name:'Wireless Keyboard', price:49.99, stock:100 },<br>
+&nbsp; { id:2, name:'USB-C Hub', price:29.50, stock:250 }<br>
+]<br>
+🔍 Found: { id:1, name:'Wireless Keyboard', ... }<br>
+Under $40: [ { id:2, name:'USB-C Hub', price:29.50 } ]
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S7: Phase 4 — Update -->
+<div class="slide">
+  <div class="eyebrow">Phase 4 — CRUD · Update</div>
+  <h2>Update — <span style="color:var(--accent3)">UPDATE products SET</span></h2>
+  <div class="split-row">
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JS — Update Operation</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cm">// crud.js — UPDATE section</span>
+<span class="kw">const</span> connection <span class="op">=</span> <span class="fn">require</span>(<span class="str">'./db'</span>);
+
+<span class="cm">// UPDATE: modify multiple fields at once</span>
+<span class="kw">const</span> <span class="fn">updateProduct</span> <span class="op">=</span> (id, newData) <span class="op">=&gt;</span> {
+  <span class="kw">const</span> sql <span class="op">=</span> <span class="str">'UPDATE products SET ? WHERE id = ?'</span>;
+
+  connection.<span class="fn">query</span>(sql, [newData, id], (err, result) <span class="op">=&gt;</span> {
+    <span class="kw">if</span> (err) { console.<span class="fn">error</span>(err.message); <span class="kw">return</span>; }
+    console.<span class="fn">log</span>(
+      <span class="str">`✏️ Updated ${result.affectedRows} row(s).`</span>
+    );
+  });
+};
+
+<span class="cm">// UPDATE: change a single field only</span>
+<span class="kw">const</span> <span class="fn">updatePrice</span> <span class="op">=</span> (id, newPrice) <span class="op">=&gt;</span> {
+  <span class="kw">const</span> sql <span class="op">=</span> <span class="str">'UPDATE products SET price = ? WHERE id = ?'</span>;
+
+  connection.<span class="fn">query</span>(sql, [newPrice, id], (err, result) <span class="op">=&gt;</span> {
+    <span class="kw">if</span> (err) { console.<span class="fn">error</span>(err.message); <span class="kw">return</span>; }
+    console.<span class="fn">log</span>(
+      <span class="str">`💰 Price updated. Changed: ${result.changedRows}`</span>
+    );
+  });
+};
+
+<span class="cm">// Usage</span>
+<span class="fn">updateProduct</span>(<span class="num">1</span>, { name: <span class="str">'Mech Keyboard Pro'</span>, stock: <span class="num">80</span> });
+<span class="fn">updatePrice</span>(<span class="num">2</span>, <span class="num">24.99</span>);</pre>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--accent3);margin-bottom:10px">🟡 Update — Key Points</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num" style="background:var(--accent3);color:#000">1</div>
+          <div class="step-body"><h4>WHERE is not optional</h4><p>Omitting WHERE from UPDATE modifies <strong style="color:var(--accent4)">every row</strong> in the table. Always target a specific ID or condition.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--accent3);color:#000">2</div>
+          <div class="step-body"><h4>Array order matters</h4><p><code class="ic">[newData, id]</code> maps left-to-right to each <code class="ic">?</code>. Getting the order wrong silently corrupts data with no error.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--accent3);color:#000">3</div>
+          <div class="step-body"><h4>affectedRows vs changedRows</h4><p><code class="ic">affectedRows</code> = rows matched the WHERE. <code class="ic">changedRows</code> = rows where a value actually changed. If new value equals old value, changedRows is 0.</p></div>
+        </div>
+      </div>
+      <div class="terminal">
+✏️ Updated 1 row(s).<br>
+💰 Price updated. Changed: 1
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S8: Phase 4 — Delete -->
+<div class="slide">
+  <div class="eyebrow">Phase 4 — CRUD · Delete</div>
+  <h2>Delete — <span style="color:var(--accent4)">DELETE FROM products</span></h2>
+  <div class="split-row">
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JS — Delete Operation</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cm">// crud.js — DELETE section</span>
+<span class="kw">const</span> connection <span class="op">=</span> <span class="fn">require</span>(<span class="str">'./db'</span>);
+
+<span class="cm">// DELETE: remove a product by ID</span>
+<span class="kw">const</span> <span class="fn">deleteProduct</span> <span class="op">=</span> (id) <span class="op">=&gt;</span> {
+  <span class="kw">const</span> sql <span class="op">=</span> <span class="str">'DELETE FROM products WHERE id = ?'</span>;
+
+  connection.<span class="fn">query</span>(sql, [id], (err, result) <span class="op">=&gt;</span> {
+    <span class="kw">if</span> (err) { console.<span class="fn">error</span>(err.message); <span class="kw">return</span>; }
+    <span class="kw">if</span> (result.affectedRows <span class="op">===</span> <span class="num">0</span>) {
+      console.<span class="fn">log</span>(<span class="str">'⚠️ No product found with that ID.'</span>);
+      <span class="kw">return</span>;
+    }
+    console.<span class="fn">log</span>(
+      <span class="str">`🗑️ Deleted ${result.affectedRows} product(s).`</span>
+    );
+  });
+};
+
+<span class="cm">// Usage</span>
+<span class="fn">deleteProduct</span>(<span class="num">1</span>); <span class="cm">// removes Wireless Keyboard</span>
+<span class="fn">deleteProduct</span>(<span class="num">99</span>); <span class="cm">// no match — prints warning</span>
+
+<span class="cm">// CLOSE: always end the connection last</span>
+<span class="fn">setTimeout</span>(() <span class="op">=&gt;</span> {
+  connection.<span class="fn">end</span>((err) <span class="op">=&gt;</span> {
+    <span class="kw">if</span> (err) <span class="kw">throw</span> err;
+    console.<span class="fn">log</span>(<span class="str">'🔌 Disconnected from MySQL.'</span>);
+  });
+}, <span class="num">1000</span>);</pre>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--accent4);margin-bottom:10px">🔴 Delete — Key Points</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num" style="background:var(--accent4);color:#000">1</div>
+          <div class="step-body"><h4>WHERE is critical</h4><p><code class="ic">DELETE FROM products</code> with no WHERE deletes <strong style="color:var(--accent4)">every row</strong>. No undo. Always double-check the WHERE condition.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--accent4);color:#000">2</div>
+          <div class="step-body"><h4>affectedRows = 0 = no match</h4><p>MySQL silently succeeds even if no row matched. Always check <code class="ic">result.affectedRows</code> to confirm the deletion happened.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--accent4);color:#000">3</div>
+          <div class="step-body"><h4>connection.end() last</h4><p>Use <code class="ic">setTimeout</code> to let async callbacks finish before closing. <code class="ic">end()</code> waits for pending queries; <code class="ic">destroy()</code> cuts immediately.</p></div>
+        </div>
+      </div>
+      <div class="terminal">
+🗑️ Deleted 1 product(s).<br>
+⚠️ No product found with that ID.<br>
+🔌 Disconnected from MySQL.
+      </div>
+      <div class="tip" style="margin-top:10px">
+        <strong>💡 Soft Delete Pattern:</strong> In production, add an <code class="ic">is_deleted BOOLEAN DEFAULT 0</code> column and UPDATE it to 1 instead of permanently removing rows. Safer and auditable.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S9: Phase 5 — Full Script -->
+<div class="slide">
+  <div class="eyebrow">Phase 5 — Complete Project</div>
+  <h2>crud.js — Everything Together</h2>
+  <div class="split-row" style="height:min(530px,58vh)">
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JS — crud.js (full runnable script)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cm">// crud.js — Complete CRUD for shop_db.products</span>
+<span class="kw">const</span> mysql <span class="op">=</span> <span class="fn">require</span>(<span class="str">'mysql'</span>);
+
+<span class="kw">const</span> connection <span class="op">=</span> mysql.<span class="fn">createConnection</span>({
+  host: <span class="str">'localhost'</span>, user: <span class="str">'root'</span>,
+  password: <span class="str">'your_password'</span>,
+  database: <span class="str">'shop_db'</span>
+});
+
+connection.<span class="fn">connect</span>((err) <span class="op">=&gt;</span> {
+  <span class="kw">if</span> (err) { console.<span class="fn">error</span>(err.message); process.<span class="fn">exit</span>(<span class="num">1</span>); }
+  console.<span class="fn">log</span>(<span class="str">'✅ Connected to shop_db'</span>);
+});
+
+<span class="kw">const</span> <span class="fn">createProduct</span> <span class="op">=</span> (p) <span class="op">=&gt;</span>
+  connection.<span class="fn">query</span>(<span class="str">'INSERT INTO products SET ?'</span>, p,
+    (e, r) <span class="op">=&gt;</span> e ? console.<span class="fn">error</span>(e) : console.<span class="fn">log</span>(<span class="str">`✅ Created ID:${r.insertId}`</span>));
+
+<span class="kw">const</span> <span class="fn">getAllProducts</span> <span class="op">=</span> () <span class="op">=&gt;</span>
+  connection.<span class="fn">query</span>(<span class="str">'SELECT * FROM products'</span>,
+    (e, r) <span class="op">=&gt;</span> e ? console.<span class="fn">error</span>(e) : console.<span class="fn">log</span>(<span class="str">'📋 Products:'</span>, r));
+
+<span class="kw">const</span> <span class="fn">updateProduct</span> <span class="op">=</span> (id, data) <span class="op">=&gt;</span>
+  connection.<span class="fn">query</span>(<span class="str">'UPDATE products SET ? WHERE id = ?'</span>, [data, id],
+    (e, r) <span class="op">=&gt;</span> e ? console.<span class="fn">error</span>(e) : console.<span class="fn">log</span>(<span class="str">`✏️ Updated ${r.affectedRows} row`</span>));
+
+<span class="kw">const</span> <span class="fn">deleteProduct</span> <span class="op">=</span> (id) <span class="op">=&gt;</span>
+  connection.<span class="fn">query</span>(<span class="str">'DELETE FROM products WHERE id = ?'</span>, [id],
+    (e, r) <span class="op">=&gt;</span> e ? console.<span class="fn">error</span>(e) : console.<span class="fn">log</span>(<span class="str">`🗑️ Deleted ${r.affectedRows} row`</span>));
+
+<span class="cm">// --- Run the full demo ---</span>
+console.<span class="fn">log</span>(<span class="str">'--- CRUD Demo: shop_db.products ---'</span>);
+
+<span class="fn">createProduct</span>({ name: <span class="str">'Wireless Keyboard'</span>, price: <span class="num">49.99</span>, stock: <span class="num">100</span> });
+<span class="fn">createProduct</span>({ name: <span class="str">'USB-C Hub'</span>,        price: <span class="num">29.50</span>, stock: <span class="num">250</span> });
+<span class="fn">getAllProducts</span>();
+<span class="fn">updateProduct</span>(<span class="num">1</span>, { price: <span class="num">44.99</span>, stock: <span class="num">90</span> });
+<span class="fn">deleteProduct</span>(<span class="num">2</span>);
+<span class="fn">getAllProducts</span>();
+
+<span class="fn">setTimeout</span>(() <span class="op">=&gt;</span> connection.<span class="fn">end</span>(() <span class="op">=&gt;</span>
+  console.<span class="fn">log</span>(<span class="str">'🔌 Disconnected.'</span>)
+), <span class="num">1500</span>);</pre>
+    </div>
+    <div class="panel">
+      <h3 style="margin-bottom:10px">🏃 Running the Project</h3>
+      <div class="code-wrap" style="margin-bottom:10px">
+        <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre>node crud.js</pre>
+      </div>
+      <h3 style="margin-bottom:7px">Expected Output</h3>
+      <div class="terminal">
+✅ Connected to shop_db<br>
+--- CRUD Demo: shop_db.products ---<br>
+✅ Created ID:1<br>
+✅ Created ID:2<br>
+📋 Products: [ {id:1,...}, {id:2,...} ]<br>
+✏️ Updated 1 row<br>
+🗑️ Deleted 1 row<br>
+📋 Products: [ {id:1, price:44.99, stock:90} ]<br>
+🔌 Disconnected.
+      </div>
+      <div class="info" style="margin-top:10px">
+        <strong>Why setTimeout?</strong> Node.js CRUD callbacks are async — they don't block. <code class="ic">setTimeout(1500)</code> waits for all operations to finish before closing the connection.
+      </div>
+      <div class="tip" style="margin-top:8px">
+        <strong>Project complete!</strong> You now have a working Node.js + MySQL CRUD application from zero. The next step is wrapping these functions inside Express.js routes and Controller files (MVC, Module 13).
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S10: Recap -->
+<div class="slide">
+  <div class="eyebrow">Recap</div>
+  <h2>What We Built — Step by Step</h2>
+  <div class="cards cols2" style="margin-top:14px">
+    <div>
+      <div class="phase"><span class="phase-num">Phase 1</span><span class="phase-label">Environment Setup</span><span class="phase-sub">nodejs.org · MySQL · npm install mysql</span></div>
+      <div class="card al" style="margin-bottom:10px">
+        <h3>✅ Installed</h3>
+        <p>Node.js LTS, MySQL Server, created <code class="ic">shop_db</code> database and <code class="ic">products</code> table, initialized npm project, installed <code class="ic">mysql</code> driver.</p>
+      </div>
+      <div class="phase"><span class="phase-num">Phase 2</span><span class="phase-label">Connection</span><span class="phase-sub">config.js + db.js</span></div>
+      <div class="card ag" style="margin-bottom:10px">
+        <h3>🔌 Connected</h3>
+        <p>Separated credentials into <code class="ic">config.js</code>, created a reusable connection in <code class="ic">db.js</code>, exported it for use across all CRUD files.</p>
+      </div>
+      <div class="phase"><span class="phase-num">Phase 3</span><span class="phase-label">Security</span><span class="phase-sub">Parameterized queries</span></div>
+      <div class="card ar">
+        <h3>🛡️ Secured</h3>
+        <p>Every query uses <code class="ic">?</code> placeholders. Credentials stored separately. Error handled in every callback.</p>
+      </div>
+    </div>
+    <div>
+      <div class="phase"><span class="phase-num">Phase 4</span><span class="phase-label">CRUD Operations</span><span class="phase-sub">crud.js</span></div>
+      <div class="crud-row" style="margin-top:0;margin-bottom:10px">
+        <div class="crud-badge cc"><div class="op-letter" style="font-size:24px">C</div><div class="op-sql">INSERT SET ?</div></div>
+        <div class="crud-badge rc"><div class="op-letter" style="font-size:24px">R</div><div class="op-sql">SELECT *</div></div>
+        <div class="crud-badge uc"><div class="op-letter" style="font-size:24px">U</div><div class="op-sql">UPDATE SET ?</div></div>
+        <div class="crud-badge dc"><div class="op-letter" style="font-size:24px">D</div><div class="op-sql">DELETE WHERE</div></div>
+      </div>
+      <div class="phase"><span class="phase-num">Phase 5</span><span class="phase-label">Complete Script</span><span class="phase-sub">node crud.js</span></div>
+      <div class="card aa">
+        <h3>🚀 Running</h3>
+        <p>All four operations in one script — creates products, reads them, updates price and stock, deletes a row, and closes the connection cleanly.</p>
+      </div>
+      <div class="info" style="margin-top:10px">
+        <strong>Best practices applied:</strong> Parameterized queries · error-first callbacks · affectedRows check · connection.end() · credentials in config · process.exit(1) on connect failure
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S11: Quiz MC (Q1-7) -->
+<div class="slide">
+  <div class="eyebrow">Skill-Building Check — Multiple Choice</div>
+  <h2>Questions 1 – 7</h2>
+  <div class="cards cols2" style="margin-top:12px">
+    <div>
+      <div class="quiz-q">1. The Create operation in MySQL involves ___ data into the database.</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>Retrieving</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>Modifying</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>Inserting</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>Deleting</div>
+
+      <div class="quiz-q" style="margin-top:11px">2. The Read operation in MySQL involves ___ data from the database.</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>Inserting</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>Retrieving</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>Updating</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>Deleting</div>
+
+      <div class="quiz-q" style="margin-top:11px">3. The Update operation in MySQL involves ___ existing data.</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>Adding</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>Fetching</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>Modifying</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>Removing</div>
+
+      <div class="quiz-q" style="margin-top:11px">4. Which method properly closes a MySQL connection in Node.js?</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>connection.close()</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>connection.destroy()</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>connection.finish()</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>connection.end()</div>
+    </div>
+    <div>
+      <div class="quiz-q">5. What is the primary benefit of using <code class="ic">?</code> placeholders in queries?</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>Makes code run faster</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>Prevents SQL Injection by escaping user input</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>Makes SQL syntax easier to read</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>Automatically creates database tables</div>
+
+      <div class="quiz-q" style="margin-top:11px">6. To establish a MySQL connection in Node.js, we use which method?</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>createServer()</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>connect()</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>query()</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>createConnection()</div>
+
+      <div class="quiz-q" style="margin-top:11px">7. When performing CRUD operations, it is important to handle ___ and sanitize user input.</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>Variables</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>SQL queries</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>Errors</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>Headers</div>
+    </div>
+  </div>
+</div>
+
+<!-- S12: Coding Problems -->
+<div class="slide">
+  <div class="eyebrow">Skill-Building Check — Coding Problems</div>
+  <h2>Questions 8 – 10</h2>
+  <p style="font-size:13px;color:var(--text3);margin-top:4px;margin-bottom:14px">Use the <code class="ic">products</code> table: <code class="ic">id (INT PK), name (VARCHAR), price (DECIMAL), stock (INT)</code></p>
+
+  <div class="prob-box">
+    <div class="prob-tag fill">✏️ Fill in the Blank</div>
+    <div class="prob-title">Question 8 — Complete the Read Query</div>
+    <div class="prob-desc">The function below should retrieve all products where <code class="ic">stock</code> is less than 10. Fill in the four blanks so the query runs correctly and safely.</div>
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JS — Fill in the Blanks</span></div>
+      <pre><span class="kw">const</span> <span class="fn">getLowStock</span> <span class="op">=</span> () <span class="op">=&gt;</span> {
+  connection.<span class="fn">query</span>(
+    <span class="str">'SELECT * FROM products WHERE stock &lt; <span class="blank">____</span>'</span>,
+    [<span class="blank">____</span>],
+    (<span class="blank">____</span>, results) <span class="op">=&gt;</span> {
+      <span class="kw">if</span> (<span class="blank">____</span>) { console.<span class="fn">error</span>(err.message); <span class="kw">return</span>; }
+      console.<span class="fn">log</span>(<span class="str">'Low stock products:'</span>, results);
+    }
+  );
+};</pre>
+    </div>
+  </div>
+
+  <div class="cards cols2" style="margin-top:10px">
+    <div class="prob-box" style="margin-bottom:0">
+      <div class="prob-tag write">✍️ Write from Scratch</div>
+      <div class="prob-title">Question 9 — Write the Update Function</div>
+      <div class="prob-desc">Write a complete Node.js function called <code class="ic">restockProduct</code> that takes <code class="ic">id</code> and <code class="ic">newStock</code> as arguments and updates only the <code class="ic">stock</code> column for that product ID. Use a parameterized query and log how many rows were affected.</div>
+    </div>
+    <div class="prob-box" style="margin-bottom:0">
+      <div class="prob-tag debug">🐛 Debug the Code</div>
+      <div class="prob-title">Question 10 — Find &amp; Fix the Bugs</div>
+      <div class="prob-desc">The delete function below has <strong style="color:var(--accent4)">3 bugs</strong>. Identify and correct each one.</div>
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">JS — Buggy Code</span></div>
+        <pre><span class="kw">const</span> <span class="fn">removeProduct</span> <span class="op">=</span> (id) <span class="op">=&gt;</span> {
+  connection.<span class="fn">query</span>(
+    <span class="str">'DELETE products WHERE id = ?'</span>,
+    id,
+    (result, err) <span class="op">=&gt;</span> {
+      <span class="kw">if</span> (err) <span class="kw">throw</span> err;
+      console.<span class="fn">log</span>(result.affectedRows);
+    }
+  );
+};</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S13: Answer Key MC -->
+<div class="slide">
+  <div class="eyebrow">Answer Key — Part 1</div>
+  <h2>Multiple Choice Answers (Q1–7)</h2>
+  <div class="cards cols2" style="margin-top:12px">
+    <div>
+      <div class="ans-item">
+        <div class="ans-q">Q1: Create operation involves ___ data</div>
+        <div class="ans-a">✅ C — Inserting</div>
+        <div class="ans-exp">Create maps to SQL's INSERT command — adds new records to a table.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q2: Read operation involves ___ data</div>
+        <div class="ans-a">✅ B — Retrieving</div>
+        <div class="ans-exp">Read maps to SELECT — fetches existing data for display or analysis.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q3: Update operation involves ___ existing data</div>
+        <div class="ans-a">✅ C — Modifying</div>
+        <div class="ans-exp">Update maps to UPDATE SET — changes values in existing rows.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q4: Method to close a MySQL connection</div>
+        <div class="ans-a">✅ D — connection.end()</div>
+        <div class="ans-exp">end() waits for all pending queries to finish before disconnecting gracefully. destroy() cuts immediately without waiting.</div>
+      </div>
+    </div>
+    <div>
+      <div class="ans-item">
+        <div class="ans-q">Q5: Primary benefit of ? placeholders</div>
+        <div class="ans-a">✅ B — Prevents SQL Injection</div>
+        <div class="ans-exp">The mysql module escapes values passed via ? — even malicious input like '; DROP TABLE-- becomes a harmless string literal.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q6: Method to establish a MySQL connection</div>
+        <div class="ans-a">✅ D — createConnection()</div>
+        <div class="ans-exp">mysql.createConnection(config) accepts host, user, password, database and returns a connection object for executing queries.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q7: Important to handle ___ in CRUD</div>
+        <div class="ans-a">✅ C — Errors</div>
+        <div class="ans-exp">CRUD involves network and disk I/O which can fail. Every callback must check the err argument to keep the app stable.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S14: Answer Key Coding -->
+<div class="slide">
+  <div class="eyebrow">Answer Key — Part 2</div>
+  <h2>Coding Problem Answers (Q8–10)</h2>
+  <div class="cards cols2" style="margin-top:12px">
+    <div>
+      <div class="ans-item" style="border-left-color:var(--purple)">
+        <div class="ans-q">Q8 — Fill in the Blank: getLowStock()</div>
+        <div class="ans-a" style="color:var(--purple)">✅ Completed function</div>
+      </div>
+      <div class="code-wrap" style="margin-bottom:12px">
+        <div class="code-header"><span class="code-lang">JS — Q8 Answer</span></div>
+        <pre><span class="kw">const</span> <span class="fn">getLowStock</span> <span class="op">=</span> () <span class="op">=&gt;</span> {
+  connection.<span class="fn">query</span>(
+    <span class="str">'SELECT * FROM products WHERE stock &lt; <span class="kw">?</span>'</span>,
+    [<span class="num">10</span>],
+    (<span class="var">err</span>, results) <span class="op">=&gt;</span> {
+      <span class="kw">if</span> (<span class="var">err</span>) { console.<span class="fn">error</span>(err.message); <span class="kw">return</span>; }
+      console.<span class="fn">log</span>(<span class="str">'Low stock products:'</span>, results);
+    }
+  );
+};</pre>
+      </div>
+      <div class="ans-item" style="border-left-color:var(--accent)">
+        <div class="ans-q">Blank 1: ? &nbsp; Blank 2: 10 &nbsp; Blank 3: err &nbsp; Blank 4: err</div>
+        <div class="ans-exp">The ? placeholder keeps the query safe. The value 10 goes in the array. The callback is error-first: (err, results) — err must come before results.</div>
+      </div>
+    </div>
+    <div>
+      <div class="ans-item" style="border-left-color:var(--accent)">
+        <div class="ans-q">Q9 — Write from Scratch: restockProduct()</div>
+        <div class="ans-a">✅ Reference solution</div>
+      </div>
+      <div class="code-wrap" style="margin-bottom:12px">
+        <div class="code-header"><span class="code-lang">JS — Q9 Answer</span></div>
+        <pre><span class="kw">const</span> <span class="fn">restockProduct</span> <span class="op">=</span> (id, newStock) <span class="op">=&gt;</span> {
+  <span class="kw">const</span> sql <span class="op">=</span>
+    <span class="str">'UPDATE products SET stock = ? WHERE id = ?'</span>;
+  connection.<span class="fn">query</span>(sql, [newStock, id],
+    (err, result) <span class="op">=&gt;</span> {
+      <span class="kw">if</span> (err) { console.<span class="fn">error</span>(err.message); <span class="kw">return</span>; }
+      console.<span class="fn">log</span>(<span class="str">'Rows affected:'</span>, result.affectedRows);
+    });
+};</pre>
+      </div>
+      <div class="ans-item" style="border-left-color:var(--accent4)">
+        <div class="ans-q">Q10 — Debug: removeProduct() — 3 bugs found</div>
+        <div class="ans-a">✅ Bug list</div>
+        <div class="ans-exp">
+          Bug 1: <code class="ic">'DELETE products'</code> → missing <strong>FROM</strong> keyword → <code class="ic">'DELETE FROM products'</code><br><br>
+          Bug 2: <code class="ic">id</code> passed bare → must be wrapped in an array → <code class="ic">[id]</code><br><br>
+          Bug 3: callback args reversed → <code class="ic">(result, err)</code> → must be <code class="ic">(err, result)</code> — error-first is Node.js convention
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S15: Final -->
+<div class="slide">
+  <div class="final">
+    <blockquote>"Data is the new oil. It's valuable, but if unrefined it cannot really be used."</blockquote>
+    <p style="font-size:13px;color:var(--text3);margin-bottom:36px">— Clive Humby</p>
+    <h2 style="margin-bottom:12px">Module 15 Complete 🎉</h2>
+    <p style="font-size:15px;color:var(--text2);max-width:520px;line-height:1.7;margin-bottom:26px">You've set up a full Node.js + MySQL environment from scratch and built a working CRUD application. The next step is wrapping these operations in Express.js routes — connecting the Model layer to your MVC architecture.</p>
+    <div class="crud-row" style="max-width:500px;margin:0 auto 24px">
+      <div class="crud-badge cc" style="padding:11px 10px"><div class="op-letter" style="font-size:24px">C</div><div class="op-sql">INSERT</div></div>
+      <div class="crud-badge rc" style="padding:11px 10px"><div class="op-letter" style="font-size:24px">R</div><div class="op-sql">SELECT</div></div>
+      <div class="crud-badge uc" style="padding:11px 10px"><div class="op-letter" style="font-size:24px">U</div><div class="op-sql">UPDATE</div></div>
+      <div class="crud-badge dc" style="padding:11px 10px"><div class="op-letter" style="font-size:24px">D</div><div class="op-sql">DELETE</div></div>
+    </div>
+    <p style="font-size:12px;color:var(--text3)">Press <kbd style="background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 7px;color:var(--accent);font-family:monospace">?</kbd> for navigation shortcuts</p>
+  </div>
+</div>
+
+</div><!-- end deck -->
+
+<div id="help">
+  <div class="help-box">
+    <h2>Keyboard Shortcuts</h2>
+    <div class="help-row"><span>Next slide</span><span><kbd>→</kbd> or <kbd>Right-click</kbd></span></div>
+    <div class="help-row"><span>Previous slide</span><span><kbd>←</kbd></span></div>
+    <div class="help-row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="help-row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="help-row"><span>Close this</span><span><kbd>?</kbd> or <kbd>Esc</kbd></span></div>
+  </div>
+</div>
+
+<script>
+const slides = Array.from(document.querySelectorAll('.slide'));
+const total = slides.length;
+let cur = 0;
+
+function go(n) {
+  n = Math.max(0, Math.min(total - 1, n));
+  if (n === cur) return;
+  const prev = cur;
+  slides[prev].classList.remove('active');
+  if (n > prev) slides[prev].classList.add('prev');
+  setTimeout(() => slides[prev].classList.remove('prev'), 360);
+  cur = n;
+  slides[cur].classList.add('active');
+  slides[cur].classList.remove('prev');
+  document.getElementById('prog').style.width = ((cur + 1) / total * 100) + '%';
+  document.getElementById('counter').textContent = (cur + 1) + ' / ' + total;
+}
+
+document.addEventListener('keydown', e => {
+  const help = document.getElementById('help');
+  if (help.classList.contains('show')) {
+    if (e.key === 'Escape' || e.key === '?') help.classList.remove('show');
+    return;
+  }
+  if (e.key === 'ArrowRight') go(cur + 1);
+  else if (e.key === 'ArrowLeft') go(cur - 1);
+  else if (e.key === 'Home') go(0);
+  else if (e.key === 'End') go(total - 1);
+  else if (e.key === '?') document.getElementById('help').classList.toggle('show');
+});
+
+document.addEventListener('mousedown', e => {
+  if (e.target.closest('button, a, input, select, textarea, pre')) return;
+  if (e.button === 2) { e.preventDefault(); e.stopImmediatePropagation(); go(cur + 1); }
+  else if (e.button === 3) { e.preventDefault(); e.stopImmediatePropagation(); go(cur - 1); }
+  else if (e.button === 4) { e.preventDefault(); e.stopImmediatePropagation(); go(cur + 1); }
+}, true);
+document.addEventListener('contextmenu', e => { if (!e.target.closest('button, a, input, select, textarea, pre')) e.preventDefault(); }, true);
+document.addEventListener('auxclick', e => { if (e.button !== 1) e.preventDefault(); }, true);
+
+let tx = 0;
+document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - tx;
+  if (Math.abs(dx) > 50) go(dx < 0 ? cur + 1 : cur - 1);
+}, { passive: true });
+
+function copyCode(btn) {
+  const code = btn.closest('.code-wrap').querySelector('pre').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('ok'); }, 1800);
+  });
+}
+
+document.getElementById('prog').style.width = (1 / total * 100) + '%';
+</script>
+</body>
+</html>

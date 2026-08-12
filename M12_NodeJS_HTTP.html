@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>M12 · Node.js HTTP Server</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0A1421;--s1:#0F1D2E;--s2:#152838;--s3:#1B3548;
+  --b1:#1F3448;--b2:#2A4A65;
+  --node:#68A063;--node2:#4D8047;
+  --cyn:#5DADE2;--cyn2:#3498DB;
+  --amb:#F5B041;--amb2:#DC7633;
+  --rose:#F1948A;--rose2:#CD6155;
+  --pur:#BB8FCE;
+  --txt:#EDF2F7;--txt2:#7B8B9E;--txt3:#CBD5E0;
+  --mono:'Cascadia Code','Fira Code','Consolas',monospace;
+  --sans:'Segoe UI',system-ui,sans-serif;
+  --ra:8px;--rb:14px;
+  --tr:340ms cubic-bezier(.4,0,.2,1);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:var(--sans)}
+#bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--node),var(--cyn));z-index:99;transition:width .28s;border-radius:0 2px 2px 0}
+#ctr{position:fixed;top:9px;right:14px;font-size:11px;color:var(--txt2);z-index:99;font-family:var(--mono);letter-spacing:.4px}
+#deck{width:100%;height:100vh;position:relative;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;padding:44px 58px 28px;opacity:0;pointer-events:none;transform:translateX(44px);transition:opacity var(--tr),transform var(--tr);overflow-y:auto}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.ol{opacity:0;transform:translateX(-44px)}.slide.or{opacity:0;transform:translateX(44px)}
+@media(prefers-reduced-motion:reduce){.slide{transition:opacity .12s;transform:none!important}}
+/* TYPE */
+.ey{font-size:10.5px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--node);margin-bottom:8px;display:flex;align-items:center;gap:9px}
+.ey::before{content:'';width:18px;height:2px;background:var(--node);border-radius:1px;display:inline-block;flex-shrink:0}
+.ttl{font-size:clamp(25px,2.8vw,41px);font-weight:800;line-height:1.1;letter-spacing:-.3px;color:var(--txt);margin-bottom:4px}
+.sub{font-size:14.5px;color:var(--txt2);margin-bottom:16px}
+.rule{height:1px;background:linear-gradient(90deg,var(--b2),transparent);border:none;margin-bottom:16px}
+/* LAYOUT */
+.cnt{flex:1;display:flex;flex-direction:column;gap:11px;min-height:0}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:11px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.sp{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:13px;flex:1;min-height:0}
+.sp>*{min-width:0;display:flex;flex-direction:column;gap:8px}
+.col{display:flex;flex-direction:column;gap:8px;min-width:0}
+.f1{flex:1}
+/* FIXED-HEIGHT CODE PANEL */
+.codepanel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:13px;height:min(540px,62vh);align-items:stretch}
+.codepanel>*{min-width:0;height:100%;display:flex;flex-direction:column}
+/* CARD */
+.card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--rb);padding:13px 15px}
+.card h3{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--node);margin-bottom:8px}
+.card h3.c{color:var(--cyn)}
+.card p,.card li{font-size:14.5px;color:var(--txt3);line-height:1.62}
+.card ul{padding-left:15px}.card li{margin-bottom:3px}
+/* CODE — FIXED FOR OVERFLOW */
+.cw{position:relative;background:#060F1B;border:1px solid var(--b1);border-radius:var(--ra);overflow:hidden;display:flex;flex-direction:column;flex:1;min-height:0}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:5px 11px;background:#080E1A;border-bottom:1px solid var(--b1);font-size:10px;color:var(--txt2);font-family:var(--mono);flex-shrink:0}
+.ch .lb{color:var(--amb)}
+.cw pre{padding:11px 13px;overflow:auto;font-family:var(--mono);font-size:13px;line-height:1.73;white-space:pre;flex:1;min-height:0}
+.cpb{padding:2px 9px;font-size:10px;font-family:var(--sans);background:var(--s3);border:1px solid var(--b2);color:var(--txt2);border-radius:3px;cursor:pointer;transition:all .16s}
+.cpb:hover{background:var(--node);color:#fff;border-color:var(--node)}
+.cpb.ok{background:var(--node);color:#060F1B;border-color:var(--node)}
+/* SYNTAX */
+.k{color:#F687B3}.s{color:#9AE6B4}.f{color:#BEE3F8}.n{color:#90CDF4}
+.cm{color:#2D4A65;font-style:italic}.tp{color:#FBB6CE}.b{color:#FAF089}
+/* BREAKDOWN */
+.bd{display:flex;flex-direction:column;gap:6px}
+.bi{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;background:var(--s1);border:1px solid var(--b1);border-radius:6px;border-left:3px solid var(--node)}
+.bi.c{border-left-color:var(--cyn)}.bi.a{border-left-color:var(--amb)}
+.bi.r{border-left-color:var(--rose)}.bi.g{border-left-color:var(--node)}
+.bl{font-family:var(--mono);font-size:10px;color:var(--node);background:#060F1B;padding:2px 6px;border-radius:3px;white-space:nowrap;align-self:flex-start;margin-top:1px;flex-shrink:0}
+.bl.c{color:var(--cyn)}
+.bt{font-size:13.5px;color:var(--txt3);line-height:1.52}.bt strong{color:var(--txt);font-weight:600}
+/* STEP */
+.step{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--s1);border:1px solid var(--b1);border-radius:var(--ra)}
+.sn{width:25px;height:25px;border-radius:50%;background:var(--node);color:#fff;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.sb h4{font-size:14px;font-weight:700;color:var(--txt);margin-bottom:2px}
+.sb p{font-size:13px;color:var(--txt2);line-height:1.48}
+/* TABLE */
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{background:var(--s2);color:var(--node);padding:7px 11px;text-align:left;font-weight:700;font-size:10px;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--b1)}
+td{padding:7px 11px;border-bottom:1px solid var(--b1);color:var(--txt3);line-height:1.45;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.013)}
+/* PILLS */
+.pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--b1);color:var(--txt2);margin:2px}
+.pn{border-color:var(--node);color:var(--node);background:rgba(104,160,99,.07)}
+.pc{border-color:var(--cyn);color:var(--cyn);background:rgba(93,173,226,.07)}
+.pa{border-color:var(--amb);color:var(--amb);background:rgba(245,176,65,.07)}
+/* HERO */
+.hbg{background:radial-gradient(ellipse at 12% 60%,rgba(104,160,99,.09) 0%,transparent 52%),radial-gradient(ellipse at 85% 15%,rgba(93,173,226,.07) 0%,transparent 46%),var(--bg)}
+.ht{font-size:clamp(42px,4.8vw,68px);font-weight:900;line-height:1.02;letter-spacing:-1.2px}
+.hs{font-size:17px;color:var(--txt2);max-width:520px;line-height:1.65;margin:12px 0 17px}
+.dots{position:absolute;inset:0;background-image:radial-gradient(rgba(104,160,99,.04) 1px,transparent 1px);background-size:28px 28px;pointer-events:none}
+/* FLOW */
+.flow{display:flex;align-items:center;flex-wrap:wrap;gap:0;margin:8px 0}
+.fb{background:var(--s2);border:1px solid var(--b2);border-radius:6px;padding:6px 12px;font-size:13px;color:var(--txt3);font-weight:500}
+.fb.hi{border-color:var(--node);color:var(--node)}
+.fa{color:var(--node);padding:0 6px;font-size:15px}
+/* BADGE ROW */
+.badge-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}
+.badge-ico{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:6px;background:var(--s2);border:1px solid var(--b1);font-size:12.5px;color:var(--txt3);font-weight:600}
+/* QUIZ */
+.mc-item{background:var(--s1);border:1px solid var(--b1);border-radius:var(--ra);padding:11px 13px}
+.mc-q{font-size:14px;font-weight:600;color:var(--txt);margin-bottom:8px;line-height:1.48}
+.qn{color:var(--node);margin-right:5px;font-weight:800}
+.mc-opts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px}
+.mc-o{padding:6px 9px;border-radius:4px;border:1px solid var(--b1);font-size:13px;color:var(--txt3);cursor:pointer;transition:all .14s;background:var(--s2);line-height:1.35}
+.mc-o:hover{border-color:var(--node);color:var(--txt)}
+.mc-o.sel{border-color:var(--node);background:rgba(104,160,99,.1);color:var(--node)}
+/* ANS */
+.ab2{border:1px solid var(--b1);border-radius:var(--rb);overflow:hidden;flex:1}
+.ar{display:flex;gap:8px;padding:7px 11px;border-bottom:1px solid var(--b1);font-size:13px;align-items:flex-start}
+.ar:last-child{border:none}
+.ar:nth-child(even){background:rgba(255,255,255,.011)}
+.an{font-weight:800;min-width:21px;font-family:var(--mono);font-size:11px;flex-shrink:0;margin-top:1px;color:var(--node)}
+.ab{color:var(--txt3);line-height:1.48;flex:1;min-width:0}
+.ab strong{color:var(--node)}
+/* QUOTE */
+.qc{background:linear-gradient(135deg,var(--s1),var(--s2));border-left:3px solid var(--node);border-radius:0 var(--ra) var(--ra) 0;padding:12px 16px;margin-bottom:9px}
+.qt{font-size:15px;color:var(--txt3);line-height:1.68;font-style:italic}
+.qs{font-size:10px;color:var(--node);margin-top:5px;font-style:normal;font-weight:700;letter-spacing:.5px}
+/* RECAP */
+.rcg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.rc{background:var(--s1);border:1px solid var(--b1);border-radius:var(--rb);padding:13px;text-align:center}
+.rc .ico{font-size:22px;margin-bottom:6px}
+.rc h4{font-size:10px;font-weight:700;color:var(--node);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.rc p{font-size:12px;color:var(--txt2);line-height:1.5}
+/* HTTP FLOW DIAGRAM */
+.httpdiag{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center;margin:6px 0}
+.httpdiag .end{background:var(--s2);border:1px solid var(--b2);border-radius:var(--ra);padding:14px;text-align:center}
+.httpdiag .end h4{font-size:11px;color:var(--node);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.httpdiag .arrows{display:flex;flex-direction:column;gap:8px;font-family:var(--mono);font-size:12px;color:var(--cyn)}
+/* MODAL */
+#mod{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:999;align-items:center;justify-content:center}
+#mod.open{display:flex}
+.mb{background:var(--s1);border:1px solid var(--b2);border-radius:13px;padding:22px 26px;min-width:300px}
+.mb h3{font-size:13.5px;font-weight:700;color:var(--node);margin-bottom:12px}
+.sr{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--b1);font-size:12px;color:var(--txt3)}
+.sr:last-of-type{border:none}
+.sr kbd{background:var(--s2);border:1px solid var(--b2);border-radius:3px;padding:1px 6px;font-family:var(--mono);font-size:10px;color:var(--txt)}
+.mcl{margin-top:13px;width:100%;padding:8px;background:var(--node);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--sans)}
+#hint{position:fixed;bottom:11px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--txt2);pointer-events:none;opacity:.35;font-family:var(--mono);letter-spacing:.3px}
+ic{background:var(--s2);padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:11.5px;color:var(--pur);border:1px solid var(--b1)}
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<div id="ctr"></div>
+<div id="deck"></div>
+<div id="hint">right-click or → &nbsp;·&nbsp; ? for shortcuts</div>
+<div id="mod">
+  <div class="mb">
+    <h3>⌨ Shortcuts</h3>
+    <div class="sr"><span>Next</span><span><kbd>→</kbd> / <kbd>Right-click</kbd></span></div>
+    <div class="sr"><span>Prev</span><span><kbd>←</kbd></span></div>
+    <div class="sr"><span>First / Last</span><span><kbd>Home</kbd> / <kbd>End</kbd></span></div>
+    <div class="sr"><span>Shortcuts</span><span><kbd>?</kbd></span></div>
+    <div class="sr"><span>Close</span><span><kbd>Esc</kbd></span></div>
+    <button class="mcl" onclick="document.getElementById('mod').classList.remove('open')">Close</button>
+  </div>
+</div>
+<script>
+// ── TOKENIZER ─────────────────────────────────────────────────────────
+function hl(raw){
+  const KW=/^(const|let|var|function|return|async|await|try|catch|throw|new|class|if|else|for|while|require|module|true|false|null|undefined)\b/;
+  const TY=/^(console|process|http|fs|path|os|JSON|Math|Promise|Error|Buffer)\b/;
+  const NUM=/^\b\d+(\.\d+)?\b/;
+  function e(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+  let i=0,o='';
+  while(i<raw.length){
+    if(raw[i]==='/'&&raw[i+1]==='/'){const end=raw.indexOf('\n',i);const ch=end<0?raw.slice(i):raw.slice(i,end);o+='<span class="cm">'+e(ch)+'</span>';i+=ch.length;continue;}
+    if(raw[i]==='`'){let j=i+1;while(j<raw.length&&raw[j]!=='`'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    if(raw[i]==="'"){let j=i+1;while(j<raw.length&&raw[j]!=="'"&&raw[j]!=='\n'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    if(raw[i]==='"'){let j=i+1;while(j<raw.length&&raw[j]!=='"'&&raw[j]!=='\n'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    const rest=raw.slice(i);let m;
+    if((m=rest.match(KW))){o+='<span class="k">'+m[0]+'</span>';i+=m[0].length;continue;}
+    if((m=rest.match(TY))){o+='<span class="tp">'+m[0]+'</span>';i+=m[0].length;continue;}
+    if((m=rest.match(NUM))){o+='<span class="n">'+m[0]+'</span>';i+=m[0].length;continue;}
+    o+=e(raw[i]);i++;
+  }
+  return o;
+}
+function cw(code,lang,label){
+  const id='c'+Math.random().toString(36).slice(2);
+  const body=(lang==='js'||lang==='bash')?hl(code):code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return '<div class="cw"><div class="ch"><span class="lb">'+(label||lang)+'</span><button class="cpb" onclick="docp(\''+id+'\',this)">Copy</button></div><pre id="'+id+'">'+body+'</pre></div>';
+}
+function docp(id,btn){
+  navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>{
+    btn.textContent='Copied!';btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('ok');},1800);
+  });
+}
+
+// ── SLIDES ────────────────────────────────────────────────────────────
+const S=[];
+
+// 0 ── TITLE
+S.push({cls:'hbg',h:`
+<div class="dots"></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;position:relative">
+  <div class="ey" style="margin-bottom:12px">Web Systems · Module 12</div>
+  <div style="margin-bottom:10px">
+    <svg width="60" height="60" viewBox="0 0 48 48" role="img" aria-label="Node.js"><polygon points="24,4 44,15 44,33 24,44 4,33 4,15" fill="#68A063"/><text x="24" y="30" font-family="Arial" font-weight="900" font-size="12" fill="white" text-anchor="middle">node</text></svg>
+  </div>
+  <div class="ht"><span style="color:var(--txt)">Your First</span><br/><span style="color:var(--node)">HTTP Server</span></div>
+  <div class="hs">The <ic>http</ic> module, request/response basics, and building a working web server from scratch — no frameworks, just raw Node.js.</div>
+  <div>
+    <span class="pill pn">The http Module</span>
+    <span class="pill pn">require()</span>
+    <span class="pill pn">createServer</span>
+    <span class="pill pa">req &amp; res</span>
+    <span class="pill pc">Coding Activity</span>
+  </div>
+</div>`});
+
+// 1 ── RECAP FROM M10-11
+S.push({h:`
+<div class="ey">Bridge from M10–11</div>
+<div class="ttl">From Theory to a Real Server</div>
+<hr class="rule"/>
+<div class="cnt">
+  <div class="g2" style="margin-bottom:4px">
+    <div class="card"><h3>What You Already Know</h3>
+      <ul>
+        <li>Node.js runs JavaScript outside the browser</li>
+        <li>Built on Google's V8 engine</li>
+        <li>Uses a <strong style="color:var(--txt)">non-blocking, event-driven</strong> model</li>
+        <li>Handles many requests with one thread</li>
+        <li>Loads modules with <ic>require()</ic></li>
+      </ul>
+    </div>
+    <div class="card"><h3>What You'll Build Today</h3>
+      <ul>
+        <li>A real web server on <ic>localhost:3000</ic></li>
+        <li>Written in ~15 lines of code</li>
+        <li>Responds to requests with a custom message</li>
+        <li>No frameworks — just <ic>http</ic> from Node's core</li>
+        <li>Tested with a browser AND with cURL</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card"><h3>The Modular Approach</h3>
+    <p style="font-size:15px;line-height:1.7">Node.js gives you <strong style="color:var(--txt)">built-in modules</strong> (like <ic>http</ic>, <ic>fs</ic>, <ic>path</ic>) that come pre-installed. Instead of writing every low-level thing from scratch, you import what you need and focus on your app's actual logic. Today's module: <ic>http</ic> — the networking engine.</p>
+  </div>
+</div>`});
+
+// 2 ── STEP 1: CREATING THE JS FILE
+S.push({h:`
+<div class="ey">Step 1 · The File</div>
+<div class="ttl">Creating a New JavaScript File</div>
+<hr class="rule"/>
+<div class="cnt">
+  <div class="sp" style="flex:1">
+    <div>
+      <div class="card" style="flex-shrink:0"><h3>1. Open Your Editor</h3>
+        <div class="badge-row">
+          <div class="badge-ico">📝 VS Code</div>
+          <div class="badge-ico">🖋 Sublime Text</div>
+          <div class="badge-ico">⚛ Atom</div>
+          <div class="badge-ico">📄 Notepad++</div>
+        </div>
+        <p style="font-size:13.5px;color:var(--txt2);margin-top:6px">Any editor works. VS Code is the most common in the JS world — has built-in Node debugging.</p>
+      </div>
+      <div class="card"><h3>2. Save With the .js Extension</h3>
+        <p style="margin-bottom:8px">Create a new blank file. When you save it, the filename must end in <ic>.js</ic>:</p>
+        <div style="font-family:var(--mono);font-size:13px;background:#060F1B;padding:10px 12px;border-radius:5px;color:var(--txt3);line-height:1.85">
+          <span style="color:var(--node)">✓</span> app.js<br/>
+          <span style="color:var(--node)">✓</span> server.js<br/>
+          <span style="color:var(--node)">✓</span> index.js<br/>
+          <span style="color:var(--rose)">✗</span> server.txt &nbsp;<span style="color:var(--txt2)">(node won't run it)</span><br/>
+          <span style="color:var(--rose)">✗</span> server &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--txt2)">(no extension = unclear)</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="flex-shrink:0"><h3>3. Try a "Hello" First</h3>
+        <p style="font-size:14px;margin-bottom:8px">Before we build the server, prove your file runs. Paste this into <ic>app.js</ic>:</p>
+      </div>
+      ${cw(`// app.js
+const greeting = 'Hello, World!';
+console.log(greeting);`,'js','app.js')}
+      <div class="card" style="margin-top:8px;flex-shrink:0"><h3>4. Run It</h3>
+        ${cw(`node app.js
+# Expected output:
+# Hello, World!`,'bash','terminal')}
+        <p style="font-size:13.5px;color:var(--txt2);margin-top:8px">If you see the greeting, your file is being executed by Node correctly. That confirms your setup — now we're ready to build the server.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 3 ── STEP 2: THE 4-PART STRUCTURE
+S.push({h:`
+<div class="ey">Step 2 · Program Structure</div>
+<div class="ttl">The Four Parts of Every Node Server</div>
+<hr class="rule"/>
+<div class="cnt">
+  <div class="g4" style="margin-bottom:6px">
+    <div class="card"><h3>① Import Modules</h3>
+      <p style="font-size:13px;line-height:1.55">Load what you need with <ic>require()</ic>. Core modules like <ic>http</ic> are free.</p>
+    </div>
+    <div class="card"><h3>② Create the Server</h3>
+      <p style="font-size:13px;line-height:1.55"><ic>http.createServer()</ic> returns a server instance. Takes a callback for every request.</p>
+    </div>
+    <div class="card"><h3>③ Handle req &amp; res</h3>
+      <p style="font-size:13px;line-height:1.55">Inside the callback, read the request and build the response. Set status, headers, body.</p>
+    </div>
+    <div class="card"><h3>④ Listen on a Port</h3>
+      <p style="font-size:13px;line-height:1.55"><ic>server.listen(3000)</ic> starts accepting connections. Server stays alive until stopped.</p>
+    </div>
+  </div>
+  <div class="sp" style="flex:1">
+    <div>
+      <div class="card" style="flex-shrink:0"><h3>① Importing the http Module</h3></div>
+      ${cw(`// require() loads a module and returns it
+const http = require('http');
+
+// You can also import 'fs' (file system)
+// alongside for reading files
+const fs = require('fs');`,'js','import section')}
+      <div class="card" style="flex-shrink:0;margin-top:8px"><h3>② Creating the Server</h3></div>
+      ${cw(`// createServer takes a callback function
+// This callback runs on EVERY request
+const server = http.createServer((req, res) => {
+  // request handling logic goes here
+});`,'js','create section')}
+    </div>
+    <div>
+      <div class="card" style="flex-shrink:0"><h3>③ Handling req &amp; res</h3></div>
+      ${cw(`const server = http.createServer((req, res) => {
+  // 200 = success
+  res.statusCode = 200;
+
+  // Tell the client what kind of data is coming
+  res.setHeader('Content-Type', 'text/plain');
+
+  // Send the body AND end the response
+  res.end('Hello, World!');
+});`,'js','request/response section')}
+      <div class="card" style="flex-shrink:0;margin-top:8px"><h3>④ Listening on Port 3000</h3></div>
+      ${cw(`// Bind the server to port 3000
+server.listen(3000, () => {
+  console.log('Server is listening on port 3000');
+});`,'js','listen section')}
+    </div>
+  </div>
+</div>`});
+
+// 4 ── COMPLETE SERVER (FULL FILE)
+S.push({h:`
+<div class="ey">Full File</div>
+<div class="ttl">Complete Server — All Four Parts Together</div>
+<hr class="rule"/>
+<div class="cnt">
+  <div class="codepanel">
+    <div>
+      <div class="card" style="flex-shrink:0"><h3>Save as server.js</h3></div>
+      ${cw(`// ① Import the http module
+const http = require('http');
+
+// ② Create the server
+const server = http.createServer((req, res) => {
+
+  // ③ Handle the request, build the response
+  res.statusCode = 200;
+  res.setHeader('Content-Type', 'text/plain');
+  res.end('Hello from my first Node.js server!');
+
+});
+
+// ④ Listen on port 3000
+server.listen(3000, () => {
+  console.log('Server running at http://localhost:3000/');
+});`,'js','server.js')}
+    </div>
+    <div>
+      <div class="card" style="flex-shrink:0"><h3>Line-by-Line Breakdown</h3></div>
+      <div class="bd f1" style="overflow:auto">
+        <div class="bi"><div class="bl">line 2</div><div class="bt"><strong>require('http')</strong> loads Node's built-in HTTP module. No <ic>npm install</ic> needed — it comes with Node.</div></div>
+        <div class="bi c"><div class="bl c">line 5</div><div class="bt"><strong>createServer</strong> makes a server object. The callback runs once per incoming request.</div></div>
+        <div class="bi a"><div class="bl">req, res</div><div class="bt"><strong>req</strong> = what the client asked for. <strong>res</strong> = what you'll send back. Both are objects with many properties and methods.</div></div>
+        <div class="bi"><div class="bl">line 8</div><div class="bt"><strong>statusCode = 200</strong> tells the browser "everything is fine." Other common codes: 404 (not found), 500 (server error), 301 (redirect).</div></div>
+        <div class="bi g"><div class="bl">line 9</div><div class="bt"><strong>setHeader</strong> tells the browser what type of data is coming. Try <ic>'text/html'</ic> instead of plain to render HTML tags.</div></div>
+        <div class="bi c"><div class="bl c">line 10</div><div class="bt"><strong>res.end()</strong> sends the body and closes the response. Without it, the browser keeps waiting forever.</div></div>
+        <div class="bi"><div class="bl">line 15</div><div class="bt"><strong>listen(3000)</strong> starts the server on port 3000. This keeps the process alive — the server runs until you stop it.</div></div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 5 ── REQUEST/RESPONSE VISUAL FLOW
+S.push({h:`
+<div class="ey">How It Works</div>
+<div class="ttl">The Request–Response Cycle</div>
+<hr class="rule"/>
+<div class="cnt">
+  <div class="httpdiag" style="margin:12px 0">
+    <div class="end">
+      <h4>Client (Browser)</h4>
+      <div style="font-size:28px;margin:6px 0">🌐</div>
+      <p style="font-size:12.5px;color:var(--txt2)">Chrome, Firefox, cURL, Postman, your React app</p>
+    </div>
+    <div class="arrows">
+      <div style="color:var(--cyn)">GET /  &nbsp;→</div>
+      <div style="color:var(--node)">←  200 OK</div>
+    </div>
+    <div class="end">
+      <h4>Server (Node.js)</h4>
+      <div style="font-size:28px;margin:6px 0">⚙️</div>
+      <p style="font-size:12.5px;color:var(--txt2)">Your server.js running on localhost:3000</p>
+    </div>
+  </div>
+  <div class="g2" style="flex:1">
+    <div class="card"><h3>What's in the Request (req)</h3>
+      <table>
+        <tr><th>Property</th><th>What it Contains</th></tr>
+        <tr><td><ic>req.method</ic></td><td>GET, POST, PUT, DELETE...</td></tr>
+        <tr><td><ic>req.url</ic></td><td>The path: <ic>/</ic>, <ic>/about</ic>, <ic>/api/users</ic></td></tr>
+        <tr><td><ic>req.headers</ic></td><td>Client info: browser, cookies, auth</td></tr>
+        <tr><td><ic>req.on('data')</ic></td><td>Body chunks (for POST requests)</td></tr>
+      </table>
+    </div>
+    <div class="card"><h3>What You Send Back (res)</h3>
+      <table>
+        <tr><th>Method / Property</th><th>Purpose</th></tr>
+        <tr><td><ic>res.statusCode</ic></td><td>200, 404, 500, 301...</td></tr>
+        <tr><td><ic>res.setHeader()</ic></td><td>Content-Type, cookies, CORS</td></tr>
+        <tr><td><ic>res.write()</ic></td><td>Send a chunk of data (streaming)</td></tr>
+        <tr><td><ic>res.end()</ic></td><td>Send final data + close response</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="card"><h3>Common HTTP Status Codes</h3>
+    <div class="g4">
+      <div style="text-align:center"><strong style="color:var(--node);font-size:20px">200</strong><br/><span style="font-size:12.5px;color:var(--txt2)">OK — everything worked</span></div>
+      <div style="text-align:center"><strong style="color:var(--cyn);font-size:20px">301</strong><br/><span style="font-size:12.5px;color:var(--txt2)">Moved — redirect</span></div>
+      <div style="text-align:center"><strong style="color:var(--amb);font-size:20px">404</strong><br/><span style="font-size:12.5px;color:var(--txt2)">Not Found — bad URL</span></div>
+      <div style="text-align:center"><strong style="color:var(--rose);font-size:20px">500</strong><br/><span style="font-size:12.5px;color:var(--txt2)">Server Error — your bug</span></div>
+    </div>
+  </div>
+</div>`});
+
+// 6 ── RUNNING AND TESTING
+S.push({h:`
+<div class="ey">Running &amp; Testing</div>
+<div class="ttl">Start Your Server and Confirm It Works</div>
+<hr class="rule"/>
+<div class="cnt">
+  <div class="sp" style="flex:1">
+    <div>
+      <div class="step" style="margin-bottom:8px"><div class="sn">1</div><div class="sb"><h4>Start the server</h4><p>Navigate to the folder with your file, then run:</p></div></div>
+      ${cw(`node server.js
+# You should see:
+# Server running at http://localhost:3000/`,'bash','terminal')}
+      <div class="step" style="margin:8px 0"><div class="sn">2</div><div class="sb"><h4>Test in your browser</h4><p>Open Chrome / Firefox / Safari and visit:</p></div></div>
+      <div style="background:#060F1B;border:1px solid var(--b1);border-radius:6px;padding:12px;font-family:var(--mono);font-size:14px;color:var(--cyn);text-align:center">
+        http://localhost:3000
+      </div>
+      <p style="font-size:13.5px;color:var(--txt2);margin-top:8px">You should see your message displayed as plain text in the browser window.</p>
+      <div class="step" style="margin:8px 0"><div class="sn">3</div><div class="sb"><h4>Or test with cURL</h4><p>Open a second terminal and run:</p></div></div>
+      ${cw(`curl http://localhost:3000
+
+# Response:
+# Hello from my first Node.js server!`,'bash','terminal (2nd window)')}
+    </div>
+    <div>
+      <div class="step" style="margin-bottom:8px"><div class="sn">4</div><div class="sb"><h4>Stop the server</h4><p>In the terminal where the server is running:</p></div></div>
+      <div style="background:#060F1B;border:1px solid var(--b1);border-radius:6px;padding:14px;font-family:var(--mono);font-size:14px;color:var(--txt);text-align:center;letter-spacing:1px">
+        Press &nbsp;<kbd style="background:var(--s3);border:1px solid var(--b2);border-radius:3px;padding:2px 8px;color:var(--amb)">Ctrl</kbd> + <kbd style="background:var(--s3);border:1px solid var(--b2);border-radius:3px;padding:2px 8px;color:var(--amb)">C</kbd>
+      </div>
+      <p style="font-size:13px;color:var(--txt2);margin-top:8px">This sends a SIGINT signal to Node, which shuts down the server cleanly.</p>
+      <div class="card" style="margin-top:12px"><h3>🐛 Common Issues</h3>
+        <table>
+          <tr><th>Problem</th><th>Fix</th></tr>
+          <tr><td>Port already in use</td><td>Change 3000 to 3001, or kill the other process</td></tr>
+          <tr><td>Cannot find module 'http'</td><td>Node not installed correctly — try <ic>node -v</ic></td></tr>
+          <tr><td>Browser hangs forever</td><td>You forgot <ic>res.end()</ic> — response never closes</td></tr>
+          <tr><td>See HTML tags as text</td><td>Change Content-Type to <ic>'text/html'</ic></td></tr>
+          <tr><td>Nothing shows in browser</td><td>Check terminal — is the server still running?</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 7 ── ANALOGY + USE CASES
+S.push({h:`
+<div class="ey">Analogies &amp; Use Cases</div>
+<div class="ttl">The Server in Plain Language</div>
+<hr class="rule"/>
+<div class="cnt">
+  <div class="g2" style="flex:1">
+    <div class="col">
+      <div class="card f1"><h3>🏢 The Reception Desk</h3>
+        <p>Your Node.js server is a receptionist at a busy office. The phone (port 3000) rings — that's an incoming request. The receptionist picks up (<ic>req</ic>), listens to what the caller wants, and gives a reply (<ic>res</ic>). Because they're not tied to any one caller for long (non-blocking), they can handle hundreds of calls without anyone waiting on hold.</p>
+      </div>
+      <div class="card f1"><h3>📮 Envelopes and Letters</h3>
+        <p>The request/response cycle is like mail. <ic>req.headers</ic> is the envelope — return address, postmark, priority markings. <ic>res.setHeader</ic> is you writing on the response envelope. <ic>res.end('text')</ic> is putting the letter inside and dropping it in the mailbox. If you forget to drop it in (no <ic>res.end</ic>), the recipient waits forever.</p>
+      </div>
+      <div class="card f1"><h3>🚦 Status Codes as Traffic Lights</h3>
+        <p>200 is green — proceed, everything's fine. 301 is a detour sign — go somewhere else. 404 is a road-closed sign — the address you asked for doesn't exist. 500 is a broken traffic light — <em>my</em> intersection is malfunctioning, not yours. The number tells the browser exactly how to react.</p>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card f1"><h3>🌐 Real-World Uses for the http Module</h3>
+        <p style="margin-bottom:8px">You'll almost always use <strong style="color:var(--txt)">Express</strong> in production, but knowing raw <ic>http</ic> matters because Express is just a wrapper on top of it. What you can build with raw <ic>http</ic>:</p>
+        <ul>
+          <li><strong style="color:var(--txt)">REST APIs</strong> — handle GET/POST/PUT/DELETE routes for a frontend to consume</li>
+          <li><strong style="color:var(--txt)">Static file server</strong> — read HTML/CSS/JS from disk and serve them (like a mini web host)</li>
+          <li><strong style="color:var(--txt)">Simple proxy</strong> — a server that forwards requests to another API, adding caching or auth</li>
+          <li><strong style="color:var(--txt)">Webhook receiver</strong> — a URL that GitHub/Stripe/Discord can POST to when events happen</li>
+        </ul>
+      </div>
+      <div class="card f1"><h3>🧱 Why Learn the Raw Version?</h3>
+        <p>Frameworks hide complexity. That's great — until something breaks. Every developer who understands the raw <ic>http</ic> module can debug <em>any</em> Express or Fastify issue, because they know what's actually happening underneath. Frameworks age; the fundamentals don't.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 8 ── KEY QUOTES
+S.push({h:`
+<div class="ey">Key Quotes</div>
+<div class="ttl">Worth Remembering</div>
+<hr class="rule"/>
+<div class="cnt">
+  <div class="qc"><div class="qt">"The http module is Node.js's networking heart. Every Express, Fastify, or Koa app you'll ever use is a thin layer on top of these same createServer, req, and res primitives."</div><div class="qs">— Node.js core team documentation</div></div>
+  <div class="qc"><div class="qt">"If you don't call res.end(), the browser waits forever. The response is a conversation — you have to say goodbye. This is the single most common bug in beginner Node servers."</div><div class="qs">— Common backend teaching principle</div></div>
+  <div class="qc"><div class="qt">"HTTP status codes are the language servers and clients speak. 200 means yes, 404 means no, 500 means I'm broken. Learn to send the right one — never send 200 when the client asked for something you couldn't provide."</div><div class="qs">— REST API best practices</div></div>
+  <div class="qc"><div class="qt">"Learn the raw http module first, then use Express. If you skip the fundamentals, you'll spend years being confused by Express behaviour that would make perfect sense with the underlying knowledge."</div><div class="qs">— Backend developer wisdom</div></div>
+</div>`});
+
+// 9 ── RECAP
+S.push({h:`
+<div class="ey">Recap</div>
+<div class="ttl">M12 — What We Covered</div>
+<hr class="rule"/>
+<div class="cnt">
+  <div class="rcg" style="flex:1">
+    <div class="rc"><div class="ico">📄</div><h4>The .js File</h4><p>Save your code as .js so Node can execute it. VS Code, Sublime, any editor works.</p></div>
+    <div class="rc"><div class="ico">📦</div><h4>require()</h4><p>Loads a module. Built-in modules like http need no install — just require them.</p></div>
+    <div class="rc"><div class="ico">⚙</div><h4>createServer</h4><p>Returns a server object. Callback runs on every request with req and res.</p></div>
+    <div class="rc"><div class="ico">📨</div><h4>req &amp; res</h4><p>req = what came in. res = what you send back. Status, headers, body — in that order.</p></div>
+    <div class="rc"><div class="ico">🔌</div><h4>listen(3000)</h4><p>Binds to a port and starts accepting connections. Keeps the process alive.</p></div>
+    <div class="rc"><div class="ico">⛔</div><h4>Ctrl+C</h4><p>Stops the running server. Sends SIGINT — Node shuts down cleanly.</p></div>
+  </div>
+  <div class="g2" style="margin-top:4px">
+    <div class="card"><h3>The Full Anatomy in One Breath</h3>
+      <p style="font-size:14.5px;line-height:1.7"><ic>require</ic> the module → <ic>createServer</ic> with a callback → set <ic>statusCode</ic> + <ic>setHeader</ic> + <ic>res.end</ic> → <ic>listen</ic> on a port. Every Node backend, no matter how big, boils down to these four steps.</p>
+    </div>
+    <div class="card"><h3>What's Next</h3>
+      <ul>
+        <li>M13 — Express.js: the framework everyone actually uses</li>
+        <li>Routing (multiple endpoints, not just one)</li>
+        <li>Middleware chains (auth, logging, error handling)</li>
+        <li>REST APIs the frontend can consume</li>
+      </ul>
+    </div>
+  </div>
+</div>`});
+
+// 10 ── ACTIVITY INTRO
+S.push({h:`
+<div class="ey">Activities</div>
+<div class="ttl">M12 — Assessment</div>
+<hr class="rule"/>
+<div class="cnt" style="justify-content:center">
+  <div class="g2">
+    <div class="card"><h3>📋 Multiple Choice</h3><ul><li>6 questions · 1 pt each</li><li>http module basics, req/res, running the server</li><li style="color:var(--node);font-weight:700;margin-top:5px">6 pts</li></ul></div>
+    <div class="card"><h3>✍ Coding Problem</h3><ul><li>Modify the server to send a custom message</li><li>Change status code and content type</li><li style="color:var(--cyn);font-weight:700;margin-top:5px">4 pts</li></ul></div>
+  </div>
+  <div class="card" style="text-align:center;padding:20px;margin-top:4px">
+    <div style="font-size:50px;font-weight:900;color:var(--node);line-height:1">10</div>
+    <div style="font-size:13px;color:var(--txt2);margin-top:3px">Total Points</div>
+  </div>
+  <div class="card"><h3>💡 Reminder</h3><p>Answer key is on the second-to-last slide. Attempt everything before checking!</p></div>
+</div>`});
+
+// 11 ── MC (6 QUESTIONS)
+S.push({init(el){
+  const qs=[
+    {q:"Which statement imports a core module like http into a Node.js file?",opts:["import http from 'http';","require('http');","using http;","include 'http';"]},
+    {q:"What is the entry point of a Node.js application?",opts:["The package.json file","The index.html file","The main JavaScript file executed with node","The server.listen() method"]},
+    {q:"Which method creates an HTTP server in Node.js?",opts:["http.startServer()","http.newServer()","http.createServer()","http.openServer()"]},
+    {q:"When sending a response, which command signals it is complete?",opts:["res.finish()","res.complete()","res.end()","res.send()"]},
+    {q:"How do you stop a running Node.js server in the terminal?",opts:["Close the text editor","Type 'server.stop'","Press Ctrl + C","Restart the computer"]},
+    {q:"Which built-in Node.js module handles HTTP requests and responses?",opts:["url","fs","path","http"]},
+  ];
+  const pg=el.querySelector('#mc-pg');
+  const left=qs.slice(0,3);
+  const right=qs.slice(3);
+  function makeItems(arr,offset,col){
+    arr.forEach((q,i)=>{
+      const n=i+offset+1;
+      const d=document.createElement('div');d.className='mc-item';
+      d.innerHTML='<div class="mc-q"><span class="qn">'+n+'.</span>'+q.q+'</div><div class="mc-opts">'+q.opts.map(o=>'<div class="mc-o" onclick="this.closest(\'.mc-opts\').querySelectorAll(\'.mc-o\').forEach(x=>x.classList.remove(\'sel\'));this.classList.add(\'sel\')">'+o+'</div>').join('')+'</div>';
+      col.appendChild(d);
+    });
+  }
+  const lc=document.createElement('div');lc.className='col';
+  const rc=document.createElement('div');rc.className='col';
+  makeItems(left,0,lc);makeItems(right,3,rc);
+  pg.appendChild(lc);pg.appendChild(rc);
+},h:`
+<div class="ey">Activities — Multiple Choice</div>
+<div class="ttl">Questions 1–6 <span style="font-size:13.5px;color:var(--txt2);font-weight:400">Choose the best answer · 1 pt each</span></div>
+<hr class="rule"/>
+<div class="g2" style="flex:1;align-items:start" id="mc-pg"></div>`});
+
+// 12 ── CODING PROBLEM
+S.push({h:`
+<div class="ey">Activities — Coding Problem</div>
+<div class="ttl">Build Your Custom Server <span style="font-size:13.5px;color:var(--txt2);font-weight:400">4 pts</span></div>
+<hr class="rule"/>
+<div class="cnt">
+  <div class="card" style="border-color:rgba(245,176,65,.3);background:rgba(245,176,65,.04);margin-bottom:4px">
+    <div style="display:inline-block;padding:2px 10px;border-radius:4px;font-size:10.5px;font-weight:700;font-family:var(--mono);background:rgba(245,176,65,.12);color:var(--amb);border:1px solid rgba(245,176,65,.25);margin-bottom:8px">Scenario</div>
+    <p style="font-size:15px;line-height:1.7;color:var(--txt3)">You've been asked to build a simple welcome server for a small library. When someone visits the page, they should see a friendly welcome message. Write a full Node.js HTTP server that meets the requirements on the right.</p>
+  </div>
+  <div class="g2" style="flex:1;min-height:0">
+    <div class="card"><h3>Starter Template (fill in the blanks)</h3>
+      <div style="background:#060F1B;border:1px solid var(--b1);border-radius:6px;padding:14px 16px;font-family:var(--mono);font-size:13px;line-height:1.85;color:var(--txt3)">
+        <span style="color:var(--txt2)">// 1. Import the module</span><br/>
+        <span style="color:var(--node)">const</span> http = <span style="color:var(--pur)">require</span>(<span style="color:var(--amb)">'____'</span>);<br/><br/>
+        <span style="color:var(--txt2)">// 2. Create the server</span><br/>
+        <span style="color:var(--node)">const</span> server = http.<span style="color:var(--cyn)">____</span>((req, res) => {<br/>
+        &nbsp;&nbsp;<span style="color:var(--txt2)">// 3. Set status code &amp; header</span><br/>
+        &nbsp;&nbsp;res.<span style="color:var(--cyn)">____</span> = ____;<br/>
+        &nbsp;&nbsp;res.<span style="color:var(--cyn)">setHeader</span>(<span style="color:var(--amb)">'____'</span>, <span style="color:var(--amb)">'____'</span>);<br/><br/>
+        &nbsp;&nbsp;<span style="color:var(--txt2)">// 4. Send the response</span><br/>
+        &nbsp;&nbsp;res.<span style="color:var(--cyn)">____</span>(<span style="color:var(--amb)">'____'</span>);<br/>
+        });<br/><br/>
+        <span style="color:var(--txt2)">// 5. Listen on port 3000</span><br/>
+        server.<span style="color:var(--cyn)">____</span>(____, () => {<br/>
+        &nbsp;&nbsp;console.<span style="color:var(--cyn)">log</span>(<span style="color:var(--amb)">'____'</span>);<br/>
+        });
+      </div>
+    </div>
+    <div class="card"><h3>Requirements</h3>
+      <ul style="font-size:14px;line-height:1.65">
+        <li>Uses the built-in <ic>http</ic> module</li>
+        <li>Responds with status code <strong style="color:var(--node)">200</strong></li>
+        <li>Sets Content-Type to <ic>'text/plain'</ic></li>
+        <li>Responds with the message:<br/><ic>"Welcome to the Community Library!"</ic></li>
+        <li>Listens on port <strong style="color:var(--node)">3000</strong></li>
+        <li>Prints a log message when the server starts</li>
+      </ul>
+      <div style="margin-top:12px;padding:10px 12px;background:var(--s2);border:1px solid var(--b1);border-radius:6px">
+        <p style="font-size:12.5px;color:var(--txt2);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Test It</p>
+        <div style="font-family:var(--mono);font-size:12.5px;color:var(--cyn);line-height:1.7">
+          $ node server.js<br/>
+          $ curl http://localhost:3000<br/>
+          <span style="color:var(--node)">→ Welcome to the Community Library!</span>
+        </div>
+      </div>
+      <p style="font-size:12.5px;color:var(--txt2);margin-top:8px">Write your answer on paper or in your editor. You may use the starter template as a guide.</p>
+    </div>
+  </div>
+</div>`});
+
+// 13 ── ANSWER KEY
+S.push({h:`
+<div class="ey">Answer Key</div>
+<div class="ttl">M12 — Answers &amp; Explanations</div>
+<hr class="rule"/>
+<div class="cnt">
+  <div class="g2" style="flex:1">
+    <div class="col">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--node);margin-bottom:5px">Multiple Choice (1 pt each)</div>
+      <div class="ab2">
+        <div class="ar"><span class="an">1.</span><div class="ab"><strong>require('http')</strong> — Node uses the CommonJS standard. <ic>import</ic> works only if you set <ic>"type":"module"</ic> in package.json. <ic>using</ic> and <ic>include</ic> aren't valid JS.</div></div>
+        <div class="ar"><span class="an">2.</span><div class="ab"><strong>The main JavaScript file executed with node.</strong> Execution starts at the top of that file. package.json declares the entry via <ic>main</ic> but doesn't run.</div></div>
+        <div class="ar"><span class="an">3.</span><div class="ab"><strong>http.createServer()</strong> — the only valid method for creating an HTTP server instance in Node's built-in http module.</div></div>
+        <div class="ar"><span class="an">4.</span><div class="ab"><strong>res.end()</strong> — finalizes the response and sends it. Without it, the client hangs. You can pass the body directly: <ic>res.end('data')</ic>.</div></div>
+        <div class="ar"><span class="an">5.</span><div class="ab"><strong>Ctrl + C</strong> — sends SIGINT to the Node process, which terminates it. Closing the editor won't stop a running server.</div></div>
+        <div class="ar"><span class="an">6.</span><div class="ab"><strong>http</strong> — the networking engine. <ic>url</ic>, <ic>fs</ic>, and <ic>path</ic> are helper modules for URLs, files, and paths respectively.</div></div>
+      </div>
+    </div>
+    <div class="col">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--cyn);margin-bottom:5px">Coding Problem (4 pts)</div>
+      <div class="card" style="margin-bottom:0">
+        <h3 class="c">Accepted Solution</h3>
+        ${cw(`const http = require('http');
+
+const server = http.createServer((req, res) => {
+  res.statusCode = 200;
+  res.setHeader('Content-Type', 'text/plain');
+  res.end('Welcome to the Community Library!');
+});
+
+server.listen(3000, () => {
+  console.log('Server running on port 3000');
+});`,'js','server.js — accepted answer')}
+      </div>
+      <div class="card"><h3 class="c">Scoring Rubric</h3>
+        <table>
+          <tr><th>Criterion</th><th>Pts</th></tr>
+          <tr><td>Correct <ic>require('http')</ic> import</td><td style="color:var(--node);font-weight:700">1</td></tr>
+          <tr><td>Uses <ic>createServer</ic> with (req, res) callback</td><td style="color:var(--node);font-weight:700">1</td></tr>
+          <tr><td>Sets status 200, Content-Type, and calls <ic>res.end</ic> with the correct message</td><td style="color:var(--node);font-weight:700">1</td></tr>
+          <tr><td>Calls <ic>server.listen(3000, ...)</ic> with a callback</td><td style="color:var(--node);font-weight:700">1</td></tr>
+        </table>
+        <p style="font-size:12.5px;color:var(--txt2);margin-top:8px">Small syntax variations (arrow vs function, callback message text) are accepted as long as functionality is correct.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 14 ── CLOSING
+S.push({cls:'hbg',h:`
+<div class="dots"></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;position:relative;max-width:700px">
+  <div class="ey">M12 Complete</div>
+  <div style="font-size:clamp(28px,3.2vw,46px);font-weight:900;line-height:1.15;letter-spacing:-.4px">
+    <span style="color:var(--txt)">You wrote a server.</span><br/>
+    <span style="color:var(--node)">The web is now yours.</span>
+  </div>
+  <div class="qc" style="margin:0">
+    <div class="qt">"Every big backend you'll ever build starts with the same four lines: require, createServer, respond, listen. Master this pattern and the rest is scaling."</div>
+    <div class="qs">— Backend fundamentals</div>
+  </div>
+  <div class="card" style="background:rgba(104,160,99,.05);border-color:rgba(104,160,99,.2)">
+    <h3>Coming Up — Express.js</h3>
+    <p style="font-size:14px;line-height:1.65">Next session: <ic>express()</ic> replaces manual routing. Instead of one giant if-statement for every URL, you write <ic>app.get('/users', handler)</ic>. Middleware chains, JSON parsing, and REST APIs — all built on top of the http module you just learned.</p>
+  </div>
+  <div style="display:flex;gap:7px;flex-wrap:wrap">
+    <span class="pill pn">http module ✓</span>
+    <span class="pill pn">createServer ✓</span>
+    <span class="pill pn">req &amp; res ✓</span>
+    <span class="pill pn">Ports &amp; listen ✓</span>
+    <span class="pill pa">Express.js → next</span>
+  </div>
+</div>`});
+
+// ── ENGINE ─────────────────────────────────────────────────────────────
+let cur=0;
+const deck=document.getElementById('deck');
+const bar=document.getElementById('bar');
+const ctr=document.getElementById('ctr');
+function build(){
+  S.forEach((s,i)=>{
+    const el=document.createElement('div');
+    el.className='slide'+(s.cls?' '+s.cls:'');
+    el.innerHTML=s.h||'';
+    if(i===0)el.classList.add('active');
+    deck.appendChild(el);
+    if(s.init)s.init(el);
+  });
+}
+function go(n){
+  if(n<0||n>=S.length||n===cur)return;
+  const els=deck.querySelectorAll('.slide');
+  const fwd=n>cur;
+  els[cur].classList.remove('active');
+  els[cur].classList.add(fwd?'ol':'or');
+  setTimeout(()=>els[cur].classList.remove('ol','or'),420);
+  cur=n;els[cur].classList.add('active');els[cur].scrollTop=0;tick();
+}
+function tick(){
+  bar.style.width=(S.length>1?(cur/(S.length-1)*100):100)+'%';
+  ctr.textContent=(cur+1)+' / '+S.length;
+}
+document.addEventListener('keydown',e=>{
+  const m=document.getElementById('mod');
+  if(m.classList.contains('open')){if(e.key==='Escape')m.classList.remove('open');return;}
+  const t=document.activeElement.tagName;
+  if(t==='INPUT'||t==='TEXTAREA')return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')go(cur+1);
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(cur-1);
+  else if(e.key==='Home')go(0);
+  else if(e.key==='End')go(S.length-1);
+  else if(e.key==='?')m.classList.add('open');
+  else if(e.key==='Escape')m.classList.remove('open');
+});
+document.addEventListener('mousedown',e=>{
+  if(e.target.closest('button,input,a,.mc-o'))return;
+  if(e.button===2){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+  else if(e.button===3){e.preventDefault();e.stopImmediatePropagation();go(cur-1);}
+  else if(e.button===4){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+},true);
+document.addEventListener('contextmenu',e=>{
+  if(e.target.closest('button,input,a'))return;
+  e.preventDefault();e.stopImmediatePropagation();
+},true);
+document.addEventListener('auxclick',e=>{
+  if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation();}
+},true);
+let tx=0;
+document.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+document.addEventListener('touchend',e=>{const d=e.changedTouches[0].clientX-tx;if(Math.abs(d)>50){d<0?go(cur+1):go(cur-1);}},{passive:true});
+build();tick();
+</script>
+</body>
+</html>

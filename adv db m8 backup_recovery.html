@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M8 — Database Backup & Recovery</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e1117;--bg2:#151922;--bg3:#1c2330;--bg4:#232c3d;
+  --accent:#4f9fff;--accent2:#38d9a9;--accent3:#f7c948;--accent4:#ff6b6b;
+  --text:#e8edf5;--text2:#9ba8bb;--text3:#6b7a91;
+  --border:#2a3547;--border2:#364257;
+  --code-bg:#0a0d14;--code-border:#1e2a3a;
+  --green:#2dd4bf;--amber:#f59e0b;--red:#f87171;--purple:#a78bfa;
+  --r:10px;--r2:6px;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',system-ui,sans-serif}
+.deck{position:relative;width:100vw;height:100vh;overflow:hidden}
+.slide{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  padding:52px 72px 44px;opacity:0;pointer-events:none;
+  transition:opacity 350ms ease,transform 350ms ease;
+  transform:translateX(40px);overflow-y:auto;
+}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.prev{opacity:0;transform:translateX(-40px)}
+@media(prefers-reduced-motion:reduce){.slide{transition:none}}
+
+/* Progress bar */
+#prog{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width 350ms ease;z-index:99}
+#counter{position:fixed;top:14px;right:24px;font-size:12px;color:var(--text3);z-index:99;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+
+/* Eyebrow + title */
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+h1{font-size:clamp(36px,4.2vw,58px);font-weight:700;line-height:1.1;letter-spacing:-.02em;color:var(--text)}
+h2{font-size:clamp(26px,3vw,40px);font-weight:700;line-height:1.15;letter-spacing:-.015em;color:var(--text)}
+h3{font-size:18px;font-weight:600;color:var(--text);margin-bottom:8px}
+
+/* Cards grid */
+.cards{display:grid;gap:16px;margin-top:24px}
+.cards.cols2{grid-template-columns:1fr 1fr}
+.cards.cols3{grid-template-columns:1fr 1fr 1fr}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:20px 22px}
+.card .icon{font-size:22px;margin-bottom:10px}
+.card h3{font-size:16px;margin-bottom:6px}
+.card p,.card li{font-size:14.5px;color:var(--text2);line-height:1.6}
+.card ul{padding-left:16px}
+.card.accent-l{border-left:3px solid var(--accent)}
+.card.accent-g{border-left:3px solid var(--accent2)}
+.card.accent-a{border-left:3px solid var(--accent3)}
+.card.accent-r{border-left:3px solid var(--accent4)}
+.card.accent-p{border-left:3px solid var(--purple)}
+
+/* Code blocks */
+.code-wrap{position:relative;margin-top:16px;background:var(--code-bg);border:1px solid var(--code-border);border-radius:var(--r);overflow:hidden}
+.code-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#080b10;border-bottom:1px solid var(--code-border)}
+.code-lang{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.copy-btn{font-size:11px;font-weight:600;color:var(--accent);background:rgba(79,159,255,.12);border:1px solid rgba(79,159,255,.3);border-radius:4px;padding:4px 10px;cursor:pointer;transition:all .15s}
+.copy-btn:hover{background:rgba(79,159,255,.22)}
+.copy-btn.copied{color:var(--accent2);border-color:rgba(56,217,169,.3);background:rgba(56,217,169,.12)}
+pre{padding:16px;overflow-x:auto;overflow-y:auto;max-height:340px;font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:13px;line-height:1.65;color:#cdd6f4}
+pre::-webkit-scrollbar{height:4px;width:4px}
+pre::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* Syntax highlight */
+.kw{color:#cba6f7}.fn{color:#89b4fa}.str{color:#a6e3a1}.cm{color:#585b70;font-style:italic}.var{color:#f38ba8}.num{color:#fab387}.op{color:#89dceb}.type{color:#89dceb}
+
+/* Table */
+table{width:100%;border-collapse:collapse;margin-top:16px;font-size:14px}
+th{background:var(--bg3);color:var(--accent);font-weight:600;text-align:left;padding:10px 14px;border-bottom:1px solid var(--border2)}
+td{padding:9px 14px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+
+/* Quiz */
+.quiz-q{font-size:16px;font-weight:600;color:var(--text);margin-bottom:12px;line-height:1.5}
+.quiz-opt{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:var(--r2);border:1px solid var(--border);margin-bottom:8px;font-size:14.5px;color:var(--text2);cursor:default}
+.quiz-opt .opt-key{font-weight:700;color:var(--accent);min-width:20px}
+
+/* Diagrams */
+.diagram{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:24px;margin-top:20px;font-family:monospace;font-size:13px;color:var(--text2);line-height:1.8;white-space:pre}
+
+/* Badge */
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;border-radius:20px}
+.badge.blue{background:rgba(79,159,255,.15);color:var(--accent);border:1px solid rgba(79,159,255,.3)}
+.badge.green{background:rgba(45,212,191,.12);color:var(--accent2);border:1px solid rgba(45,212,191,.25)}
+.badge.amber{background:rgba(245,158,11,.12);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+.badge.red{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.25)}
+
+/* Impact boxes for data loss */
+.impact-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px}
+.impact-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;display:flex;gap:14px;align-items:flex-start}
+.impact-icon{font-size:24px;flex-shrink:0}
+.impact-body h4{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
+.impact-body p{font-size:13.5px;color:var(--text2);line-height:1.5}
+
+/* Flow diagram visual */
+.flow-viz{display:flex;align-items:center;gap:0;margin:24px 0;justify-content:center}
+.flow-box{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:14px 20px;text-align:center;min-width:160px}
+.flow-box .flow-title{font-size:13px;font-weight:700;color:var(--accent);margin-bottom:4px}
+.flow-box .flow-sub{font-size:11.5px;color:var(--text2)}
+.flow-arrow{font-size:20px;color:var(--text3);padding:0 12px}
+.flow-arrow.down{transform:rotate(90deg)}
+.flow-label{font-size:11px;color:var(--accent3);text-align:center;margin-top:4px;font-weight:600}
+
+/* Setup steps */
+.steps{display:flex;flex-direction:column;gap:12px;margin-top:20px}
+.step{display:flex;gap:16px;align-items:flex-start}
+.step-num{flex-shrink:0;width:32px;height:32px;background:var(--accent);color:#000;font-weight:700;font-size:14px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.step-body h4{font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px}
+.step-body p,.step-body code{font-size:13.5px;color:var(--text2);line-height:1.6}
+.step-body code{background:rgba(79,159,255,.1);color:var(--accent);padding:1px 6px;border-radius:3px;font-family:monospace}
+
+/* Breakdown */
+.breakdown{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}
+.breakdown-blk{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px}
+.breakdown-blk .blk-head{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--accent3);margin-bottom:10px}
+.breakdown-blk ul{list-style:none;display:flex;flex-direction:column;gap:7px}
+.breakdown-blk li{font-size:13.5px;color:var(--text2);display:flex;gap:8px;line-height:1.5}
+.breakdown-blk li::before{content:'→';color:var(--accent);flex-shrink:0}
+
+/* Hero slide */
+.hero{flex:1;display:flex;flex-direction:column;justify-content:center}
+.hero-tag{display:inline-flex;align-items:center;gap:8px;background:rgba(79,159,255,.1);border:1px solid rgba(79,159,255,.25);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--accent);letter-spacing:.05em;margin-bottom:28px;width:fit-content}
+.hero h1{font-size:clamp(42px,5vw,68px);max-width:820px;margin-bottom:20px}
+.hero .sub{font-size:18px;color:var(--text2);max-width:600px;line-height:1.6;margin-bottom:32px}
+.hero-pills{display:flex;gap:10px;flex-wrap:wrap}
+.pill{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:7px 16px;font-size:13px;color:var(--text2)}
+
+/* Answer key */
+.ans-item{background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--accent2);border-radius:var(--r);padding:14px 16px;margin-bottom:10px}
+.ans-q{font-size:13px;color:var(--text3);margin-bottom:5px}
+.ans-a{font-size:14.5px;color:var(--text);font-weight:600}
+.ans-exp{font-size:13px;color:var(--text2);margin-top:4px;line-height:1.5}
+
+/* Scroll hint */
+.slide{scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
+
+/* Keyboard help */
+#help{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;place-items:center;z-index:200}
+#help.show{display:grid}
+.help-box{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:32px 40px;max-width:420px;width:90%}
+.help-box h2{font-size:20px;margin-bottom:20px}
+.help-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px}
+.help-row:last-child{border-bottom:none}
+.help-row span:first-child{color:var(--text2)}
+kbd{background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-size:12px;color:var(--accent);font-family:monospace}
+
+/* Review tag */
+.review-flag{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:6px;padding:10px 14px;font-size:13.5px;color:var(--purple);margin-bottom:20px;line-height:1.5}
+
+/* Inline code */
+code.ic{background:rgba(79,159,255,.1);color:var(--accent);padding:1px 6px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:12.5px}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<div id="counter">1 / 14</div>
+
+<div class="deck" id="deck">
+
+<!-- SLIDE 1: Hero -->
+<div class="slide active" id="s0">
+  <div class="hero">
+    <div class="hero-tag">📦 Module 8 &nbsp;·&nbsp; Advanced Database</div>
+    <h1>Database Backup &amp; Recovery</h1>
+    <p class="sub">A database is only as reliable as its restore process. Learn to protect, automate, and recover your data using PHP and MySQL.</p>
+    <div class="hero-pills">
+      <span class="pill">🛡️ Backup Strategies</span>
+      <span class="pill">🔄 PHP Recovery Scripts</span>
+      <span class="pill">⚡ mysqldump CLI</span>
+      <span class="pill">📋 Best Practices</span>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 2: Review -->
+<div class="slide" id="s1">
+  <div class="eyebrow">Quick Review</div>
+  <h2>From Last Session: SQL JOINs</h2>
+  <div class="review-flag">🔄 Previously, you explored how SQL JOIN clauses combine data across multiple tables — eliminating redundancy and enabling complex cross-table queries in PHP.</div>
+  <div class="cards cols3" style="margin-top:0">
+    <div class="card accent-l">
+      <h3>INNER JOIN</h3>
+      <p>Returns only matching rows from both tables. Most common join type.</p>
+    </div>
+    <div class="card accent-g">
+      <h3>LEFT JOIN</h3>
+      <p>All rows from the left table plus any matches from the right.</p>
+    </div>
+    <div class="card accent-a">
+      <h3>RIGHT JOIN</h3>
+      <p>All rows from the right table plus any matches from the left.</p>
+    </div>
+  </div>
+  <div class="code-wrap" style="margin-top:16px">
+    <div class="code-header"><span class="code-lang">SQL — JOIN Pattern</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">SELECT</span> c.name, o.order_date, o.total_amount
+<span class="kw">FROM</span> customers c
+<span class="kw">INNER JOIN</span> orders o <span class="kw">ON</span> c.customer_id <span class="op">=</span> o.customer_id;</pre>
+  </div>
+  <p style="font-size:14px;color:var(--text3);margin-top:16px">Today we move into the second critical half — keeping that data <strong style="color:var(--accent)">safe, backed up, and recoverable</strong>.</p>
+</div>
+
+<!-- SLIDE 3: What is Backup & Recovery -->
+<div class="slide" id="s2">
+  <div class="eyebrow">Core Concepts</div>
+  <h2>What Are Backup &amp; Recovery?</h2>
+  <div class="flow-viz" style="margin-top:28px">
+    <div class="flow-box">
+      <div class="flow-title">🗄️ Live Database</div>
+      <div class="flow-sub">MySQL / MariaDB</div>
+      <div class="flow-label">Source</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center">
+      <div class="flow-arrow">→</div>
+      <div style="font-size:11px;color:var(--accent3);font-weight:600;white-space:nowrap">Backup Process</div>
+    </div>
+    <div class="flow-box">
+      <div class="flow-title">💾 Storage / S3</div>
+      <div class="flow-sub">.sql Dump File</div>
+      <div class="flow-label">Safe Copy</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center">
+      <div class="flow-arrow">←</div>
+      <div style="font-size:11px;color:var(--accent2);font-weight:600;white-space:nowrap">Recovery Process</div>
+    </div>
+    <div class="flow-box">
+      <div class="flow-title">🗄️ Target Database</div>
+      <div class="flow-sub">Restored State</div>
+      <div class="flow-label">Operational</div>
+    </div>
+  </div>
+  <div class="cards cols2" style="margin-top:20px">
+    <div class="card accent-l">
+      <h3>🗃️ Backup</h3>
+      <p>Creating duplicate copies of data and storing them on separate physical or cloud storage. Acts as a safety net against human error, hardware failure, corruption, and cyberattacks.</p>
+    </div>
+    <div class="card accent-g">
+      <h3>🔄 Recovery</h3>
+      <p>Restoring backed-up data back into a target database engine to return an application to an operational or point-in-time state.</p>
+    </div>
+  </div>
+  <div class="review-flag" style="margin-top:16px">💡 <strong>Key Takeaway:</strong> A database is only as reliable as its restore process. The best backup is the one you've tested and confirmed restores correctly.</div>
+</div>
+
+<!-- SLIDE 4: Importance -->
+<div class="slide" id="s3">
+  <div class="eyebrow">Business Case</div>
+  <h2>Why Backup Matters</h2>
+  <table style="margin-top:20px">
+    <thead>
+      <tr><th>Pillar</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="badge blue">🛡️ Data Protection</span></td><td>Guards against hardware failures, software bugs, human errors, and ransomware attacks.</td></tr>
+      <tr><td><span class="badge green">⏱️ Business Continuity</span></td><td>Minimizes system downtime — preventing productivity losses and customer churn during outages.</td></tr>
+      <tr><td><span class="badge amber">🌋 Disaster Recovery</span></td><td>Ensures off-site or cloud backups can rebuild systems following catastrophic infrastructure failures.</td></tr>
+      <tr><td><span class="badge red">⚖️ Compliance & Legal</span></td><td>Fulfills GDPR, HIPAA and other data privacy regulations regarding retention and audit capabilities.</td></tr>
+      <tr><td><span class="badge blue">🎯 Data Integrity</span></td><td>Restores damaged or corrupted databases to a known, verified, and consistent state.</td></tr>
+      <tr><td><span class="badge green">📈 Scalability</span></td><td>Ensures large databases remain manageable and recoverable as data volumes grow.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- SLIDE 5: Risks -->
+<div class="slide" id="s4">
+  <div class="eyebrow">Risk Assessment</div>
+  <h2>Consequences of Data Loss</h2>
+  <div class="impact-grid">
+    <div class="impact-item">
+      <div class="impact-icon">🚨</div>
+      <div class="impact-body">
+        <h4>Operational Disruption</h4>
+        <p>Inability to service client requests, process orders, or run critical background jobs. Daily workflows grind to a halt.</p>
+      </div>
+    </div>
+    <div class="impact-item">
+      <div class="impact-icon">💸</div>
+      <div class="impact-body">
+        <h4>Financial Loss</h4>
+        <p>Direct monetary losses from service downtime, SLA breach penalties, and the cost of reconstructing lost data.</p>
+      </div>
+    </div>
+    <div class="impact-item">
+      <div class="impact-icon">🔒</div>
+      <div class="impact-body">
+        <h4>Loss of Intellectual Property</h4>
+        <p>Irrecoverable loss of proprietary analytical data, trade secrets, and operational histories that took years to accumulate.</p>
+      </div>
+    </div>
+    <div class="impact-item">
+      <div class="impact-icon">📉</div>
+      <div class="impact-body">
+        <h4>Reputational Damage</h4>
+        <p>Exposure to data breaches or missing user accounts permanently damages market reputation and customer trust.</p>
+      </div>
+    </div>
+    <div class="impact-item">
+      <div class="impact-icon">⚖️</div>
+      <div class="impact-body">
+        <h4>Legal Penalties</h4>
+        <p>Non-compliance with data retention regulations (GDPR, HIPAA) leads to regulatory audits and heavy fines.</p>
+      </div>
+    </div>
+    <div class="impact-item">
+      <div class="impact-icon">😰</div>
+      <div class="impact-body">
+        <h4>Developer Stress</h4>
+        <p>Late-night data loss incidents with no backup? Career-defining moments — for the wrong reasons. Always backup.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 6: Setup Guide -->
+<div class="slide" id="s5">
+  <div class="eyebrow">Environment Setup</div>
+  <h2>Getting Your Environment Ready</h2>
+  <div class="cards cols2" style="margin-top:20px">
+    <div>
+      <h3 style="color:var(--accent);margin-bottom:14px">📋 Prerequisites</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h4>WAMP/XAMPP Running</h4>
+            <p>Ensure your local server is active (green icon). MySQL should be accessible on port <code>3306</code>.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h4>Create a Test Database</h4>
+            <p>Open phpMyAdmin or terminal and run: <code>CREATE DATABASE app_production;</code></p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h4>Verify mysqldump Path</h4>
+            <p>Check CLI tool exists at: <code>C:\wamp64\bin\mysql\mysql8.4.7\bin\mysqldump.exe</code></p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h4>PHP File Location</h4>
+            <p>Place all backup scripts inside <code>C:\wamp64\www\backups\</code> and run via browser.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h3 style="color:var(--accent2);margin-bottom:14px">🗂️ Project File Structure</h3>
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">Directory Layout</span></div>
+        <pre style="font-size:13px;color:var(--text2)">C:\wamp64\www\
+└── backups\
+    ├── config.php         ← DB credentials
+    ├── backup_mysqli.php  ← Drill 1
+    ├── recover_mysqli.php ← Drill 2
+    ├── backup_dump.php    ← Drill 3A
+    ├── recover_dump.php   ← Drill 3B
+    └── dumps\
+        └── backup_*.sql   ← Generated files</pre>
+      </div>
+      <div class="card accent-a" style="margin-top:16px">
+        <h3>⚠️ Security Note</h3>
+        <p style="font-size:13px">Never expose <code>config.php</code> publicly. Store credentials outside the web root in production environments.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 7: Drill 1 — MySQLi Backup -->
+<div class="slide" id="s6">
+  <div class="eyebrow">Drill 1 — PHP Backup via MySQLi</div>
+  <h2>Programmatic Backup Script</h2>
+  <div class="breakdown" style="margin-top:12px;margin-bottom:4px">
+    <div class="breakdown-blk">
+      <div class="blk-head">What It Does</div>
+      <ul>
+        <li>Connects to MySQL via <code class="ic">mysqli_connect()</code></li>
+        <li>Fetches all table names with <code class="ic">SHOW TABLES</code></li>
+        <li>Exports each table's <strong>CREATE</strong> statement</li>
+        <li>Exports each row as an <strong>INSERT</strong> statement</li>
+        <li>Writes everything to a timestamped <code class="ic">.sql</code> file</li>
+      </ul>
+    </div>
+    <div class="breakdown-blk">
+      <div class="blk-head">Key Functions Used</div>
+      <ul>
+        <li><code class="ic">mysqli_connect()</code> — opens DB connection</li>
+        <li><code class="ic">mysqli_query()</code> — executes SQL statements</li>
+        <li><code class="ic">mysqli_fetch_row()</code> — reads table names</li>
+        <li><code class="ic">mysqli_real_escape_string()</code> — sanitizes values</li>
+        <li><code class="ic">fopen() / fwrite() / fclose()</code> — file I/O</li>
+      </ul>
+    </div>
+  </div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">PHP — backup_mysqli.php</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cm">// ── Configuration ─────────────────────────────</span>
+<span class="var">$host</span>     <span class="op">=</span> <span class="str">'localhost'</span>;
+<span class="var">$username</span> <span class="op">=</span> <span class="str">'db_user'</span>;
+<span class="var">$password</span> <span class="op">=</span> <span class="str">'secret_password'</span>;
+<span class="var">$database</span> <span class="op">=</span> <span class="str">'app_production'</span>;
+
+<span class="var">$connection</span> <span class="op">=</span> <span class="fn">mysqli_connect</span>(<span class="var">$host</span>, <span class="var">$username</span>, <span class="var">$password</span>, <span class="var">$database</span>);
+<span class="kw">if</span> (!<span class="var">$connection</span>) <span class="fn">die</span>(<span class="str">"Connection failed: "</span> . <span class="fn">mysqli_connect_error</span>());
+
+<span class="kw">function</span> <span class="fn">backupDatabase</span>(<span class="var">$connection</span>, <span class="var">$database</span>) {
+    <span class="cm">// Step 1: Create timestamped file</span>
+    <span class="var">$backupFile</span> <span class="op">=</span> <span class="str">'backup_'</span> . <span class="fn">date</span>(<span class="str">'Ymd_His'</span>) . <span class="str">'.sql'</span>;
+    <span class="var">$handle</span>     <span class="op">=</span> <span class="fn">fopen</span>(<span class="var">$backupFile</span>, <span class="str">'w'</span>);
+
+    <span class="cm">// Step 2: Fetch all table names</span>
+    <span class="var">$tables</span> <span class="op">=</span> [];
+    <span class="var">$result</span> <span class="op">=</span> <span class="fn">mysqli_query</span>(<span class="var">$connection</span>, <span class="str">"SHOW TABLES"</span>);
+    <span class="kw">while</span> (<span class="var">$row</span> <span class="op">=</span> <span class="fn">mysqli_fetch_row</span>(<span class="var">$result</span>)) { <span class="var">$tables</span>[] <span class="op">=</span> <span class="var">$row</span>[<span class="num">0</span>]; }
+
+    <span class="kw">foreach</span> (<span class="var">$tables</span> <span class="kw">as</span> <span class="var">$table</span>) {
+        <span class="cm">// Step 3: Export CREATE TABLE structure</span>
+        <span class="var">$res</span> <span class="op">=</span> <span class="fn">mysqli_query</span>(<span class="var">$connection</span>, <span class="str">"SHOW CREATE TABLE `$table`"</span>);
+        <span class="var">$row</span> <span class="op">=</span> <span class="fn">mysqli_fetch_row</span>(<span class="var">$res</span>);
+        <span class="fn">fwrite</span>(<span class="var">$handle</span>, <span class="str">"\n\n"</span> . <span class="var">$row</span>[<span class="num">1</span>] . <span class="str">";\n\n"</span>);
+
+        <span class="cm">// Step 4: Export each row as INSERT</span>
+        <span class="var">$res</span> <span class="op">=</span> <span class="fn">mysqli_query</span>(<span class="var">$connection</span>, <span class="str">"SELECT * FROM `$table`"</span>);
+        <span class="kw">while</span> (<span class="var">$row</span> <span class="op">=</span> <span class="fn">mysqli_fetch_assoc</span>(<span class="var">$res</span>)) {
+            <span class="var">$vals</span> <span class="op">=</span> <span class="fn">array_map</span>(<span class="kw">fn</span>(<span class="var">$v</span>) <span class="op">=></span>
+                <span class="str">"'"</span> . <span class="fn">mysqli_real_escape_string</span>(<span class="var">$connection</span>, <span class="var">$v</span>) . <span class="str">"'"</span>,
+                <span class="fn">array_values</span>(<span class="var">$row</span>)
+            );
+            <span class="fn">fwrite</span>(<span class="var">$handle</span>, <span class="str">"INSERT INTO `$table` VALUES ("</span>.<span class="fn">implode</span>(<span class="str">","</span>,<span class="var">$vals</span>).<span class="str">");\n"</span>);
+        }
+    }
+    <span class="fn">fclose</span>(<span class="var">$handle</span>);
+    <span class="kw">echo</span> <span class="str">"Backup generated: "</span> . <span class="var">$backupFile</span>;
+}
+
+<span class="fn">backupDatabase</span>(<span class="var">$connection</span>, <span class="var">$database</span>);
+<span class="fn">mysqli_close</span>(<span class="var">$connection</span>);</pre>
+  </div>
+</div>
+
+<!-- SLIDE 8: Drill 2 — Recovery -->
+<div class="slide" id="s7">
+  <div class="eyebrow">Drill 2 — PHP Recovery via MySQLi</div>
+  <h2>Programmatic Recovery Script</h2>
+  <div class="breakdown" style="margin-top:12px;margin-bottom:4px">
+    <div class="breakdown-blk">
+      <div class="blk-head">Recovery Flow</div>
+      <ul>
+        <li>Check if the backup <code class="ic">.sql</code> file exists</li>
+        <li>Read its full contents with <code class="ic">file_get_contents()</code></li>
+        <li>Split into individual queries on <code class="ic">;\n</code> delimiter</li>
+        <li>Execute each query in sequence via <code class="ic">mysqli_query()</code></li>
+        <li>Report any per-query errors immediately</li>
+      </ul>
+    </div>
+    <div class="breakdown-blk">
+      <div class="blk-head">Common Pitfalls</div>
+      <ul>
+        <li>Splitting on <code class="ic">;</code> alone breaks multi-line queries</li>
+        <li>Must <code class="ic">trim()</code> each query before executing</li>
+        <li>Restore to an <strong>empty</strong> database to avoid conflicts</li>
+        <li>Large files may hit <code class="ic">memory_limit</code> — increase in php.ini</li>
+      </ul>
+    </div>
+  </div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">PHP — recover_mysqli.php</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="var">$host</span>       <span class="op">=</span> <span class="str">'localhost'</span>;
+<span class="var">$username</span>   <span class="op">=</span> <span class="str">'db_user'</span>;
+<span class="var">$password</span>   <span class="op">=</span> <span class="str">'secret_password'</span>;
+<span class="var">$database</span>   <span class="op">=</span> <span class="str">'app_production'</span>;
+<span class="var">$backupFile</span> <span class="op">=</span> <span class="str">'backup_20260728_120000.sql'</span>;
+
+<span class="var">$connection</span> <span class="op">=</span> <span class="fn">mysqli_connect</span>(<span class="var">$host</span>, <span class="var">$username</span>, <span class="var">$password</span>, <span class="var">$database</span>);
+<span class="kw">if</span> (!<span class="var">$connection</span>) <span class="fn">die</span>(<span class="str">"Connection failed: "</span> . <span class="fn">mysqli_connect_error</span>());
+
+<span class="kw">function</span> <span class="fn">recoverDatabase</span>(<span class="var">$connection</span>, <span class="var">$backupFile</span>) {
+    <span class="cm">// Step 1: Validate backup file exists</span>
+    <span class="kw">if</span> (!<span class="fn">file_exists</span>(<span class="var">$backupFile</span>)) {
+        <span class="fn">die</span>(<span class="str">"Error: Backup file '{$backupFile}' not found."</span>);
+    }
+
+    <span class="cm">// Step 2: Read entire SQL file into memory</span>
+    <span class="var">$sqlContent</span> <span class="op">=</span> <span class="fn">file_get_contents</span>(<span class="var">$backupFile</span>);
+
+    <span class="cm">// Step 3: Split into individual queries</span>
+    <span class="var">$queries</span> <span class="op">=</span> <span class="fn">explode</span>(<span class="str">";\n"</span>, <span class="var">$sqlContent</span>);
+
+    <span class="cm">// Step 4: Execute each query</span>
+    <span class="kw">foreach</span> (<span class="var">$queries</span> <span class="kw">as</span> <span class="var">$query</span>) {
+        <span class="var">$query</span> <span class="op">=</span> <span class="fn">trim</span>(<span class="var">$query</span>);
+        <span class="kw">if</span> (!<span class="fn">empty</span>(<span class="var">$query</span>)) {
+            <span class="kw">if</span> (!<span class="fn">mysqli_query</span>(<span class="var">$connection</span>, <span class="var">$query</span>)) {
+                <span class="kw">echo</span> <span class="str">"Error: "</span> . <span class="fn">mysqli_error</span>(<span class="var">$connection</span>) . <span class="str">"\n"</span>;
+            }
+        }
+    }
+    <span class="kw">echo</span> <span class="str">"Recovery completed successfully!\n"</span>;
+}
+
+<span class="fn">recoverDatabase</span>(<span class="var">$connection</span>, <span class="var">$backupFile</span>);
+<span class="fn">mysqli_close</span>(<span class="var">$connection</span>);</pre>
+  </div>
+</div>
+
+<!-- SLIDE 9: Drill 3A — mysqldump backup -->
+<div class="slide" id="s8">
+  <div class="eyebrow">Drill 3A — CLI Backup via mysqldump</div>
+  <h2>Fast Production Backup with mysqldump</h2>
+  <div class="cards cols2" style="margin-top:12px;margin-bottom:8px">
+    <div class="card accent-g">
+      <h3>⚡ Why mysqldump?</h3>
+      <p>Native MySQL tool — faster, more reliable, handles edge cases like stored procedures, views, and triggers that a manual PHP script might miss.</p>
+    </div>
+    <div class="card accent-a">
+      <h3>🔧 PHP system() Function</h3>
+      <p>Executes an external shell command from PHP. Returns the last line of output; second argument captures the exit code (<code class="ic">0</code> = success).</p>
+    </div>
+  </div>
+  <div class="breakdown" style="margin-bottom:8px">
+    <div class="breakdown-blk">
+      <div class="blk-head">Script Breakdown</div>
+      <ul>
+        <li><code class="ic">sprintf()</code> builds the shell command string safely</li>
+        <li><code class="ic">escapeshellarg()</code> wraps each argument to prevent injection</li>
+        <li><code class="ic">system($cmd, $code)</code> runs the command and captures exit code</li>
+        <li><code class="ic">$code === 0</code> means the dump succeeded</li>
+        <li>Output file: <code class="ic">backup_YYYYMMDD_HHMMSS.sql</code></li>
+      </ul>
+    </div>
+    <div class="breakdown-blk">
+      <div class="blk-head">Security Considerations</div>
+      <ul>
+        <li>Always use <code class="ic">escapeshellarg()</code> on every argument</li>
+        <li>Never interpolate user input directly into shell commands</li>
+        <li>Store credentials in config files outside the web root</li>
+        <li>Consider using <code class="ic">~/.my.cnf</code> for passwordless CLI access</li>
+      </ul>
+    </div>
+  </div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">PHP — backup_dump.php</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="var">$host</span>       <span class="op">=</span> <span class="str">'localhost'</span>;
+<span class="var">$username</span>   <span class="op">=</span> <span class="str">'db_user'</span>;
+<span class="var">$password</span>   <span class="op">=</span> <span class="str">'secret_password'</span>;
+<span class="var">$database</span>   <span class="op">=</span> <span class="str">'app_production'</span>;
+<span class="var">$backupFile</span> <span class="op">=</span> <span class="str">'backup_'</span> . <span class="fn">date</span>(<span class="str">'Ymd_His'</span>) . <span class="str">'.sql'</span>;
+
+<span class="cm">// Build the shell command with safe argument escaping</span>
+<span class="var">$command</span> <span class="op">=</span> <span class="fn">sprintf</span>(
+    <span class="str">"mysqldump --host=%s --user=%s --password=%s %s > %s"</span>,
+    <span class="fn">escapeshellarg</span>(<span class="var">$host</span>),
+    <span class="fn">escapeshellarg</span>(<span class="var">$username</span>),
+    <span class="fn">escapeshellarg</span>(<span class="var">$password</span>),
+    <span class="fn">escapeshellarg</span>(<span class="var">$database</span>),
+    <span class="fn">escapeshellarg</span>(<span class="var">$backupFile</span>)
+);
+
+<span class="cm">// Execute and capture exit code</span>
+<span class="fn">system</span>(<span class="var">$command</span>, <span class="var">$outputCode</span>);
+
+<span class="kw">if</span> (<span class="var">$outputCode</span> <span class="op">===</span> <span class="num">0</span>) {
+    <span class="kw">echo</span> <span class="str">"Backup created: {$backupFile}"</span>;
+} <span class="kw">else</span> {
+    <span class="kw">echo</span> <span class="str">"Error generating backup via mysqldump."</span>;
+}</pre>
+  </div>
+</div>
+
+<!-- SLIDE 10: Drill 3B — Recovery via CLI -->
+<div class="slide" id="s9">
+  <div class="eyebrow">Drill 3B — CLI Recovery via mysql</div>
+  <h2>Fast Production Recovery with mysql CLI</h2>
+  <div class="cards cols2" style="margin-top:12px;margin-bottom:8px">
+    <div class="card accent-l">
+      <h3>📥 mysql CLI Import</h3>
+      <p>The <code class="ic">mysql</code> command reads a <code class="ic">.sql</code> file and executes it against the target database. The <code class="ic">&lt;</code> operator redirects file content into the command.</p>
+    </div>
+    <div class="card accent-r">
+      <h3>🧪 Comparing Approaches</h3>
+      <p><strong>PHP mysqli</strong>: More control, works without CLI access, but slower on large datasets.<br><strong>mysqldump/mysql CLI</strong>: Faster, more reliable, handles complex schemas better.</p>
+    </div>
+  </div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">PHP — recover_dump.php</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="var">$host</span>       <span class="op">=</span> <span class="str">'localhost'</span>;
+<span class="var">$username</span>   <span class="op">=</span> <span class="str">'db_user'</span>;
+<span class="var">$password</span>   <span class="op">=</span> <span class="str">'secret_password'</span>;
+<span class="var">$database</span>   <span class="op">=</span> <span class="str">'app_production'</span>;
+<span class="var">$backupFile</span> <span class="op">=</span> <span class="str">'backup_20260728_120000.sql'</span>;
+
+<span class="cm">// Build the restoration command</span>
+<span class="var">$command</span> <span class="op">=</span> <span class="fn">sprintf</span>(
+    <span class="str">"mysql --host=%s --user=%s --password=%s %s < %s"</span>,
+    <span class="fn">escapeshellarg</span>(<span class="var">$host</span>),
+    <span class="fn">escapeshellarg</span>(<span class="var">$username</span>),
+    <span class="fn">escapeshellarg</span>(<span class="var">$password</span>),
+    <span class="fn">escapeshellarg</span>(<span class="var">$database</span>),
+    <span class="fn">escapeshellarg</span>(<span class="var">$backupFile</span>)
+);
+
+<span class="fn">system</span>(<span class="var">$command</span>, <span class="var">$outputCode</span>);
+
+<span class="kw">if</span> (<span class="var">$outputCode</span> <span class="op">===</span> <span class="num">0</span>) {
+    <span class="kw">echo</span> <span class="str">"Database restored from: {$backupFile}"</span>;
+} <span class="kw">else</span> {
+    <span class="kw">echo</span> <span class="str">"Error restoring database via mysql CLI."</span>;
+}</pre>
+  </div>
+  <div class="breakdown" style="margin-top:14px">
+    <div class="breakdown-blk">
+      <div class="blk-head">Backup vs Recovery — Key Difference</div>
+      <ul>
+        <li>Backup uses <code class="ic">></code> (output to file) with <code class="ic">mysqldump</code></li>
+        <li>Recovery uses <code class="ic">&lt;</code> (input from file) with <code class="ic">mysql</code></li>
+        <li>Same config, opposite direction of data flow</li>
+      </ul>
+    </div>
+    <div class="breakdown-blk">
+      <div class="blk-head">Recommended Best Practices</div>
+      <ul>
+        <li>Schedule backups with CRON jobs (Linux) or Task Scheduler (Windows)</li>
+        <li>Store backups off-site or in cloud storage (S3, Google Drive)</li>
+        <li>Test restores regularly — a backup you haven't tested is not a backup</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 11: FAQ -->
+<div class="slide" id="s10">
+  <div class="eyebrow">Lesson Wrap-Up</div>
+  <h2>Frequently Asked Questions</h2>
+  <div class="cards" style="margin-top:20px">
+    <div class="card accent-l">
+      <h3>❓ Why is automated backup essential in PHP applications?</h3>
+      <p>Manual backups are prone to human omission. Automated PHP scripts or CRON jobs ensure regular, consistent backups without requiring manual intervention — even when the developer is asleep or on vacation.</p>
+    </div>
+    <div class="card accent-a">
+      <h3>❓ How frequently should database backups be performed?</h3>
+      <p>It depends on data velocity. <strong style="color:var(--text)">High-transaction systems</strong> (e-commerce, banking) need real-time logging or hourly incremental backups. <strong style="color:var(--text)">Low-change static systems</strong> may only need daily or weekly full backups.</p>
+    </div>
+    <div class="card accent-r">
+      <h3>❓ Can a database be recovered without a backup file?</h3>
+      <p>Without a clean backup or binary log stream, recovery is extremely difficult, costly, and often incomplete using forensic disk recovery software. This is why proactive backups are non-negotiable.</p>
+    </div>
+    <div class="card accent-p">
+      <h3>❓ Which method is better — PHP mysqli or mysqldump?</h3>
+      <p>For production systems, <code class="ic">mysqldump</code> is faster and more complete. PHP mysqli backup is useful when you lack CLI access or need fine-grained control over the export format.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 12: Quiz -->
+<div class="slide" id="s11">
+  <div class="eyebrow">Skill-Building Check — Multiple Choice</div>
+  <h2>Test Your Understanding</h2>
+  <div class="cards cols2" style="margin-top:16px">
+    <div>
+      <div class="quiz-q">1. What is the core process of creating duplicate copies of database records called?</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>Data Migration</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>Database Backup</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>Normalization</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>Query Optimization</div>
+      <div class="quiz-q" style="margin-top:16px">2. Which CLI utility is standard for dumping MySQL schemas and data to a <code class="ic">.sql</code> file?</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>pg_dump</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>sqlite3_export</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>mysqldump</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>php_export</div>
+      <div class="quiz-q" style="margin-top:16px">3. What process restores tables, schemas, and records from a dump file?</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>Database Recovery</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>Database Parsing</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>Data Indexing</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>Transaction Logging</div>
+    </div>
+    <div>
+      <div class="quiz-q">4. Which PHP extension provides procedural interfaces to connect with MySQL?</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>PDO_SQLITE</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>ODBC</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>mysqli</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>MongoClient</div>
+      <div class="quiz-q" style="margin-top:16px">5. What standard file extension is used for raw SQL script exports?</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>.db</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>.bak</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>.sql</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>.csv</div>
+      <div class="quiz-q" style="margin-top:16px">6. Which PHP function executes an external shell command like <code class="ic">mysqldump</code>?</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>eval()</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>include()</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>system()</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>file_exists()</div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 13: Recap -->
+<div class="slide" id="s12">
+  <div class="eyebrow">Module Recap</div>
+  <h2>What We Covered Today</h2>
+  <div class="cards cols2" style="margin-top:20px">
+    <div class="card accent-l">
+      <h3>📚 Concepts Learned</h3>
+      <ul style="list-style:none;display:flex;flex-direction:column;gap:8px;margin-top:8px">
+        <li style="font-size:14px;color:var(--text2);display:flex;gap:8px"><span style="color:var(--accent)">✓</span>Difference between backup and recovery</li>
+        <li style="font-size:14px;color:var(--text2);display:flex;gap:8px"><span style="color:var(--accent)">✓</span>7 pillars of why backup matters</li>
+        <li style="font-size:14px;color:var(--text2);display:flex;gap:8px"><span style="color:var(--accent)">✓</span>5 consequences of data loss</li>
+        <li style="font-size:14px;color:var(--text2);display:flex;gap:8px"><span style="color:var(--accent)">✓</span>Compliance requirements (GDPR, HIPAA)</li>
+      </ul>
+    </div>
+    <div class="card accent-g">
+      <h3>🛠️ Skills Practiced</h3>
+      <ul style="list-style:none;display:flex;flex-direction:column;gap:8px;margin-top:8px">
+        <li style="font-size:14px;color:var(--text2);display:flex;gap:8px"><span style="color:var(--accent2)">✓</span>PHP backup script via mysqli</li>
+        <li style="font-size:14px;color:var(--text2);display:flex;gap:8px"><span style="color:var(--accent2)">✓</span>PHP recovery script via mysqli</li>
+        <li style="font-size:14px;color:var(--text2);display:flex;gap:8px"><span style="color:var(--accent2)">✓</span>mysqldump CLI backup via system()</li>
+        <li style="font-size:14px;color:var(--text2);display:flex;gap:8px"><span style="color:var(--accent2)">✓</span>mysql CLI recovery via system()</li>
+        <li style="font-size:14px;color:var(--text2);display:flex;gap:8px"><span style="color:var(--accent2)">✓</span>Using escapeshellarg() for security</li>
+      </ul>
+    </div>
+    <div class="card accent-a">
+      <h3>📋 Best Practices to Remember</h3>
+      <ul style="list-style:none;display:flex;flex-direction:column;gap:8px;margin-top:8px">
+        <li style="font-size:14px;color:var(--text2);display:flex;gap:8px"><span style="color:var(--amber)">→</span>Automate backups with CRON or Task Scheduler</li>
+        <li style="font-size:14px;color:var(--text2);display:flex;gap:8px"><span style="color:var(--amber)">→</span>Store backups off-site or in cloud storage</li>
+        <li style="font-size:14px;color:var(--text2);display:flex;gap:8px"><span style="color:var(--amber)">→</span>Test restores — an untested backup isn't one</li>
+        <li style="font-size:14px;color:var(--text2);display:flex;gap:8px"><span style="color:var(--amber)">→</span>Use escapeshellarg() on all CLI arguments</li>
+      </ul>
+    </div>
+    <div class="card accent-r">
+      <h3>🔮 Coming Up Next</h3>
+      <p style="font-size:14px;color:var(--text2);margin-top:8px;line-height:1.6">Advanced topics to explore: Binary logs for point-in-time recovery, incremental vs full backups, cloud backup automation with AWS S3 or Google Cloud Storage, and database replication as a high-availability strategy.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 14: Answer Key -->
+<div class="slide" id="s13">
+  <div class="eyebrow">Answer Key</div>
+  <h2>Quiz Answers &amp; Explanations</h2>
+  <div class="cards cols2" style="margin-top:16px">
+    <div>
+      <div class="ans-item">
+        <div class="ans-q">Q1: Core process of creating duplicate copies</div>
+        <div class="ans-a">✅ B — Database Backup</div>
+        <div class="ans-exp">Backup creates redundant data copies stored separately for security and recovery purposes.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q2: CLI utility for dumping MySQL schemas to .sql</div>
+        <div class="ans-a">✅ C — mysqldump</div>
+        <div class="ans-exp">mysqldump is the standard CLI tool bundled with MySQL for exporting database schemas and data.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q3: Process that restores from a dump file</div>
+        <div class="ans-a">✅ A — Database Recovery</div>
+        <div class="ans-exp">Recovery reads the dump file and re-executes its SQL to restore the database to its prior state.</div>
+      </div>
+    </div>
+    <div>
+      <div class="ans-item">
+        <div class="ans-q">Q4: PHP extension for MySQL connections</div>
+        <div class="ans-a">✅ C — mysqli</div>
+        <div class="ans-exp">mysqli (MySQL Improved) provides both procedural and OOP interfaces for PHP-MySQL communication.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q5: Standard extension for SQL export files</div>
+        <div class="ans-a">✅ C — .sql</div>
+        <div class="ans-exp">Plain-text database backup scripts containing DDL and DML statements use the .sql extension.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q6: PHP function to run shell commands</div>
+        <div class="ans-a">✅ C — system()</div>
+        <div class="ans-exp">system() executes external shell commands and outputs results — used to call mysqldump and mysql CLI.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end deck -->
+
+<!-- Help overlay -->
+<div id="help">
+  <div class="help-box">
+    <h2>Keyboard Shortcuts</h2>
+    <div class="help-row"><span>Next slide</span><span><kbd>→</kbd> or <kbd>Right-click</kbd></span></div>
+    <div class="help-row"><span>Previous slide</span><span><kbd>←</kbd></span></div>
+    <div class="help-row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="help-row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="help-row"><span>Close this panel</span><span><kbd>?</kbd> or <kbd>Esc</kbd></span></div>
+  </div>
+</div>
+
+<script>
+const slides = Array.from(document.querySelectorAll('.slide'));
+const total = slides.length;
+let cur = 0;
+
+function go(n) {
+  n = Math.max(0, Math.min(total - 1, n));
+  if (n === cur) return;
+  const prev = cur;
+  slides[prev].classList.remove('active');
+  if (n > prev) slides[prev].classList.add('prev');
+  setTimeout(() => slides[prev].classList.remove('prev'), 360);
+  cur = n;
+  slides[cur].classList.add('active');
+  slides[cur].classList.remove('prev');
+  document.getElementById('prog').style.width = ((cur + 1) / total * 100) + '%';
+  document.getElementById('counter').textContent = (cur + 1) + ' / ' + total;
+}
+
+// Arrow keys
+document.addEventListener('keydown', e => {
+  if (document.getElementById('help').classList.contains('show')) {
+    if (e.key === 'Escape' || e.key === '?') document.getElementById('help').classList.remove('show');
+    return;
+  }
+  if (e.key === 'ArrowRight') go(cur + 1);
+  else if (e.key === 'ArrowLeft') go(cur - 1);
+  else if (e.key === 'Home') go(0);
+  else if (e.key === 'End') go(total - 1);
+  else if (e.key === '?') document.getElementById('help').classList.toggle('show');
+});
+
+// Right-click = next, side buttons
+document.addEventListener('mousedown', e => {
+  if (e.target.closest('button, a, input, select, textarea, pre')) return;
+  if (e.button === 2) { e.preventDefault(); e.stopImmediatePropagation(); go(cur + 1); }
+  else if (e.button === 3) { e.preventDefault(); e.stopImmediatePropagation(); go(cur - 1); }
+  else if (e.button === 4) { e.preventDefault(); e.stopImmediatePropagation(); go(cur + 1); }
+}, true);
+document.addEventListener('contextmenu', e => { if (!e.target.closest('button, a, input, select, textarea, pre')) e.preventDefault(); }, true);
+document.addEventListener('auxclick', e => { if (e.button !== 1) e.preventDefault(); }, true);
+
+// Swipe
+let tx = 0;
+document.addEventListener('touchstart', e => tx = e.touches[0].clientX, { passive: true });
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - tx;
+  if (Math.abs(dx) > 50) go(dx < 0 ? cur + 1 : cur - 1);
+}, { passive: true });
+
+// Copy buttons
+function copyCode(btn) {
+  const code = btn.closest('.code-wrap').querySelector('pre').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1800);
+  });
+}
+
+// Init
+document.getElementById('prog').style.width = (1 / total * 100) + '%';
+</script>
+</body>
+</html>

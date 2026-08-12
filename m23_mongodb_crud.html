@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M23 — MongoDB CRUD Operations in Node.js</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0f17;--bg2:#111827;--bg3:#1a2234;--bg4:#1f2c42;
+  --accent:#60a5fa;--accent2:#34d399;--accent3:#fbbf24;--accent4:#f87171;--purple:#a78bfa;
+  --mongo:#4DB33D;
+  --text:#e2e8f4;--text2:#94a3b8;--text3:#64748b;
+  --border:#1e2d45;--border2:#2d3f5c;
+  --code-bg:#080c14;--code-border:#182030;
+  --r:10px;--r2:6px;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',system-ui,sans-serif}
+.deck{position:relative;width:100vw;height:100vh;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;padding:44px 66px 36px;opacity:0;pointer-events:none;transition:opacity 350ms ease,transform 350ms ease;transform:translateX(40px);overflow-y:auto}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.prev{opacity:0;transform:translateX(-40px)}
+@media(prefers-reduced-motion:reduce){.slide{transition:none}}
+.slide::-webkit-scrollbar{width:4px}.slide::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+#prog{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--mongo),var(--accent2));transition:width 350ms ease;z-index:99}
+#counter{position:fixed;top:14px;right:24px;font-size:13px;color:var(--text3);z-index:99;font-variant-numeric:tabular-nums}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mongo);margin-bottom:10px}
+h1{font-size:clamp(36px,4.2vw,58px);font-weight:700;line-height:1.1;letter-spacing:-.02em}
+h2{font-size:clamp(26px,3vw,38px);font-weight:700;line-height:1.15;letter-spacing:-.015em}
+h3{font-size:18px;font-weight:600;color:var(--text);margin-bottom:7px}
+p,li,td,th,.step-body p,.step-body h4,.quiz-opt,.quiz-q,.ans-exp,.prob-desc{font-size:16px;line-height:1.7}
+.cards{display:grid;gap:13px;margin-top:15px}.cols2{grid-template-columns:1fr 1fr}.cols3{grid-template-columns:1fr 1fr 1fr}.cols4{grid-template-columns:1fr 1fr 1fr 1fr}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:17px 19px}
+.card p,.card li{font-size:16px;color:var(--text2);line-height:1.65}.card ul{padding-left:16px}
+.card.al{border-left:3px solid var(--accent)}.card.ag{border-left:3px solid var(--accent2)}.card.aa{border-left:3px solid var(--accent3)}.card.ar{border-left:3px solid var(--accent4)}.card.ap{border-left:3px solid var(--purple)}.card.am{border-left:3px solid var(--mongo)}
+.code-wrap{position:relative;background:var(--code-bg);border:1px solid var(--code-border);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column}
+.code-header{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:#050810;border-bottom:1px solid var(--code-border);flex-shrink:0}
+.code-lang{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.copy-btn{font-size:12px;font-weight:700;color:var(--mongo);background:rgba(77,179,61,.12);border:1px solid rgba(77,179,61,.3);border-radius:4px;padding:4px 10px;cursor:pointer;transition:all .15s;flex-shrink:0}
+.copy-btn:hover{background:rgba(77,179,61,.22)}
+.copy-btn.ok{color:var(--accent2);border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.1)}
+pre{padding:14px 16px;overflow:auto;font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:13.5px;line-height:1.75;color:#cdd6f4;flex:1;min-height:0}
+pre::-webkit-scrollbar{height:4px;width:4px}pre::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.kw{color:#cba6f7}.fn{color:#89b4fa}.str{color:#a6e3a1}.cm{color:#4a5260;font-style:italic}.var{color:#f38ba8}.num{color:#fab387}.op{color:#89dceb}
+.split-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;height:min(510px,56vh);align-items:stretch;margin-top:14px}
+.split-row .code-wrap{height:100%;overflow:hidden}
+.split-row .panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:17px 19px;overflow-y:auto;height:100%;min-height:0}
+.hero{flex:1;display:flex;flex-direction:column;justify-content:center}
+.hero-tag{display:inline-flex;align-items:center;gap:8px;background:rgba(77,179,61,.12);border:1px solid rgba(77,179,61,.3);border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;color:var(--mongo);letter-spacing:.05em;margin-bottom:24px;width:fit-content}
+.hero h1{max-width:820px;margin-bottom:16px}
+.hero .sub{font-size:18px;color:var(--text2);max-width:640px;line-height:1.65;margin-bottom:26px}
+.logo-row{display:flex;gap:10px;flex-wrap:wrap}
+.logo-chip{display:flex;align-items:center;gap:7px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:7px 14px;font-size:14px;font-weight:600;color:var(--text2)}
+/* CRUD badges */
+.crud-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-top:18px}
+.crud-badge{border-radius:var(--r);padding:16px 14px;text-align:center}
+.crud-badge .op-letter{font-size:32px;font-weight:800;line-height:1;margin-bottom:5px}
+.crud-badge .op-name{font-size:13px;font-weight:700;letter-spacing:.06em;margin-bottom:4px}
+.crud-badge .op-method{font-family:'JetBrains Mono',monospace;font-size:12px;opacity:.8}
+.crud-badge.cc{background:rgba(96,165,250,.1);border:1.5px solid rgba(96,165,250,.3);color:var(--accent)}
+.crud-badge.rc{background:rgba(52,211,153,.1);border:1.5px solid rgba(52,211,153,.3);color:var(--accent2)}
+.crud-badge.uc{background:rgba(251,191,36,.1);border:1.5px solid rgba(251,191,36,.3);color:var(--accent3)}
+.crud-badge.dc{background:rgba(248,113,113,.1);border:1.5px solid rgba(248,113,113,.3);color:var(--accent4)}
+.steps{display:flex;flex-direction:column;gap:12px;margin-top:13px}
+.step{display:flex;gap:14px;align-items:flex-start}
+.step-num{flex-shrink:0;width:30px;height:30px;background:var(--mongo);color:#000;font-weight:700;font-size:13px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.step-body h4{font-size:16px;font-weight:600;color:var(--text);margin-bottom:3px}
+.step-body p{font-size:16px;color:var(--text2);line-height:1.6}
+.step-body code{background:rgba(77,179,61,.12);color:var(--mongo);padding:1px 6px;border-radius:3px;font-family:monospace;font-size:14px}
+.info{background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.2);border-radius:var(--r2);padding:12px 16px;font-size:16px;color:var(--text2);line-height:1.65;margin-top:13px}
+.tip{background:rgba(77,179,61,.07);border:1px solid rgba(77,179,61,.25);border-radius:var(--r2);padding:12px 16px;font-size:16px;color:var(--text2);line-height:1.65;margin-top:13px}
+.warn{background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.2);border-radius:var(--r2);padding:12px 16px;font-size:16px;color:var(--text2);line-height:1.65;margin-top:13px}
+.info strong,.tip strong,.warn strong{color:var(--text)}
+.terminal{background:var(--code-bg);border:1px solid var(--code-border);border-radius:var(--r2);padding:12px 16px;font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--mongo);line-height:2;margin-top:10px}
+.dir{background:var(--code-bg);border:1px solid var(--code-border);border-radius:var(--r);padding:13px 17px;font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--text2);line-height:2.1;margin-top:12px;white-space:pre;overflow-x:auto;display:block}
+.dir .folder{color:var(--accent3)}.dir .file{color:var(--accent2)}.dir .note{color:var(--text3)}
+code.ic{background:rgba(77,179,61,.12);color:var(--mongo);padding:1px 6px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:14px}
+/* Analogy */
+.ana-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.ana-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:17px 19px}
+.ana-icon{font-size:30px;margin-bottom:9px}.ana-title{font-size:17px;font-weight:700;margin-bottom:7px}
+.ana-desc{font-size:16px;color:var(--text2);line-height:1.65}
+/* Quiz */
+.quiz-q{font-size:16px;font-weight:600;color:var(--text);margin-bottom:9px;line-height:1.55}
+.quiz-opt{display:flex;align-items:flex-start;gap:9px;padding:9px 13px;border-radius:var(--r2);border:1px solid var(--border);margin-bottom:7px;font-size:16px;color:var(--text2)}
+.opt-key{font-weight:700;color:var(--mongo);min-width:18px;flex-shrink:0}
+.prob-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;margin-bottom:12px}
+.prob-tag{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:10px;margin-bottom:8px}
+.prob-tag.fill{background:rgba(167,139,250,.15);color:var(--purple);border:1px solid rgba(167,139,250,.3)}
+.prob-tag.write{background:rgba(77,179,61,.12);color:var(--mongo);border:1px solid rgba(77,179,61,.3)}
+.prob-tag.debug{background:rgba(248,113,113,.15);color:var(--accent4);border:1px solid rgba(248,113,113,.3)}
+.prob-title{font-size:17px;font-weight:600;color:var(--text);margin-bottom:6px}
+.prob-desc{font-size:16px;color:var(--text2);line-height:1.65;margin-bottom:10px}
+.blank{color:#f38ba8;background:rgba(243,139,168,.12);border-bottom:1px dashed #f38ba8;padding:0 4px;border-radius:2px}
+.ans-item{background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--mongo);border-radius:var(--r);padding:13px 15px;margin-bottom:9px}
+.ans-q{font-size:13px;color:var(--text3);margin-bottom:4px}
+.ans-a{font-size:16px;font-weight:700;color:var(--text)}
+.ans-exp{font-size:15.5px;color:var(--text2);margin-top:4px;line-height:1.6}
+/* Callback depth visual */
+.cb-depth{display:flex;flex-direction:column;gap:0;margin-top:12px}
+.cb-level{border-left:2px solid;padding:8px 12px;margin-left:0;border-radius:0 var(--r2) var(--r2) 0;background:var(--bg2)}
+.cb-level .cbl-tag{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
+.cb-level .cbl-method{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600}
+.cb-level .cbl-desc{font-size:14px;color:var(--text3)}
+.cb-l1{border-color:var(--accent);margin-left:0}.cb-l1 .cbl-tag{color:var(--accent)}
+.cb-l2{border-color:var(--accent2);margin-left:18px}.cb-l2 .cbl-tag{color:var(--accent2)}
+.cb-l3{border-color:var(--accent3);margin-left:36px}.cb-l3 .cbl-tag{color:var(--accent3)}
+.cb-l4{border-color:var(--accent4);margin-left:54px}.cb-l4 .cbl-tag{color:var(--accent4)}
+#help{position:fixed;inset:0;background:rgba(0,0,0,.82);display:none;place-items:center;z-index:200}
+#help.show{display:grid}
+.help-box{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:30px 38px;max-width:420px;width:90%}
+.help-box h2{font-size:20px;margin-bottom:18px}
+.help-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:16px}
+.help-row:last-child{border-bottom:none}.help-row span:first-child{color:var(--text2)}
+kbd{background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-size:12px;color:var(--mongo);font-family:monospace}
+.final{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.final blockquote{font-size:20px;font-style:italic;color:var(--text2);max-width:600px;line-height:1.7;margin-bottom:22px;position:relative;padding:0 34px}
+.final blockquote::before{content:'\201C';font-size:60px;color:var(--mongo);position:absolute;left:0;top:-10px;line-height:1}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<div id="counter">1 / 18</div>
+<div class="deck" id="deck">
+
+<!-- S0: Hero -->
+<div class="slide active">
+  <div class="hero">
+    <div class="hero-tag">🍃 Module 23 &nbsp;·&nbsp; MongoDB + Node.js</div>
+    <h1>MongoDB CRUD<br>Operations in Node.js</h1>
+    <p class="sub">Put your MongoDB connection to work — insert, query, update, and delete documents directly from JavaScript using the official Node.js driver.</p>
+    <div class="logo-row">
+      <span class="logo-chip"><svg width="20" height="20" viewBox="0 0 48 48" role="img" aria-label="MongoDB"><rect width="48" height="48" rx="8" fill="#4DB33D"/><text x="24" y="30" text-anchor="middle" fill="#fff" font-size="9" font-weight="700" font-family="monospace">MongoDB</text></svg> MongoDB</span>
+      <span class="logo-chip"><svg width="20" height="20" viewBox="0 0 48 48" role="img" aria-label="Node.js"><circle cx="24" cy="24" r="24" fill="#026e00"/><text x="24" y="29" text-anchor="middle" fill="#fff" font-size="10" font-weight="700" font-family="monospace">Node</text></svg> Node.js</span>
+      <span class="logo-chip"><svg width="20" height="20" viewBox="0 0 48 48" role="img" aria-label="npm"><rect width="48" height="48" rx="8" fill="#cb3837"/><text x="24" y="30" text-anchor="middle" fill="#fff" font-size="11" font-weight="700" font-family="monospace">npm</text></svg> npm</span>
+    </div>
+    <div class="crud-row" style="margin-top:28px;max-width:520px">
+      <div class="crud-badge cc"><div class="op-letter">C</div><div class="op-name">Create</div><div class="op-method">insertOne()</div></div>
+      <div class="crud-badge rc"><div class="op-letter">R</div><div class="op-name">Read</div><div class="op-method">find()</div></div>
+      <div class="crud-badge uc"><div class="op-letter">U</div><div class="op-name">Update</div><div class="op-method">updateOne()</div></div>
+      <div class="crud-badge dc"><div class="op-letter">D</div><div class="op-name">Delete</div><div class="op-method">deleteOne()</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- S1: Review -->
+<div class="slide">
+  <div class="eyebrow">Quick Review — Module 22</div>
+  <h2>Where We Left Off</h2>
+  <div class="cards cols3" style="margin-top:16px">
+    <div class="card am"><h3>✅ Previously</h3><ul style="margin-top:8px"><li style="margin-bottom:6px">Installed MongoDB locally</li><li style="margin-bottom:6px">Learned <code class="ic">MongoClient</code> class</li><li>Connected Node.js to MongoDB</li></ul></div>
+    <div class="card ag"><h3>🎯 Today's Goals</h3><ul style="margin-top:8px"><li style="margin-bottom:6px">Explain MongoDB's advantages for Node.js</li><li style="margin-bottom:6px">Perform all 4 CRUD operations</li><li>Write a complete CRUD script with the mongodb driver</li></ul></div>
+    <div class="card al"><h3>🔗 The Upgrade</h3><p>In M22 we <strong style="color:var(--text)">connected</strong> — today we <strong style="color:var(--mongo)">manipulate</strong>. We go from "hello, database" to inserting, reading, updating, and deleting real documents.</p></div>
+  </div>
+  <div style="margin-top:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:17px 19px">
+    <h3 style="margin-bottom:8px">🧩 CRUD = the Core of Every Application</h3>
+    <p style="font-size:16px;color:var(--text2);line-height:1.65">Every web app — social media, e-commerce, CRM — does the same four things with data: <strong style="color:var(--accent)">Create</strong> it, <strong style="color:var(--accent2)">Read</strong> it, <strong style="color:var(--accent3)">Update</strong> it, and <strong style="color:var(--accent4)">Delete</strong> it. Master these four methods on MongoDB and you can build anything.</p>
+  </div>
+  <div class="tip"><strong>⚙️ Prerequisite:</strong> MongoDB running (<code class="ic">mongod</code>), project folder with <code class="ic">npm install mongodb</code> already done from M22.</div>
+</div>
+
+<!-- S2: Why MongoDB -->
+<div class="slide">
+  <div class="eyebrow">Quick Recap</div>
+  <h2>Why MongoDB Is a Node.js Favorite</h2>
+  <div class="cards cols3" style="margin-top:14px">
+    <div class="card am"><h3>🔄 Schema-less</h3><p>No rigid tables. Documents in the same collection can have completely different fields — perfect for evolving apps that need to iterate fast.</p></div>
+    <div class="card ag"><h3>📈 Scalability</h3><p>Horizontal scaling via <strong style="color:var(--text)">sharding</strong> — distributes data across multiple servers for massive traffic and data loads.</p></div>
+    <div class="card al"><h3>🛡️ High Availability</h3><p>Built-in <strong style="color:var(--text)">replication</strong> — multiple copies of data across servers. If one fails, another takes over with zero downtime.</p></div>
+    <div class="card ap"><h3>🔍 Rich Queries</h3><p>Powerful filtering, sorting, indexing, aggregation pipelines, and geospatial queries — far beyond simple key lookups.</p></div>
+    <div class="card aa"><h3>🔀 Flexible Model</h3><p>Natively handles hierarchical data and nested objects that are painful to model in flat SQL tables with JOINs.</p></div>
+    <div class="card ar"><h3>🤝 JS Integration</h3><p>Data is BSON (Binary JSON) → maps directly to JavaScript objects. No ORM translation layer needed — write once, use everywhere.</p></div>
+  </div>
+</div>
+
+<!-- S3: CRUD Overview -->
+<div class="slide">
+  <div class="eyebrow">Core Concept</div>
+  <h2>MongoDB CRUD — The Four Methods</h2>
+  <p style="font-size:16px;color:var(--text2);margin-top:8px;line-height:1.65">Every data operation maps to one of these four methods on a MongoDB collection object.</p>
+  <div class="cards cols2" style="margin-top:14px">
+    <div class="card" style="border-top:3px solid var(--accent)">
+      <h3 style="color:var(--accent)">🔵 Create — <code class="ic">insertOne(doc, cb)</code></h3>
+      <p>Inserts a single new document (JS object) into the collection. The callback receives <code class="ic">result.insertedId</code> — the auto-generated ObjectId.</p>
+    </div>
+    <div class="card" style="border-top:3px solid var(--accent2)">
+      <h3 style="color:var(--accent2)">🟢 Read — <code class="ic">find(filter).toArray(cb)</code></h3>
+      <p>Queries for documents matching a filter. <code class="ic">.toArray()</code> converts the MongoDB cursor into a JavaScript array you can loop through.</p>
+    </div>
+    <div class="card" style="border-top:3px solid var(--accent3)">
+      <h3 style="color:var(--accent3)">🟡 Update — <code class="ic">updateOne(filter, update, cb)</code></h3>
+      <p>Modifies a single matching document. The update object uses MongoDB operators like <code class="ic">$set</code> to specify which fields to change.</p>
+    </div>
+    <div class="card" style="border-top:3px solid var(--accent4)">
+      <h3 style="color:var(--accent4)">🔴 Delete — <code class="ic">deleteOne(filter, cb)</code></h3>
+      <p>Removes a single document matching the filter. Check <code class="ic">result.deletedCount</code> to confirm the deletion actually happened.</p>
+    </div>
+  </div>
+  <div class="info" style="margin-top:14px">
+    <strong>💡 Bulk variants:</strong> Every method has a multi-document version — <code class="ic">insertMany()</code>, <code class="ic">updateMany()</code>, <code class="ic">deleteMany()</code>. Same syntax, but takes/affects an array of documents.
+  </div>
+  <div class="tip">
+    <strong>⚡ Modern alternative:</strong> These examples use callbacks (matching your lesson material). In production, developers typically use <code class="ic">async/await</code> with the same methods — the CRUD logic stays identical.
+  </div>
+</div>
+
+<!-- S4: Create -->
+<div class="slide">
+  <div class="eyebrow">CRUD — Create</div>
+  <h2>insertOne() <span style="color:var(--accent);font-size:22px">— Add a Document</span></h2>
+  <div class="split-row">
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JS — Create (Insert)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="kw">const</span> { MongoClient } <span class="op">=</span> <span class="fn">require</span>(<span class="str">'mongodb'</span>);
+<span class="kw">const</span> url    <span class="op">=</span> <span class="str">'mongodb://localhost:27017'</span>;
+<span class="kw">const</span> dbName <span class="op">=</span> <span class="str">'shop_db'</span>;
+<span class="kw">const</span> client <span class="op">=</span> <span class="kw">new</span> <span class="fn">MongoClient</span>(url);
+
+client.<span class="fn">connect</span>((err) <span class="op">=&gt;</span> {
+  <span class="kw">if</span> (err) <span class="kw">throw</span> err;
+  console.<span class="fn">log</span>(<span class="str">'✅ Connected'</span>);
+
+  <span class="kw">const</span> db         <span class="op">=</span> client.<span class="fn">db</span>(dbName);
+  <span class="kw">const</span> collection <span class="op">=</span> db.<span class="fn">collection</span>(<span class="str">'products'</span>);
+
+  <span class="cm">// Build the document</span>
+  <span class="kw">const</span> product <span class="op">=</span> {
+    name  : <span class="str">'Wireless Keyboard'</span>,
+    price : <span class="num">49.99</span>,
+    stock : <span class="num">120</span>
+  };
+
+  <span class="cm">// Insert it into the collection</span>
+  collection.<span class="fn">insertOne</span>(product, (err, result) <span class="op">=&gt;</span> {
+    <span class="kw">if</span> (err) <span class="kw">throw</span> err;
+    console.<span class="fn">log</span>(
+      <span class="str">'✅ Inserted ID:'</span>,
+      result.insertedId
+    );
+    client.<span class="fn">close</span>();
+  });
+});</pre>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--accent);margin-bottom:12px">🔵 Create — Key Points</h3>
+      <div class="steps">
+        <div class="step"><div class="step-num" style="background:var(--accent);color:#000">1</div><div class="step-body"><h4>Document = JS Object</h4><p>Just a plain object — keys become field names. No schema declaration needed.</p></div></div>
+        <div class="step"><div class="step-num" style="background:var(--accent);color:#000">2</div><div class="step-body"><h4>result.insertedId</h4><p>After insert, MongoDB returns the auto-generated <code>ObjectId</code> in <code>result.insertedId</code>. Use it to reference the new document immediately.</p></div></div>
+        <div class="step"><div class="step-num" style="background:var(--accent);color:#000">3</div><div class="step-body"><h4>No CREATE TABLE</h4><p>Unlike SQL, you don't declare tables or columns first. MongoDB creates the collection when you first insert into it — "lazy creation."</p></div></div>
+      </div>
+      <div class="terminal" style="margin-top:12px">✅ Connected<br>✅ Inserted ID: ObjectId("65c1a4f3...")</div>
+    </div>
+  </div>
+</div>
+
+<!-- S5: Read -->
+<div class="slide">
+  <div class="eyebrow">CRUD — Read</div>
+  <h2>find().toArray() <span style="color:var(--accent2);font-size:22px">— Query Documents</span></h2>
+  <div class="split-row">
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JS — Read (Query)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cm">// Inside client.connect callback...</span>
+<span class="kw">const</span> collection <span class="op">=</span> db.<span class="fn">collection</span>(<span class="str">'products'</span>);
+
+<span class="cm">// READ ALL — empty filter {} returns everything</span>
+collection.<span class="fn">find</span>({}).<span class="fn">toArray</span>((err, docs) <span class="op">=&gt;</span> {
+  <span class="kw">if</span> (err) <span class="kw">throw</span> err;
+  console.<span class="fn">log</span>(<span class="str">'📋 All products:'</span>, docs);
+});
+
+<span class="cm">// READ FILTERED — match by field value</span>
+<span class="kw">const</span> filter <span class="op">=</span> { name: <span class="str">'Wireless Keyboard'</span> };
+collection.<span class="fn">find</span>(filter).<span class="fn">toArray</span>((err, docs) <span class="op">=&gt;</span> {
+  <span class="kw">if</span> (err) <span class="kw">throw</span> err;
+  console.<span class="fn">log</span>(<span class="str">'🔍 Matched:'</span>, docs);
+});
+
+<span class="cm">// READ WITH OPERATORS — price over 30</span>
+collection.<span class="fn">find</span>({
+  price: { $gt: <span class="num">30</span> }
+}).<span class="fn">toArray</span>((err, docs) <span class="op">=&gt;</span> {
+  <span class="kw">if</span> (err) <span class="kw">throw</span> err;
+  console.<span class="fn">log</span>(<span class="str">'💰 Over $30:'</span>, docs);
+});</pre>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--accent2);margin-bottom:12px">🟢 Read — Key Points</h3>
+      <div class="steps">
+        <div class="step"><div class="step-num" style="background:var(--accent2);color:#000">1</div><div class="step-body"><h4>find() returns a cursor</h4><p>Not an array. Call <code>.toArray()</code> to convert the cursor into a standard JavaScript array you can loop through.</p></div></div>
+        <div class="step"><div class="step-num" style="background:var(--accent2);color:#000">2</div><div class="step-body"><h4>Empty filter = all docs</h4><p><code>find({"{}"})</code> with an empty object returns every document in the collection — equivalent to <code>SELECT *</code> in SQL.</p></div></div>
+        <div class="step"><div class="step-num" style="background:var(--accent2);color:#000">3</div><div class="step-body"><h4>Operators use $</h4><p><code>$gt</code> (greater than), <code>$lt</code> (less than), <code>$eq</code> (equals), <code>$in</code> (in array) — all prefixed with a dollar sign.</p></div></div>
+        <div class="step"><div class="step-num" style="background:var(--accent2);color:#000">4</div><div class="step-body"><h4>No match = empty array</h4><p>If no documents match the filter, <code>docs</code> is <code>[]</code> — not null. Check <code>docs.length === 0</code>.</p></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S6: Update -->
+<div class="slide">
+  <div class="eyebrow">CRUD — Update</div>
+  <h2>updateOne() <span style="color:var(--accent3);font-size:22px">— Modify a Document</span></h2>
+  <div class="split-row">
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JS — Update</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cm">// Inside client.connect callback...</span>
+<span class="kw">const</span> collection <span class="op">=</span> db.<span class="fn">collection</span>(<span class="str">'products'</span>);
+
+<span class="cm">// UPDATE: change the price of 'Wireless Keyboard'</span>
+<span class="kw">const</span> filter <span class="op">=</span> { name: <span class="str">'Wireless Keyboard'</span> };
+<span class="kw">const</span> update <span class="op">=</span> { $set: { price: <span class="num">39.99</span>, stock: <span class="num">95</span> } };
+
+collection.<span class="fn">updateOne</span>(filter, update, (err, result) <span class="op">=&gt;</span> {
+  <span class="kw">if</span> (err) <span class="kw">throw</span> err;
+  console.<span class="fn">log</span>(
+    <span class="str">'✏️ Matched:'</span>, result.matchedCount,
+    <span class="str">'Modified:'</span>, result.modifiedCount
+  );
+});
+
+<span class="cm">// INCREMENT: increase stock by 50</span>
+<span class="kw">const</span> incUpdate <span class="op">=</span> { $inc: { stock: <span class="num">50</span> } };
+
+collection.<span class="fn">updateOne</span>(filter, incUpdate, (err, result) <span class="op">=&gt;</span> {
+  <span class="kw">if</span> (err) <span class="kw">throw</span> err;
+  console.<span class="fn">log</span>(<span class="str">'📦 Stock incremented by 50'</span>);
+});</pre>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--accent3);margin-bottom:12px">🟡 Update — Key Points</h3>
+      <div class="steps">
+        <div class="step"><div class="step-num" style="background:var(--accent3);color:#000">1</div><div class="step-body"><h4>Always use $set or an operator</h4><p>Passing <code>{"{"} price: 39.99 {"}"}</code> without <code>$set</code> <strong style="color:var(--accent4)">replaces the entire document</strong> — wiping all other fields. Always wrap changes in an operator.</p></div></div>
+        <div class="step"><div class="step-num" style="background:var(--accent3);color:#000">2</div><div class="step-body"><h4>matchedCount vs modifiedCount</h4><p><code>matchedCount</code> = documents that matched the filter. <code>modifiedCount</code> = documents that actually changed. They differ when the new value equals the old value.</p></div></div>
+        <div class="step"><div class="step-num" style="background:var(--accent3);color:#000">3</div><div class="step-body"><h4>$inc — Atomic Increment</h4><p><code>$inc: {"{"} stock: 50 {"}"}</code> atomically adds 50 to the current stock value. Use negative numbers to decrement. No race conditions.</p></div></div>
+      </div>
+      <div class="terminal" style="margin-top:12px">✏️ Matched: 1 Modified: 1<br>📦 Stock incremented by 50</div>
+    </div>
+  </div>
+</div>
+
+<!-- S7: Delete -->
+<div class="slide">
+  <div class="eyebrow">CRUD — Delete</div>
+  <h2>deleteOne() <span style="color:var(--accent4);font-size:22px">— Remove a Document</span></h2>
+  <div class="split-row">
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JS — Delete</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cm">// Inside client.connect callback...</span>
+<span class="kw">const</span> collection <span class="op">=</span> db.<span class="fn">collection</span>(<span class="str">'products'</span>);
+
+<span class="cm">// DELETE: remove a product by name</span>
+<span class="kw">const</span> filter <span class="op">=</span> { name: <span class="str">'Wireless Keyboard'</span> };
+
+collection.<span class="fn">deleteOne</span>(filter, (err, result) <span class="op">=&gt;</span> {
+  <span class="kw">if</span> (err) <span class="kw">throw</span> err;
+
+  <span class="kw">if</span> (result.deletedCount <span class="op">===</span> <span class="num">0</span>) {
+    console.<span class="fn">log</span>(<span class="str">'⚠️ No matching document found.'</span>);
+  } <span class="kw">else</span> {
+    console.<span class="fn">log</span>(
+      <span class="str">`🗑️ Deleted ${result.deletedCount} document(s).`</span>
+    );
+  }
+
+  <span class="cm">// Close when all operations are done</span>
+  client.<span class="fn">close</span>();
+});</pre>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--accent4);margin-bottom:12px">🔴 Delete — Key Points</h3>
+      <div class="steps">
+        <div class="step"><div class="step-num" style="background:var(--accent4);color:#000">1</div><div class="step-body"><h4>No error on zero matches</h4><p>If no document matches the filter, MongoDB doesn't throw — it just returns <code>deletedCount: 0</code>. Always check this value to confirm the deletion.</p></div></div>
+        <div class="step"><div class="step-num" style="background:var(--accent4);color:#000">2</div><div class="step-body"><h4>Permanent removal</h4><p>Unlike SQL's soft-delete patterns, <code>deleteOne()</code> physically removes the document. There is no recycle bin. Consider adding an <code>isDeleted: true</code> flag instead for production.</p></div></div>
+        <div class="step"><div class="step-num" style="background:var(--accent4);color:#000">3</div><div class="step-body"><h4>client.close() at the end</h4><p>Close the connection only after ALL operations have completed. In a callback-chained script, close inside the last callback.</p></div></div>
+      </div>
+      <div class="terminal" style="margin-top:12px">🗑️ Deleted 1 document(s).</div>
+    </div>
+  </div>
+</div>
+
+<!-- S8: Full CRUD Script -->
+<div class="slide">
+  <div class="eyebrow">Complete Script</div>
+  <h2>crud.js — All Four Operations</h2>
+  <div class="split-row" style="height:min(540px,60vh)">
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JS — crud.js (complete)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="kw">const</span> { MongoClient } <span class="op">=</span> <span class="fn">require</span>(<span class="str">'mongodb'</span>);
+<span class="kw">const</span> url    <span class="op">=</span> <span class="str">'mongodb://localhost:27017'</span>;
+<span class="kw">const</span> dbName <span class="op">=</span> <span class="str">'shop_db'</span>;
+<span class="kw">const</span> client <span class="op">=</span> <span class="kw">new</span> <span class="fn">MongoClient</span>(url);
+
+client.<span class="fn">connect</span>((err) <span class="op">=&gt;</span> {
+  <span class="kw">if</span> (err) { console.<span class="fn">error</span>(err); <span class="kw">return</span>; }
+  console.<span class="fn">log</span>(<span class="str">'✅ Connected to MongoDB'</span>);
+  <span class="kw">const</span> col <span class="op">=</span> client.<span class="fn">db</span>(dbName).<span class="fn">collection</span>(<span class="str">'products'</span>);
+
+  <span class="cm">// 1. CREATE</span>
+  <span class="kw">const</span> product <span class="op">=</span> { name: <span class="str">'USB-C Hub'</span>, price: <span class="num">29.50</span>, stock: <span class="num">200</span> };
+  col.<span class="fn">insertOne</span>(product, (err, r) <span class="op">=&gt;</span> {
+    <span class="kw">if</span> (err) <span class="kw">throw</span> err;
+    console.<span class="fn">log</span>(<span class="str">'✅ Inserted:'</span>, r.insertedId);
+
+    <span class="cm">// 2. READ</span>
+    col.<span class="fn">find</span>({ name: <span class="str">'USB-C Hub'</span> }).<span class="fn">toArray</span>((err, docs) <span class="op">=&gt;</span> {
+      <span class="kw">if</span> (err) <span class="kw">throw</span> err;
+      console.<span class="fn">log</span>(<span class="str">'📋 Found:'</span>, docs);
+
+      <span class="cm">// 3. UPDATE</span>
+      col.<span class="fn">updateOne</span>(
+        { name: <span class="str">'USB-C Hub'</span> },
+        { $set: { price: <span class="num">24.99</span> } },
+        (err, r) <span class="op">=&gt;</span> {
+          <span class="kw">if</span> (err) <span class="kw">throw</span> err;
+          console.<span class="fn">log</span>(<span class="str">'✏️ Modified:'</span>, r.modifiedCount);
+
+          <span class="cm">// 4. DELETE</span>
+          col.<span class="fn">deleteOne</span>(
+            { name: <span class="str">'USB-C Hub'</span> },
+            (err, r) <span class="op">=&gt;</span> {
+              <span class="kw">if</span> (err) <span class="kw">throw</span> err;
+              console.<span class="fn">log</span>(<span class="str">'🗑️ Deleted:'</span>, r.deletedCount);
+              client.<span class="fn">close</span>();
+            });
+        });
+    });
+  });
+});</pre>
+    </div>
+    <div class="panel">
+      <h3 style="margin-bottom:12px">🏃 Run the Script</h3>
+      <div class="code-wrap" style="margin-bottom:10px"><div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><pre>node crud.js</pre></div>
+      <h3 style="margin-bottom:7px">Expected Output</h3>
+      <div class="terminal">✅ Connected to MongoDB<br>✅ Inserted: ObjectId("65c1...")<br>📋 Found: [{ name:'USB-C Hub', ... }]<br>✏️ Modified: 1<br>🗑️ Deleted: 1</div>
+      <h3 style="margin-top:14px;margin-bottom:8px">🔗 Callback Chain Flow</h3>
+      <div class="cb-depth">
+        <div class="cb-level cb-l1"><div class="cbl-tag">Step 1</div><div class="cbl-method" style="color:var(--accent)">insertOne()</div><div class="cbl-desc">Create the document</div></div>
+        <div class="cb-level cb-l2"><div class="cbl-tag">Step 2</div><div class="cbl-method" style="color:var(--accent2)">find().toArray()</div><div class="cbl-desc">Read it back</div></div>
+        <div class="cb-level cb-l3"><div class="cbl-tag">Step 3</div><div class="cbl-method" style="color:var(--accent3)">updateOne()</div><div class="cbl-desc">Change the price</div></div>
+        <div class="cb-level cb-l4"><div class="cbl-tag">Step 4</div><div class="cbl-method" style="color:var(--accent4)">deleteOne() → close()</div><div class="cbl-desc">Remove + disconnect</div></div>
+      </div>
+      <div class="warn" style="margin-top:10px"><strong>Callback nesting:</strong> This "pyramid of doom" works but is hard to maintain. In production, use <code class="ic">async/await</code> — same methods, flat code.</div>
+    </div>
+  </div>
+</div>
+
+<!-- S9: Analogy + Use Cases -->
+<div class="slide">
+  <div class="eyebrow">Real-World Analogies</div>
+  <h2>MongoDB CRUD in the Real World</h2>
+  <div class="ana-grid">
+    <div class="ana-card" style="border-left:3px solid var(--accent)"><div class="ana-icon">🗄️</div><div class="ana-title" style="color:var(--accent)">The Rigid Filing Cabinet (SQL)</div><div class="ana-desc">Every folder must have exactly the same 10 index tabs. If you add a new tab, you must reformat <strong style="color:var(--text)">every single existing folder</strong> — even if most tabs are left blank. That's ALTER TABLE.</div></div>
+    <div class="ana-card" style="border-left:3px solid var(--mongo)"><div class="ana-icon">📔</div><div class="ana-title" style="color:var(--mongo)">The Dynamic Filing Cabinet (MongoDB)</div><div class="ana-desc">Each folder can have whatever you want — a name, a photo, a list of songs. The next folder may have entirely different contents. No reformatting, no downtime, no migrations needed.</div></div>
+  </div>
+  <h3 style="margin-top:18px;margin-bottom:12px">Real-World Use Cases</h3>
+  <div class="cards cols3" style="margin-top:0">
+    <div class="card am"><h3>🛒 Product Catalogs</h3><p>A T-shirt has size and color. A laptop has RAM and CPU. MongoDB's flexible documents store both in the same collection — no forced generic "attributes" table.</p></div>
+    <div class="card ag"><h3>👤 User Profiles</h3><p>Add "Dark Mode" or "Notification Prefs" as nested objects instantly — no ALTER TABLE on a million-row table. Documents grow organically.</p></div>
+    <div class="card al"><h3>📊 Real-Time Analytics</h3><p>Server logs and IoT sensor data arrive at massive volume with varying structure. MongoDB's high write throughput and automatic sharding handle it effortlessly.</p></div>
+  </div>
+</div>
+
+<!-- S10: FAQ -->
+<div class="slide">
+  <div class="eyebrow">Lesson Wrap-Up</div>
+  <h2>FAQs &amp; Summary</h2>
+  <div class="cards cols2" style="margin-top:14px">
+    <div class="card am"><h3>❓ How do I install the MongoDB driver?</h3><p>Run <code class="ic">npm install mongodb</code> in your project folder. This downloads the official driver that provides <code class="ic">MongoClient</code> and all CRUD methods.</p></div>
+    <div class="card al"><h3>❓ What's the connection string format?</h3><p><code class="ic">mongodb://localhost:27017/dbName</code> — contains the protocol, host, port (default 27017), and optionally the database name. For Atlas, the URL includes cluster and auth info.</p></div>
+    <div class="card ap"><h3>❓ What if the filter matches nothing?</h3><p><code class="ic">updateOne</code> and <code class="ic">deleteOne</code> succeed silently with <code class="ic">matchedCount: 0</code> / <code class="ic">deletedCount: 0</code>. No error is thrown — always check these properties.</p></div>
+    <div class="card ag"><h3>❓ What is <code class="ic">_id</code> / ObjectId?</h3><p>A 12-byte globally unique identifier MongoDB auto-generates as the primary key. Access it from <code class="ic">result.insertedId</code> after an insert.</p></div>
+  </div>
+  <div style="margin-top:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px">
+    <h3 style="margin-bottom:8px">📋 Summary</h3>
+    <p style="font-size:16px;color:var(--text2);line-height:1.65">Today we performed all four <strong style="color:var(--mongo)">CRUD operations</strong> on MongoDB from Node.js — <strong style="color:var(--accent)">insertOne</strong>, <strong style="color:var(--accent2)">find().toArray()</strong>, <strong style="color:var(--accent3)">updateOne with $set</strong>, and <strong style="color:var(--accent4)">deleteOne</strong>. We chained them in callbacks, understood how each result object works, and saw how MongoDB's flexible documents power real-world applications.</p>
+  </div>
+</div>
+
+<!-- S11: Recap -->
+<div class="slide">
+  <div class="eyebrow">Recap</div>
+  <h2>Key Takeaways</h2>
+  <div class="cards cols2" style="margin-top:16px">
+    <div class="card" style="border-top:3px solid var(--accent)"><h3 style="color:var(--accent)">🔵 Create</h3><ul style="margin-top:8px"><li style="margin-bottom:6px"><code class="ic">collection.insertOne(doc, cb)</code></li><li style="margin-bottom:6px">Returns <code class="ic">result.insertedId</code></li><li>Collection created lazily on first insert</li></ul></div>
+    <div class="card" style="border-top:3px solid var(--accent2)"><h3 style="color:var(--accent2)">🟢 Read</h3><ul style="margin-top:8px"><li style="margin-bottom:6px"><code class="ic">collection.find(filter).toArray(cb)</code></li><li style="margin-bottom:6px">Empty filter <code class="ic">{"{}"}</code> = all docs</li><li>Operators: <code class="ic">$gt</code>, <code class="ic">$lt</code>, <code class="ic">$eq</code>, <code class="ic">$in</code></li></ul></div>
+    <div class="card" style="border-top:3px solid var(--accent3)"><h3 style="color:var(--accent3)">🟡 Update</h3><ul style="margin-top:8px"><li style="margin-bottom:6px"><code class="ic">collection.updateOne(filter, update, cb)</code></li><li style="margin-bottom:6px">Always use <code class="ic">$set</code> to avoid full replacement</li><li><code class="ic">matchedCount</code> vs <code class="ic">modifiedCount</code></li></ul></div>
+    <div class="card" style="border-top:3px solid var(--accent4)"><h3 style="color:var(--accent4)">🔴 Delete</h3><ul style="margin-top:8px"><li style="margin-bottom:6px"><code class="ic">collection.deleteOne(filter, cb)</code></li><li style="margin-bottom:6px">Check <code class="ic">deletedCount</code> — no error on 0 matches</li><li>Always <code class="ic">client.close()</code> in the last callback</li></ul></div>
+  </div>
+</div>
+
+<!-- S12: Quiz MC -->
+<div class="slide">
+  <div class="eyebrow">Skill-Building Check — Multiple Choice</div>
+  <h2>Questions 1 – 7</h2>
+  <div class="cards cols2" style="margin-top:12px">
+    <div>
+      <div class="quiz-q">1. To install the MongoDB driver, you use the command ___ install mongodb.</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>npm</div><div class="quiz-opt"><span class="opt-key">B</span>node</div><div class="quiz-opt"><span class="opt-key">C</span>mongod</div><div class="quiz-opt"><span class="opt-key">D</span>client</div>
+      <div class="quiz-q" style="margin-top:12px">2. A MongoDB connection string contains the server address, port, and ___.</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>User agent</div><div class="quiz-opt"><span class="opt-key">B</span>Database name</div><div class="quiz-opt"><span class="opt-key">C</span>SSH key</div><div class="quiz-opt"><span class="opt-key">D</span>Collection name</div>
+      <div class="quiz-q" style="margin-top:12px">3. The ___ class is used to establish a connection to MongoDB in Node.js.</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>MongoServer</div><div class="quiz-opt"><span class="opt-key">B</span>MongoConnect</div><div class="quiz-opt"><span class="opt-key">C</span>MongoDB</div><div class="quiz-opt"><span class="opt-key">D</span>MongoClient</div>
+      <div class="quiz-q" style="margin-top:12px">4. To handle unexpected connection dropouts, listen to the ___ event.</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>'connect'</div><div class="quiz-opt"><span class="opt-key">B</span>'disconnect'</div><div class="quiz-opt"><span class="opt-key">C</span>'error'</div><div class="quiz-opt"><span class="opt-key">D</span>'ready'</div>
+    </div>
+    <div>
+      <div class="quiz-q">5. To close the MongoDB connection, use the ___ method.</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>stop()</div><div class="quiz-opt"><span class="opt-key">B</span>end()</div><div class="quiz-opt"><span class="opt-key">C</span>kill()</div><div class="quiz-opt"><span class="opt-key">D</span>close()</div>
+      <div class="quiz-q" style="margin-top:12px">6. Which method queries and retrieves documents from a collection?</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>collection.get()</div><div class="quiz-opt"><span class="opt-key">B</span>collection.query()</div><div class="quiz-opt"><span class="opt-key">C</span>collection.find()</div><div class="quiz-opt"><span class="opt-key">D</span>collection.fetch()</div>
+      <div class="quiz-q" style="margin-top:12px">7. Which update operator specifies which fields to change?</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>$add</div><div class="quiz-opt"><span class="opt-key">B</span>$delete</div><div class="quiz-opt"><span class="opt-key">C</span>$set</div><div class="quiz-opt"><span class="opt-key">D</span>$push</div>
+    </div>
+  </div>
+</div>
+
+<!-- S13: Coding Problems -->
+<div class="slide">
+  <div class="eyebrow">Skill-Building Check — Coding Problems</div>
+  <h2>Questions 8 – 10</h2>
+  <p style="font-size:15px;color:var(--text3);margin-top:4px;margin-bottom:14px">Assume <code class="ic">mongodb</code> is installed, <code class="ic">MongoClient</code> imported, and you're inside the <code class="ic">client.connect()</code> callback with <code class="ic">collection</code> available.</p>
+  <div class="prob-box">
+    <div class="prob-tag fill">✏️ Fill in the Blank</div>
+    <div class="prob-title">Question 8 — Complete the Read + Update Sequence</div>
+    <div class="prob-desc">Fill in the five blanks to query all products, then update the price of "Mech Keyboard" to 59.99.</div>
+    <div class="code-wrap"><div class="code-header"><span class="code-lang">JS — Fill in the Blanks</span></div>
+      <pre>collection.<span class="blank">____</span>({}).<span class="blank">____</span>((err, docs) <span class="op">=&gt;</span> {
+  <span class="kw">if</span> (err) <span class="kw">throw</span> err;
+  console.<span class="fn">log</span>(<span class="str">'All products:'</span>, docs);
+
+  collection.<span class="fn">updateOne</span>(
+    { name: <span class="str">'Mech Keyboard'</span> },
+    { <span class="blank">____</span>: { <span class="blank">____</span>: <span class="num">59.99</span> } },
+    (err, result) <span class="op">=&gt;</span> {
+      <span class="kw">if</span> (err) <span class="kw">throw</span> err;
+      console.<span class="fn">log</span>(<span class="str">'Modified:'</span>, result.<span class="blank">____</span>);
+    }
+  );
+});</pre>
+    </div>
+  </div>
+  <div class="cards cols2" style="margin-top:10px">
+    <div class="prob-box" style="margin-bottom:0">
+      <div class="prob-tag write">✍️ Write from Scratch</div>
+      <div class="prob-title">Question 9 — Write a Delete Function</div>
+      <div class="prob-desc">Write a function called <code class="ic">removeProduct</code> that takes a <code class="ic">collection</code> and a <code class="ic">productName</code>. It should call <code class="ic">deleteOne()</code> to remove the product. If <code class="ic">deletedCount</code> is 0, log "Product not found". Otherwise log "Product deleted".</div>
+    </div>
+    <div class="prob-box" style="margin-bottom:0">
+      <div class="prob-tag debug">🐛 Debug the Code</div>
+      <div class="prob-title">Question 10 — Find &amp; Fix the Bugs</div>
+      <div class="prob-desc">The update operation below has <strong style="color:var(--accent4)">3 bugs</strong>. Find and fix each one.</div>
+      <div class="code-wrap"><div class="code-header"><span class="code-lang">JS — Buggy Code</span></div>
+        <pre>collection.<span class="fn">updateOne</span>(
+  { name: <span class="str">'Laptop'</span> },
+  { price: <span class="num">999</span> },
+  (result, err) <span class="op">=&gt;</span> {
+    <span class="kw">if</span> (err) <span class="kw">throw</span> err;
+    console.<span class="fn">log</span>(result.updatedCount);
+  }
+);</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S14: Answer Key MC -->
+<div class="slide">
+  <div class="eyebrow">Answer Key — Part 1</div>
+  <h2>Multiple Choice Answers (Q1–7)</h2>
+  <div class="cards cols2" style="margin-top:14px">
+    <div>
+      <div class="ans-item"><div class="ans-q">Q1: Command to install the driver</div><div class="ans-a">✅ A — npm</div><div class="ans-exp">npm install mongodb downloads and installs the official MongoDB driver for your Node.js project.</div></div>
+      <div class="ans-item"><div class="ans-q">Q2: Connection string contains address, port, and ___</div><div class="ans-a">✅ B — Database name</div><div class="ans-exp">The standard format is mongodb://host:port/databaseName — specifying which database MongoClient connects to.</div></div>
+      <div class="ans-item"><div class="ans-q">Q3: Class to establish the connection</div><div class="ans-a">✅ D — MongoClient</div><div class="ans-exp">MongoClient is the core interface from the mongodb driver. Instantiate it with a URL and call .connect().</div></div>
+      <div class="ans-item"><div class="ans-q">Q4: Event for connection dropouts</div><div class="ans-a">✅ C — 'error'</div><div class="ans-exp">The 'error' event catches unexpected connection failures throughout the app lifecycle, beyond the initial connect callback.</div></div>
+    </div>
+    <div>
+      <div class="ans-item"><div class="ans-q">Q5: Method to close the connection</div><div class="ans-a">✅ D — close()</div><div class="ans-exp">client.close() gracefully terminates the connection, ensuring pending operations finish and resources are freed.</div></div>
+      <div class="ans-item"><div class="ans-q">Q6: Method to query documents</div><div class="ans-a">✅ C — collection.find()</div><div class="ans-exp">find() accepts an optional filter object and returns a cursor. Append .toArray() to convert to a JavaScript array.</div></div>
+      <div class="ans-item"><div class="ans-q">Q7: Update operator for changing fields</div><div class="ans-a">✅ C — $set</div><div class="ans-exp">$set specifies new values for fields without replacing the entire document. E.g. { $set: { age: 30 } } only changes the age field.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- S15: Answer Key Coding -->
+<div class="slide">
+  <div class="eyebrow">Answer Key — Part 2</div>
+  <h2>Coding Problem Answers (Q8–10)</h2>
+  <div class="cards cols2" style="margin-top:14px">
+    <div>
+      <div class="ans-item" style="border-left-color:var(--purple)"><div class="ans-q">Q8 — Fill in the Blank</div><div class="ans-a" style="color:var(--purple)">✅ Completed sequence</div></div>
+      <div class="code-wrap" style="margin-bottom:12px"><div class="code-header"><span class="code-lang">JS — Q8 Answer</span></div>
+        <pre>collection.<span class="fn">find</span>({}).<span class="fn">toArray</span>((err, docs) <span class="op">=&gt;</span> {
+  <span class="kw">if</span> (err) <span class="kw">throw</span> err;
+  console.<span class="fn">log</span>(<span class="str">'All products:'</span>, docs);
+
+  collection.<span class="fn">updateOne</span>(
+    { name: <span class="str">'Mech Keyboard'</span> },
+    { $set: { price: <span class="num">59.99</span> } },
+    (err, result) <span class="op">=&gt;</span> {
+      <span class="kw">if</span> (err) <span class="kw">throw</span> err;
+      console.<span class="fn">log</span>(<span class="str">'Modified:'</span>, result.modifiedCount);
+    }
+  );
+});</pre>
+      </div>
+      <div class="ans-item" style="border-left-color:var(--text3)"><div class="ans-exp"><strong style="color:var(--text)">B1:</strong> <code class="ic">find</code> &nbsp; <strong style="color:var(--text)">B2:</strong> <code class="ic">toArray</code> &nbsp; <strong style="color:var(--text)">B3:</strong> <code class="ic">$set</code> &nbsp; <strong style="color:var(--text)">B4:</strong> <code class="ic">price</code> &nbsp; <strong style="color:var(--text)">B5:</strong> <code class="ic">modifiedCount</code></div></div>
+    </div>
+    <div>
+      <div class="ans-item" style="border-left-color:var(--mongo)"><div class="ans-q">Q9 — Write from Scratch: removeProduct</div><div class="ans-a" style="color:var(--mongo)">✅ Reference solution</div></div>
+      <div class="code-wrap" style="margin-bottom:12px"><div class="code-header"><span class="code-lang">JS — Q9 Answer</span></div>
+        <pre><span class="kw">const</span> <span class="fn">removeProduct</span> <span class="op">=</span> (collection, productName) <span class="op">=&gt;</span> {
+  collection.<span class="fn">deleteOne</span>(
+    { name: productName },
+    (err, result) <span class="op">=&gt;</span> {
+      <span class="kw">if</span> (err) { console.<span class="fn">error</span>(err); <span class="kw">return</span>; }
+      <span class="kw">if</span> (result.deletedCount <span class="op">===</span> <span class="num">0</span>) {
+        console.<span class="fn">log</span>(<span class="str">'Product not found'</span>);
+      } <span class="kw">else</span> {
+        console.<span class="fn">log</span>(<span class="str">'Product deleted'</span>);
+      }
+    }
+  );
+};</pre>
+      </div>
+      <div class="ans-item" style="border-left-color:var(--accent4)"><div class="ans-q">Q10 — Debug: 3 bugs in updateOne</div><div class="ans-a">✅ Bug list</div>
+        <div class="ans-exp"><strong style="color:var(--text)">Bug 1:</strong> <code class="ic">{ price: 999 }</code> → missing <code class="ic">$set</code> operator → this replaces the <strong>entire document</strong> → <code class="ic">{ $set: { price: 999 } }</code><br><br><strong style="color:var(--text)">Bug 2:</strong> <code class="ic">(result, err)</code> → callback args reversed → Node.js is error-first → <code class="ic">(err, result)</code><br><br><strong style="color:var(--text)">Bug 3:</strong> <code class="ic">result.updatedCount</code> → property doesn't exist → correct name is <code class="ic">result.modifiedCount</code></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S16: Closing -->
+<div class="slide">
+  <div class="final">
+    <blockquote>"Without data, you're just another person with an opinion."</blockquote>
+    <p style="font-size:14px;color:var(--text3);margin-bottom:38px">— W. Edwards Deming</p>
+    <h2 style="margin-bottom:14px">Module 23 Complete 🎉</h2>
+    <p style="font-size:17px;color:var(--text2);max-width:540px;line-height:1.7;margin-bottom:28px">You can now Create, Read, Update, and Delete documents in MongoDB from Node.js. Combined with Express routing and sessions from earlier modules, you have everything needed to build a complete, data-driven web application.</p>
+    <div class="crud-row" style="max-width:500px;margin:0 auto 26px">
+      <div class="crud-badge cc" style="padding:12px 10px"><div class="op-letter" style="font-size:24px">C</div><div class="op-method">insertOne</div></div>
+      <div class="crud-badge rc" style="padding:12px 10px"><div class="op-letter" style="font-size:24px">R</div><div class="op-method">find</div></div>
+      <div class="crud-badge uc" style="padding:12px 10px"><div class="op-letter" style="font-size:24px">U</div><div class="op-method">updateOne</div></div>
+      <div class="crud-badge dc" style="padding:12px 10px"><div class="op-letter" style="font-size:24px">D</div><div class="op-method">deleteOne</div></div>
+    </div>
+    <p style="font-size:13px;color:var(--text3)">Press <kbd>?</kbd> for navigation shortcuts</p>
+  </div>
+</div>
+
+</div>
+
+<div id="help"><div class="help-box"><h2>Keyboard Shortcuts</h2>
+<div class="help-row"><span>Next slide</span><span><kbd>→</kbd> or <kbd>Right-click</kbd></span></div>
+<div class="help-row"><span>Previous slide</span><span><kbd>←</kbd></span></div>
+<div class="help-row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+<div class="help-row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+<div class="help-row"><span>Close this</span><span><kbd>?</kbd> or <kbd>Esc</kbd></span></div>
+</div></div>
+
+<script>
+const slides=Array.from(document.querySelectorAll('.slide'));const total=slides.length;let cur=0;
+function go(n){n=Math.max(0,Math.min(total-1,n));if(n===cur)return;const prev=cur;slides[prev].classList.remove('active');if(n>prev)slides[prev].classList.add('prev');setTimeout(()=>slides[prev].classList.remove('prev'),360);cur=n;slides[cur].classList.add('active');slides[cur].classList.remove('prev');document.getElementById('prog').style.width=((cur+1)/total*100)+'%';document.getElementById('counter').textContent=(cur+1)+' / '+total;}
+document.addEventListener('keydown',e=>{const help=document.getElementById('help');if(help.classList.contains('show')){if(e.key==='Escape'||e.key==='?')help.classList.remove('show');return;}if(e.key==='ArrowRight')go(cur+1);else if(e.key==='ArrowLeft')go(cur-1);else if(e.key==='Home')go(0);else if(e.key==='End')go(total-1);else if(e.key==='?')document.getElementById('help').classList.toggle('show');});
+document.addEventListener('mousedown',e=>{if(e.target.closest('button,a,input,select,textarea,pre'))return;if(e.button===2){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}else if(e.button===3){e.preventDefault();e.stopImmediatePropagation();go(cur-1);}else if(e.button===4){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}},true);
+document.addEventListener('contextmenu',e=>{if(!e.target.closest('button,a,input,select,textarea,pre'))e.preventDefault();},true);
+document.addEventListener('auxclick',e=>{if(e.button!==1)e.preventDefault();},true);
+let tx=0;document.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;},{passive:true});document.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50)go(dx<0?cur+1:cur-1);},{passive:true});
+function copyCode(btn){const code=btn.closest('.code-wrap').querySelector('pre').innerText;navigator.clipboard.writeText(code).then(()=>{btn.textContent='Copied!';btn.classList.add('ok');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('ok');},1800);});}
+document.getElementById('prog').style.width=(1/total*100)+'%';
+</script>
+</body>
+</html>

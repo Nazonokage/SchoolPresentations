@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MySQL + WAMP + PHP — Data Blueprint Guide</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+    * { box-sizing: border-box; }
+    html, body { margin:0; padding:0; height:100%; overflow:hidden; }
+    body {
+      font-family:'Inter', system-ui, sans-serif;
+      background:var(--bg);
+      color:var(--ink);
+      transition: background 300ms ease, color 300ms ease;
+    }
+    h1,h2,h3 { font-family:'Fraunces', Georgia, serif; margin:0; }
+    code, pre, .mono { font-family:'JetBrains Mono', 'Courier New', monospace; }
+
+    /* ——— DATA BLUEPRINT THEME ——— */
+    :root {
+      --bg: #1A2634;
+      --bg-alt: #243447;
+      --accent: #00D4FF;
+      --accent-strong: #0099CC;
+      --card: #2A3A4A;
+      --card-border: rgba(0, 180, 255, 0.2);
+      --shadow: rgba(0, 0, 0, 0.45);
+      --ink: #E8F0F8;
+      --ink-soft: #8AB0D4;
+      --eyebrow-ink: #66D9FF;
+      --card-ink: #E8F0F8;
+      --card-ink-soft: #8AB0D4;
+      --card-accent: #0099CC;
+      --step-num-ink: #FFFFFF;
+      --tick: 300ms;
+    }
+
+    #app { position:relative; width:100vw; height:100vh; overflow:hidden; }
+
+    /* progress */
+    .progress-track { position:fixed; top:0; left:0; right:0; height:5px; background:rgba(0,180,255,0.15); z-index:50; }
+    .progress-fill { height:100%; width:0%; background:linear-gradient(90deg, var(--accent-strong), var(--accent)); transition: width 350ms ease; }
+
+    /* query-heat gauge (replaces roast gauge) */
+    .query-gauge {
+      position:fixed; top:18px; right:22px; z-index:50;
+      display:flex; flex-direction:column; align-items:center; gap:4px;
+      font-family:'JetBrains Mono', monospace; font-size:10px; letter-spacing:0.14em;
+      color:var(--ink-soft); user-select:none; pointer-events:none;
+      transition: color var(--tick) ease;
+    }
+    .query-gauge svg { width:34px; height:34px; display:block; }
+    .query-gauge .db-icon { transform-origin:center bottom; }
+    @media (prefers-reduced-motion: no-preference) {
+      .query-gauge .db-icon { animation: pulseGlow 2.8s ease-in-out infinite; }
+    }
+    @keyframes pulseGlow {
+      0% { opacity:0.5; transform:scale(1); }
+      50% { opacity:1; transform:scale(1.08); }
+      100% { opacity:0.5; transform:scale(1); }
+    }
+    .heat-label { text-transform:uppercase; font-weight:700; }
+
+    /* slides */
+    .stage { position:absolute; inset:0; }
+    .slide {
+      position:absolute; inset:0;
+      overflow-y:auto; overflow-x:hidden;
+      display:flex; flex-direction:column; align-items:stretch; justify-content:safe center;
+      padding: 76px clamp(28px, 7vw, 120px) 90px;
+      opacity:0; transform:translateX(0) scale(1);
+      will-change: transform, opacity;
+    }
+    .slide.active { opacity:1; transform:translateX(0) scale(1); transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:5; }
+    .slide.enter-fwd { transform:translateX(64px) scale(0.985); opacity:0; }
+    .slide.enter-bwd { transform:translateX(-64px) scale(0.985); opacity:0; }
+    .slide.exit-fwd { transform:translateX(-64px) scale(0.985); opacity:0; transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:4; }
+    .slide.exit-bwd { transform:translateX(64px) scale(0.985); opacity:0; transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:4; }
+    @media (prefers-reduced-motion: reduce) {
+      .slide, .slide.active, .slide.enter-fwd, .slide.enter-bwd, .slide.exit-fwd, .slide.exit-bwd {
+        transition: opacity 120ms linear !important; transform:none !important;
+      }
+    }
+    .slide-inner { max-width:980px; width:100%; margin:0 auto; }
+
+    .eyebrow {
+      font-family:'JetBrains Mono', monospace; font-size:12.5px; letter-spacing:0.16em;
+      text-transform:uppercase; font-weight:700; color:var(--eyebrow-ink);
+      display:flex; align-items:center; gap:10px; margin-bottom:14px;
+      transition: color var(--tick) ease;
+    }
+    .eyebrow::after { content:''; flex:1; height:0; border-top:2px dashed var(--card-border); }
+    h2.slide-title { font-size:clamp(28px, 4vw, 44px); font-weight:700; line-height:1.12; margin-bottom:22px; letter-spacing:-0.01em; }
+    .lede { font-size:17px; color:var(--ink-soft); margin:-8px 0 22px; max-width:70ch; line-height:1.55; }
+
+    .card {
+      background:var(--card); border:1px solid var(--card-border); border-radius:10px;
+      padding:18px 20px; min-width:0;
+      box-shadow: 0 4px 18px var(--shadow);
+      transition: background var(--tick) ease, border-color var(--tick) ease;
+    }
+    .card h3 { font-size:15px; font-weight:700; margin-bottom:6px; font-family:'Inter',sans-serif; color:var(--card-ink); }
+    .card p, .card li { font-size:14.5px; color:var(--card-ink-soft); line-height:1.5; }
+
+    .card-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(0, 1fr)); gap:14px; min-width:0; }
+    .card-grid.cols-2 { grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .card-grid.cols-4 { grid-template-columns:repeat(4, minmax(0,1fr)); }
+    @media (max-width:760px){ .card-grid.cols-4{grid-template-columns:repeat(2, minmax(0,1fr));} .card-grid.cols-2{grid-template-columns:minmax(0,1fr);} }
+
+    .two-col { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:26px; align-items:start; min-width:0; }
+    @media (max-width:760px){ .two-col { grid-template-columns:minmax(0,1fr); } }
+    .two-col > * { min-width:0; }
+
+    ul.ticket-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:9px; }
+    ul.ticket-list li { position:relative; padding-left:22px; font-size:15.5px; line-height:1.5; color:var(--ink); }
+    ul.ticket-list li::before { content:'▹'; position:absolute; left:0; color:var(--accent); font-weight:700; }
+
+    ol.step-list { list-style:none; counter-reset:step; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; }
+    ol.step-list li { position:relative; padding-left:40px; font-size:15.5px; line-height:1.55; min-width:0; }
+    ol.step-list li::before { counter-increment:step; content:counter(step); position:absolute; left:0; top:-1px; width:26px; height:26px; border-radius:50%; background:var(--card-accent); color:var(--step-num-ink); display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:13px; transition: background var(--tick) ease; }
+    ol.step-list b { font-family:'JetBrains Mono',monospace; font-size:13.5px; background:var(--card); padding:1px 6px; border-radius:4px; border:1px solid var(--card-border); }
+
+    .quote-block { font-family:'Fraunces', serif; font-style:italic; font-size:19px; line-height:1.5; color:var(--ink); border-left:3px solid var(--accent); padding:4px 0 4px 18px; margin:6px 0 20px; }
+    .note { background:var(--card); border:1px dashed var(--card-border); border-radius:10px; padding:12px 16px; font-size:14px; color:var(--card-ink-soft); margin-top:14px; }
+    .note b { color:var(--card-ink); }
+
+    pre.code-block {
+      background:#0E151E; color:#D4E6F5; border-radius:10px; padding:18px 20px;
+      font-size:14px; line-height:1.6; overflow-x:auto; margin:0; min-width:0;
+      box-shadow: inset 0 0 0 1px rgba(0,180,255,0.08), 0 6px 18px var(--shadow);
+    }
+    pre.code-block code { white-space:pre; }
+    .tok-kw{ color:#FFB86C; font-weight:600; }
+    .tok-str{ color:#A3D9A5; }
+    .tok-com{ color:#7A8BA3; font-style:italic; }
+    .tok-type{ color:#7FB0D6; }
+    .tok-num{ color:#D99A6C; }
+    .tok-fn{ color:#66D9FF; }
+
+    .code-cap { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:8px; }
+
+    .op-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(0,1fr)); gap:10px; min-width:0; }
+    .op-chip { background:var(--card); border:1px solid var(--card-border); border-radius:8px; padding:10px 12px; text-align:center; min-width:0; }
+    .op-chip .sym { font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:700; color:var(--card-accent); }
+    .op-chip .desc { font-size:12px; color:var(--card-ink-soft); margin-top:2px; }
+
+    .two-col pre.code-block { max-width:100%; overflow-x:auto; white-space:pre-wrap; word-break:break-word; }
+    .two-col .code-block code { white-space:pre-wrap; word-break:break-word; }
+
+    /* HUD */
+    .hud { position:fixed; bottom:16px; right:20px; z-index:50; display:flex; align-items:center; gap:12px; }
+    .counter { font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700; background:var(--card); border:1px solid var(--card-border); color:var(--card-ink); padding:8px 16px; border-radius:999px; box-shadow:0 4px 14px var(--shadow); transition: background var(--tick) ease, color var(--tick) ease, border-color var(--tick) ease; }
+    .hint { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-soft); letter-spacing:0.05em; display:none; }
+    @media (min-width:640px){ .hint { display:block; } }
+
+    .click-zone { position:fixed; inset:0; z-index:1; cursor:pointer; }
+    .slide::-webkit-scrollbar { width:8px; }
+    .slide::-webkit-scrollbar-thumb { background:var(--card-border); border-radius:8px; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+  <!-- Query Heat Gauge (replaces coffee roast) -->
+  <div class="query-gauge" id="queryGauge">
+    <svg viewBox="0 0 40 40" fill="none">
+      <rect x="6" y="12" width="22" height="18" rx="2" stroke="var(--ink)" stroke-width="1.4" fill="var(--accent)" opacity="0.2" />
+      <rect x="10" y="16" width="14" height="3" rx="1" fill="var(--accent)" opacity="0.7" class="db-icon" />
+      <rect x="10" y="22" width="14" height="3" rx="1" fill="var(--accent)" opacity="0.5" class="db-icon" style="animation-delay:0.3s;" />
+      <circle cx="28" cy="18" r="3" stroke="var(--accent)" stroke-width="1.2" fill="none" />
+      <path d="M30 20 L34 24 M30 16 L34 12" stroke="var(--accent)" stroke-width="1.2" />
+    </svg>
+    <span class="heat-label" id="heatLabel">Query Cool</span>
+  </div>
+
+  <div class="click-zone" id="clickZone"></div>
+  <div class="stage" id="stage"></div>
+
+  <div class="hud">
+    <span class="hint">click / → to continue</span>
+    <div class="counter" id="counter">1 / 18</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // SQL + PHP keyword highlighting
+  var KEYWORDS = ['SELECT','INSERT','UPDATE','DELETE','FROM','WHERE','JOIN','INNER','LEFT','RIGHT','GROUP','BY','ORDER','HAVING','LIMIT','OFFSET','CREATE','TABLE','DROP','ALTER','ADD','COLUMN','PRIMARY','KEY','FOREIGN','UNIQUE','INDEX','DATABASE','USE','SHOW','DESCRIBE','EXPLAIN','VALUES','INTO','SET','ON','AS','AND','OR','NOT','NULL','DEFAULT','CASCADE','RESTRICT','UNION','ALL','DISTINCT','COUNT','SUM','AVG','MAX','MIN','LIKE','BETWEEN','IS','TRUE','FALSE','BOOLEAN','INT','VARCHAR','TEXT','DATE','DATETIME','TIMESTAMP','FLOAT','DOUBLE','DECIMAL','CHAR','BLOB','ENUM','SET','TRIGGER','PROCEDURE','FUNCTION','VIEW','TEMPORARY','IF','ELSE','WHILE','LOOP','REPEAT','BEGIN','END','DECLARE','EXIT','CONTINUE','ITERATE','LEAVE','RETURN','CALL','DO','HANDLER','CONDITION','SIGNAL','RESIGNAL','GET','DIAGNOSTICS','STACKED','NO','SQL','EXCEPTION','CONTINUE','UNDO','READS','MODIFIES','SQL','SECURITY','DEFINER','INVOKER','DETERMINISTIC','NOT','DETERMINISTIC','CONTAINS','SQL','NO','SQL','READS','SQL','DATA','MODIFIES','SQL','DATA','COMMIT','ROLLBACK','START','TRANSACTION','SAVEPOINT','RELEASE','LOCK','TABLES','UNLOCK'];
+  var KW_RE = new RegExp('\\b(' + KEYWORDS.join('|') + ')\\b', 'i');
+  var TOKEN_RE = /(\/\/.*$)|("(?:\\.|[^"\\])*")|('(?:\\.|[^'\\])')|\b([A-Za-z_][A-Za-z0-9_]*)\b|\b(\d+\.?\d*)\b/gm;
+
+  function highlightSQL(src){
+    var esc = escapeHtml(src);
+    return esc.replace(TOKEN_RE, function(match, comment, str, chr, word, num){
+      if(comment !== undefined) return '<span class="tok-com">' + comment + '</span>';
+      if(str !== undefined) return '<span class="tok-str">' + str + '</span>';
+      if(chr !== undefined) return '<span class="tok-str">' + chr + '</span>';
+      if(word !== undefined){
+        if(KW_RE.test(word)) return '<span class="tok-kw">' + word + '</span>';
+        if(/^[A-Z]/.test(word)) return '<span class="tok-type">' + word + '</span>';
+        return word;
+      }
+      if(num !== undefined) return '<span class="tok-num">' + num + '</span>';
+      return match;
+    });
+  }
+  function code(src){
+    return '<pre class="code-block"><code>' + highlightSQL(src.replace(/^\n/,'').replace(/\n$/,'')) + '</code></pre>';
+  }
+
+  var S = [];
+
+  // ——— SLIDES ———
+  S.push({
+    eyebrow: 'Data Blueprint — Intro',
+    title: 'MySQL + WAMP + PHP',
+    lede: 'A beginner-friendly guide to setting up your local web development environment and writing your first database queries.',
+    body:
+      '<div class="quote-block">"Databases are the backbone of modern web apps. Let\'s get you started with MySQL, WAMP, and a dash of PHP."</div>' +
+      '<div class="card-grid cols-2">' +
+        '<div class="card"><h3>⚡ What is WAMP?</h3><p>Windows + Apache + MySQL + PHP — a complete local server stack for development.</p></div>' +
+        '<div class="card"><h3>🗄️ Why MySQL?</h3><p>The world\'s most popular open-source relational database. Reliable, fast, and easy to learn.</p></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'Step 1 — Download WAMP',
+    title: 'Getting WAMP Server',
+    lede: 'First, download the WAMP installer from the official website.',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>📥 Download</h3><ul class="ticket-list">' +
+          '<li>Go to <b>wampserver.aviatechno.net</b></li>' +
+          '<li>Choose the version compatible with your Windows (64-bit recommended)</li>' +
+          '<li>Save the installer (.exe) to your computer</li>' +
+        '</ul></div>' +
+        '<div class="card"><h3>✅ System Requirements</h3><ul class="ticket-list">' +
+          '<li>Windows 7, 8, 10, or 11</li>' +
+          '<li>Microsoft Visual C++ Redistributable (2015-2022)</li>' +
+          '<li>At least 1GB RAM, 2GB free disk space</li>' +
+        '</ul></div>' +
+      '</div>' +
+      '<div class="note"><b>Pro tip:</b> If you\'re on macOS or Linux, consider XAMPP or MAMP instead — the concepts are the same.</div>'
+  });
+
+  S.push({
+    eyebrow: 'Step 2 — Install WAMP',
+    title: 'Running the Installer',
+    body:
+      '<ol class="step-list">' +
+        '<li>Run the <b>.exe</b> file you downloaded.</li>' +
+        '<li>If Windows Defender prompts, click <b>Run anyway</b>.</li>' +
+        '<li>Choose your language (usually English).</li>' +
+        '<li>Accept the license agreement and click <b>Next</b>.</li>' +
+        '<li>Select the installation folder (default: <b>C:\\wamp64</b>).</li>' +
+        '<li>Click <b>Install</b> and wait for the process to complete.</li>' +
+        '<li>After installation, <b>launch WAMP</b> from the Start menu.</li>' +
+      '</ol>' +
+      '<div class="note">You\'ll see a green WAMP icon in your system tray when it\'s running — that means all services are active.</div>'
+  });
+
+  S.push({
+    eyebrow: 'Step 3 — Start WAMP',
+    title: 'How to Open WAMP & Verify Services',
+    body:
+      '<div class="two-col">' +
+        '<div>' +
+          '<h3 style="color:var(--accent); margin-bottom:8px;">▶️ Start WAMP</h3>' +
+          '<ul class="ticket-list">' +
+            '<li>From the Start menu, search for <b>WAMP</b> and click on <b>WampServer</b>.</li>' +
+            '<li>Alternatively, double-click the <b>WampServer</b> icon on your desktop.</li>' +
+            '<li>Wait until the tray icon turns <b style="color:#4CAF50;">green</b> (may take 5-10 seconds).</li>' +
+          '</ul>' +
+        '</div>' +
+        '<div>' +
+          '<h3 style="color:var(--accent); margin-bottom:8px;">🔍 Verify Services</h3>' +
+          '<ul class="ticket-list">' +
+            '<li>Left-click the WAMP tray icon.</li>' +
+            '<li>Check that <b>Apache</b> and <b>MySQL</b> services are running.</li>' +
+            '<li>If the icon is <b style="color:#FF9800;">orange</b>, something is wrong (port conflict or missing VC++).</li>' +
+          '</ul>' +
+        '</div>' +
+      '</div>' +
+      code('// Open phpMyAdmin via the tray icon\n// Click "phpMyAdmin" to access your databases via browser')
+  });
+
+  S.push({
+    eyebrow: 'Step 4 — phpMyAdmin',
+    title: 'Accessing Your Databases',
+    lede: 'phpMyAdmin is a web-based tool to manage MySQL databases visually.',
+    body:
+      '<div class="two-col">' +
+        '<div>' +
+          '<h3 style="color:var(--accent); margin-bottom:8px;">🌐 Open phpMyAdmin</h3>' +
+          '<ul class="ticket-list">' +
+            '<li>Click the WAMP tray icon.</li>' +
+            '<li>Select <b>phpMyAdmin</b> from the menu.</li>' +
+            '<li>Your default browser opens with the phpMyAdmin interface.</li>' +
+            '<li>Default login: <b>root</b> (no password).</li>' +
+          '</ul>' +
+        '</div>' +
+        '<div class="card"><h3>📋 What you see</h3><ul class="ticket-list">' +
+          '<li>List of existing databases on the left.</li>' +
+          '<li>SQL query editor in the center.</li>' +
+          '<li>Table structure and data views.</li>' +
+          '<li>Import/export tools for backups.</li>' +
+        '</ul></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'SQL Basics — CREATE',
+    title: 'Creating a Database & Table',
+    lede: 'Start by creating a database and your first table.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('CREATE DATABASE my_first_db;\n\nUSE my_first_db;\n\nCREATE TABLE users (\n    id INT AUTO_INCREMENT PRIMARY KEY,\n    username VARCHAR(50) NOT NULL,\n    email VARCHAR(100) NOT NULL,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);') + '</div>' +
+        '<div class="card"><h3>🧩 Breakdown</h3><ul class="ticket-list">' +
+          '<li><b>CREATE DATABASE</b> — creates a new database.</li>' +
+          '<li><b>USE</b> — selects the database to work with.</li>' +
+          '<li><b>CREATE TABLE</b> — defines a new table.</li>' +
+          '<li><b>INT, VARCHAR</b> — column data types.</li>' +
+          '<li><b>PRIMARY KEY</b> — unique identifier for each row.</li>' +
+        '</ul></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'SQL Basics — INSERT',
+    title: 'Adding Data to Your Table',
+    lede: 'Insert records into your users table.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('INSERT INTO users (username, email)\nVALUES\n    (\'alice_wonder\', \'alice@example.com\'),\n    (\'bob_builder\', \'bob@example.com\'),\n    (\'charlie_chaplin\', \'charlie@example.com\');') + '</div>' +
+        '<div class="card"><h3>📝 Notes</h3><ul class="ticket-list">' +
+          '<li>Specify column names after <b>INSERT INTO</b>.</li>' +
+          '<li>Use <b>VALUES</b> with matching order.</li>' +
+          '<li>Strings must be in <b>single quotes</b>.</li>' +
+          '<li><b>id</b> is auto-generated (AUTO_INCREMENT).</li>' +
+        '</ul></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'SQL Basics — SELECT',
+    title: 'Reading Data with SELECT',
+    lede: 'Retrieve data from your table using SELECT statements.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('-- Select all users\nSELECT * FROM users;\n\n-- Select specific columns\nSELECT username, email FROM users;\n\n-- Filter with WHERE\nSELECT * FROM users\nWHERE username LIKE \'%bob%\';') + '</div>' +
+        '<div class="card"><h3>🎯 SELECT variants</h3><ul class="ticket-list">' +
+          '<li><b>*</b> — all columns.</li>' +
+          '<li><b>WHERE</b> — filter rows.</li>' +
+          '<li><b>LIKE</b> — pattern matching.</li>' +
+          '<li><b>ORDER BY</b> — sorting results.</li>' +
+        '</ul></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'SQL Basics — UPDATE & DELETE',
+    title: 'Modifying and Removing Data',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('-- Update a user\'s email\nUPDATE users\nSET email = \'alice.new@example.com\'\nWHERE id = 1;\n\n-- Delete a user\nDELETE FROM users\nWHERE id = 3;') + '</div>' +
+        '<div class="card"><h3>⚠️ Be careful!</h3><ul class="ticket-list">' +
+          '<li>Always use <b>WHERE</b> with UPDATE/DELETE.</li>' +
+          '<li>Without WHERE, <b>all rows</b> are affected.</li>' +
+          '<li>Consider using <b>SELECT</b> first to preview.</li>' +
+          '<li>Use <b>LIMIT</b> to restrict rows.</li>' +
+        '</ul></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'PHP + MySQL',
+    title: 'Connecting PHP to MySQL',
+    lede: 'Use PHP to interact with your database dynamically.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('<?php\n// Database connection\n$host = \'localhost\';\n$dbname = \'my_first_db\';\n$user = \'root\';\n$pass = \'\';\n\ntry {\n    $pdo = new PDO(\n        "mysql:host=$host;dbname=$dbname",\n        $user, $pass\n    );\n    echo "Connected successfully!";\n} catch (PDOException $e) {\n    die("Connection failed: " . $e->getMessage());\n}\n?>') + '</div>' +
+        '<div class="card"><h3>🔑 Key points</h3><ul class="ticket-list">' +
+          '<li><b>PDO</b> is a secure way to connect.</li>' +
+          '<li>Default root user has <b>no password</b> locally.</li>' +
+          '<li>Always use <b>try-catch</b> for error handling.</li>' +
+          '<li>Store credentials in a <b>config file</b>.</li>' +
+        '</ul></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'PHP — SELECT Query',
+    title: 'Fetching Data with PHP',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('<?php\n// ... connection code ...\n\n$stmt = $pdo->query("SELECT * FROM users");\n$users = $stmt->fetchAll(PDO::FETCH_ASSOC);\n\nforeach ($users as $user) {\n    echo $user[\'username\'] . " — " . $user[\'email\'] . "<br>";\n}\n?>') + '</div>' +
+        '<div class="card"><h3>📦 Fetch modes</h3><ul class="ticket-list">' +
+          '<li><b>FETCH_ASSOC</b> — associative array.</li>' +
+          '<li><b>FETCH_OBJ</b> — object.</li>' +
+          '<li><b>FETCH_BOTH</b> — both (default).</li>' +
+          '<li><b>FETCH_COLUMN</b> — single column.</li>' +
+        '</ul></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'PHP — INSERT with PDO',
+    title: 'Inserting Data Securely',
+    lede: 'Use prepared statements to prevent SQL injection.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('<?php\n// ... connection code ...\n\n$sql = "INSERT INTO users (username, email) \n        VALUES (:username, :email)";\n$stmt = $pdo->prepare($sql);\n\n$stmt->execute([\n    \':username\' => \'dave_dev\',\n    \':email\' => \'dave@example.com\'\n]);\n\necho "User inserted with ID: " . $pdo->lastInsertId();\n?>') + '</div>' +
+        '<div class="card"><h3>🛡️ Security first</h3><ul class="ticket-list">' +
+          '<li><b>Prepared statements</b> prevent SQL injection.</li>' +
+          '<li>Use <b>:placeholders</b> for values.</li>' +
+          '<li><b>lastInsertId()</b> gets the auto-generated ID.</li>' +
+          '<li>Always validate user input on the server.</li>' +
+        '</ul></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'WAMP — Useful Shortcuts',
+    title: 'WAMP Quick Actions',
+    body:
+      '<div class="card-grid cols-4">' +
+        '<div class="card"><h3>🔄 Restart</h3><p>Right-click tray icon → Restart All Services</p></div>' +
+        '<div class="card"><h3>🌐 Localhost</h3><p>Click tray icon → localhost or go to <b>http://localhost</b></p></div>' +
+        '<div class="card"><h3>📁 www folder</h3><p>Your PHP files go in <b>C:\\wamp64\\www\\</b></p></div>' +
+        '<div class="card"><h3>🐘 PHP Info</h3><p>Create a file <b>info.php</b> with <code>&lt;?php phpinfo(); ?&gt;</code></p></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'Common Errors',
+    title: 'Troubleshooting WAMP & MySQL',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>🟠 Orange icon</h3><ul class="ticket-list">' +
+          '<li>Port 80/443 in use (Skype, IIS).</li>' +
+          '<li>Change Apache port in <b>httpd.conf</b>.</li>' +
+          '<li>Check Windows services for conflicts.</li>' +
+        '</ul></div>' +
+        '<div class="card"><h3>🔴 Red icon</h3><ul class="ticket-list">' +
+          '<li>Apache or MySQL failed to start.</li>' +
+          '<li>Check error logs: <b>wamp64/logs/</b>.</li>' +
+          '<li>Missing VC++ redistributable.</li>' +
+        '</ul></div>' +
+      '</div>' +
+      '<div class="note"><b>Quick fix:</b> Try running WAMP as Administrator, or check your firewall settings.</div>'
+  });
+
+  S.push({
+    eyebrow: 'SQL — Joins',
+    title: 'Combining Tables with JOIN',
+    lede: 'Relational databases shine when you join related tables.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('-- Create a posts table\nCREATE TABLE posts (\n    id INT AUTO_INCREMENT PRIMARY KEY,\n    user_id INT,\n    title VARCHAR(200),\n    content TEXT,\n    FOREIGN KEY (user_id) REFERENCES users(id)\n);\n\n-- Join users with their posts\nSELECT users.username, posts.title\nFROM users\nINNER JOIN posts ON users.id = posts.user_id;') + '</div>' +
+        '<div class="card"><h3>🔗 JOIN types</h3><ul class="ticket-list">' +
+          '<li><b>INNER JOIN</b> — matching rows only.</li>' +
+          '<li><b>LEFT JOIN</b> — all from left table.</li>' +
+          '<li><b>RIGHT JOIN</b> — all from right table.</li>' +
+          '<li><b>FOREIGN KEY</b> links tables.</li>' +
+        '</ul></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'PHP — Display Data',
+    title: 'Building a Simple User List',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('<?php\n// fetch users and display in HTML\n$users = $pdo->query("SELECT * FROM users");\n?>\n\n<table border="1">\n<tr><th>ID</th><th>Username</th><th>Email</th></tr>\n<?php while($row = $users->fetch(PDO::FETCH_ASSOC)): ?>\n<tr>\n    <td><?= $row[\'id\'] ?></td>\n    <td><?= htmlspecialchars($row[\'username\']) ?></td>\n    <td><?= htmlspecialchars($row[\'email\']) ?></td>\n</tr>\n<?php endwhile; ?>\n</table>') + '</div>' +
+        '<div class="card"><h3>✨ Best practices</h3><ul class="ticket-list">' +
+          '<li>Use <b>htmlspecialchars()</b> to prevent XSS.</li>' +
+          '<li>Keep logic separate from presentation.</li>' +
+          '<li>Consider using a template engine.</li>' +
+          '<li>Always close database connections.</li>' +
+        '</ul></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'Recap & Next Steps',
+    title: 'What You\'ve Learned',
+    body:
+      '<div class="card-grid cols-4">' +
+        '<div class="card"><h3>🗄️ MySQL</h3><p>CREATE, INSERT, SELECT, UPDATE, DELETE, JOIN</p></div>' +
+        '<div class="card"><h3>🖥️ WAMP</h3><p>Installation, starting services, phpMyAdmin</p></div>' +
+        '<div class="card"><h3>🐘 PHP</h3><p>PDO connection, prepared statements, fetching data</p></div>' +
+        '<div class="card"><h3>🛠️ Best practices</h3><p>Security, error handling, troubleshooting</p></div>' +
+      '</div>' +
+      '<div class="quote-block" style="margin-top:20px;">You\'ve built a solid foundation. Next: explore more advanced SQL, frameworks, and full-stack development.</div>'
+  });
+
+  S.push({
+    eyebrow: 'Final — Resources',
+    title: 'Where to Go From Here',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>📚 Recommended</h3><ul class="ticket-list">' +
+          '<li>MySQL official documentation</li>' +
+          '<li>PHP.net manual — PDO section</li>' +
+          '<li>Laravel or Symfony (PHP frameworks)</li>' +
+          '<li>Database design & normalization</li>' +
+        '</ul></div>' +
+        '<div class="card"><h3>🔧 Practice</h3><ul class="ticket-list">' +
+          '<li>Build a blog or to-do app</li>' +
+          '<li>Add user authentication</li>' +
+          '<li>Experiment with JOINs & subqueries</li>' +
+          '<li>Optimize queries with indexes</li>' +
+        '</ul></div>' +
+      '</div>' +
+      '<div class="note"><b>Pro tip:</b> Set up a development environment and start building real projects — that\'s where the real learning happens!</div>' +
+      '<div class="quote-block">Happy coding! If you have questions, drop them in the comments. See you in the next tutorial.</div>'
+  });
+
+  // ——— HEAT GAUGE (3-step) ———
+  function applyHeat(t){
+    var label = t < 0.4 ? 'Query Cool' : (t < 0.7 ? 'Index Warm' : 'Join Hot');
+    document.getElementById('heatLabel').textContent = label;
+  }
+
+  // ——— RENDER & NAVIGATION ———
+  var stage = document.getElementById('stage');
+  var counterEl = document.getElementById('counter');
+  var progressFill = document.getElementById('progressFill');
+  var total = S.length;
+  var current = 0;
+  var animating = false;
+
+  function buildSlideEl(idx){
+    var d = S[idx];
+    var el = document.createElement('div');
+    el.className = 'slide';
+    el.innerHTML =
+      '<div class="slide-inner">' +
+        '<div class="eyebrow">' + d.eyebrow + '</div>' +
+        '<h2 class="slide-title">' + d.title + '</h2>' +
+        (d.lede ? '<div class="lede">' + d.lede + '</div>' : '') +
+        d.body +
+      '</div>';
+    return el;
+  }
+
+  function updateHud(){
+    counterEl.textContent = (current+1) + ' / ' + total;
+    progressFill.style.width = ((current) / (total-1) * 100) + '%';
+    applyHeat(current / (total-1));
+  }
+
+  var curEl = buildSlideEl(0);
+  curEl.classList.add('active');
+  stage.appendChild(curEl);
+  updateHud();
+
+  function goTo(idx, dir){
+    if(animating || idx === current || idx < 0 || idx >= total) return;
+    animating = true;
+    var nextEl = buildSlideEl(idx);
+    nextEl.classList.add(dir > 0 ? 'enter-fwd' : 'enter-bwd');
+    stage.appendChild(nextEl);
+    void nextEl.offsetWidth;
+    var oldEl = curEl;
+    requestAnimationFrame(function(){
+      oldEl.classList.remove('active');
+      oldEl.classList.add(dir > 0 ? 'exit-fwd' : 'exit-bwd');
+      nextEl.classList.remove('enter-fwd','enter-bwd');
+      nextEl.classList.add('active');
+    });
+    current = idx;
+    curEl = nextEl;
+    updateHud();
+    setTimeout(function(){
+      if(oldEl && oldEl.parentNode) oldEl.parentNode.removeChild(oldEl);
+      animating = false;
+    }, 420);
+  }
+
+  function next(){ goTo(current+1, 1); }
+  function prev(){ goTo(current-1, -1); }
+
+  document.getElementById('clickZone').addEventListener('click', function(e){
+    var w = window.innerWidth;
+    if(e.clientX < w * 0.25){ prev(); } else { next(); }
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown'){ e.preventDefault(); next(); }
+    else if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); prev(); }
+    else if(e.key === 'Home'){ e.preventDefault(); goTo(0, -1); }
+    else if(e.key === 'End'){ e.preventDefault(); goTo(total-1, 1); }
+    else if(e.key === 'ArrowUp'){ e.preventDefault(); prev(); }
+    else if(e.key === 'ArrowDown'){ e.preventDefault(); next(); }
+  });
+})();
+</script>
+</body>
+</html>

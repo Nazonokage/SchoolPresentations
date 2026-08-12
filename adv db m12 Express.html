@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Module 12 — Node.js Basics</title>
+<style>
+  :root{
+    --bg:#0B1220;
+    --surface:#111B2E;
+    --surface2:#182644;
+    --border: rgba(140,163,199,0.16);
+    --border-strong: rgba(140,163,199,0.30);
+    --text:#E9EEF6;
+    --muted:#8CA0BF;
+    --muted-dim:#5E7191;
+    --accent:#6CC24A;
+    --accent-soft: rgba(108,194,74,0.14);
+    --accent-line: rgba(108,194,74,0.4);
+    --accent2:#F5A623;
+    --accent2-soft: rgba(245,166,35,0.14);
+    --danger:#E76A6A;
+    --code-bg:#0A101E;
+    --radius: 16px;
+    --font-display: 'Century Gothic','Avenir Next','Trebuchet MS','Segoe UI',sans-serif;
+    --font-body: -apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --font-mono: 'JetBrains Mono','Fira Code',Consolas,'SFMono-Regular',Menlo,monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--font-body);}
+  ::selection{background:var(--accent-soft);color:var(--text);}
+
+  .deck{position:relative;width:100vw;height:100vh;overflow:hidden;background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(108,194,74,0.08), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(245,166,35,0.06), transparent 60%),
+      var(--bg);
+  }
+
+  .slide{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    padding: 56px 88px 70px;
+    opacity:0; transform: translateX(48px);
+    transition: opacity 350ms ease, transform 350ms ease;
+    pointer-events:none; overflow-y:auto;
+  }
+  .slide.active{ opacity:1; transform:translateX(0); pointer-events:auto; z-index:2;}
+  .slide.exit-left{ transform: translateX(-48px); }
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition:none; }
+  }
+
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--font-mono); font-size:12.5px; letter-spacing:0.06em; text-transform:uppercase;
+    color:var(--accent); background:var(--accent-soft); border:1px solid var(--accent-line);
+    padding:6px 12px; border-radius:999px; width:fit-content; margin-bottom:22px;
+  }
+  .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);}
+
+  h1.title{ font-family:var(--font-display); font-weight:700; font-size:clamp(30px,3.6vw,46px); line-height:1.12; margin:0 0 18px; letter-spacing:-0.01em;}
+  h2.subtitle{ font-family:var(--font-body); font-weight:400; font-size:17px; color:var(--muted); margin:0 0 28px; max-width:760px; line-height:1.55;}
+
+  .content{ flex:1; min-height:0; display:flex; flex-direction:column; gap:18px;}
+
+  p{ line-height:1.6; color:var(--text); font-size:15.5px; margin:0 0 10px;}
+  p.muted{ color:var(--muted); }
+  strong{ color:var(--text); font-weight:650; }
+  code.inline{ font-family:var(--font-mono); font-size:0.88em; background:var(--surface2); border:1px solid var(--border); color:var(--accent); padding:1.5px 6px; border-radius:5px;}
+
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:22px; min-height:0;}
+  .grid-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; min-height:0;}
+
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:22px 24px;}
+  .card h3{ margin:0 0 8px; font-family:var(--font-display); font-size:17px; font-weight:700;}
+  .card p{ font-size:14.5px; }
+
+  .callout{ border-radius:var(--radius); padding:16px 20px; border:1px solid; display:flex; gap:12px; align-items:flex-start;}
+  .callout.tip{ background:var(--accent-soft); border-color:var(--accent-line); }
+  .callout.note{ background:var(--accent2-soft); border-color:rgba(245,166,35,0.4); }
+  .callout .icon{ font-family:var(--font-mono); font-weight:700; font-size:13px; padding:3px 8px; border-radius:6px; flex-shrink:0; margin-top:1px;}
+  .callout.tip .icon{ background:var(--accent); color:#04240a;}
+  .callout.note .icon{ background:var(--accent2); color:#2a1900;}
+  .callout p{ margin:0; font-size:14.5px; color:var(--text);}
+
+  ol.steps, ul.list{ margin:0; padding-left:22px; }
+  ol.steps li, ul.list li{ font-size:15px; line-height:1.6; margin-bottom:8px; color:var(--text);}
+  ul.list{ list-style:none; padding-left:0;}
+  ul.list li{ padding-left:26px; position:relative;}
+  ul.list li::before{ content:"›"; position:absolute; left:0; color:var(--accent); font-weight:700;}
+
+  /* code cards */
+  .code-card{ background:var(--code-bg); border:1px solid var(--border); border-radius:var(--radius); display:flex; flex-direction:column; overflow:hidden; min-height:0;}
+  .code-card .code-head{ flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:var(--surface2); border-bottom:1px solid var(--border);}
+  .code-head .fname{ font-family:var(--font-mono); font-size:12.5px; color:var(--muted); display:flex; align-items:center; gap:8px;}
+  .code-head .fname .lang-pill{ background:var(--accent-soft); color:var(--accent); border-radius:5px; padding:2px 7px; font-size:10.5px; letter-spacing:0.04em; text-transform:uppercase;}
+  .copy-btn{ font-family:var(--font-mono); font-size:11.5px; color:var(--muted); background:transparent; border:1px solid var(--border-strong); padding:5px 10px; border-radius:6px; cursor:pointer; transition:all .15s ease;}
+  .copy-btn:hover{ color:var(--text); border-color:var(--accent-line); background:var(--accent-soft); }
+  .copy-btn.copied{ color:var(--accent); border-color:var(--accent-line); background:var(--accent-soft);}
+  .code-card pre{ margin:0; flex:1; overflow:auto; min-height:0; padding:16px 18px; }
+  .code-card code{ font-family:var(--font-mono); font-size:13.2px; line-height:1.65; white-space:pre; color:#CBD6E6;}
+  .tok-k{ color:#7FB9F0; } .tok-s{ color:var(--accent); } .tok-c{ color:var(--muted-dim); font-style:italic;} .tok-n{ color:var(--accent2); }
+
+  .fixed-row{ display:grid; grid-template-columns:1fr 1fr; gap:22px; height:min(520px,58vh); min-height:0;}
+  .fixed-row > *{ height:100%; min-height:0; }
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); display:flex; flex-direction:column; overflow:hidden; min-height:0;}
+  .panel .panel-head{ flex-shrink:0; padding:10px 16px; background:var(--surface2); border-bottom:1px solid var(--border); font-family:var(--font-mono); font-size:12px; color:var(--muted); letter-spacing:0.04em; text-transform:uppercase;}
+  .panel .panel-body{ flex:1; overflow:auto; min-height:0; padding:16px 18px; display:flex; flex-direction:column; gap:12px;}
+  .panel .panel-body p{ font-size:14px; }
+  .term-line{ font-family:var(--font-mono); font-size:13px; color:var(--muted); }
+  .term-line .prompt{ color:var(--accent); margin-right:6px;}
+  .term-out{ font-family:var(--font-mono); font-size:13px; background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:10px 12px; color:#CBD6E6;}
+
+  /* diagram */
+  .diagram{ display:flex; flex-direction:column; gap:10px; }
+  .diag-step{ display:flex; align-items:center; gap:16px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 18px;}
+  .diag-num{ font-family:var(--font-mono); font-size:13px; color:var(--accent); background:var(--accent-soft); border:1px solid var(--accent-line); width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .diag-step h4{ margin:0 0 3px; font-size:14.5px; font-family:var(--font-display);}
+  .diag-step p{ margin:0; font-size:13px; color:var(--muted);}
+  .diag-arrow{ text-align:center; color:var(--muted-dim); font-size:15px; margin:-2px 0;}
+
+  /* MCQ */
+  .mcq-grid{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  .mcq{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px 20px;}
+  .mcq .qnum{ font-family:var(--font-mono); color:var(--accent); font-size:12px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;}
+  .pts{ font-family:var(--font-mono); font-size:10.5px; color:var(--accent2); background:var(--accent2-soft); border:1px solid rgba(245,166,35,0.4); padding:2px 8px; border-radius:999px; letter-spacing:0.03em;}
+  .points-strip{ display:flex; gap:10px; margin-bottom:4px; flex-wrap:wrap; }
+  .points-strip .chip{ font-family:var(--font-mono); font-size:11.5px; color:var(--muted); background:var(--surface); border:1px solid var(--border); padding:5px 12px; border-radius:999px;}
+  .points-strip .chip b{ color:var(--accent);}
+  .scenario-card{ background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent2); border-radius:14px; padding:18px 22px;}
+  .scenario-card h3{ margin:0 0 8px; font-family:var(--font-display); font-size:15.5px; display:flex; align-items:center; gap:10px;}
+  .scenario-card p{ font-size:14.5px; margin:0;}
+  .paper-note{ display:flex; align-items:center; gap:10px; font-family:var(--font-mono); font-size:12px; color:var(--muted); background:var(--surface2); border:1px dashed var(--border-strong); border-radius:10px; padding:10px 14px;}
+  .mcq .qtext{ font-size:14.5px; margin:0 0 12px; font-weight:600; line-height:1.5;}
+  .mcq .opts{ display:flex; flex-direction:column; gap:7px;}
+  .mcq .opt{ font-size:13.5px; color:var(--muted); background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:8px 11px;}
+  .mcq .opt b{ color:var(--text); margin-right:6px;}
+  .mcq.center-last{ grid-column: 1 / -1; max-width:calc(50% - 9px); margin:0 auto;}
+
+  /* answer key */
+  .akey{ background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:10px; padding:12px 16px; margin-bottom:10px;}
+  .akey .q{ font-size:13.5px; color:var(--muted); margin:0 0 4px;}
+  .akey .a{ font-size:14px; margin:0 0 4px;}
+  .akey .a b{ color:var(--accent);}
+  .akey .exp{ font-size:12.8px; color:var(--muted); margin:0; line-height:1.5;}
+
+  /* title slide */
+  .hero{ flex:1; display:flex; flex-direction:column; justify-content:center; gap:26px; max-width:900px;}
+  .hero .badge-row{ display:flex; gap:10px; align-items:center; margin-top:6px;}
+  .logo-chip{ display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:8px 14px;}
+  .logo-chip img{ width:22px; height:22px;}
+  .logo-chip span{ font-family:var(--font-mono); font-size:12.5px; color:var(--muted);}
+  .hero-visual{ position:absolute; right:70px; top:50%; transform:translateY(-50%); opacity:0.9;}
+
+  .quote-card{ background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent2); border-radius:12px; padding:20px 24px; margin-bottom:14px;}
+  .quote-card p{ font-size:16px; font-style:italic; margin:0; color:var(--text); line-height:1.6;}
+  .quote-card .src{ margin-top:10px; font-family:var(--font-mono); font-size:11.5px; color:var(--muted); font-style:normal;}
+
+  .recap-list{ display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .recap-item{ display:flex; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px;}
+  .recap-item .check{ color:var(--accent); font-family:var(--font-mono); flex-shrink:0;}
+
+  .closing-wrap{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:22px;}
+  .closing-wrap .status{ font-family:var(--font-mono); font-size:12.5px; color:var(--accent); letter-spacing:0.08em;}
+
+  /* progress + nav chrome */
+  .progress-bar{ position:fixed; top:0; left:0; height:3px; background:var(--accent); box-shadow:0 0 10px var(--accent); z-index:50; transition:width 300ms ease;}
+  .counter{ position:fixed; bottom:20px; right:28px; font-family:var(--font-mono); font-size:12px; color:var(--muted); background:rgba(11,18,32,0.7); border:1px solid var(--border); padding:6px 12px; border-radius:999px; z-index:50; backdrop-filter:blur(6px);}
+  .hint{ position:fixed; bottom:20px; left:28px; font-family:var(--font-mono); font-size:11px; color:var(--muted-dim); z-index:50; display:flex; gap:14px;}
+  .hint kbd{ border:1px solid var(--border-strong); border-radius:4px; padding:1px 6px; font-family:var(--font-mono); color:var(--muted); margin-right:4px;}
+
+  .shortcuts-overlay{ position:fixed; inset:0; background:rgba(6,10,18,0.82); backdrop-filter:blur(4px); z-index:100; display:none; align-items:center; justify-content:center;}
+  .shortcuts-overlay.show{ display:flex; }
+  .shortcuts-box{ background:var(--surface); border:1px solid var(--border-strong); border-radius:16px; padding:32px 36px; width:380px;}
+  .shortcuts-box h3{ margin:0 0 18px; font-family:var(--font-display);}
+  .shortcuts-box .row{ display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:13.5px; color:var(--muted);}
+  .shortcuts-box .row:last-child{ border-bottom:none;}
+
+  @media (max-width: 900px){
+    .slide{ padding:38px 24px 84px; }
+    .grid-2, .fixed-row, .grid-3, .mcq-grid, .recap-list{ grid-template-columns:1fr; height:auto;}
+    .fixed-row{ height:auto; }
+    .fixed-row > *{ height:min(360px,50vh);}
+    .hero-visual{ display:none; }
+    .mcq.center-last{ max-width:100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck" id="deck">
+  <div class="progress-bar" id="progressBar" style="width:0%"></div>
+  <div id="slideContainer"></div>
+  <div class="counter" id="counter">1 / 1</div>
+  <div class="hint"><span><kbd>&#8594;</kbd>next</span><span><kbd>&#8592;</kbd>prev</span><span><kbd>?</kbd>shortcuts</span></div>
+</div>
+
+<div class="shortcuts-overlay" id="shortcutsOverlay">
+  <div class="shortcuts-box">
+    <h3>Shortcuts</h3>
+    <div class="row"><span>Next slide</span><span><kbd>&#8594;</kbd> / Right-click / Mouse4</span></div>
+    <div class="row"><span>Previous slide</span><span><kbd>&#8592;</kbd> / Mouse3</span></div>
+    <div class="row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="row"><span>Toggle this menu</span><span><kbd>?</kbd></span></div>
+    <div class="row"><span>Close menu</span><span><kbd>Esc</kbd></span></div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function hlJS(code){
+    let s = esc(code);
+    s = s.replace(/(\/\/[^\n]*)/g, '<span class="tok-c">$1</span>');
+    s = s.replace(/('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")/g, function(m){
+      if(/tok-c/.test(m)) return m;
+      return '<span class="tok-s">'+m+'</span>';
+    });
+    s = s.replace(/\b(const|let|var|function|require|return)\b/g, '<span class="tok-k">$1</span>');
+    s = s.replace(/\b(\d+)\b/g, '<span class="tok-n">$1</span>');
+    return s;
+  }
+  function hlBash(code){
+    let s = esc(code);
+    s = s.replace(/(#[^\n]*)/g, '<span class="tok-c">$1</span>');
+    s = s.replace(/\b(mkdir|cd|npm|node|curl|init|install)\b/g, '<span class="tok-k">$1</span>');
+    s = s.replace(/(-{1,2}[a-zA-Z]+)/g, '<span class="tok-n">$1</span>');
+    return s;
+  }
+
+  function codeCard(id, filename, lang, rawCode){
+    const html = lang === 'bash' ? hlBash(rawCode) : hlJS(rawCode);
+    return '<div class="code-card">'
+      + '<div class="code-head"><div class="fname"><span class="lang-pill">'+lang+'</span>'+filename+'</div>'
+      + '<button class="copy-btn" data-code-id="'+id+'">Copy</button></div>'
+      + '<pre><code id="'+id+'">'+html+'</code></pre></div>';
+  }
+
+  // raw code snippets (kept in plain strings, single-line strings preserved)
+  const CODE = {
+    hello: "// app.js\nconst greeting = 'Hello, World!';\nconsole.log(greeting);",
+    imports: "const http = require('http');\nconst fs = require('fs'); // The file system module, often used alongside http",
+    createServer: "const server = http.createServer((req, res) => {\n  // Request handling logic goes here\n});",
+    handleReq: "const server = http.createServer((req, res) => {\n  res.statusCode = 200; // OK\n  res.setHeader('Content-Type', 'text/plain'); // Tell the browser it's plain text\n  res.end('Hello, World!'); // Send the response and end the request\n});",
+    listen: "server.listen(3000, () => {\n  console.log('Server is listening on port 3000');\n});",
+    complete: "// Import the built-in http module\nconst http = require('http');\n\n// Create the server\nconst server = http.createServer((req, res) => {\n  // Set the HTTP status code and content type\n  res.statusCode = 200;\n  res.setHeader('Content-Type', 'text/plain');\n\n  // Send the response back to the client\n  res.end('Hello from my first Node.js server!');\n});\n\n// Bind the server to port 3000\nserver.listen(3000, () => {\n  console.log('Server running at http://localhost:3000/');\n});",
+    run: "node server.js",
+    mkdir: "mkdir my-web-server\ncd my-web-server",
+    npminit: "npm init -y",
+    npminstall: "npm install http",
+    drillServer: "// 1. Import the built-in http module\nconst http = require('http');\n\n// 2. Create the server\nconst server = http.createServer((req, res) => {\n  // Set status code to 200 (Success)\n  res.statusCode = 200;\n\n  // Set the response header so the client knows it's plain text\n  res.setHeader('Content-Type', 'text/plain');\n\n  // Send the custom message and signal the end of the response\n  res.end('This is a custom message from the server!');\n});\n\n// 3. Start the server and listen on port 3000\nserver.listen(3000, () => {\n  console.log('Server is running and listening on port 3000');\n});",
+    curl: "curl http://localhost:3000",
+    cafeStarter: "// your-server.js\nconst http = require('http');\n\nconst server = http.createServer((req, res) => {\n  res.statusCode = 200;\n  res.setHeader('Content-Type', 'text/plain');\n\n  // TODO: write your own confirmation message\n  res.end('___________________________');\n});\n\n// TODO: pick a port and log a startup message\nserver.listen(____, () => {\n  console.log('___________________________');\n});",
+    cafeSample: "// cafe-server.js — one possible take\nconst http = require('http');\n\nconst server = http.createServer((req, res) => {\n  res.statusCode = 200;\n  res.setHeader('Content-Type', 'text/plain');\n  res.end('Order received! Your coffee will be ready in 5 minutes.');\n});\n\nserver.listen(4000, () => {\n  console.log('Cafe order server listening on port 4000');\n});"
+  };
+
+  const NODE_LOGO = 'https://cdn.simpleicons.org/nodedotjs/6CC24A';
+  const JS_LOGO = 'https://cdn.simpleicons.org/javascript/F5A623';
+  const NPM_LOGO = 'https://cdn.simpleicons.org/npm/E9EEF6';
+
+  const slides = [];
+
+  // 1. Title
+  slides.push({ eyebrow: 'MODULE 12 &middot; BACKEND FOUNDATIONS', body: `
+    <div class="hero">
+      <h1 class="title" style="font-size:clamp(34px,4.6vw,58px);">Node.js Basics<br>Structure, Syntax &amp; Your First Server</h1>
+      <h2 class="subtitle">You've learned how Node.js thinks &mdash; event-driven, non-blocking, single-threaded. Now it's time to write real code and stand up a working web server from scratch.</h2>
+      <div class="badge-row">
+        <div class="logo-chip"><img src="${NODE_LOGO}" alt="Node.js logo" role="img"><span>Node.js runtime</span></div>
+        <div class="logo-chip"><img src="${JS_LOGO}" alt="JavaScript logo" role="img"><span>JavaScript</span></div>
+        <div class="logo-chip"><img src="${NPM_LOGO}" alt="npm logo" role="img"><span>npm</span></div>
+      </div>
+    </div>
+  `});
+
+  // 2. Lesson Preview & Review
+  slides.push({ eyebrow: 'A &middot; LESSON PREVIEW &amp; REVIEW', body: `
+    <h1 class="title">Where we left off, where we're headed</h1>
+    <div class="content">
+      <div class="grid-2" style="flex:1;">
+        <div class="card">
+          <h3>What we've covered so far</h3>
+          <p>Node.js relies on an <strong>event-driven, non-blocking I/O model</strong>. Rather than blocking a thread while a file read or database query finishes, Node.js uses a single-threaded <strong>event loop</strong>.</p>
+          <p class="muted">Slow operations are delegated to the system kernel, and the loop immediately moves on to the next task.</p>
+        </div>
+        <div class="card">
+          <h3>What's coming up</h3>
+          <ol class="steps">
+            <li>Creating a new JavaScript file with the <code class="inline">.js</code> extension</li>
+            <li>Exploring the basic structure of a Node.js application &mdash; importing modules and creating servers</li>
+            <li>Writing and running a simple HTTP server that responds with a custom message</li>
+          </ol>
+        </div>
+      </div>
+      <div class="callout tip">
+        <span class="icon">TIP</span>
+        <p>By the end of this lesson, you will have built a fully functioning web server on your own computer.</p>
+      </div>
+    </div>
+  `});
+
+  // 3. Core Concept
+  slides.push({ eyebrow: 'B &middot; MAIN LESSON', body: `
+    <h1 class="title">Core concept: the modular approach</h1>
+    <div class="content" style="justify-content:center;">
+      <p style="font-size:17px;max-width:760px;">Node.js promotes a <strong>modular approach</strong> to development. Instead of writing every piece of functionality from scratch, you lean on a vast ecosystem of built-in modules and third-party packages distributed through the npm registry.</p>
+      <div class="grid-3">
+        <div class="card"><h3>Built-in modules</h3><p>Core tools like <code class="inline">http</code> and <code class="inline">fs</code> ship with Node.js &mdash; no install required.</p></div>
+        <div class="card"><h3>npm registry</h3><p>A vast library of third-party packages you can pull into any project.</p></div>
+        <div class="card"><h3>Your logic</h3><p>You focus on what makes your app unique, instead of reinventing the wheel.</p></div>
+      </div>
+    </div>
+  `});
+
+  // 4. Step 1
+  slides.push({ eyebrow: 'B &middot; STEP 1', body: `
+    <h1 class="title">Creating a new JavaScript file</h1>
+    <div class="content">
+      <div class="grid-2" style="flex:1;">
+        <div>
+          <ol class="steps">
+            <li>Open your preferred <strong>text editor</strong> or <strong>IDE</strong> &mdash; Visual Studio Code, Sublime Text, Atom, or even Notepad++ all work.</li>
+            <li>Create a new blank file. When you save it, use the <code class="inline">.js</code> extension &mdash; for example <code class="inline">app.js</code> or <code class="inline">server.js</code>.</li>
+            <li>Start writing JavaScript inside the file.</li>
+            <li>Save it somewhere you can easily reach from your terminal.</li>
+          </ol>
+        </div>
+        ${codeCard('c-hello','app.js','js', CODE.hello)}
+      </div>
+    </div>
+  `});
+
+  // 5. Program structure overview
+  slides.push({ eyebrow: 'B &middot; STEP 2', body: `
+    <h1 class="title">The basic program structure</h1>
+    <h2 class="subtitle">A typical Node.js program follows a predictable shape, built around the <code class="inline">http</code> module.</h2>
+    <div class="content">
+      <div class="diagram">
+        <div class="diag-step"><div class="diag-num">1</div><div><h4>Import required modules</h4><p>Load core modules with <code class="inline">require()</code>.</p></div></div>
+        <div class="diag-arrow">&#8595;</div>
+        <div class="diag-step"><div class="diag-num">2</div><div><h4>Create a server instance</h4><p><code class="inline">http.createServer()</code> registers a callback for every request.</p></div></div>
+        <div class="diag-arrow">&#8595;</div>
+        <div class="diag-step"><div class="diag-num">3</div><div><h4>Handle requests &amp; send responses</h4><p>Read the <code class="inline">req</code> object, shape the <code class="inline">res</code> object.</p></div></div>
+        <div class="diag-arrow">&#8595;</div>
+        <div class="diag-step"><div class="diag-num">4</div><div><h4>Run (bind) the server to a port</h4><p><code class="inline">server.listen()</code> starts accepting traffic.</p></div></div>
+      </div>
+    </div>
+  `});
+
+  // 6. Import + Create server
+  slides.push({ eyebrow: 'B &middot; STEP 2 &middot; PARTS 1&ndash;2', body: `
+    <h1 class="title">Importing modules &amp; creating a server</h1>
+    <div class="content">
+      <div class="grid-2" style="flex:1;">
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <p><strong>1. Importing required modules.</strong> Node.js provides core modules for system-level tasks with zero external downloads. Load them with <code class="inline">require()</code>.</p>
+          ${codeCard('c-imports','server.js','js', CODE.imports)}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <p><strong>2. Creating a server instance.</strong> <code class="inline">http.createServer()</code> accepts a callback that runs every time the server receives a request.</p>
+          ${codeCard('c-createserver','server.js','js', CODE.createServer)}
+        </div>
+      </div>
+    </div>
+  `});
+
+  // 7. Handling requests
+  slides.push({ eyebrow: 'B &middot; STEP 2 &middot; PART 3', body: `
+    <h1 class="title">Handling requests, sending responses</h1>
+    <div class="content">
+      <div class="grid-2" style="flex:1;">
+        <div style="display:flex;flex-direction:column;gap:12px;justify-content:center;">
+          <p>Inside the callback, you define how to handle the incoming <code class="inline">req</code> object and shape the outgoing <code class="inline">res</code> object.</p>
+          <ul class="list">
+            <li>Read headers, URLs, and query parameters from <code class="inline">req</code></li>
+            <li>Set a status code &mdash; <code class="inline">200</code> for success, <code class="inline">404</code> for not found</li>
+            <li>Set headers before the response ends</li>
+          </ul>
+        </div>
+        ${codeCard('c-handlereq','server.js','js', CODE.handleReq)}
+      </div>
+    </div>
+  `});
+
+  // 8. Binding to a port
+  slides.push({ eyebrow: 'B &middot; STEP 2 &middot; PART 4', body: `
+    <h1 class="title">Running (binding) the server to a port</h1>
+    <div class="content">
+      <div class="grid-2" style="flex:1;">
+        <div style="display:flex;flex-direction:column;gap:12px;justify-content:center;">
+          <p>Finally, tell the server to listen for incoming requests on a specific network port, such as <code class="inline">3000</code>.</p>
+          <p class="muted">When the server starts successfully, it fires a callback &mdash; commonly used to log a friendly status message to the terminal.</p>
+        </div>
+        ${codeCard('c-listen','server.js','js', CODE.listen)}
+      </div>
+    </div>
+  `});
+
+  // 9. Complete code (fixed row)
+  slides.push({ eyebrow: 'B &middot; PUTTING IT TOGETHER', body: `
+    <h1 class="title">The complete code</h1>
+    <h2 class="subtitle">All four parts, assembled into one fully working file.</h2>
+    <div class="fixed-row">
+      ${codeCard('c-complete','server.js','js', CODE.complete)}
+      <div class="panel">
+        <div class="panel-head">Run it</div>
+        <div class="panel-body">
+          <p>Save the file, then run it from your terminal:</p>
+          <div class="term-line"><span class="prompt">$</span>node server.js</div>
+          <div class="term-out">Server running at http://localhost:3000/</div>
+          <p class="muted">To stop the server at any time, press <strong>Ctrl + C</strong> in the terminal.</p>
+        </div>
+      </div>
+    </div>
+  `});
+
+  // 10. Analogy
+  slides.push({ eyebrow: 'C &middot; ANALOGIES &amp; USE CASES', body: `
+    <h1 class="title">Analogy: the reception desk</h1>
+    <h2 class="subtitle">The event loop, explained through a busy office front desk.</h2>
+    <div class="content" style="flex:1;justify-content:center;">
+      <div class="grid-3">
+        <div class="card">
+          <h3>The receptionist never blocks</h3>
+          <p>A caller asks the receptionist (the event loop) to find a document (an I/O operation). The receptionist leaves a sticky note (callback) and immediately answers the next ringing phone.</p>
+        </div>
+        <div class="card">
+          <h3>The callback fires later</h3>
+          <p>When a staff member finds the document, they trigger the sticky note, and the receptionist calls the original customer back with the information.</p>
+        </div>
+        <div class="card">
+          <h3>Hundreds served at once</h3>
+          <p>This non-blocking behavior lets the receptionist serve hundreds of customers simultaneously, without ever putting one on hold in a long line.</p>
+        </div>
+      </div>
+    </div>
+  `});
+
+  // 11. Real-world use cases
+  slides.push({ eyebrow: 'C &middot; REAL-WORLD USE CASES', body: `
+    <h1 class="title">Where the raw http module shows up</h1>
+    <h2 class="subtitle">Production apps often reach for frameworks like Express.js &mdash; but understanding the raw module is vital to learning how the web works underneath.</h2>
+    <div class="content" style="flex:1;">
+      <div class="grid-3">
+        <div class="card"><h3>Building RESTful APIs</h3><p>The foundation of backend services handling <code class="inline">GET</code>, <code class="inline">POST</code>, <code class="inline">PUT</code>, and <code class="inline">DELETE</code> requests for web or mobile apps.</p></div>
+        <div class="card"><h3>Serving static files</h3><p>A script that reads HTML files and sends them to the client &mdash; a basic web host.</p></div>
+        <div class="card"><h3>Simple proxies</h3><p>A server sitting between a client and an external API, adding security, caching, or authentication along the way.</p></div>
+      </div>
+    </div>
+  `});
+
+  // 12. Drill setup
+  slides.push({ eyebrow: 'E &middot; GUIDED DRILL', body: `
+    <h1 class="title">Build your custom web server &mdash; setup</h1>
+    <div class="content">
+      <div class="grid-2" style="flex:1;">
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <p><strong>Step 1 &mdash; New project.</strong> Open your terminal, create a folder, and move into it.</p>
+          ${codeCard('c-mkdir','terminal','bash', CODE.mkdir)}
+          <p><strong>Step 2 &mdash; Initialize.</strong> Create a <code class="inline">package.json</code> file.</p>
+          ${codeCard('c-npminit','terminal','bash', CODE.npminit)}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <p><strong>Optional &mdash; the http module.</strong> It's a core built-in module, so nothing to install &mdash; but the exercise walks through adding it anyway.</p>
+          ${codeCard('c-npminstall','terminal','bash', CODE.npminstall)}
+          <div class="callout note">
+            <span class="icon">NOTE</span>
+            <p>Because <code class="inline">http</code> is built-in, this simply adds it to your dependency list. You never need to install core Node.js modules.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `});
+
+  // 13. Drill code + test (fixed row)
+  slides.push({ eyebrow: 'E &middot; GUIDED DRILL', body: `
+    <h1 class="title">Write, run, and test the server</h1>
+    <h2 class="subtitle">Create <code class="inline">server.js</code>, paste in the code, and confirm it responds with your custom message.</h2>
+    <div class="fixed-row">
+      ${codeCard('c-drill','server.js','js', CODE.drillServer)}
+      <div class="panel">
+        <div class="panel-head">Start &amp; test</div>
+        <div class="panel-body">
+          <div class="term-line"><span class="prompt">$</span>node server.js</div>
+          <div class="term-out">Server is running and listening on port 3000</div>
+          <p><strong>Browser:</strong> visit <code class="inline">http://localhost:3000</code></p>
+          <p><strong>Terminal:</strong> or test with cURL</p>
+          <div class="term-line"><span class="prompt">$</span>curl http://localhost:3000</div>
+          <div class="term-out">This is a custom message from the server!</div>
+        </div>
+      </div>
+    </div>
+  `});
+
+  // 14. Recap
+  slides.push({ eyebrow: 'RECAP', body: `
+    <h1 class="title">Recap before you dive into practice</h1>
+    <div class="content" style="flex:1;justify-content:center;">
+      <div class="recap-list">
+        <div class="recap-item"><span class="check">&#10003;</span><span>Created a <code class="inline">.js</code> file as the entry point for a program.</span></div>
+        <div class="recap-item"><span class="check">&#10003;</span><span>Loaded core modules like <code class="inline">http</code> and <code class="inline">fs</code> with <code class="inline">require()</code>.</span></div>
+        <div class="recap-item"><span class="check">&#10003;</span><span>Built a server with <code class="inline">http.createServer()</code>.</span></div>
+        <div class="recap-item"><span class="check">&#10003;</span><span>Shaped responses with <code class="inline">res.statusCode</code>, headers, and <code class="inline">res.end()</code>.</span></div>
+        <div class="recap-item"><span class="check">&#10003;</span><span>Bound the server to a port with <code class="inline">server.listen()</code>.</span></div>
+        <div class="recap-item"><span class="check">&#10003;</span><span>Tested the server with a browser and with cURL.</span></div>
+      </div>
+    </div>
+  `});
+
+  // 15. Key Quotes
+  slides.push({ eyebrow: 'KEY QUOTES', body: `
+    <h1 class="title">Key quotes from this lesson</h1>
+    <div class="content" style="flex:1;justify-content:center;">
+      <div class="quote-card"><p>"By the end of this lesson, you will have built a fully functioning web server on your own computer!"</p><div class="src">Lesson preview, tip callout</div></div>
+      <div class="quote-card"><p>"Understanding the raw http module is vital to learning how the web works under the hood."</p><div class="src">Real-world use cases</div></div>
+      <div class="quote-card"><p>"You should see the output: Server running at http://localhost:3000/."</p><div class="src">Running your program</div></div>
+    </div>
+  `});
+
+  // 16. FAQs
+  slides.push({ eyebrow: 'D &middot; WRAP-UP &amp; FAQS', body: `
+    <h1 class="title">Frequently asked questions</h1>
+    <div class="content">
+      <div class="grid-3">
+        <div class="card"><h3>Can I use databases?</h3><p>Yes. Relational databases like MySQL or PostgreSQL work with libraries such as <code class="inline">mysql2</code> or <code class="inline">pg</code>. NoSQL options include the <code class="inline">mongodb</code> driver or Mongoose.</p></div>
+        <div class="card"><h3>How do I handle requests?</h3><p>Use <code class="inline">http.createServer()</code> with a callback. The first argument (<code class="inline">req</code>) holds request details; the second (<code class="inline">res</code>) sends the response.</p></div>
+        <div class="card"><h3>Can I build REST APIs?</h3><p>Absolutely &mdash; the raw <code class="inline">http</code> module works, but most developers reach for lightweight frameworks like Express.js or Fastify to simplify routing and middleware.</p></div>
+      </div>
+    </div>
+  `});
+
+  // 17. Skill-building check part 1
+  slides.push({ eyebrow: 'F &middot; SKILL-BUILDING CHECK', body: `
+    <h1 class="title">Test your understanding</h1>
+    <h2 class="subtitle">Choose the best answer for each question. (Part 1 of 3 &mdash; Multiple Choice)</h2>
+    <div class="content">
+      <div class="points-strip"><span class="chip">Multiple choice: <b>6 &times; 1 pt</b></span><span class="chip">Coding challenge: <b>4 pts</b></span><span class="chip">Total: <b>10 pts</b></span></div>
+      <div class="mcq-grid">
+        <div class="mcq"><span class="qnum">Question 1 <span class="pts">1 pt</span></span><p class="qtext">Which statement is used to import a core module like http into a Node.js file?</p>
+          <div class="opts"><div class="opt"><b>A.</b> import http from 'http';</div><div class="opt"><b>B.</b> require('http');</div><div class="opt"><b>C.</b> using http;</div><div class="opt"><b>D.</b> include 'http';</div></div></div>
+        <div class="mcq"><span class="qnum">Question 2 <span class="pts">1 pt</span></span><p class="qtext">What is the entry point of a Node.js application?</p>
+          <div class="opts"><div class="opt"><b>A.</b> The package.json file.</div><div class="opt"><b>B.</b> The index.html file.</div><div class="opt"><b>C.</b> The main JS file run with node.</div><div class="opt"><b>D.</b> The server.listen() method.</div></div></div>
+        <div class="mcq"><span class="qnum">Question 3 <span class="pts">1 pt</span></span><p class="qtext">Which method is used to create an HTTP server in Node.js?</p>
+          <div class="opts"><div class="opt"><b>A.</b> http.startServer()</div><div class="opt"><b>B.</b> http.newServer()</div><div class="opt"><b>C.</b> http.createServer()</div><div class="opt"><b>D.</b> http.openServer()</div></div></div>
+        <div class="mcq"><span class="qnum">Question 4 <span class="pts">1 pt</span></span><p class="qtext">Which command signals that a response is complete and ready to send?</p>
+          <div class="opts"><div class="opt"><b>A.</b> res.finish()</div><div class="opt"><b>B.</b> res.complete()</div><div class="opt"><b>C.</b> res.end()</div><div class="opt"><b>D.</b> res.send()</div></div></div>
+      </div>
+    </div>
+  `});
+
+  // 18. Skill-building check part 2
+  slides.push({ eyebrow: 'F &middot; SKILL-BUILDING CHECK', body: `
+    <h1 class="title">Test your understanding</h1>
+    <h2 class="subtitle">Choose the best answer for each question. (Part 2 of 3 &mdash; Multiple Choice)</h2>
+    <div class="content">
+      <div class="mcq-grid">
+        <div class="mcq"><span class="qnum">Question 5 <span class="pts">1 pt</span></span><p class="qtext">How do you stop the server once it is running in the terminal?</p>
+          <div class="opts"><div class="opt"><b>A.</b> Close the text editor.</div><div class="opt"><b>B.</b> Type server.stop in the terminal.</div><div class="opt"><b>C.</b> Press Ctrl + C in the terminal.</div><div class="opt"><b>D.</b> Restart the computer.</div></div></div>
+        <div class="mcq"><span class="qnum">Question 6 <span class="pts">1 pt</span></span><p class="qtext">Which built-in module is primarily used for handling HTTP requests and responses?</p>
+          <div class="opts"><div class="opt"><b>A.</b> url</div><div class="opt"><b>B.</b> fs</div><div class="opt"><b>C.</b> path</div><div class="opt"><b>D.</b> http</div></div></div>
+      </div>
+    </div>
+  `});
+
+  // 18b. Coding challenge (full-width, single problem)
+  slides.push({ eyebrow: 'F &middot; SKILL-BUILDING CHECK', body: `
+    <h1 class="title">Coding challenge <span class="pts" style="font-size:13px;">4 pts</span></h1>
+    <h2 class="subtitle">Part 3 of 3 &mdash; take the pattern from this lesson and make it your own.</h2>
+    <div class="content">
+      <div class="scenario-card">
+        <h3>&#128161; The idea</h3>
+        <p>Pick a real-life moment where a quick "yes, got it" message would be handy &mdash; a caf&eacute; confirming an order, a library confirming a hold, a gym confirming a class booking, a locker confirming a pickup code. Build a raw Node.js server, exactly like the one from this lesson, that plays that role.</p>
+      </div>
+      <div class="fixed-row" style="height:min(380px,46vh);">
+        <div class="panel">
+          <div class="panel-head">Pick a scenario</div>
+          <div class="panel-body">
+            <p><strong>Or invent your own:</strong></p>
+            <ul class="list">
+              <li>&#9749; Caf&eacute; &mdash; confirms an order and a wait time</li>
+              <li>&#128218; Library &mdash; confirms a book is on hold</li>
+              <li>&#127939; Gym &mdash; confirms a class booking</li>
+              <li>&#128230; Locker room &mdash; confirms a pickup code</li>
+            </ul>
+            <p class="muted">Write your response message in your own words &mdash; there's no single correct sentence here.</p>
+            <div class="paper-note">&#9998; Sketch it on paper first if that's easier, then translate it into a real <code class="inline">.js</code> file.</div>
+          </div>
+        </div>
+        ${codeCard('c-cafe-starter','your-server.js','js', CODE.cafeStarter)}
+      </div>
+      <div class="card">
+        <h3>Scoring (4 pts total)</h3>
+        <ul class="list">
+          <li>1 pt &mdash; correct import + <code class="inline">createServer()</code> setup</li>
+          <li>1 pt &mdash; status code + a sensible header are set</li>
+          <li>1 pt &mdash; <code class="inline">res.end()</code> sends a clear, on-theme message</li>
+          <li>1 pt &mdash; server listens on a port with a startup log</li>
+        </ul>
+
+      </div>
+    </div>
+  `});
+
+  // 19. Answer key part 1
+  slides.push({ eyebrow: 'ANSWER KEY', body: `
+    <h1 class="title">Answer key</h1>
+    <h2 class="subtitle">With brief explanations. (1 of 3 &mdash; Multiple Choice)</h2>
+    <div class="content">
+      <div class="akey"><p class="q">Question 1</p><p class="a">Correct answer: <b>B &mdash; require('http');</b></p><p class="exp">Node.js uses the CommonJS standard, which loads built-in modules, external packages, and local files with the require() function.</p></div>
+      <div class="akey"><p class="q">Question 2</p><p class="a">Correct answer: <b>C &mdash; the main JS file you execute with node</b></p><p class="exp">The entry point is the .js file you run with node &lt;filename.js&gt;. Execution starts at the top of that file.</p></div>
+      <div class="akey"><p class="q">Question 3</p><p class="a">Correct answer: <b>C &mdash; http.createServer()</b></p><p class="exp">http.createServer() initializes an HTTP server instance, taking a request-listener callback as its argument.</p></div>
+    </div>
+  `});
+
+  // 20. Answer key part 2
+  slides.push({ eyebrow: 'ANSWER KEY', body: `
+    <h1 class="title">Answer key</h1>
+    <h2 class="subtitle">With brief explanations. (2 of 3 &mdash; Multiple Choice)</h2>
+    <div class="content">
+      <div class="akey"><p class="q">Question 4</p><p class="a">Correct answer: <b>C &mdash; res.end()</b></p><p class="exp">res.end() finalizes the HTTP response. You can pass the data to send directly into res.end('Text goes here').</p></div>
+      <div class="akey"><p class="q">Question 5</p><p class="a">Correct answer: <b>C &mdash; Press Ctrl + C in the terminal</b></p><p class="exp">Node.js servers run in the foreground of your terminal process. Ctrl + C terminates that process, stopping the server.</p></div>
+      <div class="akey"><p class="q">Question 6</p><p class="a">Correct answer: <b>D &mdash; http</b></p><p class="exp">The http module contains createServer() and is the networking engine. url, fs, and path are helpful but serve other purposes.</p></div>
+    </div>
+  `});
+
+  // 20b. Answer key part 3 — coding challenge sample solution
+  slides.push({ eyebrow: 'ANSWER KEY', body: `
+    <h1 class="title">Answer key &mdash; coding challenge</h1>
+    <h2 class="subtitle">Sample answer only. (3 of 3 &mdash; 4 pts) &mdash; any on-theme scenario, message, and port earns full credit.</h2>
+    <div class="fixed-row" style="height:min(420px,52vh);">
+      ${codeCard('c-cafe-sample','cafe-server.js','js', CODE.cafeSample)}
+      <div class="panel">
+        <div class="panel-head">Grading notes</div>
+        <div class="panel-body">
+          <p><strong>1 pt</strong> &mdash; <code class="inline">require('http')</code> and <code class="inline">http.createServer()</code> present.</p>
+          <p><strong>1 pt</strong> &mdash; a status code and a sensible header are set.</p>
+          <p><strong>1 pt</strong> &mdash; <code class="inline">res.end()</code> sends a clear message that fits the student's chosen scenario &mdash; wording is entirely up to them.</p>
+          <p><strong>1 pt</strong> &mdash; <code class="inline">server.listen()</code> is called on any port, with a startup log.</p>
+          <p class="muted">This caf&eacute; version is just one valid take &mdash; a library, gym, or locker-room version earns the same 4 points.</p>
+        </div>
+      </div>
+    </div>
+  `});
+
+  // 21. Closing
+  slides.push({ eyebrow: 'THAT'+"'"+'S A WRAP', body: `
+    <div class="closing-wrap">
+      <div class="status">&#9679; SERVER STOPPED &middot; CTRL+C</div>
+      <div class="quote-card" style="max-width:640px;"><p>"The best way to predict the future is to implement it."</p><div class="src">David Heinemeier Hansson, on building software by shipping it</div></div>
+      <h1 class="title" style="margin:0;">Nice work &mdash; you built a real server.</h1>
+      <p class="muted" style="max-width:560px;">You now understand the anatomy of a Node.js program: importing modules, creating a server, handling requests, and binding to a port. Keep experimenting &mdash; try changing the response, the port, or the status code.</p>
+    </div>
+  `});
+
+  // ---------- render ----------
+  const container = document.getElementById('slideContainer');
+  const progressBar = document.getElementById('progressBar');
+  const counter = document.getElementById('counter');
+  let current = 0;
+
+  slides.forEach((s, i) => {
+    const el = document.createElement('div');
+    el.className = 'slide';
+    el.innerHTML = '<div class="eyebrow"><span class="dot"></span>'+s.eyebrow+'</div>'+s.body;
+    container.appendChild(el);
+  });
+
+  const slideEls = Array.from(container.children);
+
+  function render(newIndex, direction){
+    const prevIndex = current;
+    if(newIndex === prevIndex) return;
+    slideEls[prevIndex].classList.remove('active');
+    slideEls[prevIndex].classList.add('exit-left');
+    slideEls[newIndex].classList.remove('exit-left');
+    // force reflow for transition when moving backward
+    void slideEls[newIndex].offsetWidth;
+    slideEls[newIndex].classList.add('active');
+    setTimeout(() => { slideEls[prevIndex].classList.remove('exit-left'); }, 380);
+    current = newIndex;
+    progressBar.style.width = ((current) / (slides.length - 1) * 100) + '%';
+    counter.textContent = (current + 1) + ' / ' + slides.length;
+  }
+
+  slideEls[0].classList.add('active');
+  counter.textContent = '1 / ' + slides.length;
+
+  function next(){ if(current < slides.length - 1) render(current + 1, 1); }
+  function prev(){ if(current > 0) render(current - 1, -1); }
+  function first(){ render(0, -1); }
+  function last(){ render(slides.length - 1, 1); }
+
+  // keyboard
+  const overlay = document.getElementById('shortcutsOverlay');
+  document.addEventListener('keydown', (e) => {
+    if(e.key === '?'){ overlay.classList.toggle('show'); return; }
+    if(e.key === 'Escape'){ overlay.classList.remove('show'); return; }
+    if(overlay.classList.contains('show')) return;
+    if(e.key === 'ArrowRight' || e.key === 'PageDown'){ next(); }
+    else if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ prev(); }
+    else if(e.key === 'Home'){ first(); }
+    else if(e.key === 'End'){ last(); }
+  });
+
+  // right-click / mouse buttons for navigation
+  document.addEventListener('contextmenu', (e) => { e.preventDefault(); if(!overlay.classList.contains('show')) next(); });
+  document.addEventListener('mousedown', (e) => {
+    if(e.button === 3 || e.button === 4){
+      e.preventDefault(); e.stopImmediatePropagation();
+      if(!overlay.classList.contains('show')){ e.button === 3 ? prev() : next(); }
+    }
+  }, true);
+  document.addEventListener('mouseup', (e) => {
+    if(e.button === 3 || e.button === 4){ e.preventDefault(); e.stopImmediatePropagation(); }
+  }, true);
+
+  // swipe
+  let touchStartX = null;
+  document.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].clientX; }, {passive:true});
+  document.addEventListener('touchend', (e) => {
+    if(touchStartX === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if(Math.abs(dx) > 50){ dx < 0 ? next() : prev(); }
+    touchStartX = null;
+  }, {passive:true});
+
+  // copy buttons (delegated)
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.copy-btn');
+    if(!btn) return;
+    const codeEl = document.getElementById(btn.getAttribute('data-code-id'));
+    if(!codeEl) return;
+    const text = codeEl.textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const original = btn.textContent;
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1400);
+    });
+  });
+
+  // close shortcuts overlay on outside click
+  overlay.addEventListener('click', (e) => { if(e.target === overlay) overlay.classList.remove('show'); });
+
+})();
+</script>
+</body>
+</html>

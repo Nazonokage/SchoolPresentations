@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M13 — Node.js MVC Architecture</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0f17;--bg2:#111827;--bg3:#1a2234;--bg4:#1f2c42;
+  --accent:#60a5fa;--accent2:#34d399;--accent3:#fbbf24;--accent4:#f87171;--purple:#a78bfa;
+  --text:#e2e8f4;--text2:#94a3b8;--text3:#64748b;
+  --border:#1e2d45;--border2:#2d3f5c;
+  --code-bg:#080c14;--code-border:#182030;
+  --r:10px;--r2:6px;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',system-ui,sans-serif}
+.deck{position:relative;width:100vw;height:100vh;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;padding:48px 68px 40px;opacity:0;pointer-events:none;transition:opacity 350ms ease,transform 350ms ease;transform:translateX(40px);overflow-y:auto}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.prev{opacity:0;transform:translateX(-40px)}
+@media(prefers-reduced-motion:reduce){.slide{transition:none}}
+.slide::-webkit-scrollbar{width:4px}.slide::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+#prog{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width 350ms ease;z-index:99}
+#counter{position:fixed;top:14px;right:24px;font-size:12px;color:var(--text3);z-index:99;font-variant-numeric:tabular-nums}
+
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+h1{font-size:clamp(38px,4.5vw,62px);font-weight:700;line-height:1.1;letter-spacing:-.02em}
+h2{font-size:clamp(26px,3vw,40px);font-weight:700;line-height:1.15;letter-spacing:-.015em}
+h3{font-size:17px;font-weight:600;color:var(--text);margin-bottom:7px}
+
+/* Cards */
+.cards{display:grid;gap:14px;margin-top:18px}
+.cols2{grid-template-columns:1fr 1fr}
+.cols3{grid-template-columns:1fr 1fr 1fr}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px}
+.card p,.card li{font-size:14.5px;color:var(--text2);line-height:1.65}
+.card ul{padding-left:16px}
+.card.al{border-left:3px solid var(--accent)}
+.card.ag{border-left:3px solid var(--accent2)}
+.card.aa{border-left:3px solid var(--accent3)}
+.card.ar{border-left:3px solid var(--accent4)}
+.card.ap{border-left:3px solid var(--purple)}
+
+/* Code */
+.code-wrap{position:relative;background:var(--code-bg);border:1px solid var(--code-border);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column}
+.code-header{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:#050810;border-bottom:1px solid var(--code-border);flex-shrink:0}
+.code-lang{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.copy-btn{font-size:11px;font-weight:700;color:var(--accent);background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.3);border-radius:4px;padding:3px 9px;cursor:pointer;transition:all .15s;flex-shrink:0}
+.copy-btn:hover{background:rgba(96,165,250,.22)}
+.copy-btn.ok{color:var(--accent2);border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.1)}
+pre{padding:14px 16px;overflow:auto;font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:12.5px;line-height:1.7;color:#cdd6f4;flex:1;min-height:0}
+pre::-webkit-scrollbar{height:4px;width:4px}
+pre::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* Syntax */
+.kw{color:#cba6f7}.fn{color:#89b4fa}.str{color:#a6e3a1}.cm{color:#4a5260;font-style:italic}.var{color:#f38ba8}.num{color:#fab387}.op{color:#89dceb}.tag{color:#f38ba8}.attr{color:#89b4fa}.val{color:#a6e3a1}
+
+/* Side-by-side code+panel */
+.split-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;height:min(520px,58vh);align-items:stretch;margin-top:16px}
+.split-row .code-wrap{height:100%;overflow:hidden}
+.split-row .panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;overflow-y:auto;height:100%;min-height:0}
+
+/* MVC diagram */
+.mvc-diagram{display:flex;align-items:center;justify-content:center;gap:0;margin:28px 0}
+.mvc-box{border-radius:var(--r);padding:18px 24px;text-align:center;min-width:170px}
+.mvc-box .mb-label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.mvc-box .mb-title{font-size:20px;font-weight:700;margin-bottom:6px}
+.mvc-box .mb-sub{font-size:12.5px;line-height:1.5}
+.mvc-arrow{display:flex;flex-direction:column;align-items:center;padding:0 10px;gap:4px}
+.mvc-arrow .arr-line{width:50px;height:2px}
+.mvc-arrow .arr-label{font-size:10.5px;font-weight:600;letter-spacing:.05em;white-space:nowrap}
+.mvc-box.m{background:rgba(167,139,250,.1);border:1.5px solid rgba(167,139,250,.4)}
+.mvc-box.m .mb-label{color:var(--purple)}
+.mvc-box.m .mb-title{color:#c4b5fd}
+.mvc-box.m .mb-sub{color:#a78bfa}
+.mvc-box.v{background:rgba(52,211,153,.08);border:1.5px solid rgba(52,211,153,.35)}
+.mvc-box.v .mb-label{color:var(--accent2)}
+.mvc-box.v .mb-title{color:#6ee7b7}
+.mvc-box.v .mb-sub{color:var(--accent2)}
+.mvc-box.c{background:rgba(96,165,250,.1);border:1.5px solid rgba(96,165,250,.4)}
+.mvc-box.c .mb-label{color:var(--accent)}
+.mvc-box.c .mb-title{color:#93c5fd}
+.mvc-box.c .mb-sub{color:var(--accent)}
+
+/* Benefit list */
+.benefit-list{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.benefit-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:13px 15px;display:flex;gap:12px;align-items:flex-start}
+.b-num{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:rgba(96,165,250,.15);color:var(--accent);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.b-body h4{font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px}
+.b-body p{font-size:13px;color:var(--text2);line-height:1.5}
+
+/* Hero */
+.hero{flex:1;display:flex;flex-direction:column;justify-content:center}
+.hero-tag{display:inline-flex;align-items:center;gap:8px;background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.25);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.05em;margin-bottom:26px;width:fit-content}
+.hero h1{max-width:820px;margin-bottom:18px}
+.hero .sub{font-size:17px;color:var(--text2);max-width:600px;line-height:1.65;margin-bottom:28px}
+.logo-row{display:flex;gap:10px;flex-wrap:wrap}
+.logo-chip{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:7px 14px;font-size:13px;font-weight:600;color:var(--text2)}
+
+/* Steps */
+.steps{display:flex;flex-direction:column;gap:11px;margin-top:16px}
+.step{display:flex;gap:14px;align-items:flex-start}
+.step-num{flex-shrink:0;width:30px;height:30px;background:var(--accent);color:#000;font-weight:700;font-size:13px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.step-body h4{font-size:14.5px;font-weight:600;color:var(--text);margin-bottom:3px}
+.step-body p{font-size:13.5px;color:var(--text2);line-height:1.55}
+.step-body code{background:rgba(96,165,250,.1);color:var(--accent);padding:1px 6px;border-radius:3px;font-family:monospace;font-size:12.5px}
+
+/* Badge */
+.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 9px;border-radius:20px}
+.b-blue{background:rgba(96,165,250,.15);color:var(--accent);border:1px solid rgba(96,165,250,.3)}
+.b-green{background:rgba(52,211,153,.1);color:var(--accent2);border:1px solid rgba(52,211,153,.25)}
+.b-amber{background:rgba(251,191,36,.1);color:var(--accent3);border:1px solid rgba(251,191,36,.25)}
+
+/* Analogy */
+.analogy-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:20px}
+.ana-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:20px;text-align:center}
+.ana-icon{font-size:36px;margin-bottom:12px}
+.ana-role{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.ana-title{font-size:16px;font-weight:700;margin-bottom:8px}
+.ana-desc{font-size:13px;color:var(--text2);line-height:1.6}
+.ana-card.mc .ana-role{color:var(--purple)}
+.ana-card.mc .ana-title{color:#c4b5fd}
+.ana-card.vc .ana-role{color:var(--accent2)}
+.ana-card.vc .ana-title{color:#6ee7b7}
+.ana-card.cc .ana-role{color:var(--accent)}
+.ana-card.cc .ana-title{color:#93c5fd}
+
+/* Quiz */
+.quiz-q{font-size:15px;font-weight:600;color:var(--text);margin-bottom:10px;line-height:1.5}
+.quiz-opt{display:flex;align-items:flex-start;gap:9px;padding:9px 13px;border-radius:var(--r2);border:1px solid var(--border);margin-bottom:7px;font-size:14px;color:var(--text2)}
+.opt-key{font-weight:700;color:var(--accent);min-width:18px;flex-shrink:0}
+
+/* Answer */
+.ans-item{background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--accent2);border-radius:var(--r);padding:13px 15px;margin-bottom:10px}
+.ans-q{font-size:12.5px;color:var(--text3);margin-bottom:4px}
+.ans-a{font-size:14.5px;font-weight:700;color:var(--text)}
+.ans-exp{font-size:13px;color:var(--text2);margin-top:4px;line-height:1.5}
+
+/* info box */
+.info{background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.2);border-radius:var(--r2);padding:12px 16px;font-size:13.5px;color:var(--text2);line-height:1.6;margin-top:14px}
+.tip{background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2);border-radius:var(--r2);padding:12px 16px;font-size:13.5px;color:var(--text2);line-height:1.6;margin-top:14px}
+.info strong,.tip strong{color:var(--text)}
+
+/* table */
+table{width:100%;border-collapse:collapse;margin-top:16px;font-size:14px}
+th{background:var(--bg3);color:var(--accent);font-weight:600;text-align:left;padding:10px 13px;border-bottom:1px solid var(--border2)}
+td{padding:9px 13px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:top}
+tr:last-child td{border-bottom:none}
+
+/* dir tree */
+.dir{background:var(--code-bg);border:1px solid var(--code-border);border-radius:var(--r);padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text2);line-height:2;margin-top:14px;white-space:pre;overflow-x:auto;display:block}
+.dir .folder{color:var(--accent3)}
+.dir .file{color:var(--accent2)}
+.dir .note{color:var(--text3)}
+
+/* Help */
+#help{position:fixed;inset:0;background:rgba(0,0,0,.82);display:none;place-items:center;z-index:200}
+#help.show{display:grid}
+.help-box{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:30px 38px;max-width:400px;width:90%}
+.help-box h2{font-size:18px;margin-bottom:18px}
+.help-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:14px}
+.help-row:last-child{border-bottom:none}
+.help-row span:first-child{color:var(--text2)}
+kbd{background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 7px;font-size:11px;color:var(--accent);font-family:monospace}
+
+/* final */
+.final{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.final blockquote{font-size:20px;font-style:italic;color:var(--text2);max-width:600px;line-height:1.7;margin-bottom:24px;position:relative;padding:0 32px}
+.final blockquote::before{content:'\201C';font-size:60px;color:var(--accent);position:absolute;left:0;top:-10px;line-height:1}
+
+code.ic{background:rgba(96,165,250,.1);color:var(--accent);padding:1px 6px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:12.5px}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<div id="counter">1 / 19</div>
+<div class="deck" id="deck">
+
+<!-- S0: Hero -->
+<div class="slide active">
+  <div class="hero">
+    <div class="hero-tag">🏗️ Module 13 &nbsp;·&nbsp; Node.js</div>
+    <h1>Model-View-Controller<br>Architecture</h1>
+    <p class="sub">Organize, scale, and maintain real-world web applications using the industry-standard MVC pattern with Node.js and Express.</p>
+    <div class="logo-row">
+      <span class="logo-chip">
+        <svg width="18" height="18" viewBox="0 0 48 48" fill="none" role="img" aria-label="Node.js"><circle cx="24" cy="24" r="24" fill="#026e00"/><path d="M24 8l13 7.5v15L24 38 11 30.5v-15L24 8z" fill="#fff" opacity=".15"/><text x="24" y="28" text-anchor="middle" fill="#fff" font-size="11" font-weight="700" font-family="monospace">Node</text></svg>
+        Node.js
+      </span>
+      <span class="logo-chip">
+        <svg width="18" height="18" viewBox="0 0 48 48" role="img" aria-label="Express.js"><rect width="48" height="48" rx="8" fill="#333"/><text x="24" y="30" text-anchor="middle" fill="#fff" font-size="10" font-weight="700" font-family="monospace">EXP</text></svg>
+        Express.js
+      </span>
+      <span class="logo-chip">
+        <svg width="18" height="18" viewBox="0 0 48 48" role="img" aria-label="MongoDB"><rect width="48" height="48" rx="8" fill="#00684a"/><text x="24" y="30" text-anchor="middle" fill="#fff" font-size="9" font-weight="700" font-family="monospace">MDB</text></svg>
+        Mongoose
+      </span>
+      <span class="logo-chip">
+        <svg width="18" height="18" viewBox="0 0 48 48" role="img" aria-label="EJS templates"><rect width="48" height="48" rx="8" fill="#b4ca65"/><text x="24" y="30" text-anchor="middle" fill="#333" font-size="11" font-weight="700" font-family="monospace">EJS</text></svg>
+        EJS
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- S1: Review -->
+<div class="slide">
+  <div class="eyebrow">Quick Review — Module 12</div>
+  <h2>Where We Left Off</h2>
+  <div class="cards cols2" style="margin-top:18px">
+    <div class="card al">
+      <h3>✅ Previously Covered</h3>
+      <ul style="margin-top:8px">
+        <li style="font-size:14px;color:var(--text2);margin-bottom:6px">Creating JavaScript files and basic Node.js program structure</li>
+        <li style="font-size:14px;color:var(--text2);margin-bottom:6px">Using the built-in <code class="ic">http</code> module</li>
+        <li style="font-size:14px;color:var(--text2)">Building a simple server that responds with a custom message</li>
+      </ul>
+    </div>
+    <div class="card ag">
+      <h3>🎯 Today's Goals</h3>
+      <ul style="margin-top:8px">
+        <li style="font-size:14px;color:var(--text2);margin-bottom:6px">Explain MVC and its three core components</li>
+        <li style="font-size:14px;color:var(--text2);margin-bottom:6px">Understand why MVC matters in real-world apps</li>
+        <li style="font-size:14px;color:var(--text2)">Connect Model, View, and Controller in a working Node.js app</li>
+      </ul>
+    </div>
+  </div>
+  <div class="info" style="margin-top:20px">
+    <strong>📋 Prerequisite:</strong> A basic understanding of JavaScript functions and objects will greatly help you understand the code in this module.
+  </div>
+  <div style="margin-top:20px;padding:18px 20px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r)">
+    <p style="font-size:14px;color:var(--text2);line-height:1.65">A basic HTTP server <em>works</em> — but as your application grows, dumping everything into one file becomes a nightmare. Real-world apps need <strong style="color:var(--text)">organization, scalability, and maintainability</strong>. That's exactly what MVC gives you.</p>
+  </div>
+</div>
+
+<!-- S2: What is MVC -->
+<div class="slide">
+  <div class="eyebrow">Core Concept</div>
+  <h2>What is MVC?</h2>
+  <p style="font-size:15px;color:var(--text2);margin-top:10px;line-height:1.65">MVC stands for <strong style="color:var(--text)">Model-View-Controller</strong> — a software design pattern that organizes code into three distinct, interconnected components. The same core principles apply regardless of language: Python, Java, PHP, or JavaScript.</p>
+  <div class="mvc-diagram">
+    <div class="mvc-box m">
+      <div class="mb-label">Component 1</div>
+      <div class="mb-title">Model</div>
+      <div class="mb-sub">Data &amp; Business Logic<br>Database / APIs</div>
+    </div>
+    <div class="mvc-arrow">
+      <div class="arr-label" style="color:var(--text3)">data</div>
+      <div class="arr-line" style="background:var(--border2)"></div>
+      <div class="arr-label" style="color:var(--text3)">↔</div>
+    </div>
+    <div class="mvc-box c">
+      <div class="mb-label">Component 2</div>
+      <div class="mb-title">Controller</div>
+      <div class="mb-sub">Mediator &amp; Logic<br>Handles requests</div>
+    </div>
+    <div class="mvc-arrow">
+      <div class="arr-label" style="color:var(--text3)">render</div>
+      <div class="arr-line" style="background:var(--border2)"></div>
+      <div class="arr-label" style="color:var(--text3)">↔</div>
+    </div>
+    <div class="mvc-box v">
+      <div class="mb-label">Component 3</div>
+      <div class="mb-title">View</div>
+      <div class="mb-sub">User Interface<br>HTML / Templates</div>
+    </div>
+  </div>
+  <div class="cards cols3" style="margin-top:4px">
+    <div class="card ap">
+      <h3 style="color:#c4b5fd">🗄️ Model</h3>
+      <p>Represents <strong>data</strong> and <strong>business logic</strong>. Handles storage, retrieval, and manipulation. Interacts directly with the database or external APIs.</p>
+    </div>
+    <div class="card al">
+      <h3 style="color:#93c5fd">🎛️ Controller</h3>
+      <p>Acts as the <strong>mediator</strong>. Receives input from the View, interacts with the Model to fetch/update data, then decides which View to render.</p>
+    </div>
+    <div class="card ag">
+      <h3 style="color:#6ee7b7">🖥️ View</h3>
+      <p>Represents the <strong>User Interface</strong>. Handles presentation of data and receives user input (button clicks, form submissions).</p>
+    </div>
+  </div>
+</div>
+
+<!-- S3: Benefits -->
+<div class="slide">
+  <div class="eyebrow">Why Use MVC?</div>
+  <h2>7 Benefits of MVC Architecture</h2>
+  <div class="benefit-list">
+    <div class="benefit-item">
+      <div class="b-num">1</div>
+      <div class="b-body"><h4>Separation of Concerns</h4><p>Data, presentation, and logic are cleanly separated — easier to understand, modify, and debug.</p></div>
+    </div>
+    <div class="benefit-item">
+      <div class="b-num">2</div>
+      <div class="b-body"><h4>Modularity &amp; Reusability</h4><p>Swap your UI without touching data logic, and vice versa. Components are fully decoupled.</p></div>
+    </div>
+    <div class="benefit-item">
+      <div class="b-num">3</div>
+      <div class="b-body"><h4>Code Organization</h4><p>Clear, predictable folder and file structure. Developers know exactly where to find any function.</p></div>
+    </div>
+    <div class="benefit-item">
+      <div class="b-num">4</div>
+      <div class="b-body"><h4>Improved Collaboration</h4><p>One dev works on View while another works on Model — zero conflicts, maximum velocity.</p></div>
+    </div>
+    <div class="benefit-item">
+      <div class="b-num">5</div>
+      <div class="b-body"><h4>Flexibility &amp; Extensibility</h4><p>Add new features by modifying Controller and View, often without touching the Model at all.</p></div>
+    </div>
+    <div class="benefit-item">
+      <div class="b-num">6</div>
+      <div class="b-body"><h4>Testability</h4><p>Each component can be independently unit tested — test data logic without a built UI.</p></div>
+    </div>
+    <div class="benefit-item" style="grid-column:1/-1">
+      <div class="b-num">7</div>
+      <div class="b-body"><h4>Maintainability &amp; Scalability</h4><p>Bugs are confined to one component. A structured architectural blueprint makes scaling manageable as the app grows.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- S4: Setup -->
+<div class="slide">
+  <div class="eyebrow">Implementation — Step 1</div>
+  <h2>Setting Up the Environment</h2>
+  <div class="steps" style="margin-top:16px">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>Create the project folder</h4>
+        <p><code>mkdir mvc-demo-app</code> then <code>cd mvc-demo-app</code> — this is where your whole app will live.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>Initialize npm</h4>
+        <p><code>npm init -y</code> — generates a default <code>package.json</code> to track dependencies and scripts.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>Create the MVC folders</h4>
+        <p><code>mkdir models views controllers routes</code> — scaffolds the four core directories before any code is written.</p>
+      </div>
+    </div>
+  </div>
+  <div class="cards cols2" style="margin-top:16px">
+    <div>
+      <h3 style="color:var(--accent);margin-bottom:12px">📦 Install Dependencies</h3>
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre>npm install express mongoose ejs bcrypt jsonwebtoken --save</pre>
+      </div>
+      <table style="margin-top:12px">
+        <thead><tr><th>Package</th><th>Role in MVC</th></tr></thead>
+        <tbody>
+          <tr><td><code class="ic">express</code></td><td>Server, routing (Controller glue)</td></tr>
+          <tr><td><code class="ic">mongoose</code></td><td>MongoDB ODM (Model layer)</td></tr>
+          <tr><td><code class="ic">ejs</code></td><td>Template engine (View layer)</td></tr>
+          <tr><td><code class="ic">bcrypt</code></td><td>Password hashing (Model security)</td></tr>
+          <tr><td><code class="ic">jsonwebtoken</code></td><td>Auth tokens (Controller logic)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <h3 style="color:var(--accent2);margin-bottom:12px">🗂️ Folder Structure</h3>
+      <div class="dir">
+<span class="folder">mvc-demo-app/</span>
+├── <span class="folder">models/</span>       <span class="note">← Model layer</span>
+│   └── <span class="file">User.js</span>
+├── <span class="folder">views/</span>        <span class="note">← View layer</span>
+│   └── <span class="file">index.ejs</span>
+├── <span class="folder">controllers/</span>  <span class="note">← Controller layer</span>
+│   ├── <span class="file">authController.js</span>
+│   └── <span class="file">homeController.js</span>
+├── <span class="folder">routes/</span>       <span class="note">← Optional (recommended)</span>
+│   └── <span class="file">index.js</span>
+└── <span class="file">app.js</span>         <span class="note">← Entry point</span>
+      </div>
+      <div class="tip" style="margin-top:12px">
+        <strong>💡 Tip:</strong> Create all folders first — enforcing MVC structure from day one prevents "spaghetti code" from creeping in later.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S5: Model -->
+<div class="slide">
+  <div class="eyebrow">Implementation — Step 2</div>
+  <h2>Creating the Model</h2>
+  <p style="font-size:14.5px;color:var(--text2);margin-top:8px;margin-bottom:2px">The Model defines your data shape and handles all database interactions via Mongoose.</p>
+  <div class="split-row">
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JS — models/User.js</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cm">// models/User.js</span>
+<span class="kw">const</span> mongoose <span class="op">=</span> <span class="fn">require</span>(<span class="str">'mongoose'</span>);
+
+<span class="cm">// Define the shape of User data in MongoDB</span>
+<span class="kw">const</span> userSchema <span class="op">=</span> <span class="kw">new</span> mongoose.<span class="fn">Schema</span>({
+  name: {
+    type: String,
+    required: <span class="kw">true</span>
+  },
+  email: {
+    type: String,
+    required: <span class="kw">true</span>,
+    unique: <span class="kw">true</span>
+  },
+  password: {
+    type: String,
+    required: <span class="kw">true</span>
+  }
+});
+
+<span class="cm">// Export a Mongoose model (maps to "users" collection)</span>
+module.exports <span class="op">=</span> mongoose.<span class="fn">model</span>(<span class="str">'User'</span>, userSchema);</pre>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--purple);margin-bottom:14px">🗄️ Model Breakdown</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num" style="background:var(--purple);color:#fff">1</div>
+          <div class="step-body">
+            <h4>mongoose.Schema()</h4>
+            <p>Defines the structure (shape) of a document — field names, types, and validation rules like <code>required</code> and <code>unique</code>.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--purple);color:#fff">2</div>
+          <div class="step-body">
+            <h4>Field Types</h4>
+            <p><code>String</code>, <code>Number</code>, <code>Boolean</code>, <code>Date</code> — Mongoose enforces these on save, giving you built-in validation.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--purple);color:#fff">3</div>
+          <div class="step-body">
+            <h4>mongoose.model()</h4>
+            <p>Creates a Model class from the schema. Mongoose automatically maps <code>'User'</code> to the <code>users</code> collection in MongoDB.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:var(--purple);color:#fff">4</div>
+          <div class="step-body">
+            <h4>module.exports</h4>
+            <p>Makes the Model available for import in Controllers, keeping each file's responsibility isolated.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S6: View -->
+<div class="slide">
+  <div class="eyebrow">Implementation — Step 3</div>
+  <h2>Creating the View (EJS Template)</h2>
+  <p style="font-size:14.5px;color:var(--text2);margin-top:8px;margin-bottom:2px">The View is pure presentation. EJS lets you embed JavaScript expressions inside HTML using <code class="ic">&lt;% %&gt;</code> tags.</p>
+  <div class="split-row">
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">EJS — views/index.ejs</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cm">&lt;!-- views/index.ejs --&gt;</span>
+<span class="tag">&lt;!DOCTYPE html&gt;</span>
+<span class="tag">&lt;html&gt;</span>
+<span class="tag">&lt;head&gt;</span>
+    <span class="tag">&lt;title&gt;</span>My App<span class="tag">&lt;/title&gt;</span>
+<span class="tag">&lt;/head&gt;</span>
+<span class="tag">&lt;body&gt;</span>
+    <span class="tag">&lt;h1&gt;</span>Welcome to My App<span class="tag">&lt;/h1&gt;</span>
+
+    <span class="cm">&lt;%-- EJS conditional: data passed from Controller --%&gt;</span>
+    <span class="op">&lt;%</span> <span class="kw">if</span> (user) { <span class="op">%&gt;</span>
+        <span class="tag">&lt;p&gt;</span>Hello, <span class="op">&lt;%=</span> user.name <span class="op">%&gt;</span><span class="tag">&lt;/p&gt;</span>
+    <span class="op">&lt;%</span> } <span class="kw">else</span> { <span class="op">%&gt;</span>
+        <span class="tag">&lt;a</span> <span class="attr">href</span>=<span class="val">"/login"</span><span class="tag">&gt;</span>Login<span class="tag">&lt;/a&gt;</span>
+    <span class="op">&lt;%</span> } <span class="op">%&gt;</span>
+<span class="tag">&lt;/body&gt;</span>
+<span class="tag">&lt;/html&gt;</span></pre>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--accent2);margin-bottom:14px">🖥️ EJS Tag Reference</h3>
+      <table style="margin-top:0">
+        <thead><tr><th>Tag</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code class="ic">&lt;% %&gt;</code></td><td>Execute JavaScript (no output)</td></tr>
+          <tr><td><code class="ic">&lt;%= %&gt;</code></td><td>Output escaped value to HTML</td></tr>
+          <tr><td><code class="ic">&lt;%- %&gt;</code></td><td>Output raw unescaped HTML</td></tr>
+          <tr><td><code class="ic">&lt;%# %&gt;</code></td><td>EJS comment (not sent to browser)</td></tr>
+        </tbody>
+      </table>
+      <div class="info" style="margin-top:14px">
+        <strong>Key point:</strong> The View receives data from the Controller via <code class="ic">res.render('index', { user })</code>. The View never fetches data itself — it only displays what it's given.
+      </div>
+      <div class="card ag" style="margin-top:12px">
+        <h3>Swap View Engines Freely</h3>
+        <p>You can switch from <code class="ic">ejs</code> to <code class="ic">pug</code> or <code class="ic">hbs</code> without rewriting any Controller code — the Controller only cares about data, not how it's rendered.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S7: Controller -->
+<div class="slide">
+  <div class="eyebrow">Implementation — Step 4</div>
+  <h2>Creating the Controller</h2>
+  <p style="font-size:14.5px;color:var(--text2);margin-top:8px;margin-bottom:2px">The Controller is the brain — it imports the Model, handles requests, and decides which View to render.</p>
+  <div class="split-row">
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JS — controllers/authController.js</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cm">// controllers/authController.js</span>
+<span class="kw">const</span> bcrypt <span class="op">=</span> <span class="fn">require</span>(<span class="str">'bcrypt'</span>);
+<span class="kw">const</span> jwt    <span class="op">=</span> <span class="fn">require</span>(<span class="str">'jsonwebtoken'</span>);
+<span class="kw">const</span> User   <span class="op">=</span> <span class="fn">require</span>(<span class="str">'../models/User'</span>);
+
+exports.login <span class="op">=</span> <span class="kw">async</span> (req, res) <span class="op">=&gt;</span> {
+    <span class="kw">const</span> { email, password } <span class="op">=</span> req.body;
+
+    <span class="cm">// Step 1: Query Model for user by email</span>
+    <span class="kw">const</span> user <span class="op">=</span> <span class="kw">await</span> User.<span class="fn">findOne</span>({ email });
+
+    <span class="cm">// Step 2: Validate credentials</span>
+    <span class="kw">if</span> (!user <span class="op">||</span> !bcrypt.<span class="fn">compareSync</span>(password, user.password)) {
+        <span class="kw">return</span> res.<span class="fn">status</span>(<span class="num">401</span>).<span class="fn">json</span>({
+            message: <span class="str">'Invalid email or password'</span>
+        });
+    }
+
+    <span class="cm">// Step 3: Generate JWT &amp; redirect</span>
+    <span class="kw">const</span> token <span class="op">=</span> jwt.<span class="fn">sign</span>(
+        { id: user._id },
+        process.env.JWT_SECRET
+    );
+    res.<span class="fn">cookie</span>(<span class="str">'token'</span>, token);
+    res.<span class="fn">redirect</span>(<span class="str">'/'</span>);
+};</pre>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--accent);margin-bottom:14px">🎛️ Controller Flow</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h4>Import dependencies</h4>
+            <p>Bring in <code>bcrypt</code>, <code>jwt</code>, and the <code>User</code> Model. The Controller depends on the Model, not the other way around.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h4>Destructure request body</h4>
+            <p>Extract <code>email</code> and <code>password</code> from <code>req.body</code> — this is the "input from the View."</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h4>Query the Model</h4>
+            <p><code>User.findOne()</code> — the Controller asks the Model to find matching data. Model handles the DB query.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h4>Respond or redirect</h4>
+            <p>Either return a <code>401</code> error JSON or set a JWT cookie and redirect to home — updating the View.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S8: Routing / app.js -->
+<div class="slide">
+  <div class="eyebrow">Implementation — Step 5</div>
+  <h2>Routing — Wiring It All Together</h2>
+  <p style="font-size:14.5px;color:var(--text2);margin-top:8px;margin-bottom:2px">The entry point <code class="ic">app.js</code> maps URLs to Controller methods. Routes delegate — they don't contain business logic.</p>
+  <div class="split-row">
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JS — app.js (Entry Point)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cm">// app.js</span>
+<span class="kw">const</span> express        <span class="op">=</span> <span class="fn">require</span>(<span class="str">'express'</span>);
+<span class="kw">const</span> authController <span class="op">=</span> <span class="fn">require</span>(<span class="str">'./controllers/authController'</span>);
+
+<span class="kw">const</span> app <span class="op">=</span> <span class="fn">express</span>();
+
+<span class="cm">// Configure View engine (EJS)</span>
+app.<span class="fn">set</span>(<span class="str">'view engine'</span>, <span class="str">'ejs'</span>);
+
+<span class="cm">// Body parsers (read form + JSON data)</span>
+app.<span class="fn">use</span>(express.<span class="fn">urlencoded</span>({ extended: <span class="kw">true</span> }));
+app.<span class="fn">use</span>(express.<span class="fn">json</span>());
+
+<span class="cm">// Routes — delegate to Controllers</span>
+app.<span class="fn">get</span>(<span class="str">'/'</span>, (req, res) <span class="op">=&gt;</span> {
+    res.<span class="fn">render</span>(<span class="str">'index'</span>, { user: req.user });
+});
+
+app.<span class="fn">post</span>(<span class="str">'/login'</span>, authController.login);
+
+<span class="cm">// Start server</span>
+app.<span class="fn">listen</span>(<span class="num">3000</span>, () <span class="op">=&gt;</span> {
+    console.<span class="fn">log</span>(<span class="str">'Server running at http://localhost:3000'</span>);
+});</pre>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--accent3);margin-bottom:12px">🔀 How a Request Flows</h3>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="background:var(--bg3);border-radius:var(--r2);padding:12px 14px">
+          <div style="font-size:11px;font-weight:700;color:var(--accent3);margin-bottom:4px">1 — USER</div>
+          <p style="font-size:13px;color:var(--text2)">Visits <code class="ic">POST /login</code> by submitting the login form</p>
+        </div>
+        <div style="text-align:center;color:var(--text3);font-size:16px">↓</div>
+        <div style="background:var(--bg3);border-radius:var(--r2);padding:12px 14px">
+          <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:4px">2 — ROUTER (app.js)</div>
+          <p style="font-size:13px;color:var(--text2)">Matches route, hands off to <code class="ic">authController.login</code></p>
+        </div>
+        <div style="text-align:center;color:var(--text3);font-size:16px">↓</div>
+        <div style="background:var(--bg3);border-radius:var(--r2);padding:12px 14px">
+          <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:4px">3 — CONTROLLER</div>
+          <p style="font-size:13px;color:var(--text2)">Validates credentials via <code class="ic">User.findOne()</code> from Model</p>
+        </div>
+        <div style="text-align:center;color:var(--text3);font-size:16px">↓</div>
+        <div style="background:var(--bg3);border-radius:var(--r2);padding:12px 14px">
+          <div style="font-size:11px;font-weight:700;color:var(--accent2);margin-bottom:4px">4 — VIEW</div>
+          <p style="font-size:13px;color:var(--text2)">Redirects to <code class="ic">/</code> which renders <code class="ic">index.ejs</code></p>
+        </div>
+      </div>
+      <div class="tip" style="margin-top:12px">
+        <strong>💡 Notice:</strong> <code class="ic">app.js</code> imports the Controller and delegates — it contains <em>zero</em> business logic itself.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S9: Drill — home controller -->
+<div class="slide">
+  <div class="eyebrow">Guided Drill — Full MVC Project</div>
+  <h2>Building Your First MVC App</h2>
+  <div class="cards cols2" style="margin-top:16px">
+    <div>
+      <h3 style="color:var(--accent);margin-bottom:12px">Steps 1–3: Scaffold</h3>
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><span class="cm"># Step 1: Create project</span>
+mkdir mvc-demo-app
+cd mvc-demo-app
+
+<span class="cm"># Step 2: Init + install</span>
+npm init -y
+npm install express ejs mongoose bcrypt jsonwebtoken --save
+
+<span class="cm"># Step 3: Create folder structure</span>
+mkdir models views controllers routes</pre>
+      </div>
+      <h3 style="color:var(--accent2);margin-top:16px;margin-bottom:12px">Step 4: Home Controller</h3>
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">JS — controllers/homeController.js</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><span class="cm">// controllers/homeController.js</span>
+exports.getHomePage <span class="op">=</span> (req, res) <span class="op">=&gt;</span> {
+    <span class="cm">// Simulated data (normally from Model)</span>
+    <span class="kw">const</span> user <span class="op">=</span> { name: <span class="str">'Student Developer'</span> };
+    res.<span class="fn">render</span>(<span class="str">'index'</span>, { user: user });
+};</pre>
+      </div>
+    </div>
+    <div>
+      <h3 style="color:var(--accent3);margin-bottom:12px">Steps 5–7: View, Routes &amp; Run</h3>
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">JS — app.js (simplified)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><span class="cm">// app.js</span>
+<span class="kw">const</span> express        <span class="op">=</span> <span class="fn">require</span>(<span class="str">'express'</span>);
+<span class="kw">const</span> homeController <span class="op">=</span> <span class="fn">require</span>(<span class="str">'./controllers/homeController'</span>);
+<span class="kw">const</span> app            <span class="op">=</span> <span class="fn">express</span>();
+
+app.<span class="fn">set</span>(<span class="str">'view engine'</span>, <span class="str">'ejs'</span>);
+app.<span class="fn">get</span>(<span class="str">'/'</span>, homeController.getHomePage);
+
+app.<span class="fn">listen</span>(<span class="num">3000</span>, () <span class="op">=&gt;</span> {
+    console.<span class="fn">log</span>(<span class="str">'MVC Server running at http://localhost:3000'</span>);
+});</pre>
+      </div>
+      <div class="code-wrap" style="margin-top:12px">
+        <div class="code-header"><span class="code-lang">bash — Run</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre>node app.js</pre>
+      </div>
+      <div class="info" style="margin-top:12px">
+        <strong>Expected:</strong> Open <code class="ic">http://localhost:3000</code> — you should see "Welcome to My App" and the paragraph "Hello, Student Developer" — confirming Model (simulated), View (EJS), and Controller are all connected!
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S10: Analogy -->
+<div class="slide">
+  <div class="eyebrow">Real-World Analogy</div>
+  <h2>MVC = A Well-Run Restaurant</h2>
+  <div class="analogy-grid">
+    <div class="ana-card mc">
+      <div class="ana-icon">🍳</div>
+      <div class="ana-role">Model</div>
+      <div class="ana-title">The Kitchen &amp; Inventory</div>
+      <div class="ana-desc">This is where the data lives. The chef (business logic) knows the recipes and where ingredients (data) are stored. They do the actual cooking — independent of how the order is presented on the menu.</div>
+    </div>
+    <div class="ana-card cc">
+      <div class="ana-icon">🧑‍💼</div>
+      <div class="ana-role">Controller</div>
+      <div class="ana-title">The Waiter</div>
+      <div class="ana-desc">Receives the customer's order (request), checks the kitchen (Model) for availability, asks the chef to prepare it, and brings the finished meal back to the table — updating what the customer sees.</div>
+    </div>
+    <div class="ana-card vc">
+      <div class="ana-icon">📋</div>
+      <div class="ana-role">View</div>
+      <div class="ana-title">The Menu &amp; Table Setting</div>
+      <div class="ana-desc">This is what the customer (user) sees. It presents options in a friendly, readable format. Your <code class="ic">index.ejs</code> is the menu — it doesn't cook food, it just shows you what's available.</div>
+    </div>
+  </div>
+  <h3 style="margin-top:24px;color:var(--text);margin-bottom:12px">Real-World Use Cases</h3>
+  <div class="cards cols3" style="margin-top:0">
+    <div class="card al">
+      <h3>🛒 E-Commerce</h3>
+      <p>Model: inventory &amp; user data. View: product catalog &amp; checkout. Controller: cart logic &amp; payment validation.</p>
+    </div>
+    <div class="card ag">
+      <h3>📱 Social Media</h3>
+      <p>Model: posts &amp; friend lists. View: personalized feed. Controller: like a photo, post a comment.</p>
+    </div>
+    <div class="card aa">
+      <h3>📝 CMS (WordPress)</h3>
+      <p>Model: article storage. View: rendered blog posts. Controller: admin actions like publish, edit, delete.</p>
+    </div>
+  </div>
+</div>
+
+<!-- S11: FAQ -->
+<div class="slide">
+  <div class="eyebrow">Lesson Wrap-Up</div>
+  <h2>Frequently Asked Questions</h2>
+  <div class="cards" style="margin-top:16px">
+    <div class="card al">
+      <h3>❓ When should I use MVC vs simpler architecture?</h3>
+      <p>MVC is ideal for medium-to-large applications — it's the industry standard for web development. For very small scripts or microservices with minimal user interaction, MVC might be over-engineering. Consider app size, team experience, and long-term maintenance needs.</p>
+    </div>
+    <div class="card ag">
+      <h3>❓ Can I mix MVC with other patterns like Microservices?</h3>
+      <p>Yes — and it's often done! You can combine MVC with Microservices or Event-Driven architecture. Just be cautious: mixing patterns without clear boundaries can make the app overly complex. Ensure distinct patterns communicate cleanly without tangling responsibilities.</p>
+    </div>
+    <div class="card aa">
+      <h3>❓ Where can I learn more about Node.js MVC?</h3>
+      <p>Beyond official Express.js and Mongoose documentation, check Udemy, Coursera, and freeCodeCamp. Studying the source code of professional MVC frameworks like <strong style="color:var(--text)">Sails.js</strong> or <strong style="color:var(--text)">AdonisJS</strong> is an excellent way to see real-world MVC structure.</p>
+    </div>
+  </div>
+  <div style="margin-top:18px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px">
+    <h3 style="margin-bottom:10px">📋 Module Summary</h3>
+    <p style="font-size:14.5px;color:var(--text2);line-height:1.65">Today we explored MVC as both a concept and a practical implementation. By separating <strong style="color:var(--purple)">data logic (Model)</strong>, <strong style="color:var(--accent2)">the user interface (View)</strong>, and <strong style="color:var(--accent)">flow control (Controller)</strong>, we unlock the ability to easily test, collaborate on, and scale our Node.js projects. The Express.js + Mongoose + EJS stack provides the full MVC toolkit.</p>
+  </div>
+</div>
+
+<!-- S11b: Troubleshooting -->
+<div class="slide">
+  <div class="eyebrow">Lesson Wrap-Up</div>
+  <h2>Troubleshooting — Hinted Solutions</h2>
+  <p style="font-size:14.5px;color:var(--text2);margin-top:8px;margin-bottom:2px">Ran the demo app and hit an error? Here's what's actually going wrong and how to fix it.</p>
+  <div class="cards" style="margin-top:16px">
+    <div class="card ar">
+      <h3>🛠️ I ran the app but <code class="ic">POST /login</code> just hangs, then errors</h3>
+      <p>This is expected with the code as shown — <code class="ic">app.js</code> never opens a database connection. Add this near the top of <code class="ic">app.js</code>, right after <code class="ic">const app = express();</code>:</p>
+      <p style="margin-top:8px"><code class="ic">mongoose.connect('mongodb://localhost:27017/mvc-demo')</code></p>
+      <p style="margin-top:8px">Make sure MongoDB is actually running locally (<code class="ic">mongod</code>), or swap the URL for a free MongoDB Atlas connection string. Without a connection, <code class="ic">User.findOne()</code> buffers for 10s and then throws a timeout error.</p>
+    </div>
+    <div class="card ar">
+      <h3>🛠️ Login throws "secretOrPrivateKey must have a value"</h3>
+      <p><code class="ic">process.env.JWT_SECRET</code> is <code class="ic">undefined</code> unless you actually set it. Quick fix:</p>
+      <p style="margin-top:8px">1. <code class="ic">npm install dotenv</code> &nbsp; 2. Create a <code class="ic">.env</code> file with <code class="ic">JWT_SECRET=someLongRandomString</code> &nbsp; 3. Add <code class="ic">require('dotenv').config();</code> as the very first line of <code class="ic">app.js</code></p>
+      <p style="margin-top:8px">Also add <code class="ic">.env</code> to <code class="ic">.gitignore</code> — never commit real secrets.</p>
+    </div>
+  </div>
+</div>
+
+<!-- S12: Recap -->
+<div class="slide">
+  <div class="eyebrow">Recap</div>
+  <h2>Key Takeaways</h2>
+  <div class="cards cols2" style="margin-top:18px">
+    <div class="card ap">
+      <h3>🗄️ Model</h3>
+      <ul style="margin-top:8px">
+        <li style="font-size:14px;color:var(--text2);margin-bottom:5px">Handles all data storage, retrieval, manipulation</li>
+        <li style="font-size:14px;color:var(--text2);margin-bottom:5px">Defined using <code class="ic">mongoose.Schema()</code></li>
+        <li style="font-size:14px;color:var(--text2)">Never interacts with the View directly</li>
+      </ul>
+    </div>
+    <div class="card ag">
+      <h3>🖥️ View</h3>
+      <ul style="margin-top:8px">
+        <li style="font-size:14px;color:var(--text2);margin-bottom:5px">Pure presentation — EJS, Pug, or Handlebars</li>
+        <li style="font-size:14px;color:var(--text2);margin-bottom:5px">Receives data via <code class="ic">res.render('name', data)</code></li>
+        <li style="font-size:14px;color:var(--text2)">Swappable without touching Controller logic</li>
+      </ul>
+    </div>
+    <div class="card al">
+      <h3>🎛️ Controller</h3>
+      <ul style="margin-top:8px">
+        <li style="font-size:14px;color:var(--text2);margin-bottom:5px">Mediates between Model and View</li>
+        <li style="font-size:14px;color:var(--text2);margin-bottom:5px">Imports Model, calls <code class="ic">findOne()</code>, renders View</li>
+        <li style="font-size:14px;color:var(--text2)">All request-handling logic lives here</li>
+      </ul>
+    </div>
+    <div class="card aa">
+      <h3>🔀 Routing</h3>
+      <ul style="margin-top:8px">
+        <li style="font-size:14px;color:var(--text2);margin-bottom:5px">Maps URLs to Controller methods in <code class="ic">app.js</code></li>
+        <li style="font-size:14px;color:var(--text2);margin-bottom:5px"><code class="ic">app.get('/', controller.method)</code></li>
+        <li style="font-size:14px;color:var(--text2)">Contains zero business logic itself</li>
+      </ul>
+    </div>
+  </div>
+  <div class="benefit-list" style="margin-top:14px;grid-template-columns:repeat(4,1fr)">
+    <div class="benefit-item">
+      <div class="b-num" style="background:rgba(167,139,250,.15);color:var(--purple)">✓</div>
+      <div class="b-body"><h4>Separation</h4><p>of concerns</p></div>
+    </div>
+    <div class="benefit-item">
+      <div class="b-num">✓</div>
+      <div class="b-body"><h4>Testable</h4><p>each component</p></div>
+    </div>
+    <div class="benefit-item">
+      <div class="b-num" style="background:rgba(52,211,153,.15);color:var(--accent2)">✓</div>
+      <div class="b-body"><h4>Scalable</h4><p>structured blueprint</p></div>
+    </div>
+    <div class="benefit-item">
+      <div class="b-num" style="background:rgba(251,191,36,.15);color:var(--accent3)">✓</div>
+      <div class="b-body"><h4>Collaborative</h4><p>parallel dev</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- S13: Quiz -->
+<div class="slide">
+  <div class="eyebrow">Skill-Building Check</div>
+  <h2>Multiple Choice — Test Your Understanding</h2>
+  <div class="cards cols2" style="margin-top:14px">
+    <div>
+      <div class="quiz-q">1. Which MVC component is responsible for directly handling user input and updating the Model or View?</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>Model</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>Controller</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>View</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>Database</div>
+
+      <div class="quiz-q" style="margin-top:14px">2. Which component renders the User Interface to the user?</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>Model</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>Controller</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>View</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>Router</div>
+    </div>
+    <div>
+      <div class="quiz-q">3. What is a major benefit of strict MVC separation?</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>Makes the server run faster</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>Mixes front-end and back-end in one file</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>Lets you modify the UI without breaking data logic</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>Removes the need for databases</div>
+
+      <div class="quiz-q" style="margin-top:14px">4. Which Node.js framework was introduced to implement MVC and handle HTTP routing?</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>http</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>Express.js</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>mongoose</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>ejs</div>
+    </div>
+  </div>
+</div>
+
+<!-- S13a: Quiz Part 2 -->
+<div class="slide">
+  <div class="eyebrow">Skill-Building Check</div>
+  <h2>Multiple Choice — Part 2</h2>
+  <div class="cards cols2" style="margin-top:14px">
+    <div>
+      <div class="quiz-q">5. In a Mongoose Model, what does <code class="ic">mongoose.model('User', userSchema)</code> primarily do?</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>Defines how HTML looks to the user</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>Handles HTTP requests and responses</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>Creates a class that maps to a MongoDB collection</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>Compresses images and static assets</div>
+
+      <div class="quiz-q" style="margin-top:14px">6. True or False: You can switch your View engine from <code class="ic">ejs</code> to <code class="ic">pug</code> without rewriting Controller logic.</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>True</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>False</div>
+    </div>
+    <div>
+      <div class="quiz-q">7. Which of the following is NOT a direct benefit of MVC architecture?</div>
+      <div class="quiz-opt"><span class="opt-key">A</span>Improved Code Organization</div>
+      <div class="quiz-opt"><span class="opt-key">B</span>Better Testability</div>
+      <div class="quiz-opt"><span class="opt-key">C</span>Eliminates the need for databases</div>
+      <div class="quiz-opt"><span class="opt-key">D</span>Improved Team Collaboration</div>
+    </div>
+  </div>
+</div>
+
+<!-- S13b: Guess the Output (Identification) -->
+<div class="slide">
+  <div class="eyebrow">Skill-Building Check</div>
+  <h2>Guess the Output — Identification</h2>
+  <p style="font-size:14.5px;color:var(--text2);margin-top:8px;margin-bottom:2px">No options this time — write down exactly what each snippet logs to the console.</p>
+  <div class="cards cols3" style="margin-top:12px">
+    <div>
+      <div class="quiz-q">8. What does this log?</div>
+      <div class="code-wrap" style="margin-bottom:10px">
+        <div class="code-header"><span class="code-lang">JS</span></div>
+        <pre><span class="cm">// math.js</span>
+module.<span class="var">exports</span> <span class="op">=</span> <span class="kw">function</span> <span class="fn">add</span>(a, b) {
+  <span class="kw">return</span> a <span class="op">+</span> b;
+};
+
+<span class="cm">// app.js</span>
+<span class="kw">const</span> add <span class="op">=</span> <span class="fn">require</span>(<span class="str">'./math'</span>);
+console.<span class="fn">log</span>(<span class="fn">add</span>(<span class="num">2</span>, <span class="num">3</span>));</pre>
+      </div>
+      <div style="border:1px dashed var(--border2);border-radius:var(--r2);padding:10px 14px;color:var(--text3);font-size:13px;margin-top:8px">✏️ Your answer:</div>
+    </div>
+    <div>
+      <div class="quiz-q">9. What does this log?</div>
+      <div class="code-wrap" style="margin-bottom:10px">
+        <div class="code-header"><span class="code-lang">JS</span></div>
+        <pre><span class="kw">async</span> <span class="kw">function</span> <span class="fn">getUser</span>() {
+  <span class="kw">return</span> { name: <span class="str">'Alex'</span> };
+}
+
+<span class="kw">async</span> <span class="kw">function</span> <span class="fn">run</span>() {
+  <span class="kw">const</span> user <span class="op">=</span> <span class="fn">getUser</span>(); <span class="cm">// no await</span>
+  console.<span class="fn">log</span>(user);
+}
+<span class="fn">run</span>();</pre>
+      </div>
+      <div style="border:1px dashed var(--border2);border-radius:var(--r2);padding:10px 14px;color:var(--text3);font-size:13px;margin-top:8px">✏️ Your answer:</div>
+    </div>
+    <div>
+      <div class="quiz-q">10. What does this log?</div>
+      <div class="code-wrap" style="margin-bottom:10px">
+        <div class="code-header"><span class="code-lang">JS</span></div>
+        <pre><span class="kw">const</span> user <span class="op">=</span> <span class="kw">null</span>;
+console.<span class="fn">log</span>(
+  user
+    <span class="op">?</span> <span class="str">`Hello, ${user.name}`</span>
+    <span class="op">:</span> <span class="str">'Please log in'</span>
+);</pre>
+      </div>
+      <div style="border:1px dashed var(--border2);border-radius:var(--r2);padding:10px 14px;color:var(--text3);font-size:13px;margin-top:8px">✏️ Your answer:</div>
+    </div>
+  </div>
+  <div class="cards cols3" style="margin-top:12px">
+    <div>
+      <div class="quiz-q">11. What does this log?</div>
+      <div class="code-wrap" style="margin-bottom:10px">
+        <div class="code-header"><span class="code-lang">JS</span></div>
+        <pre><span class="kw">const</span> [a, b <span class="op">=</span> <span class="num">10</span>] <span class="op">=</span> [<span class="num">5</span>];
+console.<span class="fn">log</span>(a, b);</pre>
+      </div>
+      <div style="border:1px dashed var(--border2);border-radius:var(--r2);padding:10px 14px;color:var(--text3);font-size:13px;margin-top:8px">✏️ Your answer:</div>
+    </div>
+    <div>
+      <div class="quiz-q">12. What does this log?</div>
+      <div class="code-wrap" style="margin-bottom:10px">
+        <div class="code-header"><span class="code-lang">JS</span></div>
+        <pre><span class="kw">const</span> base <span class="op">=</span> { role: <span class="str">'user'</span>, active: <span class="kw">true</span> };
+<span class="kw">const</span> admin <span class="op">=</span> { <span class="op">...</span>base, role: <span class="str">'admin'</span> };
+console.<span class="fn">log</span>(admin);</pre>
+      </div>
+      <div style="border:1px dashed var(--border2);border-radius:var(--r2);padding:10px 14px;color:var(--text3);font-size:13px;margin-top:8px">✏️ Your answer:</div>
+    </div>
+    <div>
+      <div class="quiz-q">13. What does this log?</div>
+      <div class="code-wrap" style="margin-bottom:10px">
+        <div class="code-header"><span class="code-lang">JS</span></div>
+        <pre><span class="kw">function</span> <span class="fn">counter</span>() {
+  <span class="kw">let</span> count <span class="op">=</span> <span class="num">0</span>;
+  <span class="kw">return</span> () <span class="op">=&gt;</span> <span class="op">++</span>count;
+}
+<span class="kw">const</span> inc <span class="op">=</span> <span class="fn">counter</span>();
+console.<span class="fn">log</span>(<span class="fn">inc</span>(), <span class="fn">inc</span>(), <span class="fn">inc</span>());</pre>
+      </div>
+      <div style="border:1px dashed var(--border2);border-radius:var(--r2);padding:10px 14px;color:var(--text3);font-size:13px;margin-top:8px">✏️ Your answer:</div>
+    </div>
+  </div>
+</div>
+
+<!-- S14: Answer Key -->
+<div class="slide">
+  <div class="eyebrow">Answer Key</div>
+  <h2>Quiz Answers &amp; Explanations</h2>
+  <div class="cards" style="margin-top:14px;grid-template-columns:repeat(4,1fr)">
+    <div>
+      <div class="ans-item">
+        <div class="ans-q">Q1: Which component handles user input?</div>
+        <div class="ans-a">✅ B — Controller</div>
+        <div class="ans-exp">The Controller sits in the middle. It receives input from the View, interacts with the Model, and decides which View to present back.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q2: Which component renders the UI?</div>
+        <div class="ans-a">✅ C — View</div>
+        <div class="ans-exp">The View is the presentation layer — it displays data to the user using template engines like EJS or Pug.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q3: Major benefit of strict MVC separation?</div>
+        <div class="ans-a">✅ C — Modify UI without breaking data logic</div>
+        <div class="ans-exp">This is "Separation of Concerns." Because components are decoupled, you can overhaul the entire UI without rewriting the Model or business logic.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q4: Framework for MVC + HTTP routing?</div>
+        <div class="ans-a">✅ B — Express.js</div>
+        <div class="ans-exp">Express provides app.get(), app.post(), and app.listen() — the backbone of any Node.js web application.</div>
+      </div>
+    </div>
+    <div>
+      <div class="ans-item">
+        <div class="ans-q">Q5: What does mongoose.model('User', schema) do?</div>
+        <div class="ans-a">✅ C — Creates a class mapped to a MongoDB collection</div>
+        <div class="ans-exp">mongoose.model() creates a Model class from the schema. Mongoose automatically maps 'User' to the 'users' collection for all DB queries.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q6: Can you switch View engines without rewriting Controllers?</div>
+        <div class="ans-a">✅ A — True</div>
+        <div class="ans-exp">The Controller calls res.render('index', data) and doesn't care how the engine renders HTML. Swap ejs for pug — the Controller is untouched.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q7: Which is NOT a direct MVC benefit?</div>
+        <div class="ans-a">✅ C — Eliminates the need for databases</div>
+        <div class="ans-exp">MVC does not remove databases — the Model is specifically designed to interact with them. All other options (organization, testability, collaboration) are genuine MVC benefits.</div>
+      </div>
+    </div>
+    <div>
+      <div class="ans-item">
+        <div class="ans-q">Q8: What does add(2, 3) log via module.exports?</div>
+        <div class="ans-a">✅ 5</div>
+        <div class="ans-exp">module.exports assigns the add function itself, so require('./math') returns a callable function. add(2,3) runs normally and returns the number 5, not a string.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q9: What logs when you forget "await" on an async call?</div>
+        <div class="ans-a">✅ Promise { name: 'Alex' }</div>
+        <div class="ans-exp">Every async function returns a Promise. Without await, getUser() isn't resolved yet — console.log prints the pending/resolved Promise wrapper, not the plain object.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q10: What logs when user is null in a ternary?</div>
+        <div class="ans-a">✅ Please log in</div>
+        <div class="ans-exp">Since user is null (falsy), the ternary's else branch runs. This mirrors the &lt;% if (user) %&gt; pattern from the EJS view — accessing user.name here would instead throw.</div>
+      </div>
+    </div>
+    <div>
+      <div class="ans-item">
+        <div class="ans-q">Q11: Destructuring with a default value</div>
+        <div class="ans-a">✅ 5 10</div>
+        <div class="ans-exp">Array destructuring pulls 5 into a. Since the array has no second element, b falls back to its default value of 10.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q12: Spreading and overriding a property</div>
+        <div class="ans-a">✅ { role: 'admin', active: true }</div>
+        <div class="ans-exp">The spread copies all of base's properties first, then role: 'admin' — written after the spread — overrides the copied role. active is untouched.</div>
+      </div>
+      <div class="ans-item">
+        <div class="ans-q">Q13: Closure holding onto state</div>
+        <div class="ans-a">✅ 1 2 3</div>
+        <div class="ans-exp">counter() returns a new function that closes over its own count variable. Each call to inc() increments and returns that same private count — a classic closure counter.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S15: Final -->
+<div class="slide">
+  <div class="final">
+    <blockquote>"Any fool can write code that a computer can understand. Good programmers write code that humans can understand."</blockquote>
+    <p style="font-size:13px;color:var(--text3);margin-bottom:40px">— Martin Fowler</p>
+    <h2 style="margin-bottom:14px">Module 13 Complete 🎉</h2>
+    <p style="font-size:16px;color:var(--text2);max-width:520px;line-height:1.7;margin-bottom:30px">You now understand how MVC separates concerns, why that matters, and how to wire Model, View, and Controller together in a real Node.js + Express application.</p>
+    <div class="logo-row" style="justify-content:center">
+      <span class="logo-chip" style="background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.3);color:#c4b5fd">🗄️ Model</span>
+      <span class="logo-chip" style="background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.3);color:#93c5fd">🎛️ Controller</span>
+      <span class="logo-chip" style="background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.3);color:#6ee7b7">🖥️ View</span>
+    </div>
+    <p style="font-size:13px;color:var(--text3);margin-top:36px">Press <kbd style="background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;color:var(--accent);font-family:monospace">?</kbd> for navigation shortcuts</p>
+  </div>
+</div>
+
+</div><!-- end deck -->
+
+<div id="help">
+  <div class="help-box">
+    <h2>Keyboard Shortcuts</h2>
+    <div class="help-row"><span>Next slide</span><span><kbd>→</kbd> or <kbd>Right-click</kbd></span></div>
+    <div class="help-row"><span>Previous slide</span><span><kbd>←</kbd></span></div>
+    <div class="help-row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="help-row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="help-row"><span>Close this panel</span><span><kbd>?</kbd> or <kbd>Esc</kbd></span></div>
+  </div>
+</div>
+
+<script>
+const slides = Array.from(document.querySelectorAll('.slide'));
+const total = slides.length;
+let cur = 0;
+
+function go(n) {
+  n = Math.max(0, Math.min(total - 1, n));
+  if (n === cur) return;
+  const prev = cur;
+  slides[prev].classList.remove('active');
+  if (n > prev) slides[prev].classList.add('prev');
+  setTimeout(() => slides[prev].classList.remove('prev'), 360);
+  cur = n;
+  slides[cur].classList.add('active');
+  slides[cur].classList.remove('prev');
+  document.getElementById('prog').style.width = ((cur + 1) / total * 100) + '%';
+  document.getElementById('counter').textContent = (cur + 1) + ' / ' + total;
+}
+
+document.addEventListener('keydown', e => {
+  const help = document.getElementById('help');
+  if (help.classList.contains('show')) {
+    if (e.key === 'Escape' || e.key === '?') help.classList.remove('show');
+    return;
+  }
+  if (e.key === 'ArrowRight') go(cur + 1);
+  else if (e.key === 'ArrowLeft') go(cur - 1);
+  else if (e.key === 'Home') go(0);
+  else if (e.key === 'End') go(total - 1);
+  else if (e.key === '?') document.getElementById('help').classList.toggle('show');
+});
+
+document.addEventListener('mousedown', e => {
+  if (e.target.closest('button, a, input, select, textarea, pre')) return;
+  if (e.button === 2) { e.preventDefault(); e.stopImmediatePropagation(); go(cur + 1); }
+  else if (e.button === 3) { e.preventDefault(); e.stopImmediatePropagation(); go(cur - 1); }
+  else if (e.button === 4) { e.preventDefault(); e.stopImmediatePropagation(); go(cur + 1); }
+}, true);
+document.addEventListener('contextmenu', e => { if (!e.target.closest('button, a, input, select, textarea, pre')) e.preventDefault(); }, true);
+document.addEventListener('auxclick', e => { if (e.button !== 1) e.preventDefault(); }, true);
+
+let tx = 0;
+document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - tx;
+  if (Math.abs(dx) > 50) go(dx < 0 ? cur + 1 : cur - 1);
+}, { passive: true });
+
+function copyCode(btn) {
+  const code = btn.closest('.code-wrap').querySelector('pre').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('ok'); }, 1800);
+  });
+}
+
+document.getElementById('prog').style.width = (1 / total * 100) + '%';
+</script>
+</body>
+</html>
