@@ -1,141 +1,101 @@
-# 📚 School Modules Repository
+# 🧮 Data Structures & Algorithms — CC104
 
-A personal collection of study modules, reviewers, exam answer keys, slides, and lecture summaries — organized so you can find what you need in **two clicks or less**.
+Lecture modules, slides, reviewers, and exam materials for **Data Structures & Algorithms (CC104)**.  
+Covers Big-O notation, Linked Lists, Stacks, Queues, Trees, Graphs, Searching, and Sorting.
 
 <p align="center">
   <img alt="status" src="https://img.shields.io/badge/status-active-brightgreen">
-  <img alt="subjects" src="https://img.shields.io/badge/subjects-3%20of%208-blue">
-  <img alt="type" src="https://img.shields.io/badge/type-personal%20study%20archive-orange">
+  <img alt="modules" src="https://img.shields.io/badge/modules-M4--M13-blue">
+  <img alt="type" src="https://img.shields.io/badge/type-course%20notes-orange">
 </p>
 
 ---
 
-## ⚡ New here? Start in 10 seconds
+## ⚡ Quick start
 
-1. **Pick your subject** from the table below.
-2. **Click the subject name** — it opens that subject's folder (or dedicated branch, if it has one).
-3. Inside, open:
-   - `.html` files → view in your **browser** (slides/decks)
-   - `.md` files → notes, reviewers, answer keys (readable right on GitHub)
-   - `.pdf` / `.docx` / `.pptx` → click **"View raw"** or **download**
+1. **Browse the module list below** and click the one you need.
+2. `.html` files → open in your **browser** (they're interactive slide decks).
+3. `.md` / `.docx` / `.pptx` / `.pdf` files → readable or downloadable right here on GitHub.
+4. Need review material? Head to the [`prelims/`](prelims/) folder.
 
-That's it. No installs, no setup. 🎉
+No downloads or installs required — everything renders in-browser.
 
 ---
 
-## 🗂️ Available Subjects
+## 📄 Lecture Modules
 
-| # | Subject | Code | Folder | Branch | Status |
-|---|---------|------|--------|--------|--------|
-| 1 | 🖥️ Human-Computer Interaction 2 | `IT103` | [`HCI_ 2_IT103_C/`](HCI_%202_IT103_C/) | [`Human_Computer_Interaction`](https://github.com/Nazonokage/SchoolPresentations/tree/Human_Computer_Interaction) | ✅ Ready |
-| 2 | 🧮 Data Structures & Algorithms | `CC104` | [`CC104_DSA_C/`](CC104_DSA_C/) | — | ✅ Ready |
-| 3 | ☕ Object-Oriented Programming | `EL 101` | [`EL_101_OOP_C/`](EL_101_OOP_C/) | — | ✅ Ready |
-| 4 | 🗄️ Advanced Database | `DC104` | `DC104_AdvDatabase/` | — | 🚧 In progress |
-| 5 | 🌐 JS Web Systems | `EL104` | `EL104_JSWebSystems/` | — | 🚧 In progress |
-| 6 | 🧩 Integrative Programming | `IT103` | `IT103_IntegrativeProg/` | — | 🚧 In progress |
-| 7 | 🔐 Systems Integration & Architecture | `IT108` | `IT108_SIA/` | — | 🚧 In progress |
-| 8 | 📱 Platform Technologies | `IT102` | `platform_Tech_IT102/` | — | 🚧 In progress |
+| Module | Topic | File |
+|--------|-------|------|
+| M4 | Big-O Notation | [DSA M4 big-o-notation-slides.html](DSA%20M4%20big-o-notation-slides.html) |
+| M5 | Linked Lists | [DSA M5 Linked_Lists.html](DSA%20M5%20Linked_Lists.html) |
+| M6 | Stacks (Part 2) | [DSA M6 Stacks_Part2.html](DSA%20M6%20Stacks_Part2.html) |
+| M7 | Queues (Part 2) | [DSA M7 Queues_Part2.html](DSA%20M7%20Queues_Part2.html) |
+| M8 | Trees | [DSA M8  Trees.html](DSA%20M8%20%20Trees.html) |
+| M9 | Trees Traversals & BST | [DSA M9 Trees_Traversals_BST.html](DSA%20M9%20Trees_Traversals_BST.html) |
+| M10 | Graphs | [DSA M10  Graphs.html](DSA%20M10%20%20Graphs.html) |
+| M11 | Binary Search | [DSA M11 Binary_Search.html](DSA%20M11%20Binary_Search.html) |
+| M12 | Searching (Part 2) | [DSA M12 Searching_Part2.html](DSA%20M12%20Searching_Part2.html) |
+| M13 | Insertion Sort | [DSA M13 Insertion_Sort.html](DSA%20M13%20Insertion_Sort.html) |
 
-> 🚧 = folder exists locally but isn't fully organized/uploaded yet.
-> 🌿 A **Branch** link means that subject also has its own standalone branch with a subject-specific README — handy if you only care about that one class and don't want to navigate through everything else.
-
----
-
-## 📖 Subject Details
-
-### 1. 🖥️ HCI 2 — Human-Computer Interaction (`IT103`)
-Touch UIs, auditory interfaces, QR codes, DOM manipulation, Web APIs, Augmented Reality, and Python text-to-speech.
-
-- 📄 **Lecture modules:** M10–M23 — DOM, QR widgets, WebAR, gTTS, Map APIs, and more
-- 📝 **Prelims folder:** compiled reviewers, summatives, exam answer keys
-- 🌿 **Also available as its own branch:** [`Human_Computer_Interaction`](https://github.com/Nazonokage/SchoolPresentations/tree/Human_Computer_Interaction) — same content, cleaner single-subject view
-
-**Jump straight to:**
-- 🗺️ [HCI2_M23_Map_APIs.html](HCI_%202_IT103_C/HCI2_M23_Map_APIs.html)
-- 🔑 [HCI2_Prelim_Exam_ANSWER_KEY.md](HCI_%202_IT103_C/prelims/HCI2_Prelim_Exam_ANSWER_KEY.md)
-- 📘 [CompiledPrelims.md](HCI_%202_IT103_C/prelims/CompiledPrelims.md)
+📄 Quick overview: [DSA info.md](DSA%20info.md)
 
 ---
 
-### 2. 🧮 DSA — Data Structures & Algorithms (`CC104`)
-Big-O notation, linked lists, stacks, queues, trees, graphs, searching, and sorting.
+## 📝 Prelims — Review Material
 
-- 📄 **Lecture modules:** M4–M13 — Big-O, Linked Lists, Stacks, Queues, Trees, Graphs, Search, Insertion Sort
-- 📝 **Prelims folder:** reviewers, summative tests, exam answer keys
+All inside [`prelims/`](prelims/):
 
-**Jump straight to:**
-- ℹ️ [DSA info.md](CC104_DSA_C/DSA%20info.md)
-- 📊 [DSA M4 Big-O Notation](CC104_DSA_C/DSA%20M4%20big-o-notation-slides.html)
-- 📘 [DSA_Prelims_Reviewer.md](CC104_DSA_C/prelims/DSA_Prelims_Reviewer.md)
-
----
-
-### 3. ☕ OOP — Object-Oriented Programming (`EL 101`)
-OOP fundamentals, access modifiers, static vs. instance, methods & arrays, Maven, polymorphism, and database JDBC/DAO.
-
-- 📄 **Lecture modules:** M5–M11 — OOP concepts, PHP/XAMPP polymorphism, JDBC/DAO
-- 📝 **Prelims folder:** intro modules, reviewers, summatives, exam answer keys
-
-**Jump straight to:**
-- 🗃️ [OOP_M11_Database_JDBC_DAO.html](EL_101_OOP_C/OOP_M11_Database_JDBC_DAO.html)
-- 📘 [OOP_Prelims_Reviewer.md](EL_101_OOP_C/prelims/OOP_Prelims_Reviewer.md)
-- 🔑 [OOP_Prelim_Exam_ANSWER_KEY.md](EL_101_OOP_C/prelims/OOP_Prelim_Exam_ANSWER_KEY.md)
+- 🔑 [DSA Prelim_Answer_Key.md](prelims/DSA%20Prelim_Answer_Key.md)
+- 📘 [DSA_Prelims_Reviewer.md](prelims/DSA_Prelims_Reviewer.md)
+- 📄 [DSA Prelim_Exam.docx](prelims/DSA%20Prelim_Exam.docx)
+- 🧪 [DSA_Prelim Summative_Test.html](prelims/DSA_Prelim%20Summative_Test.html)
+- 📗 Early modules & notes:
+  - [DSA module 2.html](prelims/DSA%20module%202.html)
+  - [dsa_module3.html](prelims/dsa_module3.html)
+  - [Java_in_15_Minutes.html](prelims/Java_in_15_Minutes.html)
+  - [Module-2-Sorting-and-Recursion.pdf](prelims/Module-2-Sorting-and-Recursion.pdf)
+  - [Module-2-Sorting-and-Recursion.pptx](prelims/Module-2-Sorting-and-Recursion.pptx)
+  - [it 30 m1 Introduction-to-Data-Structures-and-Algorithms.pptx](prelims/it%2030%20m1%20Introduction-to-Data-Structures-and-Algorithms.pptx)
+  - [it 30 m2 Primitive-Conversions-and-Language-Nuances.pptx](prelims/it%2030%20m2%20Primitive-Conversions-and-Language-Nuances.pptx)
 
 ---
 
 ## 🌳 Folder Structure
 
 ```
-📦 school-modules
-├── 📁 HCI_ 2_IT103_C/          → HCI 2 (Human-Computer Interaction)
-├── 📁 CC104_DSA_C/             → DSA (Data Structures & Algorithms)
-├── 📁 EL_101_OOP_C/            → OOP (Object-Oriented Programming)
-├── 📁 DC104_AdvDatabase/       → Advanced Database (coming soon)
-├── 📁 EL104_JSWebSystems/      → JS Web Systems (coming soon)
-├── 📁 IT103_IntegrativeProg/   → Integrative Programming (coming soon)
-├── 📁 IT108_SIA/               → Systems Integration & Architecture (coming soon)
-├── 📁 platform_Tech_IT102/     → Platform Technologies (coming soon)
-└── 📄 README.md                → you are here
+📦 Data_Structures_and_Algos (CC104)
+├── 📄 DSA M4 big-o-notation-slides.html
+├── 📄 DSA M5 Linked_Lists.html
+├── 📄 DSA M6 Stacks_Part2.html
+├── 📄 DSA M7 Queues_Part2.html
+├── 📄 DSA M8  Trees.html
+├── 📄 DSA M9 Trees_Traversals_BST.html
+├── 📄 DSA M10  Graphs.html
+├── 📄 DSA M11 Binary_Search.html
+├── 📄 DSA M12 Searching_Part2.html
+├── 📄 DSA M13 Insertion_Sort.html
+├── 📄 DSA info.md
+├── 📁 prelims/               ← reviewers, summatives, answer keys, early modules
+└── 📄 README.md              ← you are here
 ```
-
-Each subject folder generally follows this pattern inside:
-
-```
-📁 <Subject_Folder>/
-├── 📄 M#_TopicName.html   ← individual lecture slides
-├── 📄 <Subject> info.md   ← quick overview / index for that subject
-└── 📁 prelims/            ← reviewers, summatives, and answer keys
-```
-
----
-
-## 🧭 How to Use (step-by-step)
-
-| Step | What to do | Where |
-|------|------------|-------|
-| 1️⃣ | Find your subject in the table above | This page |
-| 2️⃣ | Click the subject name (or its branch link, if it has one) | Opens the folder / branch |
-| 3️⃣ | Click a file to open it | `.html` opens in-browser, `.md` renders as text, `.pdf`/`.docx`/`.pptx` gives a **View raw / Download** button |
-| 4️⃣ | Can't find a specific topic? | Open the `prelims/` folder — it has compiled reviewers covering everything |
-
----
-
-## 🌿 Branches
-
-This repo is organized as one main branch with **all subjects**, plus optional **per-subject branches** for anyone who only wants one class without the clutter of the rest.
-
-| Branch | Subject | Link |
-|--------|---------|------|
-| `main` | Everything (this page) | you're on it |
-| `Human_Computer_Interaction` | HCI 2 only | [View branch](https://github.com/Nazonokage/SchoolPresentations/tree/Human_Computer_Interaction) |
-
-More subject branches will be added here as they're split out.
 
 ---
 
 ## 💡 Notes
 
-- Clicking a subject heading links to that subject's **folder root**.
-- **Key files** provided are just starting points — browse the full folder for everything.
-- This repository is organized per subject and is meant to be expanded with the remaining subjects (e.g., Integrative Programming, Web Systems, SIA, etc.) later.
-- 🌿 Per-subject branches are optional mirrors for convenience — the main branch always has the full, up-to-date set.
+- This is a **dedicated branch** for Data Structures & Algorithms only — clean and focused.
+- The full multi-subject collection lives on the [`main`](https://github.com/Nazonokage/SchoolPresentations) branch.
+- Related: [Nazonokage/SchoolPresentations](https://github.com/Nazonokage/SchoolPresentations)
+```
+
+---
+
+### How to add it
+
+```powershell
+git checkout Data_Structures_and_Algos
+
+# Create/overwrite README.md with the content above
+git add README.md
+git commit -m "Add proper subject-specific README for DSA branch"
+git push origin Data_Structures_and_Algos
