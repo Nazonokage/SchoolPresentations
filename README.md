@@ -1,4 +1,4 @@
-```markdown
+
 # 📚 School Modules Repository
 
 A personal collection of study modules, reviewers, exam answer keys, slides, and lecture summaries — organized so you can find what you need in **two clicks or less**.
@@ -162,6 +162,3 @@ More subject branches will be added here as they're split out.
 - This repository is organized per subject and is meant to be expanded with the remaining subjects (e.g., Integrative Programming, Web Systems, SIA, etc.) later.
 - 🌿 Per-subject branches are optional mirrors for convenience — the main branch always has the full, up-to-date set.
 ```
-
-Just copy-paste this into your `README.md` on the `main` branch and push.  
-Want me to also make a cleaner subject-specific README for the `Advanced_Database` branch?
