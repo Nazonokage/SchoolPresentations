@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IDEs & Kotlin — Platform Briefing</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg:#05070d;
+    --panel:#0c1220;
+    --panel-2:#111b30;
+    --line: rgba(146,168,214,0.16);
+    --line-strong: rgba(146,168,214,0.3);
+    --cyan:#4fd8ff;
+    --violet:#a17bff;
+    --mint:#63f2c3;
+    --text:#eef2fb;
+    --muted:#8b96b8;
+    --faint:#5b6488;
+    --danger:#ff6b6b;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);}
+  body{
+    font-family:'Inter', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+
+  /* ---------- background field ---------- */
+  .field{
+    position:fixed; inset:0; z-index:0; overflow:hidden;
+    background:
+      radial-gradient(1100px 700px at 82% -10%, rgba(161,123,255,0.16), transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, rgba(79,216,255,0.14), transparent 60%),
+      var(--bg);
+  }
+  .field::before{
+    content:"";
+    position:absolute; inset:-2px;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(1200px 800px at 50% 30%, black, transparent 75%);
+    opacity:0.55;
+  }
+  .beam{
+    position:absolute; width:2px; height:160%; top:-30%;
+    background:linear-gradient(180deg, transparent, rgba(79,216,255,0.5), transparent);
+    filter: blur(1px);
+    animation: drift 14s linear infinite;
+    opacity:0.5;
+  }
+  .beam.b2{ background:linear-gradient(180deg, transparent, rgba(161,123,255,0.45), transparent); animation-duration:19s; }
+  .beam.b3{ background:linear-gradient(180deg, transparent, rgba(99,242,195,0.35), transparent); animation-duration:23s; }
+  @keyframes drift{
+    0%{ left:-5%; }
+    100%{ left:105%; }
+  }
+  @media (prefers-reduced-motion: reduce){ .beam{ animation:none; display:none; } }
+
+  /* ---------- deck / slides ---------- */
+  .deck{ position:fixed; inset:0; z-index:1; }
+  .slide{
+    position:absolute; inset:0;
+    overflow-y:auto;
+    padding: 96px 8vw 120px;
+    opacity:0; pointer-events:none;
+    transform: translateX(48px) scale(0.98);
+    transition: transform .42s cubic-bezier(.22,.8,.28,1), opacity .42s ease;
+  }
+  .slide.active{ opacity:1; pointer-events:auto; transform: translateX(0) scale(1); z-index:2; }
+  .slide.before{ transform: translateX(-48px) scale(0.98); opacity:0; }
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition: opacity .25s ease; transform:none !important; }
+  }
+
+  .slide-inner{
+    min-height:100%;
+    display:flex; flex-direction:column; justify-content:center;
+    max-width:1180px; margin:0 auto; width:100%; min-width:0;
+  }
+
+  .eyebrow{
+    font-family:'Orbitron', sans-serif;
+    font-size:12px; letter-spacing:0.22em; text-transform:uppercase;
+    color:var(--cyan); font-weight:600;
+    display:flex; align-items:center; gap:10px; margin-bottom:18px;
+  }
+  .eyebrow::before{
+    content:""; width:26px; height:1px; background:linear-gradient(90deg, var(--cyan), transparent);
+  }
+
+  h1.title{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700; font-size:clamp(30px, 4.2vw, 54px);
+    line-height:1.08; letter-spacing:-0.01em; margin:0 0 18px;
+    background: linear-gradient(120deg, #ffffff 40%, var(--cyan) 90%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .subtitle{ font-size:18px; color:var(--muted); max-width:760px; line-height:1.6; margin-bottom:8px; }
+  .lede{ font-size:16px; color:var(--muted); max-width:820px; line-height:1.7; }
+
+  /* ---------- generic content blocks ---------- */
+  .panel{
+    background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    border:1px solid var(--line); border-radius:14px; padding:26px 28px;
+    min-width:0;
+  }
+
+  .grid{ display:grid; gap:18px; margin-top:28px; min-width:0; }
+  .grid.cols-2{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .grid.cols-3{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .grid.cols-4{ grid-template-columns: repeat(4, minmax(0,1fr)); }
+  @media (max-width: 900px){
+    .grid.cols-3, .grid.cols-4{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+  }
+  @media (max-width: 620px){
+    .grid.cols-2, .grid.cols-3, .grid.cols-4{ grid-template-columns: minmax(0,1fr); }
+  }
+
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:20px 20px; min-width:0; position:relative; overflow:hidden;
+  }
+  .card::after{
+    content:""; position:absolute; inset:0; border-radius:12px; padding:1px;
+    background:linear-gradient(140deg, rgba(79,216,255,0.35), transparent 40%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+    opacity:0.7; pointer-events:none;
+  }
+  .card .tag{
+    font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--mint);
+    letter-spacing:0.06em; margin-bottom:10px; display:block;
+  }
+  .card h3{ font-family:'Space Grotesk', sans-serif; font-size:17px; margin:0 0 8px; font-weight:600; }
+  .card p{ font-size:14px; color:var(--muted); line-height:1.55; margin:0; }
+
+  .card-head{ display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+  .card-head h3{ margin:0; }
+  .icon-chip{
+    width:42px; height:42px; border-radius:10px; flex-shrink:0;
+    background:rgba(255,255,255,0.07); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center; padding:7px; overflow:hidden;
+  }
+  .icon-chip img{ max-width:100%; max-height:100%; object-fit:contain; }
+  .icon-chip.mono{
+    font-family:'Orbitron', sans-serif; font-weight:700; font-size:12px; color:var(--cyan);
+    letter-spacing:0.02em;
+  }
+
+  .num-badge{
+    font-family:'Orbitron', sans-serif; font-size:12px; color:var(--violet);
+    border:1px solid rgba(161,123,255,0.4); border-radius:20px;
+    padding:2px 10px; display:inline-block; margin-bottom:12px;
+  }
+
+  .two-col{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:24px; margin-top:26px; min-width:0; }
+  @media (max-width: 760px){ .two-col{ grid-template-columns: minmax(0,1fr); } }
+  .two-col .panel{ min-width:0; }
+  .two-col h3{ font-family:'Space Grotesk', sans-serif; font-size:18px; margin:0 0 12px; color:var(--cyan); }
+  .two-col ul, ul.plain{ margin:0; padding-left:20px; color:var(--muted); font-size:14.5px; line-height:1.75; }
+  .two-col ul li, ul.plain li{ margin-bottom:6px; }
+
+  ol.steps{ counter-reset: step; list-style:none; padding:0; margin:26px 0 0; display:flex; flex-direction:column; gap:14px; }
+  ol.steps li{
+    display:flex; gap:16px; align-items:flex-start; padding:16px 18px;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; min-width:0;
+  }
+  ol.steps li::before{
+    counter-increment: step; content: counter(step, decimal-leading-zero);
+    font-family:'JetBrains Mono', monospace; font-size:14px; color:var(--bg);
+    background:linear-gradient(135deg, var(--cyan), var(--violet));
+    min-width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; font-weight:600;
+  }
+  ol.steps li .step-body b{ display:block; font-size:15px; margin-bottom:2px; color:var(--text); }
+  ol.steps li .step-body span{ font-size:14px; color:var(--muted); line-height:1.6; }
+
+  /* ---------- code blocks ---------- */
+  .code-block{
+    margin-top:24px; border-radius:12px; overflow:hidden;
+    border:1px solid var(--line-strong); background:#080c16; min-width:0;
+  }
+  .code-head{
+    display:flex; align-items:center; gap:8px; padding:10px 16px;
+    background:var(--panel-2); border-bottom:1px solid var(--line);
+    font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--muted);
+  }
+  .code-head .dot{ width:9px; height:9px; border-radius:50%; }
+  .code-head .dot.r{ background:#ff6b6b; } .code-head .dot.y{ background:#ffd479; } .code-head .dot.g{ background:#63f2c3; }
+  .code-head .fname{ margin-left:8px; }
+  pre.code{
+    margin:0; padding:18px 20px; overflow-x:auto; min-width:0;
+    font-family:'JetBrains Mono', monospace; font-size:13.5px; line-height:1.65; color:#cdd6ee;
+  }
+  .cm-comment{ color:#5b6488; font-style:italic; }
+  .cm-string{ color:var(--mint); }
+  .cm-keyword{ color:var(--violet); font-weight:600; }
+  .cm-tag{ color:var(--cyan); font-weight:600; }
+  .cm-attr{ color:#ffd479; }
+  .cm-selector{ color:var(--cyan); font-weight:600; }
+  .cm-property{ color:#ffd479; }
+  .cm-number{ color:#ff9b6b; }
+
+  .code-note{ margin-top:16px; display:flex; flex-direction:column; gap:8px; }
+  .code-note .row{ display:flex; gap:10px; font-size:14px; color:var(--muted); }
+  .code-note code{ font-family:'JetBrains Mono', monospace; color:var(--mint); background:rgba(99,242,195,0.08); padding:1px 6px; border-radius:5px; }
+
+  /* ---------- quiz ---------- */
+  .quiz-q{ font-family:'Space Grotesk', sans-serif; font-size:19px; margin:22px 0 14px; color:var(--text); }
+  .quiz-grid{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:12px; min-width:0; }
+  @media (max-width:700px){ .quiz-grid{ grid-template-columns: minmax(0,1fr); } }
+  .quiz-option{
+    border:1px solid var(--line); background:var(--panel); border-radius:10px;
+    padding:12px 14px; font-size:14.5px; color:var(--muted); display:flex; gap:10px; min-width:0;
+  }
+  .quiz-option b{ color:var(--faint); font-family:'JetBrains Mono', monospace; }
+  .quiz-option.correct{ border-color: rgba(99,242,195,0.55); color:var(--text); background:rgba(99,242,195,0.06); }
+  .quiz-option.correct b{ color:var(--mint); }
+  .quiz-option .chk{ margin-left:auto; color:var(--mint); font-family:'JetBrains Mono', monospace; font-size:12px; opacity:0; }
+  .quiz-option.correct .chk{ opacity:1; }
+  .quiz-block{ margin-bottom:6px; }
+
+  /* ---------- quote ---------- */
+  .quote-slide .mark{ font-family:'Space Grotesk', sans-serif; font-size:64px; color:var(--violet); line-height:0.6; margin-bottom:10px; opacity:0.7; }
+  .quote-slide blockquote{
+    font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:clamp(22px,3vw,32px);
+    line-height:1.45; margin:0 0 22px; max-width:900px;
+    background: linear-gradient(120deg,#fff 40%, var(--mint) 100%); -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .quote-slide cite{ font-style:normal; font-family:'JetBrains Mono', monospace; color:var(--cyan); font-size:14px; letter-spacing:0.04em; }
+
+  /* ---------- directory / logo grid ---------- */
+  .directory{ display:grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap:14px; margin-top:26px; min-width:0; }
+  @media (max-width:900px){ .directory{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
+  @media (max-width:600px){ .directory{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  .dir-item{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px 12px; text-align:center; min-width:0; }
+  .dir-mono{
+    width:52px; height:52px; margin:0 auto 12px; border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Orbitron', sans-serif; font-weight:700; font-size:16px; color:var(--bg);
+    background:linear-gradient(135deg, var(--cyan), var(--violet));
+  }
+  .dir-logo{
+    width:64px; height:64px; margin:0 auto 12px; border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    background:#f4f6fb; border:1px solid var(--line);
+    padding:10px;
+  }
+  .dir-logo img{ max-width:100%; max-height:100%; object-fit:contain; }
+  .dir-item .idx{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--faint); display:block; margin-bottom:6px; }
+  .dir-item .name{ font-size:13.5px; color:var(--text); font-weight:500; }
+  .dir-item .icon-chip{ width:52px; height:52px; margin:0 auto 12px; border-radius:12px; padding:9px; }
+
+  /* ---------- faq ---------- */
+  .faq-item{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:22px 24px; margin-top:20px; min-width:0; }
+  .faq-item h3{ font-family:'Space Grotesk', sans-serif; font-size:17px; margin:0 0 10px; color:var(--cyan); }
+  .faq-item p{ font-size:14.5px; color:var(--muted); line-height:1.7; margin:0; }
+
+  /* ---------- chrome: progress + counter ---------- */
+  .chrome{ position:fixed; inset:0; z-index:5; pointer-events:none; }
+  .progress-rail{ position:fixed; top:0; left:0; right:0; height:3px; background:rgba(255,255,255,0.06); z-index:6; }
+  .progress-fill{ height:100%; width:0%; background:linear-gradient(90deg, var(--cyan), var(--violet)); transition:width .4s ease; box-shadow:0 0 12px rgba(79,216,255,0.6); }
+
+  .hud{
+    position:fixed; bottom:22px; right:26px; z-index:6;
+    font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--muted);
+    background:rgba(12,18,32,0.7); border:1px solid var(--line); backdrop-filter: blur(6px);
+    padding:8px 14px; border-radius:20px; display:flex; align-items:center; gap:10px;
+    letter-spacing:0.04em;
+  }
+  .hud .dotlive{ width:6px; height:6px; border-radius:50%; background:var(--mint); box-shadow:0 0 8px var(--mint); }
+  .hud b{ color:var(--text); }
+
+  .hint{
+    position:fixed; bottom:22px; left:26px; z-index:6;
+    font-family:'JetBrains Mono', monospace; font-size:11.5px; color:var(--faint);
+    letter-spacing:0.05em; display:flex; gap:14px;
+  }
+  .hint kbd{
+    border:1px solid var(--line); border-radius:5px; padding:1px 6px; color:var(--muted);
+    background:rgba(255,255,255,0.03); font-family:'JetBrains Mono', monospace;
+  }
+  @media (max-width:640px){ .hint{ display:none; } }
+
+  ::-webkit-scrollbar{ width:8px; }
+  ::-webkit-scrollbar-thumb{ background:var(--line-strong); border-radius:8px; }
+</style>
+</head>
+<body>
+
+<div class="field">
+  <div class="beam" style="left:14%;"></div>
+  <div class="beam b2" style="left:52%;"></div>
+  <div class="beam b3" style="left:78%;"></div>
+</div>
+
+<div class="progress-rail"><div class="progress-fill" id="progressFill"></div></div>
+
+<div class="deck" id="deck"></div>
+
+<div class="hud" id="hud"><span class="dotlive"></span><span><b id="hudCurrent">01</b> / <span id="hudTotal">00</span></span></div>
+<div class="hint"><span><kbd>&larr;</kbd> <kbd>&rarr;</kbd> navigate</span><span>click anywhere &rarr; next</span></div>
+
+<script>
+function escapeHtml(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function highlightCode(code){
+  const pattern = /(?<comment>\/\/.*|\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->)|(?<string>"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)|(?<tag><\/?[A-Za-z][\w-]*)|(?<attr>[a-zA-Z-][\w-]*(?=\s*=))|(?<keyword>\b(?:fun|val|var|println|package|import|class|public|private|protected|override|static|void|new|return|if|else|for|while|extends|implements|super|this|const|let|function|from|export|default|null|true|false|try|catch|throw|throws|interface|enum|when|is|in|object|companion|data)\b)|(?<selector>[.#][A-Za-z][\w-]*(?=\s*\{))|(?<property>[a-zA-Z-]+(?=\s*:\s*[^;{}]+;))|(?<number>\b\d+(?:\.\d+)?\b)/g;
+
+  let result = '';
+  let lastIndex = 0;
+  code.replace(pattern, function(match, ...rest){
+    const groups = rest[rest.length - 1];
+    const offset = rest[rest.length - 3];
+    result += escapeHtml(code.slice(lastIndex, offset));
+    let cls = '';
+    if (groups.comment) cls = 'cm-comment';
+    else if (groups.string) cls = 'cm-string';
+    else if (groups.tag) cls = 'cm-tag';
+    else if (groups.attr) cls = 'cm-attr';
+    else if (groups.keyword) cls = 'cm-keyword';
+    else if (groups.selector) cls = 'cm-selector';
+    else if (groups.property) cls = 'cm-property';
+    else if (groups.number) cls = 'cm-number';
+    result += cls ? '<span class="' + cls + '">' + escapeHtml(match) + '</span>' : escapeHtml(match);
+    lastIndex = offset + match.length;
+    return match;
+  });
+  result += escapeHtml(code.slice(lastIndex));
+  return result;
+}
+
+function codeBlock(fname, lang, code){
+  return '<div class="code-block">' +
+    '<div class="code-head"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="fname">' + fname + '</span><span style="margin-left:auto;opacity:.6;">' + lang + '</span></div>' +
+    '<pre class="code"><code>' + highlightCode(code) + '</code></pre>' +
+  '</div>';
+}
+
+function iconTile(url, initials){
+  if (!url){
+    return '<div class="icon-chip mono">' + initials + '</div>';
+  }
+  return '<div class="icon-chip"><img src="' + url + '" alt="" ' +
+    'onerror="this.style.display=\'none\'; this.parentElement.classList.add(\'mono\'); this.parentElement.textContent=\'' + initials + '\';"></div>';
+}
+function cardHead(url, initials, title){
+  return '<div class="card-head">' + iconTile(url, initials) + '<h3>' + title + '</h3></div>';
+}
+
+const kotlinSample1 = `fun main(args: Array<String>) {
+    val world = "Turin"
+    println("Hello $world")
+}`;
+
+const kotlinSample2 = `fun main() {
+    var name = "Kein"
+    var age = 20
+    println("Hello everyone, my name is $name and I am $age years old!")
+}`;
+
+const javaSample = `package com.example.myapp;
+
+import android.app.Activity;
+import android.os.Bundle;
+import android.widget.TextView;
+
+public class MainActivity extends Activity {
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        // Dynamically instantiate a text component
+        TextView textView = new TextView(this);
+        textView.setText("Hello World!");
+
+        // Set the component directly as the viewport content
+        setContentView(textView);
+    }
+}`;
+
+const htmlSample = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fetching JSON Data</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+    <h1>Welcome to the JSON Data Fetcher!</h1>
+
+    <div id="data-container">
+        <h2>Loading...</h2>
+    </div>
+
+    <script src="script.js"><\/script>
+</body>
+</html>`;
+
+const cssSample = `body {
+    background-color: #f5f5f5;
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+h1 {
+    color: #333333;
+    padding-top: 20px;
+}
+
+#data-container {
+    margin: 50px auto;
+    max-width: 500px;
+    background-color: #ffffff;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h2 {
+    color: #666666;
+}`;
+
+const jsSample = `const container = document.getElementById('data-container');
+
+// Initiate a network request to an external JSON endpoint
+fetch('https://jsonplaceholder.typicode.com/posts/1')
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response failure');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Render content to the viewport container upon a successful fetch
+        container.innerHTML = '<h2>Data Fetched Successfully!<\/h2>';
+        container.innerHTML += '<p><strong>Title:<\/strong> ' + data.title + '<\/p>';
+        container.innerHTML += '<p><strong>Body:<\/strong> ' + data.body + '<\/p>';
+    })
+    .catch(error => {
+        // Graceful error state handling
+        container.innerHTML = '<h2>Error Fetching Data!<\/h2>';
+        console.error('Fetch operation problem:', error);
+    });`;
+
+function wrap(eyebrow, body){
+  return '<div class="slide-inner"><div class="eyebrow">' + eyebrow + '</div>' + body + '</div>';
+}
+
+const slides = [];
+
+// 1 — Title
+slides.push(wrap('Module 05 // Platform Layer',
+  '<h1 class="title">IDEs & Introduction to Kotlin</h1>' +
+  '<p class="subtitle">Where you write the code, and the language you\'ll write it in — a briefing on development environments across desktop, browser, and mobile, followed by your first steps into Kotlin.</p>'+
+  '<div class="grid cols-3" style="margin-top:36px;">' +
+    '<div class="card"><span class="tag">TRACK A</span><h3>Online & App IDEs</h3><p>Build from any device, no local install required.</p></div>' +
+    '<div class="card"><span class="tag">TRACK B</span><h3>Kotlin Fundamentals</h3><p>Syntax, safety, and the language behind modern Android.</p></div>' +
+    '<div class="card"><span class="tag">TRACK C</span><h3>Live Project Drill</h3><p>Fetch and render real JSON in the browser.</p></div>' +
+  '</div>'
+));
+
+// 2 — Lesson preview
+slides.push(wrap('Lesson Briefing',
+  '<h1 class="title">Where We\'re Headed</h1>' +
+  '<p class="lede">Having completed the first four modules, you now have a solid foundation in platform technologies. This lesson shifts focus to environments you can use without a dedicated laptop or desktop — many of the tools ahead run entirely inside a mobile device or web browser.</p>' +
+  '<div class="two-col">' +
+    '<div class="panel"><h3>Already covered</h3><ul><li>Core platform concepts from Modules 1–4</li><li>Foundational development terminology</li><li>How software gets built and shipped</li></ul></div>' +
+    '<div class="panel"><h3>Coming up now</h3><ul><li>Online and app-based IDEs</li><li>Popular desktop IDEs across the industry</li><li>Kotlin syntax and a first practice program</li><li>A live JSON-fetching project drill</li></ul></div>' +
+  '</div>'
+));
+
+// 3 — What is an IDE
+slides.push(wrap('Core Concept',
+  '<h1 class="title">What Is an IDE?</h1>' +
+  '<p class="lede">An Integrated Development Environment (IDE) is a software application or web-based platform that brings together every tool a programmer needs to write, test, and package software — instead of switching between separate tools for editing, checking syntax, and compiling.</p>' +
+  '<div class="panel" style="margin-top:24px;">' +
+    '<span class="num-badge">ONLINE IDEs</span>' +
+    '<p style="color:var(--muted);font-size:15px;line-height:1.7;">Web-based environments that let developers write, edit, compile, and run code directly inside a browser. They remove the need for local installation — ideal for beginners, remote collaboration, or coding across multiple devices.</p>' +
+  '</div>'
+));
+
+// 4 — Key features of an IDE
+slides.push(wrap('Core Concept',
+  '<h1 class="title">Key Features of an IDE</h1>' +
+  '<div class="grid cols-4">' +
+    '<div class="card"><span class="tag">01</span><h3>Code Editor</h3><p>Syntax highlighting, auto-completion, and formatting to speed writing and cut typos.</p></div>' +
+    '<div class="card"><span class="tag">02</span><h3>Compiler / Interpreter</h3><p>Translates source into executable instructions, with live error-checking and debugging.</p></div>' +
+    '<div class="card"><span class="tag">03</span><h3>Collaboration Tools</h3><p>Real-time simultaneous editing, code reviews, and in-workspace chat.</p></div>' +
+    '<div class="card"><span class="tag">04</span><h3>Version Control</h3><p>Direct Git connectivity for revisions, branching, and merging.</p></div>' +
+    '<div class="card"><span class="tag">05</span><h3>Project Management</h3><p>File trees, timelines, asset tracking, and issue logs, all in one place.</p></div>' +
+    '<div class="card"><span class="tag">06</span><h3>Deployment Options</h3><p>Direct connections to hosting or deployment servers to go live from the IDE.</p></div>' +
+    '<div class="card"><span class="tag">07</span><h3>Accessibility Anywhere</h3><p>Cloud-native workspaces reachable securely from any connected device.</p></div>' +
+  '</div>'
+));
+
+// 5 — Popular IDEs pt 1
+slides.push(wrap('Industry Scan · Part 1',
+  '<h1 class="title">Popular IDEs in the Industry</h1>' +
+  '<div class="grid cols-3">' +
+    '<div class="card">' + cardHead('https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vscode/vscode-original.svg', 'VS', 'VS Code') + '<p>Lightweight, cross-platform editor with IntelliSense, built-in Git controls, and a vast extension ecosystem.</p></div>' +
+    '<div class="card">' + cardHead('https://cdn.jsdelivr.net/gh/devicons/devicon/icons/intellij/intellij-original.svg', 'IJ', 'IntelliJ IDEA') + '<p>JetBrains\' flagship IDE — the premier choice for Java and Kotlin, with deep static analysis.</p></div>' +
+    '<div class="card">' + cardHead('https://cdn.simpleicons.org/xcode/4fd8ff', 'XC', 'Xcode') + '<p>Apple\'s official IDE for macOS, iOS, watchOS, and tvOS, with native Swift, Objective-C, and C++ support.</p></div>' +
+    '<div class="card">' + cardHead('https://cdn.jsdelivr.net/gh/devicons/devicon/icons/androidstudio/androidstudio-original.svg', 'AS', 'Android Studio') + '<p>The official Android IDE, built on IntelliJ, with an advanced emulator and deep Google Services integration.</p></div>' +
+    '<div class="card">' + cardHead('https://stelligent.com/wp-content/uploads/2018/04/AWSCloud9_logo_color_400x400-1.png', 'C9', 'AWS Cloud9') + '<p>A browser-based IDE from AWS with editor, debugger, and embedded terminal — built for serverless work.</p></div>' +
+  '</div>'
+));
+
+// 6 — Popular IDEs pt 2
+slides.push(wrap('Industry Scan · Part 2',
+  '<h1 class="title">More Industry IDEs</h1>' +
+  '<div class="grid cols-3">' +
+    '<div class="card">' + cardHead('https://cdn.jsdelivr.net/gh/devicons/devicon/icons/eclipse/eclipse-original.svg', 'EC', 'Eclipse') + '<p>A classic, highly extensible open-source IDE for Java, C++, and PHP via its plugin architecture.</p></div>' +
+    '<div class="card">' + cardHead('https://cdn.jsdelivr.net/gh/devicons/devicon/icons/phpstorm/phpstorm-original.svg', 'PS', 'PhpStorm / Zend Studio') + '<p>Dedicated PHP IDEs with deep integration for Laravel, Symfony, and WordPress.</p></div>' +
+    '<div class="card">' + cardHead('https://cdn.simpleicons.org/arduino/4fd8ff', 'AR', 'Arduino IDE') + '<p>A minimal, cross-platform tool for writing and uploading code to Arduino microcontrollers.</p></div>' +
+    '<div class="card">' + cardHead('https://cdn.jsdelivr.net/gh/devicons/devicon/icons/netbeans/netbeans-original.svg', 'NB', 'NetBeans') + '<p>An open-source IDE with out-of-the-box support for Java, JavaScript, HTML5, and CSS.</p></div>' +
+    '<div class="card">' + cardHead('https://cdn.simpleicons.org/rubymine/4fd8ff', 'RM', 'RubyMine') + '<p>Optimized for Ruby and Rails, with smart refactoring and integrated testing workflows.</p></div>' +
+    '<div class="card">' + cardHead('https://cdn.jsdelivr.net/gh/devicons/devicon/icons/webstorm/webstorm-original.svg', 'WS', 'WebStorm') + '<p>JetBrains\' specialized IDE for advanced JavaScript and TypeScript, including React, Vue, and Angular.</p></div>' +
+  '</div>'
+));
+
+// 7 — Online compilers
+slides.push(wrap('Zero-Install Track',
+  '<h1 class="title">Five Popular Online Compilers</h1>' +
+  '<p class="lede">Working from a tablet, mobile device, or locked-down desktop? These platforms run your code immediately, with no setup.</p>' +
+  '<div class="grid cols-3" style="margin-top:22px;">' +
+    '<div class="card"><span class="tag">01</span>' + cardHead('https://cdn.simpleicons.org/geeksforgeeks/4fd8ff', 'GFG', 'GeeksforGeeks IDE') + '<p>A companion to the GFG educational portal, for quick execution with custom inputs.</p></div>' +
+    '<div class="card"><span class="tag">02</span>' + cardHead('', 'ID', 'Ideone') + '<p>Paste source code in dozens of languages and run it instantly, server-side.</p></div>' +
+    '<div class="card"><span class="tag">03</span>' + cardHead('https://cdn.simpleicons.org/replit/4fd8ff', 'RE', 'Repl.it (Replit)') + '<p>A collaborative cloud workspace for full-stack apps, hosting, and coding challenges.</p></div>' +
+    '<div class="card"><span class="tag">04</span>' + cardHead('', 'GDB', 'OnlineGDB') + '<p>A fast integrated compiler and debugger for C, C++, Python, and Java.</p></div>' +
+    '<div class="card"><span class="tag">05</span>' + cardHead('', 'JD', 'JDOODLE') + '<p>A minimal environment to test, save, and share snippets — zero setup required.</p></div>' +
+  '</div>'
+));
+
+// 8 — Intro to Kotlin
+slides.push(wrap('Language Briefing',
+  '<h1 class="title">Introduction to Kotlin</h1>' +
+  '<div class="two-col">' +
+    '<div class="panel"><h3>Modern &amp; Concise</h3><p style="color:var(--muted);font-size:14.5px;line-height:1.7;">A modern, statically-typed open-source language developed by JetBrains — the creators of IntelliJ IDEA. Designed to be highly expressive, reducing boilerplate so developers can do more with fewer lines.</p></div>' +
+    '<div class="panel"><h3>Interoperable &amp; Multi-platform</h3><p style="color:var(--muted);font-size:14.5px;line-height:1.7;">100% interoperable with Java — call existing Java code from Kotlin and back with zero friction. Used for server-side, web, and desktop development, and it\'s the officially preferred language for Android.</p></div>' +
+  '</div>'
+));
+
+// 9 — Kotlin features
+slides.push(wrap('Language Briefing',
+  '<h1 class="title">Key Features of Kotlin</h1>' +
+  '<div class="grid cols-4">' +
+    '<div class="card"><span class="tag">01</span><h3>Concise Syntax</h3><p>Drastically reduces repetitive boilerplate compared to older languages like Java.</p></div>' +
+    '<div class="card"><span class="tag">02</span><h3>Null Safety</h3><p>Nullable and non-nullable types are separated, catching NullPointerExceptions at compile time.</p></div>' +
+    '<div class="card"><span class="tag">03</span><h3>Extension Functions</h3><p>Extend an existing class with new behavior without inheriting or modifying its source.</p></div>' +
+    '<div class="card"><span class="tag">04</span><h3>Smart Casts</h3><p>Once a type check passes, the compiler handles the typecast implicitly.</p></div>' +
+    '<div class="card"><span class="tag">05</span><h3>Coroutines</h3><p>Built-in lightweight threads for smooth, responsive asynchronous programming.</p></div>' +
+    '<div class="card"><span class="tag">06</span><h3>Data Classes</h3><p>A concise way to declare data holders — equals(), hashCode(), and toString() generated for you.</p></div>' +
+    '<div class="card"><span class="tag">07</span><h3>Java Interoperability</h3><p>Zero-overhead migration and co-existence with existing Java infrastructure.</p></div>' +
+  '</div>'
+));
+
+// 10 — Kotlin syntax breakdown
+slides.push(wrap('Hands-On · Syntax',
+  '<h1 class="title">Understanding Kotlin Syntax</h1>' +
+  '<div class="two-col">' +
+    codeBlock('Main.kt', 'kotlin', kotlinSample1) +
+    '<div class="panel"><h3>Reading the program</h3><ul><li><b style="color:var(--text);">fun main(...)</b> — functions can live at the top level of a file; no wrapping class required.</li><li><b style="color:var(--text);">val world</b> — constants and variables are first-class; <code style="color:var(--mint);">val</code> means an immutable, read-only reference.</li><li><b style="color:var(--text);">$world</b> — string interpolation embeds variable values directly inside text.</li><li>Semicolons are optional at the end of a line.</li></ul></div>' +
+  '</div>'
+));
+
+// 11 — Practice task
+slides.push(wrap('Hands-On · Practice',
+  '<h1 class="title">Your First Practice Task</h1>' +
+  '<p class="lede">Open the <a href="https://play.kotlinlang.org/" style="color:var(--cyan);">official online Kotlin Playground</a> — no install needed — and write a short program to introduce yourself.</p>' +
+  codeBlock('Main.kt', 'kotlin', kotlinSample2)
+));
+
+// 12 — AIDE intro / steps
+slides.push(wrap('Mobile Track',
+  '<h1 class="title">Mobile Development via AIDE</h1>' +
+  '<p class="lede">Developing entirely on an Android device? AIDE (Android IDE) builds native application packages (.apk) directly on your phone or tablet.</p>' +
+  '<ol class="steps">' +
+    '<li><div class="step-body"><b>Download</b><span>Search for and install AIDE from the Google Play Store.</span></div></li>' +
+    '<li><div class="step-body"><b>Project Creation</b><span>Launch the app, select "New Project," pick a standard template, and name it.</span></div></li>' +
+    '<li><div class="step-body"><b>UI Layout</b><span>Use the drag-and-drop structural editor to build your interface via XML layout templates.</span></div></li>' +
+    '<li><div class="step-body"><b>Write Logic</b><span>Use the built-in editor to write or edit your Java/Kotlin source files.</span></div></li>' +
+    '<li><div class="step-body"><b>Compile &amp; Run</b><span>Tap "Run" — AIDE compiles the source, builds the .apk, and guides you through installing it for testing.</span></div></li>' +
+  '</ol>'
+));
+
+// 13 — AIDE code
+slides.push(wrap('Mobile Track',
+  '<h1 class="title">Example Blueprint</h1>' +
+  '<p class="lede">A minimal MainActivity that instantiates a text view and sets it as the screen\'s content.</p>' +
+  codeBlock('MainActivity.java', 'java', javaSample)
+));
+
+// 14 — Project drill intro
+slides.push(wrap('Project Drill',
+  '<h1 class="title">Fetching JSON Data in the Browser</h1>' +
+  '<p class="lede">In web applications, data routinely moves across networks as JSON. In this drill, you\'ll build a client-side interface that fetches and displays live data from a URL using vanilla HTML, CSS, and JavaScript.</p>' +
+  '<div class="grid cols-3" style="margin-top:24px;">' +
+    '<div class="card"><span class="tag">FILE 1</span><h3>index.html</h3><p>Page structure and the container that will display fetched data.</p></div>' +
+    '<div class="card"><span class="tag">FILE 2</span><h3>style.css</h3><p>Layout, color, and card presentation for the results panel.</p></div>' +
+    '<div class="card"><span class="tag">FILE 3</span><h3>script.js</h3><p>The fetch request, response handling, and error states.</p></div>' +
+  '</div>'
+));
+
+// 15 — HTML
+slides.push(wrap('Project Drill · 1 / 3',
+  '<h1 class="title">Setting Up the HTML</h1>' +
+  '<p class="lede">Create an empty file named <code style="color:var(--mint);font-family:\'JetBrains Mono\',monospace;">index.html</code> and add the structural layout.</p>' +
+  codeBlock('index.html', 'html', htmlSample)
+));
+
+// 16 — CSS
+slides.push(wrap('Project Drill · 2 / 3',
+  '<h1 class="title">Styling With CSS</h1>' +
+  '<p class="lede">Create <code style="color:var(--mint);font-family:\'JetBrains Mono\',monospace;">style.css</code> to add structured page presentation.</p>' +
+  codeBlock('style.css', 'css', cssSample)
+));
+
+// 17 — JS
+slides.push(wrap('Project Drill · 3 / 3',
+  '<h1 class="title">Fetching Data With JavaScript</h1>' +
+  '<p class="lede">Create <code style="color:var(--mint);font-family:\'JetBrains Mono\',monospace;">script.js</code> to implement the network request logic.</p>' +
+  codeBlock('script.js', 'javascript', jsSample)
+));
+
+// 18 — Skill check part 1
+slides.push(wrap('Skill-Building Check',
+  '<h1 class="title">Quick Check · Part 1</h1>' +
+  '<div class="quiz-block">' +
+    '<div class="quiz-q">1. Which platform is a widely used computer science educational portal featuring a smart browser-based IDE?</div>' +
+    '<div class="quiz-grid">' +
+      '<div class="quiz-option"><b>A</b> GeeksforGeeks</div>' +
+      '<div class="quiz-option"><b>B</b> Ideone</div>' +
+      '<div class="quiz-option"><b>C</b> JDOODLE</div>' +
+      '<div class="quiz-option"><b>D</b> OnlineGDB</div>' +
+    '</div>' +
+  '</div>' +
+  '<div class="quiz-block">' +
+    '<div class="quiz-q">2. Which platform lets users build apps, write code, and host web projects directly via a browser?</div>' +
+    '<div class="quiz-grid">' +
+      '<div class="quiz-option"><b>A</b> GeeksforGeeks</div>' +
+      '<div class="quiz-option"><b>B</b> Repl.it (Replit)</div>' +
+      '<div class="quiz-option"><b>C</b> Kotlin Playground</div>' +
+      '<div class="quiz-option"><b>D</b> OnlineGDB</div>' +
+    '</div>' +
+  '</div>'
+));
+
+// 19 — Skill check part 2 (continuation)
+slides.push(wrap('Skill-Building Check · Continued',
+  '<h1 class="title">Quick Check · Part 2</h1>' +
+  '<div class="quiz-block">' +
+    '<div class="quiz-q">1. It is a modern but already mature programming language designed to make developers happier.</div>' +
+    '<div class="quiz-grid">' +
+      '<div class="quiz-option"><b>A</b> GeeksforGeeks</div>' +
+      '<div class="quiz-option"><b>B</b> Repl.it</div>' +
+      '<div class="quiz-option"><b>C</b> JDOODLE</div>' +
+      '<div class="quiz-option"><b>D</b> Kotlin</div>' +
+    '</div>' +
+  '</div>' +
+  '<div class="quiz-block">' +
+    '<div class="quiz-q">2. It is an online compiler and debugger for popular languages like C, C++, Python, Java, PHP, Ruby, and Perl.</div>' +
+    '<div class="quiz-grid">' +
+      '<div class="quiz-option"><b>A</b> GeeksforGeeks</div>' +
+      '<div class="quiz-option"><b>B</b> OnlineGDB</div>' +
+      '<div class="quiz-option"><b>C</b> JDOODLE</div>' +
+      '<div class="quiz-option"><b>D</b> Kotlin</div>' +
+    '</div>' +
+  '</div>' +
+  '<div class="quiz-block">' +
+    '<div class="quiz-q">3. It is one of the best IDEs for Android app development.</div>' +
+    '<div class="quiz-grid">' +
+      '<div class="quiz-option"><b>A</b> GeeksforGeeks</div>' +
+      '<div class="quiz-option"><b>B</b> OnlineGDB</div>' +
+      '<div class="quiz-option"><b>C</b> Android Studio</div>' +
+      '<div class="quiz-option"><b>D</b> Kotlin</div>' +
+    '</div>' +
+  '</div>'
+));
+
+// 20 — Check for understanding: directory
+slides.push(wrap('Check For Understanding',
+  '<h1 class="title">Name the Software</h1>' +
+  '<p class="lede">Identify the IDE or software application represented by each entry in the directory below.</p>' +
+  '<div class="directory">' +
+    '<div class="dir-item"><span class="idx">ENTRY 01</span><div class="dir-logo"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/phpstorm/phpstorm-original.svg" alt="PhpStorm logo" loading="lazy"></div><div class="name">PhpStorm</div></div>' +
+    '<div class="dir-item"><span class="idx">ENTRY 02</span><div class="dir-logo"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/eclipse/eclipse-original.svg" alt="Eclipse logo" loading="lazy"></div><div class="name">Eclipse Foundation</div></div>' +
+    '<div class="dir-item"><span class="idx">ENTRY 03</span><div class="dir-logo"><img src="https://stelligent.com/wp-content/uploads/2018/04/AWSCloud9_logo_color_400x400-1.png" alt="AWS logo" loading="lazy"></div><div class="name">AWS Cloud9</div></div>' +
+    '<div class="dir-item"><span class="idx">ENTRY 04</span><div class="dir-logo"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/webstorm/webstorm-original.svg" alt="WebStorm logo" loading="lazy"></div><div class="name">WebStorm</div></div>' +
+    '<div class="dir-item"><span class="idx">ENTRY 05</span><div class="dir-logo"><img src="https://images.g2crowd.com/uploads/product/image/social_landscape/social_landscape_958979138e2004cb153b6c5201e9711f/zend-studio.png" alt="Zend logo" loading="lazy"></div><div class="name">Zend Studio</div></div>' +
+  '</div>'
+));
+
+// 21 — FAQ
+slides.push(wrap('Lesson Wrap-Up',
+  '<h1 class="title">Frequently Asked Questions</h1>' +
+  '<div class="faq-item"><h3>What is an IDE, and what are some examples?</h3><p>An Integrated Development Environment is a comprehensive software suite that consolidates the tools needed to write, edit, compile, test, and debug code into one cohesive interface. Notable examples include VS Code, IntelliJ IDEA, Android Studio, and Eclipse.</p></div>' +
+  '<div class="faq-item"><h3>What is the fastest IDE?</h3><p>Speed depends heavily on project size and system configuration, but VS Code is widely considered one of the fastest and most lightweight tools for daily developer productivity — built to target nearly any language, platform, or device through its optimized extension architecture.</p></div>'
+));
+
+// 22 — Answer Key (revealed just before the close)
+slides.push(wrap('Answers Revealed',
+  '<h1 class="title">Quick Check — Answer Key</h1>' +
+  '<p class="lede">No peeking earlier — here\'s how the two rounds shake out.</p>' +
+  '<div class="two-col">' +
+    '<div class="panel"><h3>Part 1</h3><ul class="plain">' +
+      '<li><b style="color:var(--mint);">Q1 → A.</b> GeeksforGeeks</li>' +
+      '<li><b style="color:var(--mint);">Q2 → B.</b> Repl.it (Replit)</li>' +
+    '</ul></div>' +
+    '<div class="panel"><h3>Part 2</h3><ul class="plain">' +
+      '<li><b style="color:var(--mint);">Q1 → D.</b> Kotlin</li>' +
+      '<li><b style="color:var(--mint);">Q2 → B.</b> OnlineGDB</li>' +
+      '<li><b style="color:var(--mint);">Q3 → C.</b> Android Studio</li>' +
+    '</ul></div>' +
+  '</div>'
+));
+
+// 23 — Quote (closing slide)
+slides.push('<div class="slide-inner quote-slide"><div class="eyebrow">A Moment To Reflect</div>' +
+  '<div class="mark">&ldquo;</div>' +
+  '<blockquote>Success is not the key to happiness. Happiness is the key to success. If you love what you are doing, you will be successful.</blockquote>' +
+  '<cite>— Albert Schweitzer</cite></div>'
+);
+
+// ---------- render + navigation ----------
+const deck = document.getElementById('deck');
+slides.forEach(function(html, i){
+  const el = document.createElement('div');
+  el.className = 'slide';
+  el.innerHTML = html;
+  el.dataset.index = i;
+  deck.appendChild(el);
+});
+
+const slideEls = Array.from(deck.querySelectorAll('.slide'));
+const total = slideEls.length;
+document.getElementById('hudTotal').textContent = String(total).padStart(2,'0');
+
+let current = 0;
+
+function render(){
+  slideEls.forEach(function(el, i){
+    el.classList.remove('active','before');
+    if(i === current){ el.classList.add('active'); }
+    else if(i < current){ el.classList.add('before'); }
+  });
+  const pct = total > 1 ? (current / (total - 1)) * 100 : 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('hudCurrent').textContent = String(current + 1).padStart(2,'0');
+}
+
+function goTo(i){
+  current = Math.max(0, Math.min(total - 1, i));
+  render();
+}
+function next(){ goTo(current + 1); }
+function prev(){ goTo(current - 1); }
+
+document.addEventListener('click', function(e){
+  if (e.target.closest('a')) return;
+  next();
+});
+
+document.addEventListener('keydown', function(e){
+  if (e.key === 'ArrowRight' || e.key === ' '){ e.preventDefault(); next(); }
+  else if (e.key === 'ArrowLeft'){ e.preventDefault(); prev(); }
+  else if (e.key === 'Home'){ e.preventDefault(); goTo(0); }
+  else if (e.key === 'End'){ e.preventDefault(); goTo(total - 1); }
+});
+
+render();
+</script>
+</body>
+</html>

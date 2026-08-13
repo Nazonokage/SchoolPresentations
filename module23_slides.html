@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Module 23 – Technology Platforms, Database Storage & Cloud Deployment</title>
+<style>
+  :root {
+    --base: #1a1f2e;
+    --base-lighter: #212840;
+    --shadow-dark: #111520;
+    --shadow-light: #252d45;
+    --card-bg: #1e2438;
+    --accent: #4f8ef7;
+    --accent2: #31d9a8;
+    --accent3: #f7c94f;
+    --text: #e2e8f4;
+    --text-muted: #8a9bbf;
+    --radius: 18px;
+    --radius-sm: 10px;
+    --fs-body: 17px;
+    --fs-sm: 16px;
+    --fs-title: 38px;
+    --fs-eyebrow: 13px;
+    --fs-badge: 16px;
+    --transition: 350ms;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--base); color: var(--text); font-family: 'Segoe UI', Arial, sans-serif; }
+
+  /* ── Slides container ── */
+  #deck { position: relative; width: 100%; height: 100%; }
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    padding: 48px 60px 36px;
+    background: var(--base);
+    opacity: 0; pointer-events: none;
+    transform: translateX(40px);
+    transition: opacity var(--transition) ease, transform var(--transition) ease;
+    overflow-y: auto;
+  }
+  .slide.active { opacity: 1; pointer-events: all; transform: translateX(0); }
+  .slide.exit-left { opacity: 0; transform: translateX(-40px); }
+  .slide.exit-right { opacity: 0; transform: translateX(40px); }
+  @media (prefers-reduced-motion: reduce) {
+    .slide { transition: opacity var(--transition) ease; transform: none !important; }
+  }
+
+  /* ── Progress ── */
+  #progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: var(--accent); transition: width 0.3s ease; z-index: 100; }
+  #counter { position: fixed; bottom: 14px; right: 22px; font-size: 15px; color: var(--text-muted); letter-spacing: .5px; z-index: 100; }
+
+  /* ── Eyebrow + Title ── */
+  .eyebrow { font-size: 13px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+  .slide-title { font-size: var(--fs-title); font-weight: 800; line-height: 1.15; color: var(--text); margin-bottom: 26px; }
+  .slide-title span { color: var(--accent); }
+  .slide-subtitle { font-size: 20px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.5; }
+
+  /* ── Neumorphic card ── */
+  .card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: 6px 6px 14px var(--shadow-dark), -4px -4px 10px var(--shadow-light);
+    padding: 24px 28px;
+  }
+  .card.inset {
+    box-shadow: inset 4px 4px 10px var(--shadow-dark), inset -3px -3px 8px var(--shadow-light);
+    background: #191e2d;
+  }
+
+  /* ── Grid helpers ── */
+  .grid-2 { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 18px; }
+  .col-span-2 { grid-column: span 2; }
+
+  /* ── Badges ── */
+  .badge { display: inline-flex; align-items: center; gap: 8px; background: var(--card-bg); border-radius: 40px; padding: 8px 18px; font-size: var(--fs-badge); font-weight: 600; box-shadow: 4px 4px 10px var(--shadow-dark), -3px -3px 7px var(--shadow-light); }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+  .badge-accent { color: var(--accent); }
+  .badge-accent2 { color: var(--accent2); }
+  .badge-accent3 { color: var(--accent3); }
+
+  /* ── Body text ── */
+  p, li { font-size: var(--fs-body); line-height: 1.7; color: var(--text); }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 8px; }
+  strong { color: var(--accent3); }
+  em { color: var(--accent2); }
+
+  /* ── Section header ── */
+  .sh { font-size: 20px; font-weight: 700; color: var(--accent2); margin-bottom: 12px; }
+
+  /* ── Pillar cards ── */
+  .pillar-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 22px; flex-shrink: 0; }
+  .pillar-title { font-size: 17px; font-weight: 700; color: var(--accent3); margin-bottom: 6px; }
+  .pillar-body { font-size: var(--fs-sm); line-height: 1.55; color: var(--text-muted); }
+
+  /* ── Code ── */
+  .code-wrap { position: relative; }
+  pre {
+    background: #0f1220;
+    border-radius: var(--radius-sm);
+    padding: 20px;
+    font-size: 15px;
+    line-height: 1.65;
+    overflow: auto;
+    box-shadow: inset 4px 4px 10px #090c17, inset -2px -2px 6px #1a2035;
+    color: #c9d1e3;
+    white-space: pre;
+  }
+  .copy-btn {
+    position: absolute; top: 10px; right: 10px;
+    background: var(--card-bg);
+    border: none; border-radius: 8px; cursor: pointer;
+    color: var(--text-muted); font-size: 13px; font-weight: 600;
+    padding: 5px 12px;
+    box-shadow: 3px 3px 7px var(--shadow-dark), -2px -2px 5px var(--shadow-light);
+    transition: box-shadow 0.15s;
+  }
+  .copy-btn.copied {
+    box-shadow: inset 2px 2px 5px var(--shadow-dark), inset -2px -2px 4px var(--shadow-light);
+    color: var(--accent2);
+  }
+  .kw { color: #7eb3ff; }
+  .str { color: #98d982; }
+  .cm { color: #546a80; font-style: italic; }
+  .fn { color: #f7c94f; }
+  .tag { color: #f28779; }
+  .attr { color: #ffa940; }
+  .val { color: #98d982; }
+
+  /* ── Table ── */
+  .tbl-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 16px; }
+  th { background: #212840; color: var(--accent); text-align: left; padding: 12px 16px; font-size: 15px; border-radius: 6px 6px 0 0; }
+  td { padding: 11px 16px; border-bottom: 1px solid #252d45; color: var(--text); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: #1b2033; }
+
+  /* ── Step flow ── */
+  .step-row { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 14px; }
+  .step-num { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 3px 10px rgba(79,142,247,0.35); }
+  .step-text { font-size: var(--fs-body); line-height: 1.55; }
+
+  /* ── Hero visuals ── */
+  .hero-svg-wrap { display: flex; align-items: center; justify-content: center; }
+
+  /* ── Quote ── */
+  .quote-card { border-left: 4px solid var(--accent); padding: 18px 24px; background: #191e2d; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; margin-bottom: 16px; }
+  .quote-card p { font-size: 18px; font-style: italic; color: var(--text); }
+  .quote-attr { font-size: 15px; color: var(--text-muted); margin-top: 8px; }
+
+  /* ── MCQ ── */
+  .mcq-card { background: var(--card-bg); border-radius: var(--radius); padding: 20px 24px; box-shadow: 5px 5px 12px var(--shadow-dark), -3px -3px 8px var(--shadow-light); }
+  .mcq-q { font-size: var(--fs-body); font-weight: 700; color: var(--text); margin-bottom: 12px; }
+  .mcq-opts { list-style: none; padding: 0; }
+  .mcq-opts li { font-size: var(--fs-sm); color: var(--text-muted); padding: 5px 0; display: flex; gap: 10px; }
+  .mcq-opts li span:first-child { color: var(--accent3); font-weight: 700; min-width: 22px; }
+
+  /* ── Answer key ── */
+  .ans-row { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid #252d45; }
+  .ans-num { font-size: 16px; font-weight: 800; color: var(--accent); min-width: 28px; }
+  .ans-correct { font-size: 16px; font-weight: 700; color: var(--accent2); }
+  .ans-exp { font-size: 15px; color: var(--text-muted); line-height: 1.5; margin-top: 4px; }
+
+  /* ── Shortcuts overlay ── */
+  #shortcuts {
+    display: none; position: fixed; inset: 0; background: rgba(10,13,22,0.88);
+    z-index: 200; align-items: center; justify-content: center;
+  }
+  #shortcuts.show { display: flex; }
+  .sc-box { background: var(--card-bg); border-radius: 20px; padding: 36px 48px; box-shadow: 8px 8px 20px var(--shadow-dark), -6px -6px 14px var(--shadow-light); max-width: 480px; width: 90%; }
+  .sc-box h3 { font-size: 22px; color: var(--accent); margin-bottom: 20px; text-align: center; }
+  .sc-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 16px; }
+  .sc-key { background: #212840; padding: 3px 12px; border-radius: 6px; font-family: monospace; color: var(--accent3); font-size: 15px; }
+  .sc-close { margin-top: 24px; text-align: center; }
+  .sc-close button { background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 10px 28px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(79,142,247,0.4); }
+
+  /* ── Slide: title dark ── */
+  .slide-dark { background: #10131f; }
+  .slide-dark .slide-title { color: #fff; }
+
+  /* ── Analog cards ── */
+  .analogy-icon { font-size: 36px; margin-bottom: 10px; }
+
+  /* ── Responsive ── */
+  @media (max-width: 700px) {
+    .slide { padding: 28px 20px 28px; }
+    .slide-title { font-size: 26px; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    .col-span-2 { grid-column: span 1; }
+  }
+
+  /* ── Identification activity ── */
+  .id-row { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+  .id-blank { flex: 1; height: 2px; background: #2e3a55; border-radius: 2px; }
+  .id-num { color: var(--accent); font-weight: 800; font-size: 17px; min-width: 24px; }
+  .id-clue { font-size: 16px; color: var(--text); flex: 3; }
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+<div id="counter"></div>
+
+<div id="deck">
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 1 — TITLE
+══════════════════════════════════════════════ -->
+<div class="slide slide-dark active">
+  <div class="eyebrow">Module 23 · Backend Infrastructure</div>
+  <div style="display:flex;flex-direction:column;justify-content:center;flex:1;gap:0">
+    <div class="slide-title" style="font-size:clamp(26px,3.6vw,48px);max-width:700px">
+      Technology Platforms,<br><span>Database Storage</span><br>&amp; Cloud Deployment
+    </div>
+    <div class="slide-subtitle">From invisible infrastructure to live deployed apps — in one module.</div>
+    <div class="badge-row" style="margin-top:20px">
+      <span class="badge badge-accent">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg>
+        Technology Platforms
+      </span>
+      <span class="badge badge-accent2">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></svg>
+        Database Storage
+      </span>
+      <span class="badge badge-accent3">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        Cloud Deployment
+      </span>
+    </div>
+    <div style="margin-top:36px">
+      <!-- SVG illustration: cloud with server rack -->
+      <svg viewBox="0 0 600 160" width="min(560px,90%)" role="img" aria-label="Cloud platform infrastructure diagram" style="opacity:0.55">
+        <defs>
+          <linearGradient id="cl" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#4f8ef7" stop-opacity="0.3"/>
+            <stop offset="100%" stop-color="#31d9a8" stop-opacity="0.15"/>
+          </linearGradient>
+        </defs>
+        <!-- ground servers -->
+        <rect x="20" y="90" width="100" height="60" rx="8" fill="#1e2438" stroke="#4f8ef7" stroke-width="1.5"/>
+        <rect x="30" y="100" width="80" height="10" rx="2" fill="#4f8ef7" opacity="0.5"/>
+        <rect x="30" y="115" width="80" height="10" rx="2" fill="#31d9a8" opacity="0.4"/>
+        <rect x="30" y="130" width="80" height="10" rx="2" fill="#f7c94f" opacity="0.3"/>
+        <text x="70" y="162" fill="#4f8ef7" font-size="11" text-anchor="middle" font-family="Arial">On-Premise</text>
+        <!-- arrow up -->
+        <path d="M155 120 L220 80" stroke="#4f8ef7" stroke-width="1.5" stroke-dasharray="5,4"/>
+        <polygon points="220,80 210,85 215,73" fill="#4f8ef7"/>
+        <!-- cloud shape -->
+        <ellipse cx="320" cy="60" rx="120" ry="50" fill="url(#cl)" stroke="#4f8ef7" stroke-width="1.5"/>
+        <ellipse cx="260" cy="72" rx="55" ry="38" fill="url(#cl)"/>
+        <ellipse cx="378" cy="72" rx="55" ry="38" fill="url(#cl)"/>
+        <text x="320" y="58" fill="#e2e8f4" font-size="13" text-anchor="middle" font-family="Arial" font-weight="700">Cloud Platform</text>
+        <text x="320" y="76" fill="#8a9bbf" font-size="11" text-anchor="middle" font-family="Arial">PaaS / IaaS / SaaS</text>
+        <!-- arrow down to apps -->
+        <path d="M380 110 L430 130" stroke="#31d9a8" stroke-width="1.5" stroke-dasharray="5,4"/>
+        <polygon points="430,130 418,127 424,139" fill="#31d9a8"/>
+        <rect x="430" y="130" width="90" height="22" rx="6" fill="#1e2438" stroke="#31d9a8" stroke-width="1.5"/>
+        <text x="475" y="145" fill="#31d9a8" font-size="11" text-anchor="middle" font-family="Arial">Live App 🌐</text>
+        <path d="M255 110 L190 135" stroke="#f7c94f" stroke-width="1.5" stroke-dasharray="5,4"/>
+        <polygon points="190,135 200,128 198,140" fill="#f7c94f"/>
+        <rect x="130" y="135" width="60" height="20" rx="6" fill="#1e2438" stroke="#f7c94f" stroke-width="1.5"/>
+        <text x="160" y="149" fill="#f7c94f" font-size="10" text-anchor="middle" font-family="Arial">DB 🗄️</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 2 — LESSON OVERVIEW
+══════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="eyebrow">Introduction</div>
+  <div class="slide-title">What You'll <span>Learn</span> Today</div>
+  <div class="grid-2" style="gap:18px">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="card">
+        <div class="sh">📦 Core Topics</div>
+        <div class="step-row"><div class="step-num">1</div><div class="step-text">Components of a <strong>Technology Platform</strong> and why they matter for developers</div></div>
+        <div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>Database Storage Frameworks</strong> — 4 pillars: architecture, performance, reliability, scalability</div></div>
+        <div class="step-row"><div class="step-num">3</div><div class="step-text">Deploying live apps using <strong>Heroku</strong>, the CLI, and Git push</div></div>
+        <div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>Free alternatives</strong> to Heroku (Render, Railway, Fly.io) — now that the free tier is gone</div></div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="card">
+        <div class="sh">🧩 Prerequisites</div>
+        <ul style="margin-top:4px">
+          <li>Basic understanding of what a <strong>database</strong> is (structured data store)</li>
+          <li>Comfort with the <strong>command-line interface</strong> (typing commands in a terminal)</li>
+          <li>Familiarity with <strong>Git</strong> — staging, committing, pushing code is a big bonus</li>
+        </ul>
+      </div>
+      <div class="card" style="background:linear-gradient(135deg,#1a2440,#1e2a38);border:1px solid #2d3d5a">
+        <div class="sh">🎯 Big Picture</div>
+        <p>We move from <em>writing code on your laptop</em> all the way to <em>sharing it with the world</em>. By the end of this module you'll understand the invisible machinery that powers every app you use daily.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 3 — WHAT IS A TECHNOLOGY PLATFORM?
+══════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="eyebrow">Section A · Technology Platforms</div>
+  <div class="slide-title">What Is a <span>Technology Platform?</span></div>
+  <div class="grid-2">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="card">
+        <div class="sh">Definition</div>
+        <p>A <strong>Technology Platform</strong> is a comprehensive, integrated set of software, hardware, tools, and services that provide a <em>foundation</em> for building applications and services.</p>
+        <p style="margin-top:12px;color:var(--text-muted)">Think of it as common ground for developers, businesses, and users — it abstracts away the boring, repetitive infrastructure so you can focus on solving real problems.</p>
+      </div>
+      <div class="card">
+        <div class="sh">Why it matters</div>
+        <ul>
+          <li>🚀 <strong>Accelerates</strong> development cycles</li>
+          <li>🤝 <strong>Enhances</strong> collaboration between teams</li>
+          <li>🔌 <strong>Enables</strong> seamless integration of tools</li>
+          <li>🧱 <strong>Hides</strong> hardware complexity from developers</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card hero-svg-wrap" style="min-height:280px">
+      <svg viewBox="0 0 360 300" width="100%" role="img" aria-label="Platform layer diagram showing hardware below, platform in middle, and developer apps above">
+        <title>Technology Platform Layer Diagram</title>
+        <!-- Layer: Hardware -->
+        <rect x="20" y="230" width="320" height="50" rx="10" fill="#111827" stroke="#546a80" stroke-width="1.5"/>
+        <text x="180" y="261" fill="#546a80" font-size="14" text-anchor="middle" font-family="Arial" font-weight="600">⚙️  Physical Hardware / Servers</text>
+        <!-- Arrow up -->
+        <line x1="180" y1="226" x2="180" y2="200" stroke="#4f8ef7" stroke-width="2"/>
+        <polygon points="180,196 175,206 185,206" fill="#4f8ef7"/>
+        <!-- Layer: Platform -->
+        <rect x="40" y="140" width="280" height="55" rx="12" fill="#1a2e50" stroke="#4f8ef7" stroke-width="2"/>
+        <text x="180" y="163" fill="#4f8ef7" font-size="14" text-anchor="middle" font-family="Arial" font-weight="700">🏗️  Technology Platform</text>
+        <text x="180" y="183" fill="#8a9bbf" font-size="12" text-anchor="middle" font-family="Arial">OS · Runtime · DB Engine · Auth · APIs</text>
+        <!-- Arrow up -->
+        <line x1="180" y1="136" x2="180" y2="110" stroke="#31d9a8" stroke-width="2"/>
+        <polygon points="180,106 175,116 185,116" fill="#31d9a8"/>
+        <!-- Layer: Apps -->
+        <rect x="20" y="50" width="90" height="52" rx="10" fill="#1e2438" stroke="#31d9a8" stroke-width="1.5"/>
+        <text x="65" y="73" fill="#31d9a8" font-size="12" text-anchor="middle" font-family="Arial" font-weight="600">Web App</text>
+        <text x="65" y="90" fill="#8a9bbf" font-size="11" text-anchor="middle" font-family="Arial">React/Vue</text>
+        <rect x="135" y="50" width="90" height="52" rx="10" fill="#1e2438" stroke="#f7c94f" stroke-width="1.5"/>
+        <text x="180" y="73" fill="#f7c94f" font-size="12" text-anchor="middle" font-family="Arial" font-weight="600">Mobile App</text>
+        <text x="180" y="90" fill="#8a9bbf" font-size="11" text-anchor="middle" font-family="Arial">Android/iOS</text>
+        <rect x="250" y="50" width="90" height="52" rx="10" fill="#1e2438" stroke="#f7856a" stroke-width="1.5"/>
+        <text x="295" y="73" fill="#f7856a" font-size="12" text-anchor="middle" font-family="Arial" font-weight="600">API Service</text>
+        <text x="295" y="90" fill="#8a9bbf" font-size="11" text-anchor="middle" font-family="Arial">REST/GraphQL</text>
+        <text x="180" y="22" fill="#e2e8f4" font-size="13" text-anchor="middle" font-family="Arial" font-weight="700">Developer Applications</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 4 — DATABASE STORAGE FRAMEWORK OVERVIEW
+══════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="eyebrow">Section B · Database Storage</div>
+  <div class="slide-title"><span>Database Storage</span> Frameworks</div>
+  <p style="margin-bottom:20px;color:var(--text-muted)">A Storage Framework defines <em>how</em> data is stored, organized, and managed. It governs performance, scalability, and reliability — the invisible engine under every database.</p>
+  <div class="grid-2" style="gap:18px">
+    <div class="card" style="border-top:3px solid var(--accent)">
+      <div class="pillar-icon" style="background:#1a2e50">🏛️</div>
+      <div class="pillar-title">A. Core Architecture</div>
+      <div class="pillar-body">
+        <strong style="color:var(--text)">Data Structures</strong> — how pages, indices, tables &amp; metadata live on disk.<br><br>
+        <strong style="color:var(--text)">Storage Engine</strong> — the heart of a DB: translates SQL commands into actual disk read/write operations.
+      </div>
+    </div>
+    <div class="card" style="border-top:3px solid #f7c94f">
+      <div class="pillar-icon" style="background:#2a2010">⚡</div>
+      <div class="pillar-title" style="color:#f7c94f">B. Performance &amp; Optimization</div>
+      <div class="pillar-body">
+        <strong style="color:var(--text)">Indexing</strong> — like a textbook index, finds records without full-table scans.<br>
+        <strong style="color:var(--text)">Caching</strong> — hot data lives in fast RAM, not slow disk.<br>
+        <strong style="color:var(--text)">Query Optimization</strong> — auto-picks the fastest execution plan.<br>
+        <strong style="color:var(--text)">Compression / Deduplication</strong> — saves storage space.
+      </div>
+    </div>
+    <div class="card" style="border-top:3px solid #31d9a8">
+      <div class="pillar-icon" style="background:#0e2820">🔒</div>
+      <div class="pillar-title" style="color:#31d9a8">C. Reliability &amp; Integrity</div>
+      <div class="pillar-body">
+        <strong style="color:var(--text)">Transaction Management</strong> — all-or-nothing (rollback on failure).<br>
+        <strong style="color:var(--text)">Concurrency Control</strong> — safe for many users at once.<br>
+        <strong style="color:var(--text)">Logging &amp; Recovery</strong> — crash? Journal lets DB recover.<br>
+        <strong style="color:var(--text)">Backup &amp; Restore</strong> — protect against corruption/deletion.
+      </div>
+    </div>
+    <div class="card" style="border-top:3px solid #f7856a">
+      <div class="pillar-icon" style="background:#2a1610">📈</div>
+      <div class="pillar-title" style="color:#f7856a">D. Scalability &amp; Growth</div>
+      <div class="pillar-body">
+        <strong style="color:var(--text)">Partitioning &amp; Sharding</strong> — splits massive data across multiple servers.<br><br>
+        <strong style="color:var(--text)">Data Archiving</strong> — old data auto-moves to cheap cold storage, keeping the main DB lean and fast.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 5 — HEROKU: PAAS OVERVIEW
+══════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="eyebrow">Section C · Cloud Deployment</div>
+  <div class="slide-title">Heroku: <span>Platform as a Service</span></div>
+  <div class="grid-2">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="card">
+        <div class="sh">What is PaaS?</div>
+        <p><strong>Heroku</strong> is a Platform as a Service (PaaS) — a fully managed cloud environment where you bring your code and Heroku handles servers, networking, OS updates, and scaling. You focus entirely on your app logic.</p>
+      </div>
+      <div class="card">
+        <div class="sh">Key Heroku Concepts</div>
+        <div class="step-row" style="margin-bottom:10px">
+          <div class="step-num" style="background:#6e4ef7">🐳</div>
+          <div class="step-text"><strong>Dyno</strong> — a lightweight, stateless container that runs your app. Auto-restarts on crash. "Web dynos" handle HTTP; "worker dynos" handle background jobs.</div>
+        </div>
+        <div class="step-row" style="margin-bottom:10px">
+          <div class="step-num" style="background:#f7c94f;color:#1a1f2e">🔌</div>
+          <div class="step-text"><strong>Add-ons</strong> — attach third-party services (PostgreSQL DB, Redis cache, logging) with one click — zero server config needed.</div>
+        </div>
+        <div class="step-row">
+          <div class="step-num" style="background:#31d9a8;color:#1a1f2e">💻</div>
+          <div class="step-text"><strong>Heroku CLI</strong> — a terminal tool to deploy apps, set config variables, scale dynos, and stream logs from your laptop.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card hero-svg-wrap">
+      <svg viewBox="0 0 300 280" width="100%" role="img" aria-label="Heroku deployment: developer pushes code via Git, Heroku builds a Dyno, serves users">
+        <title>Heroku PaaS Flow Diagram</title>
+        <!-- Developer -->
+        <rect x="10" y="20" width="80" height="50" rx="10" fill="#1e2438" stroke="#4f8ef7" stroke-width="1.5"/>
+        <text x="50" y="43" fill="#e2e8f4" font-size="11" text-anchor="middle" font-family="Arial" font-weight="700">Developer</text>
+        <text x="50" y="59" fill="#8a9bbf" font-size="10" text-anchor="middle" font-family="Arial">💻 Laptop</text>
+        <!-- arrow git push -->
+        <path d="M92 45 L130 80" stroke="#4f8ef7" stroke-width="1.5"/>
+        <polygon points="130,80 120,72 127,65" fill="#4f8ef7"/>
+        <text x="100" y="60" fill="#4f8ef7" font-size="10" font-family="Arial">git push</text>
+        <!-- Heroku Cloud -->
+        <rect x="110" y="90" width="100" height="80" rx="14" fill="#1a2040" stroke="#7b5ef7" stroke-width="2"/>
+        <text x="160" y="120" fill="#9b8ef7" font-size="11" text-anchor="middle" font-family="Arial" font-weight="700">☁️ Heroku</text>
+        <rect x="125" y="130" width="70" height="20" rx="6" fill="#1e2438" stroke="#31d9a8" stroke-width="1"/>
+        <text x="160" y="144" fill="#31d9a8" font-size="10" text-anchor="middle" font-family="Arial">Dyno (Container)</text>
+        <text x="160" y="165" fill="#f7c94f" font-size="9" text-anchor="middle" font-family="Arial">Add-ons: DB · Redis</text>
+        <!-- Arrow to users -->
+        <path d="M210 140 L250 120" stroke="#31d9a8" stroke-width="1.5"/>
+        <polygon points="250,120 240,118 243,129" fill="#31d9a8"/>
+        <rect x="250" y="100" width="40" height="40" rx="8" fill="#1e2438" stroke="#31d9a8" stroke-width="1.2"/>
+        <text x="270" y="122" fill="#31d9a8" font-size="10" text-anchor="middle" font-family="Arial">Users</text>
+        <text x="270" y="135" fill="#8a9bbf" font-size="9" text-anchor="middle" font-family="Arial">🌐 Web</text>
+        <!-- Add-on DB -->
+        <rect x="100" y="200" width="120" height="40" rx="10" fill="#112018" stroke="#31d9a8" stroke-width="1"/>
+        <text x="160" y="218" fill="#31d9a8" font-size="11" text-anchor="middle" font-family="Arial" font-weight="700">PostgreSQL Add-on</text>
+        <text x="160" y="233" fill="#546a80" font-size="10" text-anchor="middle" font-family="Arial">Managed by Heroku</text>
+        <line x1="160" y1="170" x2="160" y2="200" stroke="#31d9a8" stroke-width="1.2" stroke-dasharray="4,3"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 6 — FREE ALTERNATIVES TO HEROKU
+══════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="eyebrow">⚠️ Important Update · Cloud Deployment</div>
+  <div class="slide-title">Heroku Free Tier Is <span>Gone</span> — What Now?</div>
+  <div class="card" style="margin-bottom:18px;border-left:4px solid var(--accent3);background:#1e1a10;border-radius:0 var(--radius-sm) var(--radius-sm) 0">
+    <p style="color:var(--accent3)">⚠️ <strong>November 2022:</strong> Heroku officially removed its free tier. Students now need a credit card and pay for usage. Here are the best <em>completely free</em> alternatives:</p>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Platform</th>
+          <th>Best For</th>
+          <th>Free Tier Highlights</th>
+          <th>Key Difference</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong style="color:#31d9a8">Render</strong> ⭐</td>
+          <td>Full-stack web apps, static sites, databases</td>
+          <td>750 free hours/month — enough for 1 app running 24/7</td>
+          <td>Near-identical deploy experience to Heroku; great docs</td>
+        </tr>
+        <tr>
+          <td><strong style="color:#4f8ef7">Railway</strong></td>
+          <td>Rapid prototyping, full-stack apps</td>
+          <td>$5 free credit/month — covers ~3-4 basic apps</td>
+          <td>Very modern dashboard; generous database storage limits</td>
+        </tr>
+        <tr>
+          <td><strong style="color:#f7c94f">Fly.io</strong></td>
+          <td>High-performance global apps</td>
+          <td>3 free shared-CPU VMs + ~160GB data transfer</td>
+          <td>Edge servers worldwide — blazingly fast for global users</td>
+        </tr>
+        <tr>
+          <td><strong style="color:#f7856a">Koyeb</strong></td>
+          <td>Global edge, serverless</td>
+          <td>Free $5.50 monthly credit + 1 free public-domain app</td>
+          <td>Built-in global edge network; supports serverless workloads</td>
+        </tr>
+        <tr>
+          <td><strong>Vercel</strong> <em style="font-size:14px;color:var(--text-muted)">(frontend only)</em></td>
+          <td>React, Vue, Next.js frontends</td>
+          <td>Unlimited free frontend sites + serverless functions</td>
+          <td>Not ideal for custom backends (Node.js + Express APIs)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 7 — DEPLOYING TO HEROKU (STEPS)
+══════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="eyebrow">Step-by-Step · Cloud Deployment</div>
+  <div class="slide-title">Deploying an App <span>With Git</span></div>
+  <div class="grid-2" style="align-items:start">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>Install Heroku CLI</strong> — download from the Heroku website for your OS so you can control servers from the terminal.</div></div>
+      <div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>Prepare Your App</strong> — ensure code, dependencies (<code>package.json</code>), and config files are ready.</div></div>
+      <div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>Initialize Git</strong></div></div>
+      <div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>Login to Heroku</strong></div></div>
+      <div class="step-row"><div class="step-num">5</div><div class="step-text"><strong>Create App on Heroku</strong> — spins up cloud server space; becomes your app's URL.</div></div>
+      <div class="step-row"><div class="step-num">6</div><div class="step-text"><strong>Push &amp; Deploy</strong> — Heroku auto-builds &amp; starts your app.</div></div>
+      <div class="step-row"><div class="step-num">7</div><div class="step-text"><strong>Open Your Live App</strong></div></div>
+      <div class="step-row"><div class="step-num">8</div><div class="step-text"><strong>Scale &amp; Configure</strong> — set dynos and environment variables (API keys).</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="code-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><span class="cm"># Step 3: Initialize Git repo</span>
+<span class="fn">git</span> init
+<span class="fn">git</span> add .
+<span class="fn">git</span> commit -m <span class="str">"Initial commit"</span>
+
+<span class="cm"># Step 4: Login to Heroku</span>
+<span class="fn">heroku</span> login
+
+<span class="cm"># Step 5: Create the Heroku app</span>
+<span class="fn">heroku</span> create your-app-name
+
+<span class="cm"># Step 6: Push code to deploy</span>
+<span class="fn">git</span> push heroku master
+
+<span class="cm"># Step 7: Open the live app</span>
+<span class="fn">heroku</span> open
+
+<span class="cm"># Step 8: Scale and configure</span>
+<span class="fn">heroku</span> ps:scale web=2
+<span class="fn">heroku</span> config:set KEY=VALUE</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 8 — LOCATION APP: HTML
+══════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="eyebrow">Code Project · Guided Drills</div>
+  <div class="slide-title">The <span>Location Storage</span> App — Part 1</div>
+  <p style="margin-bottom:16px">Build a web app that stores a dynamic list of locations using JavaScript. Start with the HTML front-end.</p>
+  <div class="grid-2" style="height:min(500px,58vh);align-items:stretch">
+    <div class="card" style="display:flex;flex-direction:column;height:100%;overflow:hidden">
+      <div class="sh" style="flex-shrink:0">📄 index.html — The Front-End Structure</div>
+      <div class="code-wrap" style="flex:1;min-height:0">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre style="height:100%;overflow:auto">&lt;<span class="tag">!DOCTYPE html</span>&gt;
+&lt;<span class="tag">html</span> <span class="attr">lang</span>=<span class="val">"en"</span>&gt;
+&lt;<span class="tag">head</span>&gt;
+  &lt;<span class="tag">meta</span> <span class="attr">charset</span>=<span class="val">"UTF-8"</span>&gt;
+  &lt;<span class="tag">meta</span> <span class="attr">name</span>=<span class="val">"viewport"</span>
+    <span class="attr">content</span>=<span class="val">"width=device-width, initial-scale=1.0"</span>&gt;
+  &lt;<span class="tag">title</span>&gt;Location App&lt;/<span class="tag">title</span>&gt;
+&lt;/<span class="tag">head</span>&gt;
+&lt;<span class="tag">body</span>&gt;
+  &lt;<span class="tag">h1</span>&gt;Location&lt;/<span class="tag">h1</span>&gt;
+
+  &lt;<span class="tag">input</span>
+    <span class="attr">type</span>=<span class="val">"text"</span>
+    <span class="attr">id</span>=<span class="val">"locationInput"</span>
+    <span class="attr">placeholder</span>=<span class="val">"Enter location"</span>&gt;
+
+  &lt;<span class="tag">button</span> <span class="attr">id</span>=<span class="val">"addLocationButton"</span>&gt;
+    Add Location
+  &lt;/<span class="tag">button</span>&gt;
+
+  &lt;<span class="tag">ul</span> <span class="attr">id</span>=<span class="val">"locationList"</span>&gt;&lt;/<span class="tag">ul</span>&gt;
+
+  &lt;<span class="tag">script</span> <span class="attr">src</span>=<span class="val">"app.js"</span>&gt;&lt;\/<span class="tag">script</span>&gt;
+&lt;/<span class="tag">body</span>&gt;
+&lt;/<span class="tag">html</span>&gt;</pre>
+      </div>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:12px;height:100%;overflow:hidden">
+      <div class="sh" style="flex-shrink:0">🔍 What Each Part Does</div>
+      <div style="flex:1;overflow:auto;display:flex;flex-direction:column;gap:10px">
+        <div style="background:#111827;border-radius:10px;padding:14px">
+          <p style="color:var(--accent3);font-weight:700;margin-bottom:6px">&lt;input id="locationInput"&gt;</p>
+          <p style="font-size:16px">The text box where the user types a location name.</p>
+        </div>
+        <div style="background:#111827;border-radius:10px;padding:14px">
+          <p style="color:var(--accent3);font-weight:700;margin-bottom:6px">&lt;button id="addLocationButton"&gt;</p>
+          <p style="font-size:16px">When clicked, triggers JavaScript to save and display the location.</p>
+        </div>
+        <div style="background:#111827;border-radius:10px;padding:14px">
+          <p style="color:var(--accent3);font-weight:700;margin-bottom:6px">&lt;ul id="locationList"&gt;</p>
+          <p style="font-size:16px">Starts empty — JavaScript dynamically fills it with list items as locations are added.</p>
+        </div>
+        <div style="background:#111827;border-radius:10px;padding:14px">
+          <p style="color:var(--accent3);font-weight:700;margin-bottom:6px">&lt;script src="app.js"&gt;</p>
+          <p style="font-size:16px">Loads the JavaScript file — placed at the bottom so HTML renders before the script runs.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 9 — LOCATION APP: JS
+══════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="eyebrow">Code Project · Guided Drills</div>
+  <div class="slide-title">The <span>Location Storage</span> App — Part 2</div>
+  <p style="margin-bottom:16px">Now wire up the JavaScript logic that handles user input and manages the array-based "database".</p>
+  <div class="grid-2" style="height:min(500px,58vh);align-items:stretch">
+    <div class="card" style="display:flex;flex-direction:column;height:100%;overflow:hidden">
+      <div class="sh" style="flex-shrink:0">🟨 app.js — Data Logic &amp; DOM Updates</div>
+      <div class="code-wrap" style="flex:1;min-height:0">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre style="height:100%;overflow:auto"><span class="cm">// 1. Grab HTML elements we need</span>
+<span class="kw">const</span> locationInput =
+  document.<span class="fn">getElementById</span>(<span class="str">"locationInput"</span>);
+<span class="kw">const</span> addLocationButton =
+  document.<span class="fn">getElementById</span>(<span class="str">"addLocationButton"</span>);
+<span class="kw">const</span> locationList =
+  document.<span class="fn">getElementById</span>(<span class="str">"locationList"</span>);
+
+<span class="cm">// 2. Array = our simple "database"</span>
+<span class="kw">const</span> locations = [];
+
+<span class="cm">// 3. Listen for button clicks</span>
+addLocationButton.<span class="fn">addEventListener</span>(<span class="str">"click"</span>, () =&gt; {
+  <span class="kw">const</span> newLocation = locationInput.value;
+
+  <span class="kw">if</span> (newLocation) {
+    <span class="cm">// 4. Add to array</span>
+    locations.<span class="fn">push</span>(newLocation);
+
+    <span class="cm">// 5. Clear existing list display</span>
+    locationList.innerHTML = <span class="str">""</span>;
+
+    <span class="cm">// 6. Re-render every location</span>
+    <span class="kw">for</span> (<span class="kw">const</span> location <span class="kw">of</span> locations) {
+      <span class="kw">const</span> listItem =
+        document.<span class="fn">createElement</span>(<span class="str">"li"</span>);
+      listItem.textContent = location;
+      locationList.<span class="fn">appendChild</span>(listItem);
+    }
+
+    <span class="cm">// 7. Clear input for next entry</span>
+    locationInput.value = <span class="str">""</span>;
+  }
+});</pre>
+      </div>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:12px;height:100%;overflow:hidden">
+      <div class="sh" style="flex-shrink:0">💡 Step-by-Step Breakdown</div>
+      <div style="flex:1;overflow:auto;display:flex;flex-direction:column;gap:8px">
+        <div class="step-row"><div class="step-num" style="background:#31d9a8;color:#111">1</div><div class="step-text" style="font-size:16px"><strong>getElementById</strong> — captures the 3 HTML elements so JS can read/write them</div></div>
+        <div class="step-row"><div class="step-num" style="background:#31d9a8;color:#111">2</div><div class="step-text" style="font-size:16px"><strong>const locations = []</strong> — a JavaScript array that acts as our in-memory database</div></div>
+        <div class="step-row"><div class="step-num" style="background:#31d9a8;color:#111">3</div><div class="step-text" style="font-size:16px"><strong>addEventListener("click")</strong> — runs our function every time the button is pressed</div></div>
+        <div class="step-row"><div class="step-num" style="background:#31d9a8;color:#111">4</div><div class="step-text" style="font-size:16px"><strong>locations.push()</strong> — saves the new location into the array</div></div>
+        <div class="step-row"><div class="step-num" style="background:#31d9a8;color:#111">5</div><div class="step-text" style="font-size:16px"><strong>innerHTML = ""</strong> — wipes the visible list so we can rebuild it fresh</div></div>
+        <div class="step-row"><div class="step-num" style="background:#31d9a8;color:#111">6</div><div class="step-text" style="font-size:16px"><strong>for...of loop</strong> — re-renders every location in the array as an &lt;li&gt; element</div></div>
+        <div class="step-row"><div class="step-num" style="background:#31d9a8;color:#111">7</div><div class="step-text" style="font-size:16px"><strong>value = ""</strong> — clears the input box, ready for the next entry</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 10 — ANALOGIES
+══════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="eyebrow">Real-World Understanding</div>
+  <div class="slide-title">Analogies &amp; <span>Use Cases</span></div>
+  <div class="grid-2" style="gap:16px">
+    <div class="card">
+      <div class="analogy-icon">📚</div>
+      <div class="sh">DB Framework = Mega-Library</div>
+      <ul style="font-size:16px">
+        <li><strong>Indexing</strong> — the card catalog: find a specific book in 10 sec vs. searching 10,000 shelves</li>
+        <li><strong>Transaction Management</strong> — the strict librarian: either book leaves <em>and</em> status changes, or neither happens</li>
+        <li><strong>Caching</strong> — 10 most-popular books left on the front desk; patrons don't trek to the back every time</li>
+        <li><strong>Logging &amp; Recovery</strong> — the librarian's daily journal: power cut? Read the journal to restore exact state</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="analogy-icon">⚓</div>
+      <div class="sh">Heroku PaaS = Cloud-Connected Dock</div>
+      <p style="font-size:16px">You built a cruise ship (your app) on land. To launch it you'd normally have to also build the ocean, the dock, and hire a full navigation crew (servers). <strong>Heroku is the pre-built world-class harbor.</strong> Bring your finished ship, hand over the wheel (<code>git push</code>), and they immediately launch it — handling engine maintenance (updates) and steering (scaling) for you.</p>
+    </div>
+    <div class="card col-span-2">
+      <div class="analogy-icon">🍜</div>
+      <div class="sh">Use Case: Global Food Delivery App</div>
+      <div class="grid-3" style="gap:12px;margin-top:10px">
+        <div style="background:#111827;border-radius:10px;padding:12px">
+          <p style="color:var(--accent);font-weight:700;font-size:16px;margin-bottom:6px">Concurrency Control</p>
+          <p style="font-size:15px">Prevents User A and User B from ordering the same last bowl of soup simultaneously.</p>
+        </div>
+        <div style="background:#111827;border-radius:10px;padding:12px">
+          <p style="color:var(--accent2);font-weight:700;font-size:16px;margin-bottom:6px">Partitioning/Sharding</p>
+          <p style="font-size:15px">Splits user data geographically (Asia / Europe / Americas) so global load doesn't crash the single DB.</p>
+        </div>
+        <div style="background:#111827;border-radius:10px;padding:12px">
+          <p style="color:var(--accent3);font-weight:700;font-size:16px;margin-bottom:6px">Backup &amp; Restore</p>
+          <p style="font-size:15px">An entire week of order history survives even if a data center's servers fail.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 11 — KEY QUOTES
+══════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="eyebrow">Wisdom Corner</div>
+  <div class="slide-title">Key <span>Quotes</span></div>
+  <div style="display:flex;flex-direction:column;gap:20px;max-width:780px">
+    <div class="quote-card">
+      <p>"Success is walking from failure to failure with no loss of enthusiasm."</p>
+      <div class="quote-attr">— Winston Churchill</div>
+    </div>
+    <div class="card">
+      <div class="sh">Why This Matters for Developers</div>
+      <p>Debugging a broken deployment, a crashed database transaction, or a misconfigured Dyno can be deeply frustrating. Churchill's words remind us that persistence through those failures — reading the error logs, trying again, iterating — is exactly how senior engineers are forged. Every broken <code>git push</code> is a step closer to expertise.</p>
+    </div>
+    <div class="card" style="background:#1a2440;border:1px solid #2d3d5a">
+      <p style="color:var(--text-muted)">💡 Module Insight: Technology platforms exist precisely to <strong>reduce the failures you have to deal with</strong>. When Heroku auto-restarts a crashed Dyno or when a database rolls back a failed transaction automatically, that's the platform absorbing failure on your behalf — so you can keep building with enthusiasm.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 12 — RECAP
+══════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="eyebrow">Module Recap</div>
+  <div class="slide-title">Let's <span>Recap</span> the Key Ideas</div>
+  <div class="grid-2" style="gap:18px">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card" style="border-left:4px solid var(--accent)">
+        <div class="sh">Technology Platform</div>
+        <p>An integrated foundation of software, hardware, tools, and services that abstracts away infrastructure so developers can focus on building features — not managing servers.</p>
+      </div>
+      <div class="card" style="border-left:4px solid var(--accent2)">
+        <div class="sh">Database Storage Framework</div>
+        <p>A set of principles governing <strong>how</strong> data is stored and managed. Four pillars: <em>Core Architecture</em>, <em>Performance</em>, <em>Reliability</em>, and <em>Scalability</em>. The Storage Engine is the core component translating commands to disk operations.</p>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card" style="border-left:4px solid var(--accent3)">
+        <div class="sh">Heroku &amp; PaaS</div>
+        <p><strong>Dynos</strong> run your app. <strong>Add-ons</strong> attach services. Deploy by running <code>git push heroku master</code> — Heroku builds and launches automatically. Scale with <code>heroku ps:scale</code>.</p>
+      </div>
+      <div class="card" style="border-left:4px solid #f7856a">
+        <div class="sh">Heroku Is No Longer Free</div>
+        <p>Use <strong>Render</strong> or <strong>Railway</strong> instead — both offer generous free tiers that are virtually identical in workflow. Render's 750 free hours/month covers one app running 24/7.</p>
+      </div>
+    </div>
+    <div class="card col-span-2" style="background:linear-gradient(135deg,#1a2040,#1e2a38)">
+      <div class="badge-row" style="justify-content:center;gap:14px">
+        <span class="badge badge-accent">Storage Engine = DB Heart</span>
+        <span class="badge badge-accent2">Indexing = Faster Lookups</span>
+        <span class="badge badge-accent3">Concurrency = Safe Multi-User</span>
+        <span class="badge" style="color:#f7856a">Sharding = Scale Globally</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 13 — MCQ QUESTIONS (1–4)
+══════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="eyebrow">Skill-Building Check · MCQ</div>
+  <div class="slide-title">Multiple Choice Questions <span>1–4</span></div>
+  <div class="grid-2" style="gap:16px">
+    <div class="mcq-card">
+      <div class="mcq-q">1. What feature of a Storage Framework defines how data is physically stored on disk or in memory?</div>
+      <ul class="mcq-opts">
+        <li><span>A.</span> Concurrency Control</li>
+        <li><span>B.</span> Data Storage (Storage Layout)</li>
+        <li><span>C.</span> Indexing</li>
+        <li><span>D.</span> Backup &amp; Restore</li>
+      </ul>
+    </div>
+    <div class="mcq-card">
+      <div class="mcq-q">2. Which storage framework component manages concurrent access to data by multiple users or processes?</div>
+      <ul class="mcq-opts">
+        <li><span>A.</span> Transaction Management</li>
+        <li><span>B.</span> Indexing</li>
+        <li><span>C.</span> Concurrency Control</li>
+        <li><span>D.</span> Data Archiving</li>
+      </ul>
+    </div>
+    <div class="mcq-card">
+      <div class="mcq-q">3. What storage framework concept creates pointers that facilitate faster data retrieval?</div>
+      <ul class="mcq-opts">
+        <li><span>A.</span> Caching</li>
+        <li><span>B.</span> Indexing</li>
+        <li><span>C.</span> Query Optimization</li>
+        <li><span>D.</span> Partitioning</li>
+      </ul>
+    </div>
+    <div class="mcq-card">
+      <div class="mcq-q">4. What do we call the foundation for building and running business applications that abstracts away underlying infrastructure?</div>
+      <ul class="mcq-opts">
+        <li><span>A.</span> A Dyno</li>
+        <li><span>B.</span> A Storage Engine</li>
+        <li><span>C.</span> A Technology Platform</li>
+        <li><span>D.</span> A Data Partition</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 14 — MCQ QUESTIONS (5–6) + IDENTIFICATION
+══════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="eyebrow">Skill-Building Check · MCQ &amp; Identification</div>
+  <div class="slide-title">Questions <span>5–6</span> + Identification</div>
+  <div class="grid-2" style="gap:16px">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="mcq-card">
+        <div class="mcq-q">5. Which component implements the storage framework's principles by translating high-level operations into low-level disk/memory operations?</div>
+        <ul class="mcq-opts">
+          <li><span>A.</span> The Backup System</li>
+          <li><span>B.</span> The Storage Engine</li>
+          <li><span>C.</span> The Query Optimizer</li>
+          <li><span>D.</span> The Add-on</li>
+        </ul>
+      </div>
+      <div class="mcq-card">
+        <div class="mcq-q">6. Since Heroku's free tier ended, which platform offers 750 free hours/month for student PaaS deployments?</div>
+        <ul class="mcq-opts">
+          <li><span>A.</span> Microsoft Azure</li>
+          <li><span>B.</span> Render</li>
+          <li><span>C.</span> AWS Lambda</li>
+          <li><span>D.</span> Google Play Store</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sh">Identification — Name the Term</div>
+      <div style="margin-top:8px">
+        <div class="id-row"><span class="id-num">1.</span><span class="id-clue">The heart of a database that translates SQL into read/write operations.</span><div class="id-blank"></div></div>
+        <div class="id-row"><span class="id-num">2.</span><span class="id-clue">A lightweight container in Heroku that runs your application code.</span><div class="id-blank"></div></div>
+        <div class="id-row"><span class="id-num">3.</span><span class="id-clue">The technique of splitting a massive DB across multiple servers for scale.</span><div class="id-blank"></div></div>
+        <div class="id-row"><span class="id-num">4.</span><span class="id-clue">Keeps frequently accessed data in RAM to avoid slow disk reads.</span><div class="id-blank"></div></div>
+        <div class="id-row"><span class="id-num">5.</span><span class="id-clue">A cloud service category that manages servers so developers only manage code.</span><div class="id-blank"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 15 — ANSWER KEY
+══════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="eyebrow">Answer Key</div>
+  <div class="slide-title">MCQ <span>Answers &amp; Explanations</span></div>
+  <div class="grid-2" style="gap:18px">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="ans-row"><span class="ans-num">1.</span><div><div class="ans-correct">B — Data Storage (Storage Layout)</div><div class="ans-exp">Defines physical layout decisions like compression, encryption, and disk partitioning.</div></div></div>
+      <div class="ans-row"><span class="ans-num">2.</span><div><div class="ans-correct">C — Concurrency Control</div><div class="ans-exp">Ensures data consistency and prevents conflicts when multiple users read/write simultaneously.</div></div></div>
+      <div class="ans-row"><span class="ans-num">3.</span><div><div class="ans-correct">B — Indexing</div><div class="ans-exp">Acts like a textbook's back-index — locates specific records without scanning every row.</div></div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="ans-row"><span class="ans-num">4.</span><div><div class="ans-correct">C — A Technology Platform</div><div class="ans-exp">Provides a complete foundation (hardware/software/services) that abstracts complexity for developers.</div></div></div>
+      <div class="ans-row"><span class="ans-num">5.</span><div><div class="ans-correct">B — The Storage Engine</div><div class="ans-exp">Core of the database that translates user commands into actual mechanical read/write commands.</div></div></div>
+      <div class="ans-row"><span class="ans-num">6.</span><div><div class="ans-correct">B — Render</div><div class="ans-exp">Offers 750 free hours/month — enough to keep one app running 24/7 for free.</div></div></div>
+    </div>
+    <div class="card col-span-2" style="border-top:2px solid var(--accent2)">
+      <div class="sh">Identification Answers</div>
+      <div class="grid-2" style="gap:10px;margin-top:8px">
+        <div class="ans-row" style="border:none;padding:0;margin:0"><span class="ans-num">1.</span><div><div class="ans-correct">Storage Engine</div></div></div>
+        <div class="ans-row" style="border:none;padding:0;margin:0"><span class="ans-num">2.</span><div><div class="ans-correct">Dyno</div></div></div>
+        <div class="ans-row" style="border:none;padding:0;margin:0"><span class="ans-num">3.</span><div><div class="ans-correct">Sharding (Partitioning)</div></div></div>
+        <div class="ans-row" style="border:none;padding:0;margin:0"><span class="ans-num">4.</span><div><div class="ans-correct">Caching</div></div></div>
+        <div class="ans-row" style="border:none;padding:0;margin:0"><span class="ans-num">5.</span><div><div class="ans-correct">Platform as a Service (PaaS)</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 16 — CLOSING (dark)
+══════════════════════════════════════════════ -->
+<div class="slide slide-dark">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;gap:22px">
+    <svg viewBox="0 0 120 120" width="100" height="100" role="img" aria-label="Celebration icon">
+      <title>Module Complete</title>
+      <circle cx="60" cy="60" r="56" fill="#1a2440" stroke="#4f8ef7" stroke-width="2"/>
+      <text x="60" y="78" font-size="52" text-anchor="middle" font-family="Arial">🎉</text>
+    </svg>
+    <div class="eyebrow" style="font-size:15px">Module 23 Complete</div>
+    <div class="slide-title" style="font-size:clamp(22px,3.2vw,42px);color:#fff">
+      You're Now a<br><span>Backend Infrastructure</span> Insider!
+    </div>
+    <div class="quote-card" style="max-width:600px;text-align:left">
+      <p>"Success is walking from failure to failure with no loss of enthusiasm."</p>
+      <div class="quote-attr">— Winston Churchill</div>
+    </div>
+    <div class="badge-row" style="justify-content:center">
+      <span class="badge badge-accent">Tech Platforms ✓</span>
+      <span class="badge badge-accent2">DB Storage ✓</span>
+      <span class="badge badge-accent3">Cloud Deploy ✓</span>
+    </div>
+    <p style="color:var(--text-muted);font-size:17px;max-width:500px">Keep shipping, keep iterating, and don't let a broken <code>git push</code> slow your momentum. Next module awaits! 🚀</p>
+  </div>
+</div>
+
+</div><!-- #deck -->
+
+<!-- Shortcuts overlay -->
+<div id="shortcuts">
+  <div class="sc-box">
+    <h3>⌨️ Keyboard Shortcuts</h3>
+    <div class="sc-row"><span>Next slide</span><span class="sc-key">→ or Right-click</span></div>
+    <div class="sc-row"><span>Previous slide</span><span class="sc-key">←</span></div>
+    <div class="sc-row"><span>First slide</span><span class="sc-key">Home</span></div>
+    <div class="sc-row"><span>Last slide</span><span class="sc-key">End</span></div>
+    <div class="sc-row"><span>Swipe</span><span class="sc-key">Mobile gesture</span></div>
+    <div class="sc-row"><span>Toggle this overlay</span><span class="sc-key">?</span></div>
+    <div class="sc-close"><button onclick="document.getElementById('shortcuts').classList.remove('show')">Close</button></div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  let current = 0;
+  let animating = false;
+
+  const bar = document.getElementById('progress-bar');
+  const counter = document.getElementById('counter');
+
+  function updateUI() {
+    bar.style.width = ((current + 1) / total * 100) + '%';
+    counter.textContent = (current + 1) + ' / ' + total;
+  }
+
+  function goTo(next, dir) {
+    if (animating || next === current || next < 0 || next >= total) return;
+    animating = true;
+    const old = slides[current];
+    const nxt = slides[next];
+    old.classList.remove('active');
+    old.classList.add(dir > 0 ? 'exit-left' : 'exit-right');
+    nxt.style.transform = dir > 0 ? 'translateX(40px)' : 'translateX(-40px)';
+    nxt.classList.add('active');
+    requestAnimationFrame(() => { nxt.style.transform = ''; });
+    setTimeout(() => {
+      old.classList.remove('exit-left', 'exit-right');
+      animating = false;
+    }, 380);
+    current = next;
+    updateUI();
+  }
+
+  function next() { goTo(current + 1, 1); }
+  function prev() { goTo(current - 1, -1); }
+
+  // Keyboard
+  document.addEventListener('keydown', e => {
+    if (document.getElementById('shortcuts').classList.contains('show')) {
+      if (e.key === 'Escape' || e.key === '?') document.getElementById('shortcuts').classList.remove('show');
+      return;
+    }
+    if (e.key === 'ArrowRight') next();
+    else if (e.key === 'ArrowLeft') prev();
+    else if (e.key === 'Home') goTo(0, -1);
+    else if (e.key === 'End') goTo(total - 1, 1);
+    else if (e.key === '?') document.getElementById('shortcuts').classList.add('show');
+  });
+
+  // Right-click = next (block context menu)
+  document.addEventListener('contextmenu', e => { e.preventDefault(); next(); }, true);
+
+  // Mouse side buttons (Mouse3/Mouse4)
+  document.addEventListener('mousedown', e => {
+    if (e.button === 3) { e.preventDefault(); e.stopImmediatePropagation(); prev(); }
+    if (e.button === 4) { e.preventDefault(); e.stopImmediatePropagation(); next(); }
+  }, true);
+
+  // Touch swipe
+  let touchX = 0;
+  document.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; }, {passive: true});
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 50) { dx < 0 ? next() : prev(); }
+  }, {passive: true});
+
+  updateUI();
+})();
+
+function copyCode(btn) {
+  const pre = btn.parentElement.querySelector('pre');
+  if (!pre) return;
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1800);
+  });
+}
+</script>
+</body>
+</html>

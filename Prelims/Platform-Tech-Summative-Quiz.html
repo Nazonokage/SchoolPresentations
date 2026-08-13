@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Platform Technologies · Summative Assessment</title>
+<style>
+  :root{
+    --bg: #10151a;
+    --panel: #1a222a;
+    --panel-2: #202b34;
+    --rail: #2a3743;
+    --ink: #eef3f5;
+    --ink-dim: #9fb0ba;
+    --teal: #4fd8c4;
+    --amber: #f2b134;
+    --coral: #e8785a;
+    --mono: "SFMono-Regular", "Consolas", "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--bg); color:var(--ink);
+    font-family:var(--sans);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  #app{position:relative; width:100vw; height:100vh; overflow:hidden;}
+
+  /* top bus-rail progress */
+  #busrail{position:fixed; top:0; left:0; width:100%; height:6px; background:var(--rail); z-index:50;}
+  #busrail::before{content:""; position:absolute; inset:0; background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 24px);}
+  #busfill{position:absolute; top:0; left:0; height:100%; width:0%;
+      background:linear-gradient(90deg, var(--teal), var(--amber));
+      transition:width .35s ease;}
+
+  #counter{position:fixed; top:16px; right:24px; z-index:50;
+      font-family:var(--mono); font-size:13px; letter-spacing:.08em;
+      color:var(--ink-dim); background:rgba(0,0,0,.25); padding:6px 12px;
+      border:1px solid var(--rail); border-radius:20px;}
+  #hint{position:fixed; bottom:16px; right:24px; z-index:50;
+      font-family:var(--mono); font-size:12px; color:var(--ink-dim);
+      opacity:.6;}
+
+  .stage{position:absolute; inset:0; width:100%; height:100%;}
+
+  .slide{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; justify-content:center;
+    padding: 64px 90px;
+    opacity:0; pointer-events:none;
+    transform: translateX(40px);
+    transition: opacity .35s ease, transform .35s ease;
+  }
+  .slide.active{ opacity:1; pointer-events:auto; transform:translateX(0); }
+
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition:opacity .01s linear; transform:none !important; }
+  }
+
+  .eyebrow{
+    font-family:var(--mono); font-size:14px; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--teal); margin-bottom:14px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::before{content:""; width:26px; height:2px; background:var(--teal); display:inline-block;}
+
+  h1.title{font-size:56px; margin:0 0 18px; line-height:1.05; font-weight:700;}
+  h2.title{font-size:34px; margin:0 0 6px; font-weight:700;}
+  p.sub{color:var(--ink-dim); font-size:18px; max-width:760px; line-height:1.6;}
+
+  /* Title slide */
+  #slide-0 .rails{
+    display:flex; gap:6px; margin:34px 0 40px;
+  }
+  #slide-0 .rails span{height:4px; flex:1; border-radius:2px; background:var(--rail);}
+  #slide-0 .rails span:nth-child(1){background:var(--teal);}
+  #slide-0 .rails span:nth-child(2){background:var(--amber);}
+  #slide-0 .rails span:nth-child(3){background:var(--coral);}
+  #slide-0 .meta{display:flex; gap:40px; margin-top:20px; flex-wrap:wrap;}
+  #slide-0 .meta div{font-family:var(--mono); font-size:14px; color:var(--ink-dim);}
+  #slide-0 .meta strong{display:block; color:var(--ink); font-size:22px; font-weight:700; margin-bottom:2px;}
+
+  /* Quiz slide layout: two question cards */
+  .quiz-grid{
+    display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:32px; width:100%; max-width:1500px; margin:0 auto;
+  }
+  .qcard{
+    background:var(--panel); border:1px solid var(--rail); border-radius:14px;
+    padding:28px 30px; min-width:0; display:flex; flex-direction:column;
+  }
+  .qaddr{
+    font-family:var(--mono); font-size:13px; color:var(--amber);
+    letter-spacing:.1em; margin-bottom:10px;
+  }
+  .qtext{font-size:20px; line-height:1.45; font-weight:600; margin-bottom:20px; min-height:56px;}
+  .opts{display:flex; flex-direction:column; gap:10px;}
+  .opt{
+    display:flex; gap:12px; align-items:flex-start;
+    background:var(--panel-2); border:1px solid var(--rail); border-radius:9px;
+    padding:12px 14px; font-size:15px; line-height:1.4; color:var(--ink);
+  }
+  .opt .tag{
+    font-family:var(--mono); font-weight:700; color:var(--teal);
+    flex-shrink:0; width:20px;
+  }
+
+  /* Recap slide */
+  .recap-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; max-width:1200px;}
+  .recap-item{background:var(--panel); border:1px solid var(--rail); border-radius:12px; padding:20px 22px;}
+  .recap-item .k{font-family:var(--mono); color:var(--teal); font-size:13px; letter-spacing:.06em;}
+  .recap-item p{margin:8px 0 0; color:var(--ink-dim); font-size:15px; line-height:1.5;}
+
+  /* Answers slide */
+  .ans-wrap{max-width:1500px; margin:0 auto; width:100%;}
+  .ans-grid{
+    display:grid; grid-template-columns:repeat(3, minmax(0,1fr));
+    gap:10px 22px; margin-top:10px;
+  }
+  .ans-row{
+    display:flex; gap:10px; align-items:baseline;
+    border-bottom:1px dashed var(--rail); padding:7px 0; min-width:0;
+  }
+  .ans-row .num{font-family:var(--mono); color:var(--ink-dim); font-size:13px; width:22px; flex-shrink:0;}
+  .ans-row .letter{font-family:var(--mono); font-weight:700; color:var(--teal); width:16px; flex-shrink:0;}
+  .ans-row .exp{font-size:13px; color:var(--ink-dim); line-height:1.35;}
+
+  ::selection{background:var(--teal); color:#0a0e12;}
+
+  /* shortcuts overlay */
+  #shortcuts{
+    position:fixed; inset:0; background:rgba(8,12,15,.82); z-index:100;
+    display:none; align-items:center; justify-content:center;
+  }
+  #shortcuts.show{display:flex;}
+  #shortcuts .box{
+    background:var(--panel); border:1px solid var(--rail); border-radius:14px;
+    padding:32px 40px; max-width:420px; width:90%;
+  }
+  #shortcuts h3{margin:0 0 16px; font-size:20px;}
+  #shortcuts .row{display:flex; justify-content:space-between; padding:8px 0;
+      border-bottom:1px solid var(--rail); font-size:14px;}
+  #shortcuts .row kbd{font-family:var(--mono); background:var(--panel-2);
+      padding:3px 8px; border-radius:5px; border:1px solid var(--rail); color:var(--teal);}
+
+  @media (max-width: 900px){
+    .slide{padding:40px 26px;}
+    h1.title{font-size:36px;}
+    .quiz-grid{grid-template-columns:1fr; gap:18px;}
+    .ans-grid{grid-template-columns:1fr;}
+    #slide-0 .meta{gap:22px;}
+  }
+</style>
+</head>
+<body>
+<div id="busrail"><div id="busfill"></div></div>
+<div id="counter">1 / 18</div>
+<div id="hint">press ? for shortcuts</div>
+
+<div id="app">
+  <div class="stage" id="stage">
+
+    <!-- Slide 0: Title -->
+    <section class="slide active" id="slide-0">
+      <div class="eyebrow">Platform Technologies · Module 1</div>
+      <h1 class="title">Summative Assessment</h1>
+      <p class="sub">Introduction to Platform Technologies — computing history, operating systems,
+        hardware architecture, IT infrastructure, and system evolution.</p>
+      <div class="rails"><span></span><span></span><span></span></div>
+      <div class="meta">
+        <div><strong>30</strong>Multiple choice items</div>
+        <div><strong>15</strong>Slides · 2 items each</div>
+        <div><strong>4</strong>Options per item (A–D)</div>
+        <div><strong>1</strong>Answer key at the end</div>
+      </div>
+    </section>
+
+    <!-- Slides 1-15: 30 questions, 2 per slide -->
+    <section class="slide" id="slide-1">
+      <div class="eyebrow">Item 01–02 · Foundations</div>
+      <div class="quiz-grid">
+        <div class="qcard">
+          <div class="qaddr">0x01</div>
+          <div class="qtext">What combination defines a computing platform, as presented in the module?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>Hardware + Software + Networks</span></div>
+            <div class="opt"><span class="tag">B</span><span>Hardware alone</span></div>
+            <div class="opt"><span class="tag">C</span><span>Software alone</span></div>
+            <div class="opt"><span class="tag">D</span><span>Networks alone</span></div>
+          </div>
+        </div>
+        <div class="qcard">
+          <div class="qaddr">0x02</div>
+          <div class="qtext">Which generation of computing (1945–55) is characterized by punch cards and machine language programming?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>Vacuum Tubes</span></div>
+            <div class="opt"><span class="tag">B</span><span>Transistors and Batch Systems</span></div>
+            <div class="opt"><span class="tag">C</span><span>ICs and Multiprogramming</span></div>
+            <div class="opt"><span class="tag">D</span><span>Personal Computers</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-2">
+      <div class="eyebrow">Item 03–04 · Generations of Computing</div>
+      <div class="quiz-grid">
+        <div class="qcard">
+          <div class="qaddr">0x03</div>
+          <div class="qtext">The Transistors and Batch Systems era (1955–65) is closely associated with which compiler/language?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>COBOL</span></div>
+            <div class="opt"><span class="tag">B</span><span>FORTRAN</span></div>
+            <div class="opt"><span class="tag">C</span><span>BASIC</span></div>
+            <div class="opt"><span class="tag">D</span><span>Java</span></div>
+          </div>
+        </div>
+        <div class="qcard">
+          <div class="qaddr">0x04</div>
+          <div class="qtext">Which system is credited with introducing multiprogramming and timesharing (1965–1980 era)?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>IBM 1401</span></div>
+            <div class="opt"><span class="tag">B</span><span>IBM System/360</span></div>
+            <div class="opt"><span class="tag">C</span><span>IBM PC</span></div>
+            <div class="opt"><span class="tag">D</span><span>DEC minicomputer</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-3">
+      <div class="eyebrow">Item 05–06 · Generations of Computing</div>
+      <div class="quiz-grid">
+        <div class="qcard">
+          <div class="qaddr">0x05</div>
+          <div class="qtext">The Personal Computers generation (1980–present) is marked by which of the following?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>DOS and Macintosh</span></div>
+            <div class="opt"><span class="tag">B</span><span>MULTICS</span></div>
+            <div class="opt"><span class="tag">C</span><span>OS/360</span></div>
+            <div class="opt"><span class="tag">D</span><span>Punch card readers</span></div>
+          </div>
+        </div>
+        <div class="qcard">
+          <div class="qaddr">0x06</div>
+          <div class="qtext">Which operating systems are given as examples of the Mobile Computers generation?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>Symbian OS, BlackBerry OS, iOS, Android</span></div>
+            <div class="opt"><span class="tag">B</span><span>MULTICS and OS/360</span></div>
+            <div class="opt"><span class="tag">C</span><span>DOS and Windows only</span></div>
+            <div class="opt"><span class="tag">D</span><span>UNIVAC and ENIAC OS</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-4">
+      <div class="eyebrow">Item 07–08 · Modern Computers &amp; Operating Systems</div>
+      <div class="quiz-grid">
+        <div class="qcard">
+          <div class="qaddr">0x07</div>
+          <div class="qtext">Which of the following is NOT listed as a component of a modern computer?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>Processor</span></div>
+            <div class="opt"><span class="tag">B</span><span>Main memory</span></div>
+            <div class="opt"><span class="tag">C</span><span>Disks</span></div>
+            <div class="opt"><span class="tag">D</span><span>Punch card reader</span></div>
+          </div>
+        </div>
+        <div class="qcard">
+          <div class="qaddr">0x08</div>
+          <div class="qtext">What layer of software manages all the hardware components of a modern computer?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>Compiler</span></div>
+            <div class="opt"><span class="tag">B</span><span>Operating system</span></div>
+            <div class="opt"><span class="tag">C</span><span>Web browser</span></div>
+            <div class="opt"><span class="tag">D</span><span>Firmware update tool</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-5">
+      <div class="eyebrow">Item 09–10 · Hardware Architecture &amp; the OS Concept</div>
+      <div class="quiz-grid">
+        <div class="qcard">
+          <div class="qaddr">0x09</div>
+          <div class="qtext">Which of these is listed as a common type of hardware architecture / computing platform?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>RISC</span></div>
+            <div class="opt"><span class="tag">B</span><span>TCP/IP</span></div>
+            <div class="opt"><span class="tag">C</span><span>HTML</span></div>
+            <div class="opt"><span class="tag">D</span><span>SQL</span></div>
+          </div>
+        </div>
+        <div class="qcard">
+          <div class="qaddr">0x0A</div>
+          <div class="qtext">In the "extended machine" view, operating systems turn ugly hardware details into what for other software?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>More hardware</span></div>
+            <div class="opt"><span class="tag">B</span><span>Beautiful abstractions</span></div>
+            <div class="opt"><span class="tag">C</span><span>Batch jobs</span></div>
+            <div class="opt"><span class="tag">D</span><span>Punch cards</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-6">
+      <div class="eyebrow">Item 11–12 · The OS as Resource Manager</div>
+      <div class="quiz-grid">
+        <div class="qcard">
+          <div class="qaddr">0x0B</div>
+          <div class="qtext">As a resource manager, the operating system multiplexes (shares) resources in which two ways?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>In time and in space</span></div>
+            <div class="opt"><span class="tag">B</span><span>In memory and in disk only</span></div>
+            <div class="opt"><span class="tag">C</span><span>In hardware and in software only</span></div>
+            <div class="opt"><span class="tag">D</span><span>In input and output only</span></div>
+          </div>
+        </div>
+        <div class="qcard">
+          <div class="qaddr">0x0C</div>
+          <div class="qtext">Which of the following is listed among the core Operating System Concepts?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>Processes</span></div>
+            <div class="opt"><span class="tag">B</span><span>Spreadsheets</span></div>
+            <div class="opt"><span class="tag">C</span><span>Web browsers</span></div>
+            <div class="opt"><span class="tag">D</span><span>Compilers</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-7">
+      <div class="eyebrow">Item 13–14 · Chips &amp; Memory</div>
+      <div class="quiz-grid">
+        <div class="qcard">
+          <div class="qaddr">0x0D</div>
+          <div class="qtext">In the multithreaded/multicore chip diagrams (a) and (b), what is the key difference between the two quad-core layouts?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>Number of cores</span></div>
+            <div class="opt"><span class="tag">B</span><span>Shared vs. separate L2 cache</span></div>
+            <div class="opt"><span class="tag">C</span><span>Clock speed</span></div>
+            <div class="opt"><span class="tag">D</span><span>Operating system installed</span></div>
+          </div>
+        </div>
+        <div class="qcard">
+          <div class="qaddr">0x0E</div>
+          <div class="qtext">In the memory hierarchy pyramid, which level sits at the very top with the fastest, most direct CPU access?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>Hard drive</span></div>
+            <div class="opt"><span class="tag">B</span><span>CPU registers</span></div>
+            <div class="opt"><span class="tag">C</span><span>ROM/BIOS</span></div>
+            <div class="opt"><span class="tag">D</span><span>Cache Level 3</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-8">
+      <div class="eyebrow">Item 15–16 · Memory &amp; Disks</div>
+      <div class="quiz-grid">
+        <div class="qcard">
+          <div class="qaddr">0x0F</div>
+          <div class="qtext">Which layer of the memory pyramid is described as a "permanent storage area"?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>CPU registers</span></div>
+            <div class="opt"><span class="tag">B</span><span>Cache</span></div>
+            <div class="opt"><span class="tag">C</span><span>Secondary storage (e.g., hard drive)</span></div>
+            <div class="opt"><span class="tag">D</span><span>Virtual memory only</span></div>
+          </div>
+        </div>
+        <div class="qcard">
+          <div class="qaddr">0x10</div>
+          <div class="qtext">In a disk drive's structure, what component (one per surface) reads and writes data?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>Tape drive</span></div>
+            <div class="opt"><span class="tag">B</span><span>Read/write head</span></div>
+            <div class="opt"><span class="tag">C</span><span>Punch card reader</span></div>
+            <div class="opt"><span class="tag">D</span><span>Bus controller</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-9">
+      <div class="eyebrow">Item 17–18 · I/O Devices</div>
+      <div class="quiz-grid">
+        <div class="qcard">
+          <div class="qaddr">0x11</div>
+          <div class="qtext">Which of the following is classified as an input device in the I/O devices diagram?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>Speakers</span></div>
+            <div class="opt"><span class="tag">B</span><span>Laser printer</span></div>
+            <div class="opt"><span class="tag">C</span><span>Scanner</span></div>
+            <div class="opt"><span class="tag">D</span><span>Screen</span></div>
+          </div>
+        </div>
+        <div class="qcard">
+          <div class="qaddr">0x12</div>
+          <div class="qtext">Which of the following is classified as an output device in the I/O devices diagram?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>Keyboard</span></div>
+            <div class="opt"><span class="tag">B</span><span>Joystick</span></div>
+            <div class="opt"><span class="tag">C</span><span>Barcode reader</span></div>
+            <div class="opt"><span class="tag">D</span><span>Laser printer</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-10">
+      <div class="eyebrow">Item 19–20 · Buses &amp; Types of Operating Systems</div>
+      <div class="quiz-grid">
+        <div class="qcard">
+          <div class="qaddr">0x13</div>
+          <div class="qtext">Which three buses make up the system bus connecting CPU, memory, and I/O?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>Control, Address, Data</span></div>
+            <div class="opt"><span class="tag">B</span><span>Input, Output, Control</span></div>
+            <div class="opt"><span class="tag">C</span><span>Read, Write, Execute</span></div>
+            <div class="opt"><span class="tag">D</span><span>Local, Wide, Fiber</span></div>
+          </div>
+        </div>
+        <div class="qcard">
+          <div class="qaddr">0x14</div>
+          <div class="qtext">Which type of operating system is designed for devices with very limited resources, such as sensors?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>Mainframe operating system</span></div>
+            <div class="opt"><span class="tag">B</span><span>Sensor node operating system</span></div>
+            <div class="opt"><span class="tag">C</span><span>Server operating system</span></div>
+            <div class="opt"><span class="tag">D</span><span>Smart card operating system</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-11">
+      <div class="eyebrow">Item 21–22 · Types of Operating Systems</div>
+      <div class="quiz-grid">
+        <div class="qcard">
+          <div class="qaddr">0x15</div>
+          <div class="qtext">Which type of operating system runs simple, single-purpose functions on devices like smart cards?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>Real-time operating system</span></div>
+            <div class="opt"><span class="tag">B</span><span>Smart card operating system</span></div>
+            <div class="opt"><span class="tag">C</span><span>Multiprocessor operating system</span></div>
+            <div class="opt"><span class="tag">D</span><span>Embedded operating system</span></div>
+          </div>
+        </div>
+        <div class="qcard">
+          <div class="qaddr">0x16</div>
+          <div class="qtext">Per the evolution of IT infrastructure, which era began with IBM's first mainframes in 1958?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>General-purpose mainframe &amp; minicomputer era</span></div>
+            <div class="opt"><span class="tag">B</span><span>Personal computer era</span></div>
+            <div class="opt"><span class="tag">C</span><span>Client/server era</span></div>
+            <div class="opt"><span class="tag">D</span><span>Cloud and mobile computing era</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-12">
+      <div class="eyebrow">Item 23–24 · Evolution of IT Infrastructure</div>
+      <div class="quiz-grid">
+        <div class="qcard">
+          <div class="qaddr">0x17</div>
+          <div class="qtext">The Personal Computer era is marked by the introduction of which product in 1981?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>DEC minicomputer</span></div>
+            <div class="opt"><span class="tag">B</span><span>IBM PC</span></div>
+            <div class="opt"><span class="tag">C</span><span>Apple Macintosh</span></div>
+            <div class="opt"><span class="tag">D</span><span>IBM System/360</span></div>
+          </div>
+        </div>
+        <div class="qcard">
+          <div class="qaddr">0x18</div>
+          <div class="qtext">In the Client/Server era, processing work is split between which two components?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>Clients and servers</span></div>
+            <div class="opt"><span class="tag">B</span><span>Mainframes and terminals</span></div>
+            <div class="opt"><span class="tag">C</span><span>Routers and switches</span></div>
+            <div class="opt"><span class="tag">D</span><span>Databases and browsers</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-13">
+      <div class="eyebrow">Item 25–26 · Evolution of IT Infrastructure</div>
+      <div class="quiz-grid">
+        <div class="qcard">
+          <div class="qaddr">0x19</div>
+          <div class="qtext">The Enterprise Computing era (1992–present) focuses on integrating disparate networks and applications using what?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>Punch cards</span></div>
+            <div class="opt"><span class="tag">B</span><span>Internet standards and enterprise applications</span></div>
+            <div class="opt"><span class="tag">C</span><span>Batch processing only</span></div>
+            <div class="opt"><span class="tag">D</span><span>Vacuum tube circuits</span></div>
+          </div>
+        </div>
+        <div class="qcard">
+          <div class="qaddr">0x1A</div>
+          <div class="qtext">Cloud computing, part of the Cloud and Mobile Computing era, is best described as:</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>Software installed only locally</span></div>
+            <div class="opt"><span class="tag">B</span><span>Computing power and software supplied over the Internet or a network</span></div>
+            <div class="opt"><span class="tag">C</span><span>A type of mainframe hardware</span></div>
+            <div class="opt"><span class="tag">D</span><span>A punch-card processing system</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-14">
+      <div class="eyebrow">Item 27–28 · Infrastructure Components</div>
+      <div class="quiz-grid">
+        <div class="qcard">
+          <div class="qaddr">0x1B</div>
+          <div class="qtext">How many main components does IT Infrastructure have, according to the module?</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>Five</span></div>
+            <div class="opt"><span class="tag">B</span><span>Six</span></div>
+            <div class="opt"><span class="tag">C</span><span>Seven</span></div>
+            <div class="opt"><span class="tag">D</span><span>Ten</span></div>
+          </div>
+        </div>
+        <div class="qcard">
+          <div class="qaddr">0x1C</div>
+          <div class="qtext">Ultrathin computers stored in racks, mentioned under computer hardware platforms, are known as:</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>Mainframes</span></div>
+            <div class="opt"><span class="tag">B</span><span>Blade servers</span></div>
+            <div class="opt"><span class="tag">C</span><span>Minicomputers</span></div>
+            <div class="opt"><span class="tag">D</span><span>Smart cards</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-15">
+      <div class="eyebrow">Item 29–30 · Infrastructure Components</div>
+      <div class="quiz-grid">
+        <div class="qcard">
+          <div class="qaddr">0x1D</div>
+          <div class="qtext">A dedicated network that connects multiple storage devices together is called a:</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>LAN</span></div>
+            <div class="opt"><span class="tag">B</span><span>SAN (storage area network)</span></div>
+            <div class="opt"><span class="tag">C</span><span>WAN</span></div>
+            <div class="opt"><span class="tag">D</span><span>VPN</span></div>
+          </div>
+        </div>
+        <div class="qcard">
+          <div class="qaddr">0x1E</div>
+          <div class="qtext">Older systems, often built for mainframes, that would be too costly to replace or redesign are known as:</div>
+          <div class="opts">
+            <div class="opt"><span class="tag">A</span><span>Legacy systems</span></div>
+            <div class="opt"><span class="tag">B</span><span>Blade servers</span></div>
+            <div class="opt"><span class="tag">C</span><span>Middleware</span></div>
+            <div class="opt"><span class="tag">D</span><span>SAN devices</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Recap -->
+    <section class="slide" id="slide-16">
+      <div class="eyebrow">Recap</div>
+      <h2 class="title">Before you check your answers</h2>
+      <p class="sub" style="margin-bottom:26px;">This assessment traced one continuous thread: from vacuum tubes
+        to cloud computing, the platform keeps getting more abstract while the underlying job — managing hardware,
+        memory, and resources — stays the same.</p>
+      <div class="recap-grid">
+        <div class="recap-item"><div class="k">01 · HISTORY</div><p>Five generations of computing, from vacuum tubes and batch systems to ICs, PCs, and mobile devices.</p></div>
+        <div class="recap-item"><div class="k">02 · OS ROLE</div><p>The operating system as an extended machine and as a resource manager, multiplexing resources in time and space.</p></div>
+        <div class="recap-item"><div class="k">03 · HARDWARE</div><p>CPU, memory hierarchy, disks, I/O devices, and buses — the physical layer every platform sits on.</p></div>
+        <div class="recap-item"><div class="k">04 · INFRASTRUCTURE</div><p>Seven components of IT infrastructure, and how eras evolved from mainframes to cloud and mobile.</p></div>
+      </div>
+    </section>
+
+    <!-- Answers -->
+    <section class="slide" id="slide-17">
+      <div class="eyebrow">Answer Key</div>
+      <h2 class="title">All 30 Answers</h2>
+      <div class="ans-wrap">
+        <div class="ans-grid" id="ansgrid"></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div id="shortcuts">
+  <div class="box">
+    <h3>Keyboard shortcuts</h3>
+    <div class="row"><span>Next slide</span><kbd>&#8594; / Click</kbd></div>
+    <div class="row"><span>Previous slide</span><kbd>&#8592;</kbd></div>
+    <div class="row"><span>First slide</span><kbd>Home</kbd></div>
+    <div class="row"><span>Last slide</span><kbd>End</kbd></div>
+    <div class="row"><span>Mouse back/forward</span><kbd>Side buttons</kbd></div>
+    <div class="row"><span>Close this panel</span><kbd>Esc / ?</kbd></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var answers = [
+    ["A","Platform = Hardware + Software + Networks."],
+    ["A","1945–55: Vacuum Tubes — punch cards, machine language."],
+    ["B","FORTRAN compiler defined the Transistors/Batch era."],
+    ["B","IBM System/360 (OS/360) brought multiprogramming & timesharing."],
+    ["A","1980–present: Personal Computers — DOS, Macintosh, Windows, Linux."],
+    ["A","Mobile era: Symbian, BlackBerry OS, iOS, Android."],
+    ["D","Punch card readers belong to earlier eras, not the modern list."],
+    ["B","The operating system manages all hardware resources."],
+    ["A","RISC is listed as a hardware architecture type."],
+    ["B","OS = extended machine, giving beautiful abstractions."],
+    ["A","Resources are multiplexed in time and in space."],
+    ["A","Processes are a core OS concept."],
+    ["B","(a) shares one L2 cache; (b) gives each core its own L2."],
+    ["B","CPU registers sit at the very top of the memory pyramid."],
+    ["C","Secondary storage devices are the permanent storage area."],
+    ["B","The read/write head (one per surface) reads/writes disk data."],
+    ["C","Scanner is an input device."],
+    ["D","Laser printer is an output device."],
+    ["A","System bus = Control bus + Address bus + Data bus."],
+    ["B","Sensor node OS runs on resource-limited sensor devices."],
+    ["B","Smart card OS handles simple, single-purpose functions."],
+    ["A","Mainframe & minicomputer era started with IBM's 1958 mainframes."],
+    ["B","IBM PC was introduced in 1981."],
+    ["A","Client/server splits processing between clients and servers."],
+    ["B","Enterprise era integrates networks via Internet standards."],
+    ["B","Cloud computing = computing power/software over the Internet."],
+    ["C","IT Infrastructure has seven main components."],
+    ["B","Blade servers are ultrathin computers stored in racks."],
+    ["B","SAN connects multiple storage devices on a dedicated network."],
+    ["A","Legacy systems are costly-to-replace older mainframe systems."]
+  ];
+
+  var grid = document.getElementById("ansgrid");
+  answers.forEach(function(a, i){
+    var row = document.createElement("div");
+    row.className = "ans-row";
+    var n = (i+1) < 10 ? "0"+(i+1) : ""+(i+1);
+    row.innerHTML = '<span class="num">'+n+'.</span>'+
+                    '<span class="letter">'+a[0]+'</span>'+
+                    '<span class="exp">'+a[1]+'</span>';
+    grid.appendChild(row);
+  });
+
+  var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var total = slides.length;
+  var idx = 0;
+  var busfill = document.getElementById("busfill");
+  var counter = document.getElementById("counter");
+  var shortcutsEl = document.getElementById("shortcuts");
+
+  function render(){
+    slides.forEach(function(s, i){
+      s.classList.remove("active");
+      if(i === idx){ s.classList.add("active"); }
+    });
+    busfill.style.width = (total <= 1 ? 100 : (idx/(total-1))*100) + "%";
+    counter.textContent = (idx+1) + " / " + total;
+  }
+
+  function goTo(newIdx){
+    if(newIdx < 0) newIdx = 0;
+    if(newIdx > total-1) newIdx = total-1;
+    if(newIdx === idx) return;
+    idx = newIdx;
+    render();
+  }
+  function next(){ goTo(idx+1); }
+  function prev(){ goTo(idx-1); }
+
+  render();
+
+  // Click anywhere (except interactive elements) advances
+  document.getElementById("app").addEventListener("click", function(e){
+    if(e.target.closest("a,button,input,textarea,select,[data-nonav]")) return;
+    next();
+  });
+
+  // Keyboard
+  window.addEventListener("keydown", function(e){
+    if(e.key === "ArrowRight" || e.key === "PageDown"){ next(); }
+    else if(e.key === "ArrowLeft" || e.key === "PageUp"){ prev(); }
+    else if(e.key === "Home"){ goTo(0); }
+    else if(e.key === "End"){ goTo(total-1); }
+    else if(e.key === "?"){ shortcutsEl.classList.toggle("show"); }
+    else if(e.key === "Escape"){ shortcutsEl.classList.remove("show"); }
+  });
+
+  // Mouse side buttons (back=3 / forward=4) — capture phase, block browser nav
+  window.addEventListener("mousedown", function(e){
+    if(e.button === 3){
+      e.preventDefault(); e.stopImmediatePropagation();
+      prev();
+    } else if(e.button === 4){
+      e.preventDefault(); e.stopImmediatePropagation();
+      next();
+    }
+  }, true);
+
+  window.addEventListener("auxclick", function(e){
+    if(e.button === 3 || e.button === 4){
+      e.preventDefault(); e.stopImmediatePropagation();
+    }
+  }, true);
+
+  // Swipe gestures
+  var touchStartX = null, touchStartY = null;
+  window.addEventListener("touchstart", function(e){
+    if(!e.touches || !e.touches.length) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, {passive:true});
+  window.addEventListener("touchend", function(e){
+    if(touchStartX === null) return;
+    var dx = (e.changedTouches[0].clientX - touchStartX);
+    var dy = (e.changedTouches[0].clientY - touchStartY);
+    if(Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)){
+      if(dx < 0) next(); else prev();
+    }
+    touchStartX = null; touchStartY = null;
+  }, {passive:true});
+
+  // Shortcuts overlay closes on outside click
+  shortcutsEl.addEventListener("click", function(e){
+    if(e.target === shortcutsEl) shortcutsEl.classList.remove("show");
+  });
+})();
+</script>
+</body>
+</html>

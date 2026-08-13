@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ITE 401 · Platform Technologies · Module 4</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f5f1e8;
+      --surface: #ffffff;
+      --ink: #201e1a;
+      --ink-soft: #6b6355;
+      --accent: #bb4a2c;
+      --accent-soft: #f4ded1;
+      --line: #e6ddc9;
+      --good: #2f6b4f;
+      --good-soft: #e2f0e5;
+
+      --fs-eyebrow: 0.85rem;
+      --fs-h1: 2.5rem;
+      --fs-h2: 1.5rem;
+      --fs-h3: 1.2rem;
+      --fs-body: 1.15rem;
+      --fs-card-title: 1.15rem;
+      --fs-card-body: 1.02rem;
+      --fs-small: 0.95rem;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+      color: var(--ink);
+    }
+
+    .presentation-wrapper {
+      width: 1360px;
+      max-width: 100%;
+      height: 92vh;
+      max-height: 860px;
+      background: var(--surface);
+      border-radius: 28px;
+      box-shadow: 0 24px 48px -14px rgba(30,20,10,0.25);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-bar { height: 5px; background: var(--line); width: 100%; flex-shrink: 0; }
+    .progress-fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.3s ease; }
+
+    .slide-counter {
+      position: absolute;
+      bottom: 26px;
+      right: 32px;
+      font-size: var(--fs-small);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--ink-soft);
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(4px);
+      padding: 7px 16px;
+      border-radius: 40px;
+      border: 1px solid var(--line);
+      z-index: 20;
+    }
+
+    .nav-hint {
+      position: absolute;
+      bottom: 26px;
+      left: 32px;
+      font-size: var(--fs-small);
+      color: var(--ink-soft);
+      z-index: 20;
+    }
+
+    .slides-container { flex: 1; position: relative; overflow: hidden; }
+
+    .slide-track {
+      display: flex;
+      height: 100%;
+      width: 100%;
+      transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1);
+      will-change: transform;
+    }
+
+    .slide {
+      flex: 0 0 100%;
+      height: 100%;
+      padding: 44px 64px 70px 64px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #d4cdc0 #f2ede6;
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+
+    .slide::-webkit-scrollbar { width: 6px; }
+    .slide::-webkit-scrollbar-track { background: #f2ede6; border-radius: 12px; }
+    .slide::-webkit-scrollbar-thumb { background: #d4cdc0; border-radius: 12px; }
+
+    .eyebrow {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: var(--fs-eyebrow);
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: var(--fs-h1);
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      line-height: 1.15;
+      color: var(--ink);
+      margin-bottom: 1.3rem;
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 0.55rem;
+    }
+
+    h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: var(--fs-h2);
+      font-weight: 600;
+      letter-spacing: -0.005em;
+      color: var(--ink);
+      margin: 1rem 0 0.3rem 0;
+    }
+
+    h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: var(--fs-h3);
+      font-weight: 600;
+      color: var(--ink);
+      margin: 0.7rem 0 0.2rem 0;
+    }
+
+    p, li, .text-block { font-size: var(--fs-body); line-height: 1.6; color: var(--ink); }
+
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 18px; margin-top: 16px; width: 100%; }
+    .card-grid > * { min-width: 0; }
+
+    .card {
+      background: #f8f4ec;
+      padding: 20px 22px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    }
+
+    .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+
+    .card h4 { font-family: 'Space Grotesk', sans-serif; font-size: var(--fs-card-title); font-weight: 600; color: var(--ink); }
+
+    .card p, .card li { font-size: var(--fs-card-body); line-height: 1.5; color: #3a352b; }
+    .card .meta { font-size: 0.88rem; color: var(--ink-soft); margin-top: 8px; }
+    .card .meta strong { color: var(--ink); }
+
+    .two-col { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; margin: 14px 0; }
+    .two-col > * { min-width: 0; }
+
+    .icon-tile {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .icon-tile svg { width: 30px; height: 30px; }
+
+    .hero-icon {
+      width: 100%;
+      height: 200px;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+    .hero-icon svg { width: 100px; height: 100px; }
+
+    ul, ol { padding-left: 1.3rem; margin: 8px 0 10px 0; }
+    li { margin-bottom: 5px; }
+
+    .analogy {
+      background: var(--accent-soft);
+      border-left: 4px solid var(--accent);
+      padding: 14px 20px;
+      border-radius: 12px;
+      margin: 12px 0;
+      font-size: var(--fs-body);
+    }
+    .analogy strong { color: var(--ink); }
+
+    .faq-block {
+      background: #f8f4ec;
+      border-radius: 20px;
+      padding: 20px 24px;
+      margin: 10px 0;
+      border: 1px solid var(--line);
+    }
+    .faq-block h3 { margin-top: 0; color: var(--accent); font-size: var(--fs-h3); }
+
+    .scenario-box {
+      background: #f4ede0;
+      border-radius: 18px;
+      padding: 22px 26px;
+      margin: 10px 0;
+      border-left: 6px solid var(--accent);
+    }
+
+    .answer-box {
+      background: var(--good-soft);
+      border-radius: 18px;
+      padding: 22px 26px;
+      margin: 12px 0;
+      border-left: 6px solid var(--good);
+    }
+    .answer-box h4 { font-family: 'Space Grotesk', sans-serif; color: var(--good); margin-bottom: 8px; font-size: var(--fs-card-title); }
+
+    .tip-box {
+      background: #fbf6ec;
+      border-radius: 14px;
+      padding: 14px 20px;
+      border: 1px dashed var(--accent);
+      margin-top: 10px;
+      font-size: var(--fs-body);
+    }
+
+    .check-item {
+      background: #f8f4ec;
+      padding: 12px 18px;
+      border-radius: 12px;
+      margin: 5px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .check-item .label {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      min-width: 30px;
+      color: var(--accent);
+      font-size: var(--fs-body);
+    }
+    .check-item .stmt { font-size: 1.02rem; }
+    .check-item .rationale { color: var(--ink-soft); font-size: 0.92rem; display: block; margin-top: 3px; }
+
+    .check-item.answer {
+      border-left: 4px solid var(--good);
+    }
+    .check-item.answer .label {
+      color: var(--good);
+    }
+
+    .pill {
+      display: inline-block;
+      background: #eae4d4;
+      padding: 6px 16px;
+      border-radius: 40px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .ref-line {
+      margin-top: 16px;
+      color: var(--ink-soft);
+      font-size: var(--fs-small);
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+    }
+
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 8px; }
+    .grid-3 .card { display: flex; align-items: center; gap: 10px; padding: 14px 18px; }
+    .grid-3 .card p { font-size: 1.02rem; font-weight: 500; }
+
+    .blank-line {
+      background: #f8f4ec;
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin: 5px 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 2px dashed var(--line);
+    }
+    .blank-line .num {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      min-width: 30px;
+      color: var(--ink-soft);
+      font-size: var(--fs-body);
+    }
+    .blank-line .stmt { font-size: 1.02rem; color: var(--ink); }
+    .blank-line .blank {
+      display: inline-block;
+      width: 40px;
+      border-bottom: 2px solid var(--accent);
+      margin: 0 4px;
+    }
+
+    @media (max-width: 700px) {
+      .slide { padding: 30px 22px 76px 22px; }
+      h1 { font-size: 1.9rem; }
+      .two-col { grid-template-columns: 1fr; gap: 16px; }
+      .card-grid { grid-template-columns: 1fr; }
+      .grid-3 { grid-template-columns: 1fr; }
+      .hero-icon { height: 150px; }
+      .hero-icon svg { width: 70px; height: 70px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) { .slide-track { transition: none; } }
+  </style>
+</head>
+<body>
+<div class="presentation-wrapper">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="slides-container">
+    <div class="slide-track" id="slideTrack">
+
+      <!-- SLIDE 1: Title -->
+      <div class="slide">
+        <div class="eyebrow">ITE 401 · Platform Technologies</div>
+        <h1>Module #4 · Utility Platforms &amp; Business Models</h1>
+        <div style="margin-bottom: 0.9rem;">
+          <span class="pill">Learning target</span>
+        </div>
+        <ul style="font-size:1.2rem; line-height:1.8; margin-bottom: 1.3rem;">
+          <li>🔹 Illustrate the business model for software and hardware requirements</li>
+        </ul>
+        <div class="analogy">
+          <strong>💡 Analogy:</strong> Utility platform = kuryente o gripo ng tubig — ready-to-use services without building from scratch.
+        </div>
+        <div class="ref-line">References: KPMG · ResearchGate · GeeksforGeeks</div>
+      </div>
+
+      <!-- SLIDE 2: What is a Utility Platform -->
+      <div class="slide">
+        <div class="eyebrow">B · Main lesson</div>
+        <h1>What is a Utility Platform?</h1>
+        <div class="two-col">
+          <div>
+            <p>A software or technology infrastructure that provides various services and functionalities to users. Serves as a centralized hub for accessing and managing different utilities or resources.</p>
+            <div class="analogy"><strong>💡 Analogy:</strong> Parang kuryente o gripo ng tubig — hindi mo kailangang maghukay ng balon o magtayo ng planta. Pitik lang, andiyan na ang serbisyo.</div>
+          </div>
+          <div>
+            <div class="hero-icon" style="background:var(--accent-soft);">
+              <svg viewBox="0 0 48 48" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M24 4 L14 26 H22 L18 44 L36 20 H26 Z" fill="var(--accent)" stroke="none"/>
+                <path d="M8 30 C8 26 11 23 15 23 C15 23 15 30 8 30 Z" fill="none" stroke="var(--accent)"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div style="background:#f2ede0; border-radius:16px; padding:14px 20px; margin-top:8px; font-size:var(--fs-body);">
+          <strong>Key trait:</strong> Attracts users by providing useful and often free services.
+        </div>
+      </div>
+
+      <!-- SLIDE 3: Domains - Cloud Computing & Energy -->
+      <div class="slide">
+        <div class="eyebrow">Domains of Utility Platforms</div>
+        <h1>Cloud &amp; Energy</h1>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header">
+              <div class="icon-tile" style="background:#dcebf7;">
+                <svg viewBox="0 0 48 48" fill="none" stroke="#2b6ca3" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 32c-5 0-8-3.6-8-7.8 0-4 3-7.3 7-7.7 1.3-4.6 5.6-8 10.7-8 6 0 10.9 4.7 11.2 10.6 4 .7 7.1 4.1 7.1 8.2 0 4.5-3.8 8-8.4 8H14Z"/>
+                  <path d="M24 27v9M24 27l-4 4M24 27l4 4" />
+                </svg>
+              </div>
+              <h4>☁️ Cloud Computing</h4>
+            </div>
+            <p>Resources like computing power, storage, and networking on-demand.</p>
+            <div class="meta"><strong>Examples:</strong> AWS, Azure, GCP</div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="icon-tile" style="background:var(--accent-soft);">
+                <svg viewBox="0 0 48 48" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M26 4 L14 26 H22 L18 44 L36 20 H26 Z" fill="var(--accent)" stroke="none"/>
+                </svg>
+              </div>
+              <h4>⚡ Energy Management</h4>
+            </div>
+            <p>Monitor, control, and optimize energy consumption.</p>
+            <div class="meta"><strong>Examples:</strong> Smart grids, sensors, real-time analytics</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 4: Domains - IoT & Smart Cities -->
+      <div class="slide">
+        <div class="eyebrow">Domains of Utility Platforms</div>
+        <h1>IoT &amp; Smart Cities</h1>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header">
+              <div class="icon-tile" style="background:#d9f0e8;">
+                <svg viewBox="0 0 48 48" fill="none" stroke="#1f7a5c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="24" cy="12" r="4"/>
+                  <circle cx="10" cy="34" r="4"/>
+                  <circle cx="38" cy="34" r="4"/>
+                  <path d="M24 16 L10 30 M24 16 L38 30 M13 34 H35"/>
+                </svg>
+              </div>
+              <h4>📡 Internet of Things (IoT)</h4>
+            </div>
+            <p>Connect, manage, and control a network of IoT devices.</p>
+            <div class="meta"><strong>Features:</strong> Device provisioning, remote monitoring, data collection</div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="icon-tile" style="background:#e6e0f5;">
+                <svg viewBox="0 0 48 48" fill="none" stroke="#5b4e96" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 40 V22 H14 V40" />
+                  <path d="M18 40 V14 H28 V40" />
+                  <path d="M32 40 V26 H42 V40" />
+                  <path d="M20 8 Q23 5 26 8" />
+                </svg>
+              </div>
+              <h4>🏙️ Smart Cities</h4>
+            </div>
+            <p>Centralized system for managing urban services like transportation, utilities, and civic services.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 5: Domains - Data Analytics & Communication -->
+      <div class="slide">
+        <div class="eyebrow">Domains of Utility Platforms</div>
+        <h1>Data &amp; Communication</h1>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header">
+              <div class="icon-tile" style="background:#e1e6ee;">
+                <svg viewBox="0 0 48 48" fill="none" stroke="#3e4c6d" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M8 40 V26 M18 40 V16 M28 40 V22 M38 40 V10" />
+                </svg>
+              </div>
+              <h4>📊 Data and Analytics</h4>
+            </div>
+            <p>Tools for processing, analyzing, and visualizing data.</p>
+            <div class="meta"><strong>Features:</strong> Data integration, ML algorithms, reporting</div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="icon-tile" style="background:#fae1de;">
+                <svg viewBox="0 0 48 48" fill="none" stroke="#bb4a2c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 11h22a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H15l-6 5v-5H5a3 3 0 0 1-3-3V14a3 3 0 0 1 3-3Z"/>
+                  <path d="M20 21h20a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-3v5l-6-5h-11a3 3 0 0 1-3-3v-4" fill="#fae1de"/>
+                </svg>
+              </div>
+              <h4>💬 Communication &amp; Collaboration</h4>
+            </div>
+            <p>Messaging, video conferencing, document sharing, task management.</p>
+            <div class="meta"><strong>Examples:</strong> Slack, Microsoft Teams, Google Workspace</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 6: Financial Utility Platforms -->
+      <div class="slide">
+        <div class="eyebrow">Domains of Utility Platforms</div>
+        <h1>Financial Utility Platforms</h1>
+        <div style="display:flex; gap:28px; align-items:center;">
+          <div style="flex:2;">
+            <p>Provide financial services and infrastructure to businesses and individuals.</p>
+            <ul style="margin-top:10px;">
+              <li>Payment processing</li>
+              <li>Banking services</li>
+              <li>Financial planning tools</li>
+              <li>Investment platforms</li>
+              <li>Cryptocurrency exchanges</li>
+            </ul>
+          </div>
+          <div style="flex:1; min-width:160px;">
+            <div class="hero-icon" style="background:#ddefe0; height:170px;">
+              <svg viewBox="0 0 48 48" fill="none" stroke="#2f6b4f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <ellipse cx="24" cy="12" rx="14" ry="5"/>
+                <path d="M10 12v10c0 2.8 6.3 5 14 5s14-2.2 14-5V12"/>
+                <path d="M10 22v10c0 2.8 6.3 5 14 5s14-2.2 14-5V22"/>
+                <path d="M10 32v4c0 2.8 6.3 5 14 5s14-2.2 14-5v-4"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 7: Business Model Framework (Part 1) -->
+      <div class="slide">
+        <div class="eyebrow">Business Model Framework</div>
+        <h1>11-Step Cycle · Part 1</h1>
+        <div class="card-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
+          <div class="card"><h4>1. Identify Target Market</h4><p>Understand needs and preferences of potential customers.</p></div>
+          <div class="card"><h4>2. Market Research</h4><p>Gather insights into customer needs, competition, trends.</p></div>
+          <div class="card"><h4>3. Product Development</h4><p>Design and build aligned with market needs.</p></div>
+          <div class="card"><h4>4. Pricing Strategy</h4><p>Balance costs, competition, perceived value.</p></div>
+          <div class="card"><h4>5. Distribution Channels</h4><p>Direct sales, retail, online platforms.</p></div>
+          <div class="card"><h4>6. Sales &amp; Marketing</h4><p>Promotional strategies, digital advertising.</p></div>
+        </div>
+      </div>
+
+      <!-- SLIDE 8: Business Model Framework (Part 2) -->
+      <div class="slide">
+        <div class="eyebrow">Business Model Framework</div>
+        <h1>11-Step Cycle · Part 2</h1>
+        <div class="card-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
+          <div class="card"><h4>7. Customer Support</h4><p>Documentation, FAQs, phone, email, chat.</p></div>
+          <div class="card"><h4>8. Revenue Generation</h4><p>Sales, subscriptions, usage-based pricing.</p></div>
+          <div class="card"><h4>9. Continuous Improvement</h4><p>Updates, bug fixes, new features.</p></div>
+          <div class="card"><h4>10. Partnerships &amp; Expansion</h4><p>Collaborations to enter new markets.</p></div>
+          <div class="card"><h4>11. Financial Management</h4><p>Track sales growth, CAC, LTV.</p></div>
+        </div>
+      </div>
+
+      <!-- SLIDE 9: Skill-Building Scenario -->
+      <div class="slide">
+        <div class="eyebrow">C · Skill‑building</div>
+        <h1>Scenario: Johann's Manufacturing Company</h1>
+        <div class="scenario-box">
+          <p><strong>Scenario:</strong> Johann owns a large manufacturing company facing challenges with energy consumption and cost reduction. He wants a system that can monitor, analyze, and control energy usage across his facilities.</p>
+          <p style="margin-top:10px;"><strong>Question:</strong> What kind of utility platform could you implement in Johann's company? Why did you choose that utility platform?</p>
+        </div>
+        <div class="tip-box">
+          <p><strong>💡 Isipin mo:</strong> Aling uri ng utility platform ang tutulong sa pag-monitor at pag-optimize ng energy usage?</p>
+        </div>
+        <p style="margin-top:12px; color:var(--ink-soft); font-size:1rem;">👉 Pindutin ang susunod na slide para sa posibleng sagot.</p>
+      </div>
+
+      <!-- SLIDE 10: Skill-Building Answer -->
+      <div class="slide">
+        <div class="eyebrow">C · Skill‑building · Answer</div>
+        <h1>Johann's Manufacturing — Proposed Solution</h1>
+        <div class="answer-box">
+          <h4>✅ Energy Management Utility Platform + IoT Infrastructure</h4>
+          <p><strong>Why this platform:</strong> Since Johann's factory faces challenges with high energy expenditure, an energy management utility platform provides specialized tools to track power consumption.</p>
+          <ul style="margin-top:10px;">
+            <li>Utilizes <strong>smart grids, real-time sensors, and automated smart controls</strong> to pinpoint which machines consume the most power.</li>
+            <li>Built-in <strong>data analytics engine</strong> allows Johann to view exact diagnostics and automatically scale down utility usage when areas are idle.</li>
+            <li>Effectively drives down overhead costs.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- SLIDE 11: Check for Understanding - Questions Only -->
+      <div class="slide">
+        <div class="eyebrow">D · Check for Understanding</div>
+        <h1>True or False (Try This First!)</h1>
+        <p style="margin-bottom:12px;">Read the questions carefully. Write <strong>T</strong> if the statement is <strong>true</strong> and <strong>F</strong> if the statement is <strong>false</strong>.</p>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <div class="blank-line"><span class="num">1.</span> <span class="stmt">Identifying the target market involves understanding the wants and needs of the potential customer.</span></div>
+          <div class="blank-line"><span class="num">2.</span> <span class="stmt">Data and analysis is one of the utility platforms in the context of smart cities that provide a centralized system for managing various urban services.</span></div>
+          <div class="blank-line"><span class="num">3.</span> <span class="stmt">Gathering customer feedback and market insights will help the software and hardware products improve.</span></div>
+          <div class="blank-line"><span class="num">4.</span> <span class="stmt">Payment processing, banking services, financial planning tools, investment platforms, and cryptocurrency exchanges were included in the financial utility platform.</span></div>
+          <div class="blank-line"><span class="num">5.</span> <span class="stmt">A utility platform is a software or technology infrastructure that provides various services and functionalities to users.</span></div>
+          <div class="blank-line"><span class="num">6.</span> <span class="stmt">IoT utility platforms enable users to connect, manage, and control a network of IoT devices.</span></div>
+          <div class="blank-line"><span class="num">7.</span> <span class="stmt">Financial utility platforms in the energy sector help users monitor, control, and optimize their energy consumption.</span></div>
+          <div class="blank-line"><span class="num">8.</span> <span class="stmt">Distribution Channels was involve creating marketing collateral, attending industry events, utilizing digital marketing channels, and building a strong online.</span></div>
+        </div>
+        <p style="margin-top:14px; color:var(--ink-soft); font-size:1rem;">👉 Pindutin ang susunod na slide para sa mga sagot.</p>
+      </div>
+
+      <!-- SLIDE 12: Check for Understanding - Answers -->
+      <div class="slide">
+        <div class="eyebrow">D · Check for Understanding · Answers</div>
+        <h1>True or False — Answer Key</h1>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <div class="check-item answer"><span class="label">T</span> <span class="stmt">1. Identifying the target market involves understanding the wants and needs of the potential customer. <span class="rationale">— Correct (Step 1)</span></span></div>
+          <div class="check-item answer"><span class="label">F</span> <span class="stmt">2. Data and analysis is one of the utility platforms in the context of smart cities. <span class="rationale">— False. Smart Cities platforms provide urban services; Data &amp; Analytics is a separate domain.</span></span></div>
+          <div class="check-item answer"><span class="label">T</span> <span class="stmt">3. Gathering customer feedback and market insights will help products improve. <span class="rationale">— Correct (Step 9)</span></span></div>
+          <div class="check-item answer"><span class="label">T</span> <span class="stmt">4. Payment processing, banking, and crypto exchanges are part of financial utility platforms. <span class="rationale">— Correct</span></span></div>
+          <div class="check-item answer"><span class="label">T</span> <span class="stmt">5. A utility platform is a software infrastructure that provides services to users. <span class="rationale">— Correct (Core definition)</span></span></div>
+          <div class="check-item answer"><span class="label">T</span> <span class="stmt">6. IoT utility platforms enable users to connect and control IoT devices. <span class="rationale">— Correct</span></span></div>
+          <div class="check-item answer"><span class="label">F</span> <span class="stmt">7. Financial utility platforms help optimize energy consumption. <span class="rationale">— False. Energy Management Platforms do that.</span></span></div>
+          <div class="check-item answer"><span class="label">F</span> <span class="stmt">8. Distribution Channels involves creating marketing collateral and attending events. <span class="rationale">— False. That's Sales &amp; Marketing (Step 6).</span></span></div>
+        </div>
+      </div>
+
+      <!-- SLIDE 13: Lesson Wrap-Up - Types of Software Platforms -->
+      <div class="slide">
+        <div class="eyebrow">E · Lesson wrap‑up · FAQs</div>
+        <h1>Types of Software Platforms</h1>
+        <div class="faq-block">
+          <h3>What are the types of software platforms?</h3>
+          <p>According to technical categorization frameworks, the key models include:</p>
+        </div>
+        <div class="grid-3">
+          <div class="card"><p>Utility Platform</p></div>
+          <div class="card"><p>Content Distribution Platform</p></div>
+          <div class="card"><p>Data Harvesting Platform</p></div>
+          <div class="card"><p>Interaction Network</p></div>
+          <div class="card"><p>Technology Platform</p></div>
+          <div class="card"><p>Marketplace</p></div>
+          <div class="card"><p>On-demand Service Platform</p></div>
+          <div class="card"><p>Computing Platform</p></div>
+          <div class="card"><p>Content Crowdsourcing Platform</p></div>
+        </div>
+      </div>
+
+    </div> <!-- slide-track -->
+
+    <div class="nav-hint">Click / → to advance</div>
+    <div class="slide-counter" id="slideCounter">1 / 13</div>
+  </div> <!-- slides-container -->
+</div> <!-- presentation-wrapper -->
+
+<script>
+  (function() {
+    const track = document.getElementById('slideTrack');
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const total = slides.length;
+    const counter = document.getElementById('slideCounter');
+    const fill = document.getElementById('progressFill');
+
+    let current = 0;
+    let animating = false;
+
+    function updateSlide(index) {
+      if (animating) return;
+      if (index < 0) index = 0;
+      if (index >= total) index = total - 1;
+      if (index === current && index !== 0 && index !== total-1) return;
+
+      animating = true;
+      current = index;
+
+      track.style.transform = `translateX(-${current * 100}%)`;
+      counter.textContent = `${current+1} / ${total}`;
+      fill.style.width = `${((current+1) / total) * 100}%`;
+
+      setTimeout(() => { animating = false; }, 420);
+    }
+
+    function goForward() { if (current < total - 1) updateSlide(current + 1); }
+    function goBack() { if (current > 0) updateSlide(current - 1); }
+    function goHome() { updateSlide(0); }
+    function goEnd() { updateSlide(total - 1); }
+
+    document.querySelector('.slides-container').addEventListener('click', () => goForward());
+
+    document.addEventListener('keydown', (e) => {
+      const key = e.key;
+      if (key === 'ArrowRight' || key === 'ArrowDown' || key === ' ') {
+        e.preventDefault(); goForward();
+      } else if (key === 'ArrowLeft' || key === 'ArrowUp') {
+        e.preventDefault(); goBack();
+      } else if (key === 'Home') {
+        e.preventDefault(); goHome();
+      } else if (key === 'End') {
+        e.preventDefault(); goEnd();
+      }
+    });
+
+    updateSlide(0);
+  })();
+</script>
+</body>
+</html>

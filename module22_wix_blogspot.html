@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Module 22: Applied Prototyping with Wix, Blogspot &amp; Custom UI/UX</title>
+<style>
+  :root{
+    --bg:#252b3a;
+    --ink:#eef2fa;
+    --ink-soft:#aab4cc;
+    --accent:#5b8cff;
+    --accent-2:#2dd4b6;
+    --accent-grad: linear-gradient(135deg,#5b8cff 0%,#2dd4b6 100%);
+    --sh-dark: #13161f;
+    --sh-light: #333c52;
+    --sh-dark-strong: #0d0f16;
+    --radius:20px;
+    --code-bg:#11141d;
+    --code-ink:#e7edf5;
+    --code-key:#7dd3fc;
+    --code-str:#a5d6a7;
+    --code-com:#7c88a5;
+    --code-fn:#f6c177;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    overflow:hidden;
+  }
+  #deck{
+    position:relative;
+    width:100vw;
+    height:100vh;
+    overflow:hidden;
+    background:var(--bg);
+  }
+  .slide{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    padding:56px 72px 40px;
+    opacity:0;
+    visibility:hidden;
+    transform:translateX(40px);
+    transition: opacity 350ms ease, transform 350ms ease;
+    overflow-y:auto;
+  }
+  .slide.active{
+    opacity:1;
+    visibility:visible;
+    transform:translateX(0);
+    z-index:2;
+  }
+  .slide.exit-left{ transform:translateX(-40px); }
+  .slide.exit-right{ transform:translateX(40px); }
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition:none; transform:none; }
+  }
+  .eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-size:16px;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin-bottom:12px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:22px;height:3px;border-radius:2px;
+    background:var(--accent-grad);
+    display:inline-block;
+  }
+  h1.slide-title{
+    font-size:36px;
+    line-height:1.15;
+    margin:0 0 24px 0;
+    font-weight:800;
+    letter-spacing:-.01em;
+  }
+  .slide-body{
+    font-size:17px;
+    line-height:1.65;
+    color:var(--ink-soft);
+    flex:1;
+    min-height:0;
+  }
+  .slide-body p{margin:0 0 16px 0;}
+  .slide-body strong{color:var(--ink);}
+  .grid{ display:grid; gap:20px; }
+  .grid-2{ grid-template-columns: 1fr 1fr; }
+  .grid-3{ grid-template-columns: repeat(3,1fr); }
+  .card{
+    background:var(--bg);
+    border:none;
+    border-radius:var(--radius);
+    padding:20px 22px;
+    box-shadow: 8px 8px 16px var(--sh-dark), -8px -8px 16px var(--sh-light);
+  }
+  .card h3{ margin:0 0 10px 0; font-size:17px; color:var(--ink);}
+  .card p{ margin:0; font-size:16px; color:var(--ink-soft); line-height:1.55;}
+  .badge-row{ display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin:12px 0 4px;}
+  .badge{
+    display:flex; align-items:center; gap:9px;
+    background:var(--bg); border:none;
+    border-radius:999px; padding:9px 18px 9px 10px;
+    font-size:16px; font-weight:600;
+    box-shadow: 6px 6px 12px var(--sh-dark), -6px -6px 12px var(--sh-light);
+  }
+  .badge svg,.badge img{ width:26px; height:26px; }
+  table.cmp{
+    width:100%; border-collapse:separate; border-spacing:0; font-size:16px;
+    background:var(--bg); border-radius:var(--radius); overflow:hidden;
+    box-shadow: 8px 8px 16px var(--sh-dark), -8px -8px 16px var(--sh-light);
+  }
+  table.cmp th, table.cmp td{ padding:14px 18px; text-align:left; }
+  table.cmp th{
+    background:var(--bg); font-size:16px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft);
+    box-shadow: inset 4px 4px 8px var(--sh-dark), inset -4px -4px 8px var(--sh-light);
+  }
+  table.cmp tr:not(:last-child) td{ border-bottom:1px solid rgba(255,255,255,0.06); }
+  .col-wix{ color:var(--accent); font-weight:700;}
+  .col-blog{ color:var(--accent-2); font-weight:700;}
+  ol.steps, ul.plain{ margin:0; padding-left:22px; }
+  ol.steps li, ul.plain li{ margin-bottom:12px; font-size:17px; }
+  .callout{
+    background:var(--bg); border:none;
+    border-radius:var(--radius); padding:18px 20px; font-size:16px;
+    display:flex; gap:12px; align-items:flex-start;
+    box-shadow: 8px 8px 16px var(--sh-dark), -8px -8px 16px var(--sh-light);
+  }
+  .callout .icon{ font-size:22px; line-height:1;}
+  .quote-card{
+    background:var(--bg); color:var(--ink); border-radius:var(--radius);
+    padding:34px 42px; font-size:23px; line-height:1.55;
+    font-weight:600; position:relative;
+    box-shadow: 10px 10px 20px var(--sh-dark-strong), -10px -10px 20px var(--sh-light);
+    border-left:6px solid transparent;
+    background-image: linear-gradient(var(--bg), var(--bg)), var(--accent-grad);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+  }
+  .quote-card .attrib{ display:block; margin-top:16px; font-size:16px; font-weight:500; color:var(--ink-soft);}
+  /* code panels */
+  .code-row{ display:grid; grid-template-columns: 1fr 1fr; gap:20px; height:min(560px,62vh); align-items:stretch; }
+  .code-row.single{ grid-template-columns: 1fr; }
+  .code-card{
+    display:flex; flex-direction:column; height:100%; min-height:0;
+    background:var(--bg); border-radius:var(--radius); overflow:hidden;
+    box-shadow: 8px 8px 16px var(--sh-dark), -8px -8px 16px var(--sh-light);
+    padding:10px;
+  }
+  .code-card .code-head{
+    flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
+    padding:10px 14px; color:var(--ink);
+    font-size:16px; font-weight:700; letter-spacing:.03em;
+  }
+  .code-card .copy-btn{
+    background:var(--bg); border:none;
+    color:var(--ink); border-radius:10px; padding:7px 14px; font-size:16px;
+    cursor:pointer; transition: box-shadow 150ms ease;
+    box-shadow: 4px 4px 8px var(--sh-dark), -4px -4px 8px var(--sh-light);
+  }
+  .code-card .copy-btn:hover{
+    box-shadow: 2px 2px 5px var(--sh-dark), -2px -2px 5px var(--sh-light);
+  }
+  .code-card .copy-btn.copied{
+    color:var(--accent-2);
+    box-shadow: inset 3px 3px 6px var(--sh-dark), inset -3px -3px 6px var(--sh-light);
+  }
+  .code-card pre{
+    flex:1; overflow:auto; min-height:0; margin:0; padding:18px 20px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size:16px; line-height:1.6; color:var(--code-ink);
+    background:var(--code-bg); border-radius:14px;
+    box-shadow: inset 4px 4px 10px rgba(0,0,0,0.45), inset -2px -2px 6px rgba(255,255,255,0.03);
+  }
+  .panel-card{
+    display:flex; flex-direction:column; height:100%; min-height:0;
+    background:var(--bg); border:none; border-radius:var(--radius);
+    overflow:hidden;
+    box-shadow: 8px 8px 16px var(--sh-dark), -8px -8px 16px var(--sh-light);
+    padding:10px;
+  }
+  .panel-card .panel-head{
+    flex-shrink:0; padding:10px 14px;
+    font-size:16px; font-weight:700; letter-spacing:.03em; color:var(--ink-soft);
+  }
+  .panel-card .panel-body{
+    flex:1; overflow:auto; min-height:0; padding:16px 18px; font-size:16px; color:var(--ink-soft);
+    background:var(--bg); border-radius:14px;
+    box-shadow: inset 4px 4px 10px var(--sh-dark), inset -4px -4px 10px var(--sh-light);
+  }
+  .panel-body ol{ padding-left:20px; margin:0; }
+  .panel-body li{ margin-bottom:12px; }
+  .tok-key{color:var(--code-key);} .tok-str{color:var(--code-str);} .tok-com{color:var(--code-com);font-style:italic;} .tok-fn{color:var(--code-fn);}
+  .mcq-grid{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  .mcq-card{
+    background:var(--bg); border:none; border-radius:var(--radius); padding:18px 20px;
+    box-shadow: 8px 8px 16px var(--sh-dark), -8px -8px 16px var(--sh-light);
+  }
+  .mcq-card p.q{ margin:0 0 14px 0; font-weight:700; color:var(--ink); font-size:20px;}
+  .mcq-card ul{ list-style:none; margin:0; padding:0; }
+  .mcq-card li{ padding:8px 0 8px 26px; position:relative; font-size:18px; color:var(--ink-soft);}
+  .mcq-card li::before{ content: attr(data-letter); position:absolute; left:0; font-weight:700; color:var(--accent);}
+  .mcq-card.center-last{ grid-column: 1 / -1; max-width:600px; margin:0 auto; }
+  .id-card{
+    background:var(--bg); border:none; border-radius:var(--radius); padding:22px 24px;
+    box-shadow: 8px 8px 16px var(--sh-dark), -8px -8px 16px var(--sh-light);
+  }
+  .id-card h4{ margin:0 0 12px 0; font-size:19px; color:var(--ink);}
+  .answer-list{ display:grid; gap:14px; }
+  .answer-item{
+    background:var(--bg); border:none; border-radius:16px; padding:14px 18px;
+    box-shadow: 6px 6px 12px var(--sh-dark), -6px -6px 12px var(--sh-light);
+  }
+  .answer-item .a-head{ font-weight:700; font-size:16px; color:var(--accent-2); margin-bottom:6px;}
+  .answer-item .a-body{ font-size:16px; color:var(--ink-soft); }
+  .hero-grid{
+    display:grid; grid-template-columns: 1.1fr 0.9fr; align-items:center; gap:36px; height:100%;
+  }
+  .hero-title{
+    display:flex; flex-direction:column; justify-content:center; align-items:flex-start;
+    gap:20px;
+  }
+  .hero-title h1{ font-size:52px; line-height:1.05; margin:0; font-weight:800; letter-spacing:-.02em;}
+  .hero-title .subtitle{ font-size:19px; color:var(--ink-soft); max-width:600px; }
+  .hero-visual{
+    background:var(--bg); border-radius:24px; padding:22px;
+    box-shadow: 10px 10px 22px var(--sh-dark), -10px -10px 22px var(--sh-light);
+  }
+  .hero-visual svg{ width:100%; height:auto; display:block; }
+  .figure-card{
+    background:var(--bg); border-radius:var(--radius); padding:14px;
+    box-shadow: 8px 8px 16px var(--sh-dark), -8px -8px 16px var(--sh-light);
+    overflow:hidden;
+    display:flex; flex-direction:column;
+  }
+  .figure-card img{
+    width:100%; height:clamp(160px, 24vh, 260px); object-fit:cover;
+    display:block; border-radius:14px; flex-shrink:0;
+  }
+  .figure-card .cap{ font-size:16px; color:var(--ink-soft); padding:10px 6px 2px; font-style:italic; }
+  .diagram-card{
+    background:var(--bg); border-radius:var(--radius); padding:18px;
+    box-shadow: 8px 8px 16px var(--sh-dark), -8px -8px 16px var(--sh-light);
+  }
+  .diagram-card svg{ width:100%; height:min(230px, 28vh); display:block; margin:0 auto; }
+  .icon-chip{
+    background:var(--bg); border-radius:16px; padding:12px; display:inline-flex;
+    box-shadow: 6px 6px 12px var(--sh-dark), -6px -6px 12px var(--sh-light);
+    margin-bottom:12px;
+  }
+  .closing-wrap{ display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; text-align:center; gap:26px;}
+  .closing-wrap h2{ font-size:30px; margin:0; }
+  /* progress + counter */
+  #progress-bar{
+    position:fixed; top:0; left:0; height:5px; background:var(--accent-grad); z-index:20;
+    transition:width 300ms ease; border-radius: 0 4px 4px 0;
+  }
+  #counter{
+    position:fixed; bottom:20px; right:26px; z-index:20;
+    font-size:16px; font-weight:700; color:var(--ink-soft);
+    background:var(--bg); border:none; border-radius:999px;
+    padding:8px 18px;
+    box-shadow: 5px 5px 10px var(--sh-dark), -5px -5px 10px var(--sh-light);
+  }
+  #shortcuts-overlay{
+    position:fixed; inset:0; background:rgba(5,7,12,.65); display:none;
+    align-items:center; justify-content:center; z-index:50;
+  }
+  #shortcuts-overlay.show{ display:flex; }
+  #shortcuts-overlay .box{
+    background:var(--bg); border-radius:22px; padding:32px 36px; max-width:440px;
+    box-shadow: 14px 14px 28px var(--sh-dark-strong), -10px -10px 24px var(--sh-light);
+  }
+  #shortcuts-overlay h3{ margin-top:0; font-size:19px; }
+  #shortcuts-overlay table{ width:100%; font-size:16px; border-collapse:collapse; }
+  #shortcuts-overlay td{ padding:8px 0; color:var(--ink-soft); }
+  #shortcuts-overlay td.key{ font-weight:700; color:var(--ink); width:140px; }
+  kbd{
+    background:var(--bg); border:none; border-radius:7px; padding:3px 9px; font-size:16px;
+    box-shadow: 3px 3px 6px var(--sh-dark), -3px -3px 6px var(--sh-light);
+  }
+  code.inline{
+    background:var(--bg); border:none; border-radius:7px; padding:2px 8px; font-size:16px;
+    color:var(--accent); font-family:"SF Mono",Menlo,Consolas,monospace;
+    box-shadow: inset 2px 2px 5px var(--sh-dark), inset -2px -2px 5px var(--sh-light);
+  }
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb{ background:#c7d2e0; border-radius:8px; }
+</style>
+
+</head>
+<body>
+
+<div id="progress-bar"></div>
+<div id="counter">1 / 19</div>
+<div id="deck"></div>
+
+<div id="shortcuts-overlay">
+  <div class="box">
+    <h3>Keyboard Shortcuts</h3>
+    <table>
+      <tr><td class="key"><kbd>&rarr;</kbd> / right-click</td><td>Next slide</td></tr>
+      <tr><td class="key"><kbd>&larr;</kbd></td><td>Previous slide</td></tr>
+      <tr><td class="key"><kbd>Home</kbd></td><td>First slide</td></tr>
+      <tr><td class="key"><kbd>End</kbd></td><td>Last slide</td></tr>
+      <tr><td class="key"><kbd>?</kbd></td><td>Toggle this overlay</td></tr>
+      <tr><td class="key">Swipe</td><td>Navigate on mobile</td></tr>
+    </table>
+  </div>
+</div>
+
+<script>
+(function(){
+
+// ---------- Inline SVG logo helpers ----------
+const wixLogo = `<svg width="28" height="28" viewBox="0 0 48 48" role="img" aria-label="Wix logo"><title>Wix</title><rect width="48" height="48" rx="10" fill="#0C0C0C"/><path d="M13 17c.6 0 1.1.4 1.3 1l2.4 8.6L19.2 18c.3-1 1-1.6 2-1.6s1.7.6 2 1.6l2.5 8.6L28.1 18c.2-.6.7-1 1.3-1 .9 0 1.5.7 1.5 1.5 0 .2 0 .4-.1.6l-3.5 11.4c-.3 1-1 1.6-2 1.6s-1.7-.6-2-1.6L21 22.2l-2.3 8.3c-.3 1-1 1.6-2 1.6s-1.7-.6-2-1.6L11.2 19c-.1-.2-.1-.4-.1-.6 0-.8.7-1.4 1.9-1.4z" fill="#fff"/><path d="M35.5 16.6c-.9 0-1.6.7-1.6 1.6v11.3c0 .9.7 1.6 1.6 1.6s1.6-.7 1.6-1.6V18.2c0-.9-.7-1.6-1.6-1.6z" fill="#fff"/><circle cx="35.5" cy="12.4" r="1.9" fill="#fff"/></svg>`;
+const bloggerLogo = `<svg width="28" height="28" viewBox="0 0 48 48" role="img" aria-label="Blogger logo"><title>Blogger</title><rect width="48" height="48" rx="10" fill="#FF8000"/><rect x="12" y="10" width="24" height="28" rx="4" fill="#fff"/><rect x="17" y="17" width="10" height="4" rx="2" fill="#FF8000"/><rect x="17" y="24" width="14" height="3" rx="1.5" fill="#FFCC99"/><rect x="17" y="29" width="14" height="3" rx="1.5" fill="#FFCC99"/></svg>`;
+const jsLogo = `<svg width="28" height="28" viewBox="0 0 48 48" role="img" aria-label="JavaScript logo"><title>JavaScript</title><rect width="48" height="48" rx="8" fill="#F0DB4F"/><text x="24" y="33" font-family="Arial,sans-serif" font-weight="700" font-size="18" text-anchor="middle" fill="#141414">JS</text></svg>`;
+const htmlLogo = `<svg width="28" height="28" viewBox="0 0 48 48" role="img" aria-label="HTML logo"><title>HTML5</title><polygon points="8,4 40,4 37,38 24,42 11,38" fill="#E44D26"/><polygon points="24,7 24,39 34,36 36.5,10" fill="#F16529"/><text x="24" y="27" font-family="Arial,sans-serif" font-weight="700" font-size="12" text-anchor="middle" fill="#fff">5</text></svg>`;
+const cssLogo = `<svg width="28" height="28" viewBox="0 0 48 48" role="img" aria-label="CSS logo"><title>CSS3</title><polygon points="8,4 40,4 37,38 24,42 11,38" fill="#1572B6"/><polygon points="24,7 24,39 34,36 36.5,10" fill="#33A9DC"/><text x="24" y="27" font-family="Arial,sans-serif" font-weight="700" font-size="12" text-anchor="middle" fill="#fff">3</text></svg>`;
+
+function logoRow(){
+  return `<div class="badge-row">
+    <span class="badge">${wixLogo} Wix</span>
+    <span class="badge">${bloggerLogo} Blogspot</span>
+    <span class="badge">${htmlLogo} HTML</span>
+    <span class="badge">${cssLogo} CSS</span>
+    <span class="badge">${jsLogo} JavaScript</span>
+  </div>`;
+}
+
+// ---------- Illustrative diagram SVGs ----------
+const heroBuilderSvg = `<svg viewBox="0 0 460 340" role="img" aria-label="Illustration of a drag-and-drop website builder interface" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="hg1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5b8cff"/><stop offset="100%" stop-color="#2dd4b6"/>
+    </linearGradient>
+  </defs>
+  <rect x="20" y="20" width="420" height="300" rx="18" fill="#1b2130" stroke="#333c52" stroke-width="2"/>
+  <rect x="20" y="20" width="420" height="34" rx="18" fill="#232a3c"/>
+  <circle cx="42" cy="37" r="5" fill="#5b8cff"/><circle cx="60" cy="37" r="5" fill="#2dd4b6"/><circle cx="78" cy="37" r="5" fill="#aab4cc"/>
+  <rect x="44" y="74" width="110" height="226" rx="10" fill="#232a3c"/>
+  <rect x="58" y="90" width="82" height="10" rx="3" fill="#5b8cff"/>
+  <rect x="58" y="112" width="82" height="34" rx="6" fill="url(#hg1)" opacity="0.85"/>
+  <rect x="58" y="154" width="82" height="34" rx="6" fill="#2b3548"/>
+  <rect x="58" y="196" width="82" height="34" rx="6" fill="#2b3548"/>
+  <rect x="58" y="238" width="82" height="34" rx="6" fill="#2b3548"/>
+  <rect x="172" y="74" width="252" height="226" rx="10" fill="#12161f"/>
+  <rect x="192" y="96" width="140" height="14" rx="4" fill="#eef2fa"/>
+  <rect x="192" y="120" width="200" height="8" rx="4" fill="#5b6c8a"/>
+  <rect x="192" y="140" width="160" height="8" rx="4" fill="#5b6c8a"/>
+  <rect x="192" y="166" width="92" height="60" rx="8" fill="url(#hg1)" opacity="0.9"/>
+  <rect x="296" y="166" width="92" height="60" rx="8" fill="#2b3548" stroke="#5b8cff" stroke-width="2" stroke-dasharray="6 5"/>
+  <rect x="192" y="240" width="196" height="34" rx="8" fill="#2b3548"/>
+  <circle cx="352" cy="150" r="14" fill="#eef2fa"/>
+  <path d="M346 150 l4 4 8 -9" stroke="#12161f" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <g>
+    <path d="M300 240 L330 205" stroke="#2dd4b6" stroke-width="2.5" stroke-linecap="round"/>
+    <polygon points="330,205 322,207 328,213" fill="#2dd4b6"/>
+  </g>
+</svg>`;
+
+function wixAccountFlowSvg(){
+  const steps = ['Visit wix.com','Sign Up','Verify Email','Choose Type','Publish'];
+  const w = 900, h = 190, n = steps.length;
+  const cx = i => 90 + i*((w-180)/(n-1));
+  let nodes = '', lines = '';
+  steps.forEach((label,i)=>{
+    const x = cx(i);
+    if(i < n-1){
+      lines += `<line x1="${x+34}" y1="70" x2="${cx(i+1)-34}" y2="70" stroke="#3a4359" stroke-width="3" stroke-dasharray="1 10" stroke-linecap="round"/>`;
+    }
+    nodes += `<g>
+      <circle cx="${x}" cy="70" r="34" fill="#1b2130" stroke="url(#fg1)" stroke-width="3"/>
+      <text x="${x}" y="78" text-anchor="middle" font-family="Arial,sans-serif" font-weight="800" font-size="22" fill="#eef2fa">${i+1}</text>
+      <text x="${x}" y="128" text-anchor="middle" font-family="Arial,sans-serif" font-weight="600" font-size="15" fill="#aab4cc">${label}</text>
+    </g>`;
+  });
+  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Flow diagram of the five steps to create a Wix account" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="fg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#5b8cff"/><stop offset="100%" stop-color="#2dd4b6"/></linearGradient></defs>
+    ${lines}${nodes}
+  </svg>`;
+}
+
+const sandboxSvg = `<svg viewBox="0 0 520 260" role="img" aria-label="Diagram showing custom JavaScript running inside a sandboxed iframe, isolated from the main Wix page layout" xmlns="http://www.w3.org/2000/svg">
+  <rect x="10" y="10" width="500" height="240" rx="18" fill="#1b2130" stroke="#333c52" stroke-width="2"/>
+  <text x="34" y="42" font-family="Arial,sans-serif" font-weight="700" font-size="15" fill="#eef2fa">Main Wix Page Layout</text>
+  <rect x="34" y="56" width="150" height="170" rx="10" fill="#232a3c"/>
+  <rect x="48" y="70" width="122" height="10" rx="3" fill="#5b8cff"/>
+  <rect x="48" y="90" width="90" height="8" rx="3" fill="#5b6c8a"/>
+  <rect x="48" y="106" width="100" height="8" rx="3" fill="#5b6c8a"/>
+  <rect x="48" y="130" width="122" height="36" rx="6" fill="#2b3548"/>
+  <rect x="48" y="176" width="122" height="36" rx="6" fill="#2b3548"/>
+  <g>
+    <rect x="206" y="56" width="284" height="170" rx="10" fill="#12161f" stroke="#2dd4b6" stroke-width="2" stroke-dasharray="7 6"/>
+    <text x="224" y="80" font-family="Arial,sans-serif" font-weight="700" font-size="13" fill="#2dd4b6">SANDBOXED IFRAME</text>
+    <rect x="224" y="96" width="140" height="26" rx="6" fill="#2dd4b6" opacity="0.15" stroke="#2dd4b6" stroke-width="1.5"/>
+    <text x="294" y="113" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" fill="#eef2fa">Click me!</text>
+    <path d="M300 132 v22" stroke="#f6c177" stroke-width="2" stroke-linecap="round" stroke-dasharray="1 6"/>
+    <rect x="224" y="158" width="240" height="46" rx="8" fill="#1b2130"/>
+    <text x="238" y="178" font-family="Arial,sans-serif" font-size="12" fill="#aab4cc">Hello! This custom</text>
+    <text x="238" y="194" font-family="Arial,sans-serif" font-size="12" fill="#aab4cc">JavaScript is running inside Wix!</text>
+  </g>
+  <path d="M186 141 h20" stroke="#e0533d" stroke-width="3" stroke-linecap="round"/>
+  <path d="M196 133 l10 8 -10 8" stroke="#e0533d" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="196" y="230" text-anchor="middle" font-family="Arial,sans-serif" font-size="11.5" fill="#e0533d" font-weight="700">no direct access</text>
+</svg>`;
+
+const ikeaIconSvg = `<svg viewBox="0 0 80 80" width="56" height="56" role="img" aria-label="Icon of a flat-pack furniture box representing pre-fabricated Wix building blocks" xmlns="http://www.w3.org/2000/svg">
+  <rect x="12" y="24" width="56" height="44" rx="6" fill="#2b3548" stroke="#5b8cff" stroke-width="2.5"/>
+  <path d="M12 34 L68 34" stroke="#5b8cff" stroke-width="2"/>
+  <path d="M40 24 v44" stroke="#333c52" stroke-width="2"/>
+  <path d="M12 24 L40 12 L68 24" fill="none" stroke="#2dd4b6" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="40" cy="12" r="3.5" fill="#2dd4b6"/>
+</svg>`;
+
+const decoratorIconSvg = `<svg viewBox="0 0 80 80" width="56" height="56" role="img" aria-label="Icon of a magic paintbrush representing Wix ADI automated design" xmlns="http://www.w3.org/2000/svg">
+  <path d="M22 58 L46 34" stroke="#5b6c8a" stroke-width="7" stroke-linecap="round"/>
+  <path d="M44 32 L58 18 a6 6 0 0 1 8 8 L52 40 Z" fill="url(#dg)" />
+  <defs><linearGradient id="dg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#5b8cff"/><stop offset="100%" stop-color="#2dd4b6"/></linearGradient></defs>
+  <circle cx="20" cy="60" r="5" fill="#2dd4b6"/>
+  <path d="M60 54 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z" fill="#f6c177"/>
+  <path d="M18 20 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z" fill="#5b8cff"/>
+</svg>`;
+
+const weruMockupSvg = `<svg viewBox="0 0 520 260" role="img" aria-label="Wireframe mockup of the Wer-U app showing a friend list panel on the left and a weather info panel on the right" xmlns="http://www.w3.org/2000/svg">
+  <rect x="10" y="10" width="500" height="240" rx="16" fill="#1b2130" stroke="#333c52" stroke-width="2"/>
+  <rect x="10" y="10" width="500" height="40" rx="16" fill="url(#wg)"/>
+  <defs><linearGradient id="wg" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#228B22"/><stop offset="100%" stop-color="#2dd4b6"/></linearGradient></defs>
+  <text x="260" y="35" text-anchor="middle" font-family="Arial,sans-serif" font-weight="700" font-size="16" fill="#fff">Friends Location Tracker</text>
+  <rect x="30" y="66" width="215" height="168" rx="10" fill="#232a3c"/>
+  <text x="46" y="90" font-family="Arial,sans-serif" font-weight="700" font-size="14" fill="#eef2fa">Friend List</text>
+  <rect x="46" y="102" width="180" height="26" rx="6" fill="#2b3548"/><text x="58" y="119" font-family="Arial,sans-serif" font-size="12" fill="#aab4cc">Yorik</text>
+  <rect x="46" y="134" width="180" height="26" rx="6" fill="#2b3548"/><text x="58" y="151" font-family="Arial,sans-serif" font-size="12" fill="#aab4cc">Senna</text>
+  <rect x="46" y="166" width="180" height="26" rx="6" fill="#2b3548"/><text x="58" y="183" font-family="Arial,sans-serif" font-size="12" fill="#aab4cc">Baltus</text>
+  <rect x="275" y="66" width="215" height="168" rx="10" fill="#232a3c"/>
+  <text x="291" y="90" font-family="Arial,sans-serif" font-weight="700" font-size="14" fill="#eef2fa">Weather Information</text>
+  <text x="291" y="118" font-family="Arial,sans-serif" font-size="12" fill="#aab4cc">Current Weather: <tspan fill="#2dd4b6" font-weight="700">Cloudy</tspan></text>
+  <text x="291" y="142" font-family="Arial,sans-serif" font-size="12" fill="#aab4cc">Temperature: <tspan fill="#2dd4b6" font-weight="700">25 C</tspan></text>
+  <text x="291" y="166" font-family="Arial,sans-serif" font-size="12" fill="#aab4cc">Wind Speed: <tspan fill="#2dd4b6" font-weight="700">7 m/s</tspan></text>
+  <circle cx="440" cy="190" r="16" fill="none" stroke="#5b8cff" stroke-width="2.5"/>
+  <path d="M432 190 h16 M440 182 v16" stroke="#5b8cff" stroke-width="2"/>
+</svg>`;
+
+const rocketSvg = `<svg viewBox="0 0 120 120" width="84" height="84" role="img" aria-label="Illustration of a rocket launching, symbolizing finishing the module" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="rg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#5b8cff"/><stop offset="100%" stop-color="#2dd4b6"/></linearGradient></defs>
+  <path d="M60 8 C78 26 82 56 74 82 L46 82 C38 56 42 26 60 8Z" fill="url(#rg)"/>
+  <circle cx="60" cy="46" r="9" fill="#1b2130"/>
+  <path d="M46 82 L34 100 L50 92Z" fill="#f6c177"/>
+  <path d="M74 82 L86 100 L70 92Z" fill="#f6c177"/>
+  <path d="M52 92 C56 108 64 108 68 92" fill="none" stroke="#e0533d" stroke-width="4" stroke-linecap="round"/>
+</svg>`;
+
+// ---------- Tiny syntax highlighter (single pass) ----------
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function highlight(code, lang){
+  code = esc(code);
+  const rules = {
+    html: [
+      [/(&lt;!--[\s\S]*?--&gt;)/g, 'tok-com'],
+      [/(&lt;\/?[a-zA-Z0-9-]+)/g, 'tok-key'],
+      [/(&quot;[^&]*?&quot;|"[^"]*")/g, 'tok-str']
+    ],
+    css: [
+      [/(\/\*[\s\S]*?\*\/)/g, 'tok-com'],
+      [/([.#]?[a-zA-Z-]+)(?=\s*\{)/g, 'tok-key'],
+      [/(#[0-9a-fA-F]{3,6}|\b\d+px\b|\b\d+%\b)/g, 'tok-fn']
+    ],
+    javascript: [
+      [/(\/\/.*$)/gm, 'tok-com'],
+      [/('[^']*'|"[^"]*")/g, 'tok-str'],
+      [/\b(const|let|var|function|return|if|else|forEach|new|document|addEventListener|textContent|createElement|getElementById|appendChild)\b/g, 'tok-key']
+    ]
+  };
+  const set = rules[lang] || rules.javascript;
+  set.forEach(([re, cls])=>{ code = code.replace(re, m => `<span class="${cls}">${m}</span>`); });
+  return code;
+}
+function codeBlock(id, lang, raw, label){
+  const highlighted = highlight(raw, lang);
+  return `<div class="code-card">
+    <div class="code-head"><span>${label}</span><button class="copy-btn" data-code-id="${id}">Copy</button></div>
+    <pre id="${id}"><code>${highlighted}</code></pre>
+  </div>`;
+}
+// store raw code separately so Copy always yields valid runnable source
+const RAW = {};
+
+// ---------------- SLIDE DEFINITIONS ----------------
+const slides = [];
+
+// 1. Title
+RAW['none']='';
+slides.push({
+  eyebrow:'Module 22',
+  hideHeader:true,
+  html:`<div class="hero-grid">
+    <div class="hero-title">
+      <span class="eyebrow">Applied Prototyping</span>
+      <h1>Wix, Blogspot &amp; Custom UI/UX</h1>
+      <p class="subtitle">From visual drag-and-drop editors to injected JavaScript: learn how to prototype real interfaces on no-code and low-code platforms.</p>
+      ${logoRow()}
+    </div>
+    <div class="hero-visual">${heroBuilderSvg}</div>
+  </div>`
+});
+
+// 2. Lesson overview & prerequisites
+slides.push({
+  eyebrow:'A. Lesson Preview',
+  title:'Lesson Overview &amp; Prerequisites',
+  html:`<div class="grid grid-2">
+    <div class="card">
+      <h3>What we're covering</h3>
+      <p><strong>Wix</strong> is a drag-and-drop website builder for building full business sites, stores, and portfolios without writing HTML or CSS.</p>
+      <p><strong>Blogspot (Blogger)</strong> is a free, Google-owned platform focused purely on publishing blog content.</p>
+      <p><strong>The bridge:</strong> both platforms let you embed custom HTML, CSS, and JavaScript to go beyond their visual limits.</p>
+    </div>
+    <div class="figure-card">
+      <img src="https://images.unsplash.com/photo-1547658719-da2b51169166?auto=format&fit=crop&q=80&w=1000" alt="Designer sketching website layout wireframes, representing the shift from visual editors to custom code" loading="lazy">
+      <div class="cap">From drag-and-drop editors to code injection — prototyping platforms give ultimate flexibility.</div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:20px;">
+    <h3>Prerequisites</h3>
+    <ul class="plain" style="columns:2;">
+      <li>Basic HTML elements and tags</li>
+      <li>CSS styling — colors, layout, flexbox</li>
+      <li>Basic JavaScript — arrays, functions, DOM manipulation</li>
+    </ul>
+    <p>We'll apply all three when we build the <strong>"Wer-U"</strong> app later in this module.</p>
+  </div>`
+});
+
+// 3. Comparison table
+slides.push({
+  eyebrow:'B.1 Platform Comparison',
+  title:'Wix vs. Blogspot (Blogger)',
+  html:`<table class="cmp">
+    <tr><th>Feature</th><th class="col-wix">Wix</th><th class="col-blog">Blogspot</th></tr>
+    <tr><td>Primary purpose</td><td>Full website builder — business, store, portfolio</td><td>Dedicated blogging platform</td></tr>
+    <tr><td>Design flexibility</td><td>Drag-and-drop editor, fully visual</td><td>Limited, template-based layouts</td></tr>
+    <tr><td>E-commerce</td><td>Powerful built-in store &amp; payment gateways</td><td>Very limited, needs third-party tools</td></tr>
+    <tr><td>SEO &amp; analytics</td><td>Robust built-in tools</td><td>Basic settings only</td></tr>
+    <tr><td>Hosting</td><td>Hosted by Wix, custom domains supported</td><td>Hosted by Google, subdomain or custom</td></tr>
+    <tr><td>Cost</td><td>Freemium — upgrades unlock more</td><td>Completely free</td></tr>
+  </table>`
+});
+
+// 4. Wix features
+slides.push({
+  eyebrow:'B.2 Wix Ecosystem',
+  title:'Key Features of Wix',
+  html:`<div class="grid grid-3">
+    <div class="card"><h3>1. Drag-and-Drop Editor</h3><p>Place text, images, video, and forms anywhere on the page in real time.</p></div>
+    <div class="card"><h3>2. Extensive Templates</h3><p>Industry-tailored templates for restaurants, photographers, startups, and more.</p></div>
+    <div class="card"><h3>3. Wix App Market</h3><p>Add-ons for marketing, analytics, booking systems, and live chat.</p></div>
+    <div class="card"><h3>4. Mobile Responsiveness</h3><p>Sites are automatically optimized for phones and tablets.</p></div>
+    <div class="card"><h3>5. Hosting &amp; Domain</h3><p>Reliable hosting plus custom domain support, e.g. <code class="inline">yourbusiness.com</code>.</p></div>
+    <div class="card"><h3>6. E-Commerce (Wix Stores)</h3><p>Manage listings, carts, inventory, and payment gateways like PayPal or Stripe.</p></div>
+  </div>
+  <div class="grid grid-2" style="margin-top:18px;">
+    <div class="card"><h3>7. SEO Tools</h3><p>Built-in guides and configuration to help your site rank higher on Google.</p></div>
+    <div class="card"><h3>Wix ADI</h3><p>Artificial Design Intelligence — answer a few questions and get an instantly assembled site.</p></div>
+  </div>`
+});
+
+// 5. Creating a Wix account
+slides.push({
+  eyebrow:'B.3 Getting Started',
+  title:'Step-by-Step: Creating a Wix Account',
+  html:`<div class="diagram-card" style="margin-bottom:18px;">${wixAccountFlowSvg()}</div>
+  <ol class="steps">
+    <li><strong>Visit the website</strong> — go to <code class="inline">wix.com</code>.</li>
+    <li><strong>Sign up</strong> — click "Sign Up" in the top right corner.</li>
+    <li><strong>Choose a method</strong> — email + password, or authenticate with Google or Facebook.</li>
+    <li><strong>Complete profile</strong> — enter your name, location, and site purpose.</li>
+    <li><strong>Verify email</strong> — click the confirmation link Wix sends you.</li>
+    <li><strong>Choose your type</strong> — Business, Portfolio, Blog, or Online Store.</li>
+    <li><strong>Customize</strong> — pick a template and edit fonts, colors, and content.</li>
+    <li><strong>Save and publish</strong> — hit Publish to make the site live!</li>
+  </ol>`
+});
+
+// 6. Embedding custom JS - steps
+slides.push({
+  eyebrow:'B.4 Custom Code',
+  title:'Embedding Custom JavaScript into Wix',
+  html:`<p>Wix limits full backend code, but it offers a specific way to inject <strong>frontend custom code</strong> using HTML elements — perfect for dynamic, interactive widgets.</p>
+  <ol class="steps">
+    <li>Open the Wix Editor and log in to your dashboard.</li>
+    <li>Click the <strong>"+" (Add)</strong> button on the left sidebar, select <strong>"More"</strong>, then <strong>"HTML Code"</strong>.</li>
+    <li>Paste your HTML and JavaScript into the code box.</li>
+    <li>Adjust the width, height, and scrollability of the HTML element box.</li>
+    <li>Use <strong>Preview</strong> to test your JS before publishing.</li>
+  </ol>`
+});
+
+// 7. Alert button example + pro-tip
+RAW['alertbtn'] = `<button id="myButton">Click me!</button>
+<script>
+  document.getElementById("myButton").addEventListener("click", function() {
+    alert("Hello! This custom JavaScript is running inside Wix!");
+  });
+<\/script>`;
+slides.push({
+  eyebrow:'B.4 Custom Code',
+  title:'Example: A Button That Triggers an Alert',
+  html:`<div class="code-row">
+    ${codeBlock('code-alertbtn','html',RAW['alertbtn'],'HTML Element box')}
+    <div class="diagram-card">${sandboxSvg}</div>
+  </div>
+  <div class="callout" style="margin-top:16px;">
+    <span class="icon">&#9888;&#65039;</span>
+    <div><strong>Pro-tip for Wix scripting:</strong> Wix places custom JS inside a sandboxed iframe. Your code cannot directly interact with the main Wix layout — it's strictly for isolated, custom widgets.</div>
+  </div>`
+});
+
+// 8. Analogies - IKEA + ADI
+slides.push({
+  eyebrow:'C. Analogies &amp; Use Cases',
+  title:'Wix as "Digital Furniture Assembly"',
+  html:`<div class="grid grid-2">
+    <div class="card">
+      <div class="icon-chip">${ikeaIconSvg}</div>
+      <h3>Drag-and-drop = pre-fab furniture</h3>
+      <p>Building a website from scratch is like building a house from raw lumber — it takes a master carpenter (coder) months. Wix is like buying a pre-fab IKEA kit: pieces are pre-cut, instructions are visual, and the wrench is provided. You arrange the pieces without carving the wood yourself.</p>
+    </div>
+    <div class="card">
+      <div class="icon-chip">${decoratorIconSvg}</div>
+      <h3>Wix ADI = personal interior decorator</h3>
+      <p>Instead of manually dragging and dropping, you answer a few questions about your business and style — and the AI instantly creates a fully designed, ready-to-edit website, saving hours of design work.</p>
+    </div>
+  </div>`
+});
+
+// 9. Use case restaurant
+slides.push({
+  eyebrow:'C. Analogies &amp; Use Cases',
+  title:'Use Case: A Local Restaurant\u2019s Digital Ecosystem',
+  html:`<p>A local caf&eacute; wants a website. They choose <strong>Wix</strong> because it offers everything in one place:</p>
+  <div class="grid grid-3">
+    <div class="card"><h3>Menu Template</h3><p>A restaurant-focused template displays their full menu beautifully.</p></div>
+    <div class="card"><h3>Booking App</h3><p>A reservation system pulled straight from the Wix App Market.</p></div>
+    <div class="card"><h3>Wix Stores</h3><p>Sell branded coffee beans online and process payments directly.</p></div>
+  </div>`
+});
+
+// 10. FAQs
+slides.push({
+  eyebrow:'D. Wrap-Up',
+  title:'Frequently Asked Questions',
+  html:`<div class="grid grid-2">
+    <div class="card"><h3>Can I use Wix for eCommerce?</h3><p>Yes — Wix Stores lets you create an online store, manage inventory, set up payment gateways, handle shipping, and process orders from one dashboard.</p></div>
+    <div class="card"><h3>What exactly is Wix ADI?</h3><p>Artificial Design Intelligence: it asks about your business and preferences, then auto-builds a personalized, multi-page site for you.</p></div>
+    <div class="card" style="grid-column:1/-1;"><h3>Can I use React, Vue, or jQuery inside Wix?</h3><p>Yes, with limits. You can add external <code class="inline">&lt;script src="..."&gt;</code> tags pointing to a CDN, but a full app can't run in Wix's main shell — it must live entirely inside that HTML component.</p></div>
+  </div>`
+});
+
+// 11. Guided drill intro
+slides.push({
+  eyebrow:'E. Guided Drill',
+  title:'Project: The "Wer-U" App',
+  html:`<p>A two-part interface: a dynamic <strong>friend list generator</strong> and a <strong>weather monitor</strong>. Below is the complete, reconstructed source — run it locally, or paste the relevant parts into Wix's HTML Element box.</p>
+  <div class="diagram-card" style="margin-bottom:18px;">${weruMockupSvg}</div>
+  <div class="grid grid-2">
+    <div class="card"><h3>Left panel — Friend List</h3><p>A JavaScript array of friend names is rendered into a bulleted list on page load.</p></div>
+    <div class="card"><h3>Right panel — Weather Info</h3><p>A simulated weather reading (condition, temperature, wind speed) populates on load — a stand-in for a real API call.</p></div>
+  </div>`
+});
+
+// 12. index.html + style.css
+RAW['indexhtml'] = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wer-U App</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Friends Location Tracker</h1>
+    </header>
+    <div class="container">
+        <section class="left-section">
+            <h2>Friend List</h2>
+            <ul id="friend-list"></ul>
+        </section>
+        <section class="right-section">
+            <h2>Weather Information</h2>
+            <p>Current Weather: <span id="weather">--</span></p>
+            <p>Temperature: <span id="temperature">--</span> C</p>
+            <p>Wind Speed: <span id="wind-speed">--</span> m/s</p>
+        </section>
+    </div>
+    <script src="app.js"><\/script>
+</body>
+</html>`;
+RAW['stylecss'] = `body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+}
+
+header {
+    background-color: forestgreen;
+    color: white;
+    text-align: center;
+    padding: 10px;
+    margin-bottom: 20px;
+}
+
+.container {
+    display: flex;
+    justify-content: space-around;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.left-section, .right-section {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    width: 45%;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+li {
+    background-color: #e0e0e0;
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+span {
+    font-weight: bold;
+    color: #333;
+}`;
+slides.push({
+  eyebrow:'E. Guided Drill',
+  title:'Step 1 &amp; 2: index.html and style.css',
+  html:`<div class="code-row">
+    ${codeBlock('code-indexhtml','html',RAW['indexhtml'],'index.html')}
+    ${codeBlock('code-stylecss','css',RAW['stylecss'],'style.css')}
+  </div>`
+});
+
+// 13. app.js + how to test
+RAW['appjs'] = `// Sample friend data
+const friendsData = [
+    { name: 'Yorik' },
+    { name: 'Senna' },
+    { name: 'Baltus' }
+    // You can add more friends here!
+];
+
+// Function to populate the friend list
+function populateFriendList() {
+    const friendList = document.getElementById('friend-list');
+    friendsData.forEach((friend) => {
+        const listItem = document.createElement('li');
+        listItem.textContent = friend.name;
+        friendList.appendChild(listItem);
+    });
+}
+
+// Function to update weather information
+function updateWeatherInfo() {
+    // In a real app, you would use fetch() to call a real Weather API here.
+    document.getElementById('weather').textContent = 'Cloudy';
+    document.getElementById('temperature').textContent = '25';
+    document.getElementById('wind-speed').textContent = '7';
+}
+
+// Call functions to populate the UI when the page loads
+populateFriendList();
+updateWeatherInfo();`;
+slides.push({
+  eyebrow:'E. Guided Drill',
+  title:'Step 3: app.js &amp; Testing in Wix',
+  html:`<div class="code-row">
+    ${codeBlock('code-appjs','javascript',RAW['appjs'],'app.js')}
+    <div class="panel-card">
+      <div class="panel-head">How to test this in Wix</div>
+      <div class="panel-body">
+        <ol>
+          <li>In the Wix Editor, click the <strong>+ (Add)</strong> button.</li>
+          <li>Select <strong>More &gt; HTML Code</strong>.</li>
+          <li>Paste the entire HTML block (Step 1) into the pop-up window.</li>
+          <li>Wix can't host external .css/.js files in that box, so paste <code class="inline">style.css</code> inside a <code class="inline">&lt;style&gt;</code> tag and <code class="inline">app.js</code> inside a <code class="inline">&lt;script&gt;</code> tag, both within the HTML block, to make it fully self-contained.</li>
+        </ol>
+      </div>
+    </div>
+  </div>`
+});
+
+// 14. Key quotes
+slides.push({
+  eyebrow:'Key Quotes',
+  title:'Worth Remembering',
+  html:`<div class="quote-card">
+    "Wix places custom JS inside a sandboxed iframe — it's strictly for creating isolated, custom widgets."
+    <span class="attrib">— Pro-tip, Section B.4: Embedding Custom JavaScript into Wix</span>
+  </div>`
+});
+
+// 15. Recap
+slides.push({
+  eyebrow:'D. Wrap-Up',
+  title:'Recap: Key Takeaways',
+  html:`<div class="grid grid-2">
+    <div class="card"><h3>No-code &amp; prototyping</h3><p>Wix lets non-technical users launch complex websites rapidly without touching backend code.</p></div>
+    <div class="card"><h3>Choosing a platform</h3><p>Pick Blogspot for a simple, free, text-heavy blog. Pick Wix for a polished, interactive business site or store.</p></div>
+    <div class="card" style="grid-column:1/-1;"><h3>Injected functionality</h3><p>Custom JavaScript is the gateway to dynamic features — like weather data or interactive maps — inside Wix's otherwise static environment. Just isolate your code to the HTML box element.</p></div>
+  </div>`
+});
+
+// 16. MCQs
+slides.push({
+  eyebrow:'F. Skill-Building Check',
+  title:'Multiple Choice',
+  html:`<div class="mcq-grid">
+    <div class="mcq-card">
+      <p class="q">11. Which best describes the "Wix ADI" feature?</p>
+      <ul>
+        <li data-letter="a)">A tool for adding custom JavaScript to the bottom of the page.</li>
+        <li data-letter="b)">An AI that creates a personalized website based on answers to a few questions.</li>
+        <li data-letter="c)">A built-in payment gateway for e-commerce.</li>
+        <li data-letter="d)">A specialized text editor for advanced CSS.</li>
+      </ul>
+    </div>
+    <div class="mcq-card">
+      <p class="q">12. You need a free, simple blog for daily personal reflections. Best fit?</p>
+      <ul>
+        <li data-letter="a)">Wix</li>
+        <li data-letter="b)">Blogspot (Blogger)</li>
+        <li data-letter="c)">A custom-coded React App</li>
+        <li data-letter="d)">Microsoft Word</li>
+      </ul>
+    </div>
+  </div>`
+});
+
+// 17. Identification activities
+slides.push({
+  eyebrow:'F. Skill-Building Check',
+  title:'Identification',
+  html:`<div class="grid grid-2">
+    <div class="id-card">
+      <h4>1&ndash;6. Identify 6 important features of Wix.</h4>
+      <p style="color:var(--ink-soft); font-size:16px;">Write down your own answers based on the lesson above.</p>
+    </div>
+    <div class="id-card">
+      <h4>7&ndash;10. List the three general steps to embed JavaScript into a Wix site.</h4>
+      <p style="color:var(--ink-soft); font-size:16px;">Write down your own answers.</p>
+    </div>
+  </div>`
+});
+
+// 18. Answer key
+slides.push({
+  eyebrow:'Answer Key',
+  title:'Answers &amp; Explanations',
+  html:`<div class="answer-list">
+    <div class="answer-item"><div class="a-head">1&ndash;6. Wix features (pick any 6)</div><div class="a-body">Drag-and-Drop Editor, Templates, App Market, Mobile Responsiveness, Hosting &amp; Domain, E-commerce, SEO Tools.</div></div>
+    <div class="answer-item"><div class="a-head">7&ndash;10. Embedding JavaScript into Wix</div><div class="a-body">1) Open the Wix Editor and add an HTML Element. 2) Paste your HTML/JS code into the element settings. 3) Preview and publish the site.</div></div>
+    <div class="answer-item"><div class="a-head">11. Answer: b</div><div class="a-body">Wix ADI (Artificial Design Intelligence) uses AI to instantly assemble a website based on the user's business type and style preferences, simplifying initial setup.</div></div>
+    <div class="answer-item"><div class="a-head">12. Answer: b</div><div class="a-body">Blogspot is a free platform built for straightforward text-based blogging. Wix can do blogs too, but Blogspot is lighter and completely free for this use case.</div></div>
+  </div>`
+});
+
+// 19. Closing
+slides.push({
+  eyebrow:'',
+  hideHeader:true,
+  title:'',
+  html:`<div class="closing-wrap">
+    ${rocketSvg}
+    <div class="quote-card" style="max-width:640px;">
+      "The details are not the details. They make the design."
+      <span class="attrib">— a reminder for every prototype you ship</span>
+    </div>
+    <h2>Great work finishing Module 22! Go build something.</h2>
+  </div>`
+});
+
+// ---------------- ENGINE ----------------
+const deck = document.getElementById('deck');
+let current = 0;
+let lastDir = 1;
+
+function renderSlide(el, s){
+  el.innerHTML = s.hideHeader
+    ? s.html
+    : `<span class="eyebrow">${s.eyebrow}</span><h1 class="slide-title">${s.title}</h1><div class="slide-body">${s.html}</div>`;
+}
+
+slides.forEach((s, i)=>{
+  const el = document.createElement('div');
+  el.className = 'slide';
+  el.dataset.index = i;
+  renderSlide(el, s);
+  deck.appendChild(el);
+});
+
+function update(){
+  const els = deck.querySelectorAll('.slide');
+  els.forEach((el, i)=>{
+    el.classList.remove('active','exit-left','exit-right');
+    if(i === current){ el.classList.add('active'); }
+  });
+  document.getElementById('progress-bar').style.width = ((current+1)/slides.length*100)+'%';
+  document.getElementById('counter').textContent = (current+1)+' / '+slides.length;
+}
+function goTo(i){
+  if(i < 0 || i >= slides.length || i === current) return;
+  lastDir = i > current ? 1 : -1;
+  current = i;
+  update();
+}
+function next(){ if(current < slides.length-1) goTo(current+1); }
+function prev(){ if(current > 0) goTo(current-1); }
+
+update();
+
+// ---------- Copy buttons ----------
+deck.addEventListener('click', function(e){
+  const btn = e.target.closest('.copy-btn');
+  if(!btn) return;
+  const id = btn.getAttribute('data-code-id');
+  const raw = RAW[id.replace('code-','')];
+  navigator.clipboard.writeText(raw).then(()=>{
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent = orig; btn.classList.remove('copied'); }, 1400);
+  });
+});
+
+// ---------- Navigation: keyboard ----------
+document.addEventListener('keydown', function(e){
+  if(e.key === '?'){ toggleShortcuts(); return; }
+  if(document.getElementById('shortcuts-overlay').classList.contains('show')){
+    if(e.key === 'Escape'){ toggleShortcuts(); }
+    return;
+  }
+  if(e.key === 'ArrowRight'){ next(); }
+  else if(e.key === 'ArrowLeft'){ prev(); }
+  else if(e.key === 'Home'){ goTo(0); }
+  else if(e.key === 'End'){ goTo(slides.length-1); }
+});
+
+// ---------- Navigation: right-click + mouse buttons ----------
+document.addEventListener('contextmenu', function(e){ e.preventDefault(); next(); });
+document.addEventListener('mousedown', function(e){
+  if(e.button === 3){ e.preventDefault(); e.stopImmediatePropagation(); prev(); }
+  else if(e.button === 4){ e.preventDefault(); e.stopImmediatePropagation(); next(); }
+}, true);
+
+// ---------- Swipe (mobile) ----------
+let touchStartX = null, touchStartY = null;
+document.addEventListener('touchstart', function(e){
+  touchStartX = e.changedTouches[0].clientX;
+  touchStartY = e.changedTouches[0].clientY;
+}, {passive:true});
+document.addEventListener('touchend', function(e){
+  if(touchStartX === null) return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  if(Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)){
+    if(dx < 0){ next(); } else { prev(); }
+  }
+  touchStartX = null; touchStartY = null;
+}, {passive:true});
+
+// ---------- Shortcuts overlay ----------
+function toggleShortcuts(){
+  document.getElementById('shortcuts-overlay').classList.toggle('show');
+}
+document.getElementById('shortcuts-overlay').addEventListener('click', function(e){
+  if(e.target === this){ toggleShortcuts(); }
+});
+
+})();
+</script>
+</body>
+</html>

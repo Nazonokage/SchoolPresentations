@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>NoSQL, Stateless Architecture, Drivers &amp; JavaScript</title>
+<style>
+  :root{
+    --ink:#0A0E17;
+    --panel:#121A2C;
+    --panel-2:#0E1524;
+    --panel-border: rgba(148,169,209,0.16);
+    --line: rgba(148,169,209,0.14);
+    --text:#E9EEF7;
+    --muted:#8A97B5;
+    --muted-2:#5E6B8C;
+    --cyan:#37D6C0;
+    --cyan-dim: rgba(55,214,192,0.14);
+    --amber:#F5A623;
+    --amber-dim: rgba(245,166,35,0.14);
+    --red:#EF6461;
+    --radius: 12px;
+    --font-display: -apple-system, "Segoe UI Variable", "Segoe UI Semibold", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-body: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; width:100%; height:100%;
+    background:var(--ink); color:var(--text);
+    font-family:var(--font-body);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  body{
+    background-image:
+      radial-gradient(circle at 12% 8%, rgba(55,214,192,0.06), transparent 40%),
+      radial-gradient(circle at 88% 92%, rgba(245,166,35,0.05), transparent 45%),
+      repeating-linear-gradient(0deg, rgba(148,169,209,0.035) 0px, rgba(148,169,209,0.035) 1px, transparent 1px, transparent 42px),
+      repeating-linear-gradient(90deg, rgba(148,169,209,0.035) 0px, rgba(148,169,209,0.035) 1px, transparent 1px, transparent 42px);
+  }
+  #deck{
+    position:relative; width:100vw; height:100vh;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .slide{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    padding: 64px 72px 84px;
+    opacity:0; visibility:hidden;
+    transform: translateX(24px);
+    transition: opacity 350ms ease, transform 350ms ease, visibility 0s linear 350ms;
+    pointer-events:none;
+  }
+  .slide.active{
+    opacity:1; visibility:visible; transform:translateX(0);
+    transition: opacity 350ms ease, transform 350ms ease, visibility 0s linear 0s;
+    pointer-events:auto;
+  }
+  .slide.leaving-back{ transform: translateX(-24px); }
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition: opacity 1ms linear, visibility 0s linear 0s !important; transform:none !important; }
+  }
+  .slide-inner{
+    width:100%; max-width:1180px; height:100%;
+    max-height: 720px;
+    display:flex; flex-direction:column;
+    min-height:0;
+  }
+  .kicker{
+    display:inline-flex; align-items:center; gap:10px;
+    font-family:var(--font-mono); font-size:13.5px; letter-spacing:0.06em;
+    color:var(--cyan); text-transform:uppercase;
+    padding:6px 12px 6px 10px;
+    border:1px solid var(--panel-border);
+    border-radius:4px;
+    position:relative;
+    background:linear-gradient(180deg, rgba(55,214,192,0.07), transparent);
+    width:fit-content;
+    margin-bottom:18px;
+  }
+  .kicker::before, .kicker::after{
+    content:""; position:absolute; width:7px; height:7px;
+    border-color:var(--cyan); border-style:solid; opacity:0.85;
+  }
+  .kicker::before{ top:-1px; left:-1px; border-width:1.5px 0 0 1.5px; }
+  .kicker::after{ bottom:-1px; right:-1px; border-width:0 1.5px 1.5px 0; }
+  .kicker .dot{ width:6px; height:6px; border-radius:50%; background:var(--cyan); box-shadow:0 0 8px var(--cyan); }
+  .h1{
+    font-family:var(--font-display); font-weight:800;
+    font-size:38px; letter-spacing:-0.02em; line-height:1.12;
+    margin:0 0 6px 0; color:var(--text);
+  }
+  .h1 .accent{ color:var(--cyan); }
+  .sub{
+    font-size:17px; color:var(--muted); margin:0 0 24px 0; line-height:1.6; max-width:840px;
+  }
+  .body-scroll{
+    flex:1; min-height:0; overflow:auto; padding-right:4px;
+  }
+  .body-scroll::-webkit-scrollbar{ width:8px; }
+  .body-scroll::-webkit-scrollbar-thumb{ background:var(--panel-border); border-radius:8px; }
+  p, li{ font-size:16.5px; line-height:1.68; color:#D3DAEA; }
+  strong{ color:var(--text); }
+  .grid{ display:grid; gap:16px; min-height:0; }
+  .grid-2{ grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+  .grid-3{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .grid-4{ grid-template-columns: repeat(4, minmax(0,1fr)); }
+  .grid-5{ grid-template-columns: repeat(5, minmax(0,1fr)); }
+  .card{
+    background:var(--panel); border:1px solid var(--panel-border); border-radius:var(--radius);
+    padding:18px 20px; min-width:0; position:relative;
+  }
+  .card h3{ margin:0 0 9px 0; font-size:17px; font-family:var(--font-display); font-weight:700; color:var(--text); display:flex; align-items:center; gap:10px;}
+  .card p{ margin:0; font-size:16px; color:var(--muted); line-height:1.58; }
+  .num-badge{
+    width:24px; height:24px; border-radius:5px; flex-shrink:0;
+    background:var(--cyan-dim); color:var(--cyan); border:1px solid rgba(55,214,192,0.35);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-mono); font-size:13px; font-weight:700;
+  }
+  .badge-row{ display:flex; flex-wrap:wrap; gap:12px; margin-top:4px; }
+  .badge{
+    display:flex; align-items:center; gap:9px;
+    background:var(--panel-2); border:1px solid var(--panel-border);
+    padding:9px 16px 9px 10px; border-radius:22px; font-size:14.5px; color:var(--muted); font-family:var(--font-mono);
+  }
+  .badge svg{ width:24px; height:24px; flex-shrink:0; }
+  .icon-inline{ display:inline-flex; align-items:center; justify-content:center; vertical-align:-0.3em; margin-right:9px; }
+  .icon-inline svg{ width:1.3em; height:1.3em; }
+  .callout{
+    border-left:3px solid var(--amber); background:var(--amber-dim);
+    border-radius:0 8px 8px 0; padding:14px 18px; margin-top:6px;
+  }
+  .callout .tag{ font-family:var(--font-mono); font-size:12.5px; letter-spacing:0.06em; color:var(--amber); text-transform:uppercase; display:block; margin-bottom:6px;}
+  .callout p{ color:#EADFC8; margin:0; font-size:16.5px; line-height:1.6; }
+  table{ width:100%; border-collapse:collapse; font-size:16px; }
+  th{ text-align:left; font-family:var(--font-mono); font-size:12.5px; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted-2); padding:0 14px 10px; border-bottom:1px solid var(--panel-border); font-weight:600;}
+  td{ padding:12px 14px; border-bottom:1px solid var(--line); color:#D3DAEA; vertical-align:top;}
+  tr:last-child td{ border-bottom:none; }
+  td strong{ color:var(--cyan); }
+  .diagram-wrap{ display:flex; align-items:center; justify-content:center; flex:1; min-height:0; }
+  .code-row{ display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap:16px; height:min(500px,58vh); min-height:0; }
+  .code-row.single{ grid-template-columns: minmax(0,1fr); }
+  .code-card{
+    display:flex; flex-direction:column; height:100%; min-height:0;
+    background:#0B111D; border:1px solid var(--panel-border); border-radius:var(--radius);
+    overflow:hidden;
+  }
+  .code-head{
+    flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
+    padding:10px 14px; border-bottom:1px solid var(--panel-border); background:var(--panel-2);
+  }
+  .code-head .fname{ font-family:var(--font-mono); font-size:13px; color:var(--muted); display:flex; gap:8px; align-items:center;}
+  .dots{ display:flex; gap:5px; }
+  .dots span{ width:8px; height:8px; border-radius:50%; background:#2A3450; }
+  .copy-btn{
+    font-family:var(--font-mono); font-size:12.5px; color:var(--muted);
+    background:var(--panel); border:1px solid var(--panel-border); border-radius:6px;
+    padding:5px 10px; cursor:pointer; transition: all 150ms ease;
+  }
+  .copy-btn:hover{ color:var(--cyan); border-color:var(--cyan); }
+  .copy-btn.copied{ color:var(--ink); background:var(--cyan); border-color:var(--cyan); }
+  .code-card pre{
+    flex:1; min-height:0; overflow:auto; margin:0; padding:16px 18px;
+    font-family:var(--font-mono); font-size:15px; line-height:1.65; color:#C6CFE4;
+  }
+  .code-card pre::-webkit-scrollbar{ width:8px; height:8px; }
+  .code-card pre::-webkit-scrollbar-thumb{ background:var(--panel-border); border-radius:8px; }
+  .panel-notes{ flex:1; min-height:0; overflow:auto; padding:16px 18px; font-size:16px; color:var(--muted); line-height:1.7; }
+  .panel-notes h4{ margin:0 0 9px; color:var(--text); font-size:14.5px; font-family:var(--font-mono); text-transform:uppercase; letter-spacing:0.04em;}
+  .panel-notes ul{ margin:0 0 14px 18px; padding:0; }
+  .tok-kw{ color:#37D6C0; } .tok-str{ color:#F5A623; } .tok-com{ color:#5E6B8C; font-style:italic;}
+  .tok-tag{ color:#EF6461; } .tok-attr{ color:#8FD6FF; } .tok-num{ color:#C9A6FF; } .tok-fn{ color:#8FD6FF; }
+  .qa-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .qa-card{
+    background:var(--panel); border:1px solid var(--panel-border); border-radius:var(--radius);
+    padding:16px 18px;
+  }
+  .qa-card.centered{ grid-column: 1 / -1; max-width:560px; margin:0 auto; }
+  .qa-num{ font-family:var(--font-mono); color:var(--cyan); font-size:13px; margin-bottom:7px; display:block;}
+  .qa-q{ font-size:16.5px; color:var(--text); margin:0 0 12px; line-height:1.5; font-weight:600;}
+  .qa-opts{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:7px;}
+  .qa-opts li{ font-size:16px; color:#B9C2DA; padding:8px 11px; border:1px solid var(--panel-border); border-radius:6px; background:var(--panel-2); }
+  .qa-opts li b{ color:var(--muted-2); font-family:var(--font-mono); margin-right:6px; }
+  .id-card{ background:var(--panel); border:1px solid var(--panel-border); border-radius:var(--radius); padding:14px 16px;}
+  .id-card .tag{ font-family:var(--font-mono); font-size:12px; color:var(--amber); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:7px; display:block;}
+  .id-card p{ margin:0; font-size:16px; color:#D3DAEA; line-height:1.55;}
+  .answer-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .ans-row{ display:flex; gap:10px; background:var(--panel); border:1px solid var(--panel-border); border-radius:10px; padding:12px 14px;}
+  .ans-check{ width:24px; height:24px; border-radius:5px; background:var(--cyan-dim); color:var(--cyan); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:13px; margin-top:2px;}
+  .ans-body b{ display:block; font-size:16px; color:var(--text); margin-bottom:4px;}
+  .ans-body span{ font-size:15px; color:var(--muted); line-height:1.5; }
+  .quote-block{
+    border-left:3px solid var(--cyan); padding:14px 22px; margin-bottom:16px; background:var(--panel);
+    border-radius:0 10px 10px 0;
+  }
+  .quote-block p{ font-size:18px; color:var(--text); font-style:italic; margin:0 0 8px; line-height:1.55;}
+  .quote-block .src{ font-family:var(--font-mono); font-size:12.5px; color:var(--cyan); text-transform:uppercase; letter-spacing:0.04em;}
+  .title-slide{ text-align:left; }
+  .title-slide .eyebrow-line{ display:flex; align-items:center; gap:14px; margin-bottom:26px; }
+  .title-slide .rule{ height:1px; flex:1; background:linear-gradient(90deg, var(--cyan), transparent); }
+  .title-slide h1{ font-family:var(--font-display); font-size:56px; font-weight:800; letter-spacing:-0.025em; line-height:1.06; margin:0 0 18px; }
+  .title-slide h1 span{ color:var(--cyan); }
+  .title-slide .desc{ font-size:17.5px; color:var(--muted); max-width:620px; line-height:1.6; margin-bottom:34px;}
+  .closing-slide{ text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; }
+  .closing-slide .quote{ font-family:var(--font-display); font-size:26px; font-weight:700; max-width:720px; line-height:1.4; color:var(--text); margin-bottom:22px;}
+  .closing-slide .quote::before, .closing-slide .quote::after{ color:var(--cyan); }
+  .closing-slide .bye{ font-size:17px; color:var(--muted); }
+  .flow-analogy{ display:grid; grid-template-columns:1fr auto 1fr; gap:20px; align-items:stretch; }
+  .flow-analogy .vs{ display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); color:var(--muted-2); font-size:14px; }
+  .col-title{ font-family:var(--font-mono); font-size:13px; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px; display:flex; align-items:center; gap:8px;}
+
+  /* progress + chrome */
+  #progress-track{ position:fixed; top:0; left:0; width:100%; height:3px; background:rgba(148,169,209,0.12); z-index:50; }
+  #progress-fill{ height:100%; background:linear-gradient(90deg, var(--cyan), var(--amber)); transition: width 350ms ease; position:relative; }
+  #progress-fill::after{ content:""; position:absolute; right:-3px; top:-2.5px; width:8px; height:8px; border-radius:50%; background:var(--amber); box-shadow:0 0 8px var(--amber); }
+  #counter{
+    position:fixed; bottom:22px; right:28px; font-family:var(--font-mono); font-size:12px; color:var(--muted-2);
+    z-index:50; letter-spacing:0.03em; background:rgba(10,14,23,0.6); padding:5px 10px; border-radius:6px; border:1px solid var(--panel-border);
+  }
+  #counter b{ color:var(--cyan); }
+  #hint{
+    position:fixed; bottom:22px; left:28px; font-family:var(--font-mono); font-size:11.5px; color:var(--muted-2);
+    z-index:50; opacity:0.7;
+  }
+  #shortcuts-overlay{
+    position:fixed; inset:0; background:rgba(6,9,16,0.82); backdrop-filter:blur(3px);
+    display:none; align-items:center; justify-content:center; z-index:100;
+  }
+  #shortcuts-overlay.show{ display:flex; }
+  .shortcuts-box{
+    background:var(--panel); border:1px solid var(--panel-border); border-radius:14px; padding:28px 34px;
+    max-width:420px; width:90%;
+  }
+  .shortcuts-box h2{ font-family:var(--font-display); font-size:19px; margin:0 0 16px; color:var(--text);}
+  .shortcuts-box .row{ display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--line); font-size:15px; color:var(--muted); }
+  .shortcuts-box .row:last-child{ border-bottom:none; }
+  .shortcuts-box kbd{ font-family:var(--font-mono); background:var(--panel-2); border:1px solid var(--panel-border); padding:2px 8px; border-radius:5px; color:var(--text); font-size:12px;}
+  @media (max-width:900px){
+    .slide{ padding:40px 22px 70px; }
+    .h1{ font-size:26px; }
+    .title-slide h1{ font-size:34px; }
+    .grid-2, .grid-3, .grid-4, .grid-5{ grid-template-columns:1fr; }
+    .code-row{ grid-template-columns:1fr; height:auto; max-height:70vh; }
+    .qa-grid, .answer-grid{ grid-template-columns:1fr; }
+    .flow-analogy{ grid-template-columns:1fr; }
+    .flow-analogy .vs{ padding:6px 0; }
+    #hint{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress-track"><div id="progress-fill" style="width:0%"></div></div>
+<div id="counter"><b id="cur">1</b> / <span id="tot">1</span></div>
+<div id="hint">Right-click or → next &nbsp;·&nbsp; ← previous &nbsp;·&nbsp; ? for help</div>
+
+<div id="deck"></div>
+
+<div id="shortcuts-overlay">
+  <div class="shortcuts-box">
+    <h2>Keyboard &amp; mouse shortcuts</h2>
+    <div class="row"><span>Next slide</span><span><kbd>→</kbd> or <kbd>Right-click</kbd> or <kbd>Mouse4</kbd></span></div>
+    <div class="row"><span>Previous slide</span><span><kbd>←</kbd> or <kbd>Mouse3</kbd></span></div>
+    <div class="row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="row"><span>This overlay</span><span><kbd>?</kbd></span></div>
+    <div class="row"><span>Swipe (mobile)</span><span>left / right</span></div>
+  </div>
+</div>
+
+<script>
+/* ============================= ICON LIBRARY (inline SVG badges) ============================= */
+const ICONS = {
+  nosql: `<svg viewBox="0 0 24 24" width="1.2em" height="1.2em" style="vertical-align:-0.22em;flex-shrink:0" fill="none" role="img"><title>NoSQL document icon</title><rect x="4" y="2" width="16" height="20" rx="2" stroke="#37D6C0" stroke-width="1.6"/><path d="M8 7h8M8 11h8M8 15h5" stroke="#37D6C0" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  keyvalue: `<svg viewBox="0 0 24 24" width="1.2em" height="1.2em" style="vertical-align:-0.22em;flex-shrink:0" fill="none" role="img"><title>Key-value store icon</title><circle cx="8" cy="12" r="4.2" stroke="#F5A623" stroke-width="1.6"/><path d="M12 12h9M16 12v3M19 12v3" stroke="#F5A623" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  column: `<svg viewBox="0 0 24 24" width="1.2em" height="1.2em" style="vertical-align:-0.22em;flex-shrink:0" fill="none" role="img"><title>Column-family database icon</title><rect x="3" y="4" width="4" height="16" rx="1" stroke="#8FD6FF" stroke-width="1.5"/><rect x="10" y="8" width="4" height="12" rx="1" stroke="#8FD6FF" stroke-width="1.5"/><rect x="17" y="2" width="4" height="18" rx="1" stroke="#8FD6FF" stroke-width="1.5"/></svg>`,
+  graph: `<svg viewBox="0 0 24 24" width="1.2em" height="1.2em" style="vertical-align:-0.22em;flex-shrink:0" fill="none" role="img"><title>Graph database icon</title><circle cx="5" cy="6" r="2.4" stroke="#C9A6FF" stroke-width="1.5"/><circle cx="19" cy="6" r="2.4" stroke="#C9A6FF" stroke-width="1.5"/><circle cx="12" cy="18" r="2.4" stroke="#C9A6FF" stroke-width="1.5"/><path d="M7 7.4L10.2 16M17 7.4L13.8 16M7.4 6h9.2" stroke="#C9A6FF" stroke-width="1.4"/></svg>`,
+  kotlin: `<svg viewBox="0 0 24 24" width="1.2em" height="1.2em" style="vertical-align:-0.22em;flex-shrink:0" role="img"><title>Kotlin logo</title><path d="M2 2h20L12 12l10 10H2z" fill="url(#kg)"/><defs><linearGradient id="kg" x1="2" y1="2" x2="22" y2="22"><stop offset="0" stop-color="#37D6C0"/><stop offset="0.5" stop-color="#8FD6FF"/><stop offset="1" stop-color="#F5A623"/></linearGradient></defs></svg>`,
+  driver: `<svg viewBox="0 0 24 24" width="1.2em" height="1.2em" style="vertical-align:-0.22em;flex-shrink:0" fill="none" role="img"><title>Device driver icon</title><rect x="3" y="9" width="18" height="6" rx="1.5" stroke="#EF6461" stroke-width="1.6"/><circle cx="7.5" cy="12" r="1.3" fill="#EF6461"/><circle cx="12" cy="12" r="1.3" fill="#EF6461"/><path d="M3 5.5h18M3 18.5h18" stroke="#EF6461" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="1 3"/></svg>`,
+  html: `<svg viewBox="0 0 24 24" width="1.2em" height="1.2em" style="vertical-align:-0.22em;flex-shrink:0" role="img"><title>HTML icon</title><path d="M4 3l1.6 17L12 22l6.4-2L20 3H4z" fill="#F5A623" opacity="0.18"/><path d="M4 3l1.6 17L12 22l6.4-2L20 3H4z" stroke="#F5A623" stroke-width="1.4" fill="none"/><path d="M7 7h10l-.4 4H8l.2 2h9l-.6 6.4-4.6 1.4-4.6-1.4-.3-3" stroke="#F5A623" stroke-width="1.3" fill="none"/></svg>`,
+  gear: `<svg viewBox="0 0 24 24" width="1.2em" height="1.2em" style="vertical-align:-0.22em;flex-shrink:0" fill="none" role="img"><title>Operating system icon</title><circle cx="12" cy="12" r="3" stroke="#8FD6FF" stroke-width="1.5"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="#8FD6FF" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+};
+
+function badge(icon, label){
+  return `<div class="badge">${ICONS[icon]||''}<span>${label}</span></div>`;
+}
+
+/* ============================= SYNTAX HIGHLIGHTER (single pass) ============================= */
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function highlight(code, lang){
+  code = esc(code);
+  if(lang === 'kotlin' || lang === 'javascript' || lang === 'js'){
+    const kw = lang==='kotlin' // legacy fallback
+      ? /\b(fun|val|var|if|else|return|class|object|null|true|false|for|while|when|import|package|companion|private|public)\b/g
+      : /\b(function|const|let|var|if|else|return|new|class|for|while|null|true|false|typeof|document|window)\b/g;
+    code = code.replace(/(\/\/.*$)/gm, '§C§$1§/C§');
+    code = code.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g, '§S§$1§/S§');
+    code = code.replace(kw, '§K§$1§/K§');
+    code = code.replace(/\b(\d+(?:\.\d+)?)\b/g, '§N§$1§/N§');
+    code = code.replace(/\b([a-zA-Z_][\w]*)(?=\()/g, '§F§$1§/F§');
+  } else if(lang === 'html'){
+    code = code.replace(/(&lt;!--[\s\S]*?--&gt;)/g, '§C§$1§/C§');
+    code = code.replace(/(&lt;\/?)([a-zA-Z0-9-]+)/g, '$1§T§$2§/T§');
+    code = code.replace(/([a-zA-Z-]+)(=)("(?:[^"\\]|\\.)*")/g, '§A§$1§/A§$2§S§$3§/S§');
+  } else if(lang === 'css'){
+    code = code.replace(/([.#]?[a-zA-Z0-9_-]+)(\s*\{)/g, '§F§$1§/F§$2');
+    code = code.replace(/([a-zA-Z-]+)(:)/g, '§A§$1§/A§$2');
+  }
+  code = code
+    .replace(/§C§/g,'<span class="tok-com">').replace(/§\/C§/g,'</span>')
+    .replace(/§S§/g,'<span class="tok-str">').replace(/§\/S§/g,'</span>')
+    .replace(/§K§/g,'<span class="tok-kw">').replace(/§\/K§/g,'</span>')
+    .replace(/§N§/g,'<span class="tok-num">').replace(/§\/N§/g,'</span>')
+    .replace(/§F§/g,'<span class="tok-fn">').replace(/§\/F§/g,'</span>')
+    .replace(/§T§/g,'<span class="tok-tag">').replace(/§\/T§/g,'</span>')
+    .replace(/§A§/g,'<span class="tok-attr">').replace(/§\/A§/g,'</span>');
+  return code;
+}
+
+let copyCounter = 0;
+function codeCard(title, lang, code){
+  const id = 'code-' + (copyCounter++);
+  return `<div class="code-card">
+    <div class="code-head">
+      <div class="fname"><span class="dots"><span></span><span></span><span></span></span>${title}</div>
+      <button class="copy-btn" onclick="copyCode('${id}', this)">Copy</button>
+    </div>
+    <pre id="${id}" data-raw="${encodeURIComponent(code)}">${highlight(code, lang)}</pre>
+  </div>`;
+}
+function copyCode(id, btn){
+  const raw = decodeURIComponent(document.getElementById(id).dataset.raw);
+  navigator.clipboard.writeText(raw).then(()=>{
+    const prev = btn.textContent;
+    btn.textContent = 'Copied!'; btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent = prev; btn.classList.remove('copied'); }, 1400);
+  });
+}
+
+/* ============================= DIAGRAMS ============================= */
+const NOSQL_DIAGRAM = `
+<svg viewBox="0 0 720 300" role="img" style="width:100%;max-width:680px;height:auto;">
+<title>NoSQL database core capabilities diagram</title>
+<rect x="1" y="1" width="718" height="298" rx="14" fill="#121A2C" stroke="#243252"/>
+<text x="360" y="34" text-anchor="middle" font-family="ui-monospace,monospace" font-size="14" letter-spacing="1" fill="#37D6C0">NOSQL DATABASE CORE</text>
+<line x1="30" y1="48" x2="690" y2="48" stroke="#243252"/>
+${[
+  ['01','Schema Flexibility','Dynamic attributes, no rigid tables','#37D6C0'],
+  ['02','Horizontal Scaling','Distributes traffic across many nodes','#F5A623'],
+  ['03','High Availability','Built-in replication & auto-failover','#8FD6FF'],
+  ['04','Diverse Data Models','Key-Value, Document, Column, Graph','#C9A6FF'],
+  ['05','Eventual Consistency','Async sync across read replicas','#EF6461'],
+].map((row,i)=>`
+  <g transform="translate(30, ${64 + i*44})">
+    <rect width="24" height="24" rx="5" fill="${row[3]}22" stroke="${row[3]}" stroke-width="1.3"/>
+    <text x="12" y="16.5" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" fill="${row[3]}">${row[0]}</text>
+    <text x="38" y="16" font-family="-apple-system,sans-serif" font-size="15" font-weight="700" fill="#E9EEF7">${row[1]}</text>
+    <text x="38" y="33" font-family="-apple-system,sans-serif" font-size="13" fill="#8A97B5">${row[2]}</text>
+  </g>`).join('')}
+</svg>`;
+
+const DRIVER_DIAGRAM = `
+<svg viewBox="0 0 640 340" role="img" style="width:100%;max-width:520px;height:auto;">
+<title>Operating system, driver, and hardware communication flow</title>
+<g font-family="-apple-system,sans-serif">
+  <rect x="120" y="10" width="400" height="70" rx="10" fill="#121A2C" stroke="#37D6C0" stroke-width="1.6"/>
+  <text x="320" y="38" text-anchor="middle" font-size="17" font-weight="700" fill="#E9EEF7">Operating System</text>
+  <text x="320" y="58" text-anchor="middle" font-size="13" fill="#8A97B5">Sends generic I/O requests</text>
+
+  <line x1="320" y1="80" x2="320" y2="120" stroke="#5E6B8C" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+  <rect x="120" y="120" width="400" height="70" rx="10" fill="#121A2C" stroke="#F5A623" stroke-width="1.6"/>
+  <text x="320" y="148" text-anchor="middle" font-size="17" font-weight="700" fill="#E9EEF7">Device Driver</text>
+  <text x="320" y="168" text-anchor="middle" font-size="13" fill="#8A97B5">Translates requests to device-specific commands</text>
+
+  <line x1="320" y1="190" x2="320" y2="230" stroke="#5E6B8C" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+  <rect x="120" y="230" width="400" height="70" rx="10" fill="#121A2C" stroke="#EF6461" stroke-width="1.6"/>
+  <text x="320" y="258" text-anchor="middle" font-size="17" font-weight="700" fill="#E9EEF7">Hardware Device</text>
+  <text x="320" y="278" text-anchor="middle" font-size="13" fill="#8A97B5">Executes the physical operation</text>
+
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#5E6B8C"/>
+    </marker>
+  </defs>
+</g>
+</svg>`;
+
+/* ============================= SLIDE CONTENT ============================= */
+const SLIDES = [];
+
+// 1. TITLE
+SLIDES.push(`
+<div class="slide-inner title-slide">
+  <div class="eyebrow-line">
+    <span class="kicker"><span class="dot"></span>PLATFORM TECHNOLOGIES // MODULE 15-16</span>
+    <div class="rule"></div>
+  </div>
+  <h1>NoSQL Databases, Stateless<br>Architecture, System Drivers<br>&amp; <span>JavaScript</span></h1>
+  <p class="desc">How modern applications store evolving data, scale across servers, talk to hardware, and get built with fewer lines of code.</p>
+  <div class="badge-row">
+    ${badge('nosql','MongoDB · Document Store')}
+    ${badge('keyvalue','Redis · Key-Value')}
+    ${badge('column','Cassandra · Column-Family')}
+    ${badge('graph','Neo4j · Graph')}
+    ${badge('js','JavaScript')}
+    ${badge('driver','System Drivers')}
+  </div>
+</div>`);
+
+// 2. LESSON PREVIEW & REVIEW
+SLIDES.push(`
+<div class="slide-inner">
+  <span class="kicker"><span class="dot"></span>A · LESSON PREVIEW</span>
+  <h1 class="h1">Overview &amp; Prerequisite Review</h1>
+  <p class="sub">In modern web development and platform engineering, applications must handle massive volumes of evolving data, scale across distributed servers, and interact seamlessly with underlying hardware. This lesson covers <strong>NoSQL &amp; non-schema databases</strong>, <strong>stateless architecture</strong>, essential <strong>system drivers</strong>, and an introduction to <strong>JavaScript (Node.js)</strong>.</p>
+  <div class="body-scroll">
+    <div class="grid grid-3">
+      <div class="card">
+        <h3><span class="num-badge">01</span>Relational Databases</h3>
+        <p>Traditional databases (MySQL, PostgreSQL) enforce strict, predefined schemas with fixed tables, rows, and columns.</p>
+      </div>
+      <div class="card">
+        <h3><span class="num-badge">02</span>Client-Server Model</h3>
+        <p>How clients (browsers, mobile apps) send requests over HTTP to back-end application servers.</p>
+      </div>
+      <div class="card">
+        <h3><span class="num-badge">03</span>OS Mechanics</h3>
+        <p>How an operating system coordinates software instructions with physical device hardware.</p>
+      </div>
+    </div>
+  </div>
+</div>`);
+
+// 3. WHAT IS NOSQL
+SLIDES.push(`
+<div class="slide-inner">
+  <span class="kicker"><span class="dot"></span>B.1 · CORE CONCEPT</span>
+  <h1 class="h1">What is a <span class="accent">NoSQL</span> Database?</h1>
+  <p class="sub"><strong>NoSQL (Not Only SQL)</strong> databases provide a non-relational approach to data storage. They address the scalability and schema limitations of relational databases, especially for unstructured or semi-structured data at scale.</p>
+  <div class="diagram-wrap">${NOSQL_DIAGRAM}</div>
+</div>`);
+
+// 4. NOSQL CHARACTERISTICS
+SLIDES.push(`
+<div class="slide-inner">
+  <span class="kicker"><span class="dot"></span>B.1 · KEY CHARACTERISTICS</span>
+  <h1 class="h1">Five Traits of NoSQL Systems</h1>
+  <div class="body-scroll">
+    <div class="grid grid-3" style="margin-bottom:16px;">
+      <div class="card"><h3><span class="num-badge">1</span>Schema Flexibility</h3><p>Store data without a predefined schema — ideal for rapidly evolving requirements.</p></div>
+      <div class="card"><h3><span class="num-badge">2</span>Scalability</h3><p>Scales <strong>horizontally</strong>, distributing data and traffic across many servers or nodes.</p></div>
+      <div class="card"><h3><span class="num-badge">3</span>High Availability</h3><p>Automated replication and failover keep the system available and fault tolerant.</p></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card"><h3><span class="num-badge">4</span>Diverse Data Models</h3><p>Supports multiple paradigms tailored to specific application query needs.</p></div>
+      <div class="card"><h3><span class="num-badge">5</span>Eventual Consistency</h3><p>Prioritizes speed &amp; availability, propagating updates asynchronously across replicas.</p></div>
+    </div>
+  </div>
+</div>`);
+
+// 5. WHAT IS STATELESS DATA
+SLIDES.push(`
+<div class="slide-inner">
+  <span class="kicker"><span class="dot"></span>B.2 · CORE CONCEPT</span>
+  <h1 class="h1">What is <span class="accent">Stateless</span> Data?</h1>
+  <p class="sub"><strong>Stateless data</strong> refers to processing where each request is independent of previous interactions. In a stateless architecture, the server retains no session memory about prior user requests.</p>
+  <div class="callout">
+    <span class="tag">Key Rule</span>
+    <p>In a stateless system, the client must send all necessary context — such as authentication tokens or session IDs — with <strong>every single request</strong>.</p>
+  </div>
+</div>`);
+
+// 6. STATELESS ADVANTAGES
+SLIDES.push(`
+<div class="slide-inner">
+  <span class="kicker"><span class="dot"></span>B.2 · ADVANTAGES</span>
+  <h1 class="h1">Why Go Stateless?</h1>
+  <div class="body-scroll">
+    <div class="grid grid-2">
+      <div class="card"><h3><span class="num-badge">A</span>No Server-Side Sessions</h3><p>Eliminates the overhead of storing user session states in server memory.</p></div>
+      <div class="card"><h3><span class="num-badge">B</span>Seamless Scalability</h3><p>Any server in a cluster can handle any request without shared session state.</p></div>
+      <div class="card"><h3><span class="num-badge">C</span>Optimized Load Balancing</h3><p>Requests route freely to the least busy server — no session affinity needed.</p></div>
+      <div class="card"><h3><span class="num-badge">D</span>Reduced Server Overhead</h3><p>Conserves backend CPU &amp; RAM, improving overall request throughput.</p></div>
+    </div>
+  </div>
+</div>`);
+
+// 7. NON-SCHEMA CATEGORIES
+SLIDES.push(`
+<div class="slide-inner">
+  <span class="kicker"><span class="dot"></span>B.3 · TAXONOMY</span>
+  <h1 class="h1">Non-Schema Database Categories</h1>
+  <p class="sub">A <strong>non-schema (schemaless)</strong> database allows storing and retrieving records without a predefined structure.</p>
+  <div class="body-scroll">
+    <table>
+      <tr><th>Category</th><th>Description</th><th>Examples</th><th>Primary Use Case</th></tr>
+      <tr><td><span class="icon-inline">${ICONS.nosql}</span><strong>Document</strong></td><td>Stores data in semi-structured formats like JSON or BSON.</td><td>MongoDB, Couchbase</td><td>Content management, catalogs</td></tr>
+      <tr><td><span class="icon-inline">${ICONS.keyvalue}</span><strong>Key-Value</strong></td><td>Stores data as simple key/value pairs; highly efficient lookup.</td><td>Redis, DynamoDB</td><td>Caching, sessions, leaderboards</td></tr>
+      <tr><td><span class="icon-inline">${ICONS.column}</span><strong>Column-Family</strong></td><td>Organizes data into columns for fast analytical queries.</td><td>Cassandra, HBase</td><td>Logs, time-series, analytics</td></tr>
+      <tr><td><span class="icon-inline">${ICONS.graph}</span><strong>Graph</strong></td><td>Focuses on nodes &amp; edges to map interconnected relationships.</td><td>Neo4j, Neptune</td><td>Social graphs, recommendations</td></tr>
+    </table>
+  </div>
+</div>`);
+
+// 8. DRIVERS DIAGRAM
+SLIDES.push(`
+<div class="slide-inner">
+  <span class="kicker"><span class="dot"></span>B.4 · HARDWARE LAYER</span>
+  <h1 class="h1">Hardware &amp; System Drivers</h1>
+  <p class="sub">A <strong>driver</strong> is a software component that acts as an intermediary, letting the OS communicate with and control physical hardware devices.</p>
+  <div class="diagram-wrap">${DRIVER_DIAGRAM}</div>
+</div>`);
+
+// 9. DRIVER TYPES
+SLIDES.push(`
+<div class="slide-inner">
+  <span class="kicker"><span class="dot"></span>B.4 · COMMON TYPES</span>
+  <h1 class="h1">Ten Common Driver Types</h1>
+  <div class="body-scroll">
+    <div class="grid grid-3" style="gap:14px;">
+      ${[
+        ['Graphics','Renders visuals & video on displays (NVIDIA, AMD, Intel)'],
+        ['Printer','Converts documents into printer-specific commands'],
+        ['Audio','Manages sound card I/O for speakers & mics (Realtek)'],
+        ['Network','Enables connectivity over Ethernet, Wi-Fi, cellular'],
+        ['Touchpad / Keyboard','Processes signals from laptop input hardware'],
+        ['USB','Coordinates OS communication with USB peripherals'],
+        ['Bluetooth','Facilitates wireless short-range communication'],
+        ['Scanner','Translates scanned visuals into digital formats'],
+        ['Webcam','Enables video capture for conferencing & recording'],
+        ['Storage','Controls read/write on SSDs and HDDs'],
+      ].map(d=>`<div class="card" style="padding:14px 16px;"><h3 style="font-size:16px;margin-bottom:7px;">${d[0]}</h3><p style="font-size:16px;">${d[1]}</p></div>`).join('')}
+    </div>
+  </div>
+</div>`);
+
+// 10. JS INTRO
+SLIDES.push(`
+<div class="slide-inner">
+  <span class="kicker"><span class="dot"></span>B.5 · LANGUAGE</span>
+  <h1 class="h1">Introduction to <span class="accent">JavaScript</span></h1>
+  <p class="sub"><strong>JavaScript</strong> is a dynamic, cross-platform language that runs natively in browsers and on servers via Node.js. It offers concise syntax, vast ecosystem support, and runs everywhere.</p>
+  <div class="callout" style="margin-bottom:16px;">
+    <span class="tag">Analogy</span>
+    <p>Think of JavaScript as the universal language of the web — it runs in the browser, on the server (Node.js), and even in mobile apps (React Native), with one consistent syntax.</p>
+  </div>
+  <div class="body-scroll">
+    <div class="grid grid-2">
+      <div class="card"><h3 style="font-size:16px;">Concise Syntax</h3><p style="font-size:16px;">Full functionality with cleaner, readable code.</p></div>
+      <div class="card"><h3 style="font-size:16px;">Java Interop</h3><p style="font-size:16px;">Mixes freely with existing Java libraries.</p></div>
+      <div class="card"><h3 style="font-size:16px;">Null Safety</h3><p style="font-size:16px;">Prevents common null pointer crashes.</p></div>
+      <div class="card"><h3 style="font-size:16px;">Standalone Apps</h3><p style="font-size:16px;">Android, backend, or desktop tools.</p></div>
+    </div>
+  </div>
+</div>`);
+
+// 11. JS CODE
+const JS_CODE = [
+  '// JavaScript (Node.js)',
+  "const appName = 'Reminder App';",
+  'console.log(`Running ${appName} in Node.js.`);',
+  '',
+  '// Output:',
+  '// Running Reminder App in Node.js.'
+].join('\n');
+SLIDES.push(`
+<div class="slide-inner">
+  <span class="kicker"><span class="dot"></span>B.5 · SAMPLE CODE</span>
+  <h1 class="h1">JavaScript in Practice</h1>
+  <p class="sub">A minimal JavaScript program: declaring a variable with <code style="font-family:var(--font-mono);color:var(--cyan);">const</code> and printing template-literal output.</p>
+  <div class="code-row single">
+    ${codeCard('main.js', 'javascript', JS_CODE)}
+  </div>
+</div>`);
+
+// 12. ANALOGY FAST FOOD
+SLIDES.push(`
+<div class="slide-inner">
+  <span class="kicker"><span class="dot"></span>C · ANALOGY</span>
+  <h1 class="h1">The Fast-Food Counter</h1>
+  <p class="sub">A real-world way to feel the difference between stateful and stateless systems.</p>
+  <div class="flow-analogy" style="flex:1;">
+    <div class="card">
+      <div class="col-title" style="color:var(--red);">STATEFUL (TRADITIONAL)</div>
+      <p>You place an order with Cashier A. If you want to add a drink later, you must return to <strong>Cashier A</strong> — only they remember your existing order.</p>
+    </div>
+    <div class="vs">VS</div>
+    <div class="card">
+      <div class="col-title" style="color:var(--cyan);">STATELESS (MODERN WEB APIs)</div>
+      <p>You place an order and receive a detailed receipt (token). To modify it, walk up to <strong>any cashier</strong> — show your receipt, and they process it instantly, no history check needed.</p>
+    </div>
+  </div>
+</div>`);
+
+// 13. INDUSTRY USE CASES
+SLIDES.push(`
+<div class="slide-inner">
+  <span class="kicker"><span class="dot"></span>C · REAL-WORLD USE</span>
+  <h1 class="h1">Industry Use Cases</h1>
+  <div class="grid grid-2">
+    <div class="card">
+      <h3><span class="num-badge">1</span>High-Traffic Social Networks</h3>
+      <p>Platforms use <strong>Document &amp; Key-Value stores</strong> (MongoDB, Redis) to serve feeds instantly. Authentication runs on <strong>stateless tokens (JWTs)</strong>, so any backend server can verify requests without a database lookup.</p>
+    </div>
+    <div class="card">
+      <h3><span class="num-badge">2</span>Cross-Platform Hardware Connectivity</h3>
+      <p>Plug in a new USB drawing tablet, and the OS installs a specialized <strong>input driver</strong> that converts physical stylus pressure into real-time digital cursor coordinates.</p>
+    </div>
+  </div>
+</div>`);
+
+// 14. RECAP
+SLIDES.push(`
+<div class="slide-inner">
+  <span class="kicker"><span class="dot"></span>D · RECAP</span>
+  <h1 class="h1">Summary Takeaways</h1>
+  <div class="body-scroll">
+    <div class="grid grid-2">
+      <div class="card"><h3><span class="num-badge">✓</span>NoSQL Databases</h3><p>Provide schema flexibility &amp; horizontal scalability for structured, semi-structured, or unstructured data.</p></div>
+      <div class="card"><h3><span class="num-badge">✓</span>Stateless Architecture</h3><p>Processes each request independently, removing server-side session overhead and maximizing scaling.</p></div>
+      <div class="card"><h3><span class="num-badge">✓</span>Device Drivers</h3><p>Act as essential software bridges between operating systems and physical hardware.</p></div>
+      <div class="card"><h3><span class="num-badge">✓</span>JavaScript</h3><p>A dynamic, cross-platform language that runs in browsers and on servers — the backbone of modern web development.</p></div>
+    </div>
+  </div>
+</div>`);
+
+// 15. KEY QUOTES (moved right after recap)
+SLIDES.push(`
+<div class="slide-inner">
+  <span class="kicker"><span class="dot"></span>KEY QUOTES</span>
+  <h1 class="h1">Worth Remembering</h1>
+  <div class="body-scroll">
+    <div class="quote-block">
+      <p>"In a stateless system, the client must send all necessary context with every single request."</p>
+      <span class="src">— Key Rule, Stateless Architecture</span>
+    </div>
+    <div class="quote-block">
+      <p>"Think of JavaScript as the universal language of the web — it runs in the browser, on the server (Node.js), and even in mobile apps (React Native), with one consistent syntax."</p>
+      <span class="src">— Analogy, Introduction to JavaScript</span>
+    </div>
+    <div class="quote-block">
+      <p>"NoSQL databases provide a non-relational approach to data storage and management, designed to address the scalability and schema limitations of traditional relational databases."</p>
+      <span class="src">— What is a NoSQL Database?</span>
+    </div>
+  </div>
+</div>`);
+
+// 16. ACTIVITIES — MCQ (5 questions, 2-col, last centered)
+function mcq(n, q, opts, letters){
+  return `<div class="qa-card${n===5?' centered':''}">
+    <span class="qa-num">MCQ · Q${n}</span>
+    <p class="qa-q">${q}</p>
+    <ul class="qa-opts">${opts.map((o,i)=>`<li><b>${letters[i]}.</b> ${o}</li>`).join('')}</ul>
+  </div>`;
+}
+SLIDES.push(`
+<div class="slide-inner">
+  <span class="kicker"><span class="dot"></span>F · SKILL CHECK</span>
+  <h1 class="h1">Activities — Multiple Choice</h1>
+  <div class="body-scroll">
+    <div class="qa-grid">
+      ${mcq(1,'Which driver enables a webcam to capture video for conferencing and recording?',['Webcam Drivers','Storage Drivers','Scanner Drivers','USB Drivers'],['A','B','C','D'])}
+      ${mcq(2,'What component enables an OS to interact with external devices such as flash drives?',['Webcam Drivers','Storage Drivers','Scanner Drivers','USB Drivers'],['A','B','C','D'])}
+      ${mcq(3,'Which driver lets the OS process images from a physical scanner?',['Webcam Drivers','Storage Drivers','Scanner Drivers','USB Drivers'],['A','B','C','D'])}
+      ${mcq(4,'Which drivers manage data access on SSDs and hard disk drives?',['Webcam Drivers','Storage Drivers','Scanner Drivers','USB Drivers'],['A','B','C','D'])}
+      ${mcq(5,'Which drivers let a computer send formatted print jobs to physical hardware?',['Webcam Drivers','Storage Drivers','Scanner Drivers','Printer Drivers'],['A','B','C','D'])}
+    </div>
+  </div>
+</div>`);
+
+// 17-18. ACTIVITIES — IDENTIFICATION (10 items: 5 direct + 5 situational)
+function idCard(n, tag, text){
+  return `<div class="id-card"><span class="tag">${tag} · Item ${n}</span><p>${text}</p></div>`;
+}
+SLIDES.push(`
+<div class="slide-inner">
+  <span class="kicker"><span class="dot"></span>F · SKILL CHECK</span>
+  <h1 class="h1">Activities — Identification <span style="color:var(--muted);font-size:16px;font-weight:400;">(1–5, direct)</span></h1>
+  <div class="body-scroll">
+    <div class="grid grid-2">
+      ${idCard(1,'Direct','This type of database organizes data into columns instead of rows, ideal for time-series and analytics workloads.')}
+      ${idCard(2,'Direct','This architecture requires the client to send all necessary context with every single request.')}
+      ${idCard(3,'Direct','This software component acts as a translator between the operating system and a physical hardware device.')}
+      ${idCard(4,'Direct','This modern JVM language offers null safety and a more concise syntax as an alternative to Java.')}
+      ${idCard(5,'Direct','This NoSQL category stores data as simple key-value pairs, commonly used for caching.')}
+    </div>
+  </div>
+</div>`);
+
+SLIDES.push(`
+<div class="slide-inner">
+  <span class="kicker"><span class="dot"></span>F · SKILL CHECK</span>
+  <h1 class="h1">Activities — Identification <span style="color:var(--muted);font-size:16px;font-weight:400;">(6–10, situational)</span></h1>
+  <div class="body-scroll">
+    <div class="grid grid-2">
+      ${idCard(6,'Situational','A social app must authenticate millions of users per second without any single backend server remembering who is logged in. What concept makes this possible?')}
+      ${idCard(7,'Situational','A startup\\u2019s user records keep changing shape — some users have 3 fields, others 12 — and a rigid schema breaks every sprint. What kind of database solves this?')}
+      ${idCard(8,'Situational','You plug in a brand-new graphics tablet, and the OS instantly starts converting pen strokes into cursor movement. What made this possible?')}
+      ${idCard(9,'Situational','An e-commerce platform wants to efficiently map "customers who bought this also bought that." Which database type fits best?')}
+      ${idCard(10,'Situational','A developer wants to write Android app logic with fewer lines than Java, plus built-in protection from null pointer crashes. What should they use?')}
+    </div>
+  </div>
+</div>`);
+
+// 19. GUIDED DRILL — REMINDER APP
+const REMINDER_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reminder App</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 30px; }
+        .container { max-width: 400px; margin: 0 auto; background: #ffffff; padding: 20px;
+            border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .title { text-align: center; color: #333; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        input[type="text"] { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 8px 12px; background-color: #28a745; color: white; border: none;
+            border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #218838; }
+        ul { list-style: none; padding: 0; }
+        li { padding: 8px; background: #e9ecef; margin-bottom: 6px; border-radius: 4px; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 20px 30px; border-radius: 8px; text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .close-btn { margin-top: 15px; background-color: #dc3545; }
+        .close-btn:hover { background-color: #c82333; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 class="title">Reminder App</h2>
+    <div class="input-group">
+        <input type="text" id="reminderInput" placeholder="Enter a reminder...">
+        <button onclick="addReminder()">Add Reminder</button>
+    </div>
+    <ul id="reminderList"></ul>
+</div>
+
+<div class="modal-overlay" id="reminderModal">
+    <div class="modal-content">
+        <h3>Reminder</h3>
+        <p id="modalText">Time to check your task!</p>
+        <button class="close-btn" onclick="closeModal()">Close</button>
+    </div>
+</div>
+
+<script>
+    const reminders = [];
+    let currentIndex = 0;
+
+    function addReminder() {
+        const input = document.getElementById('reminderInput');
+        const text = input.value.trim();
+        if (text !== "") {
+            reminders.push(text);
+            const li = document.createElement('li');
+            li.textContent = text;
+            document.getElementById('reminderList').appendChild(li);
+            input.value = "";
+        }
+    }
+
+    setInterval(() => {
+        if (reminders.length > 0) {
+            const currentReminder = reminders[currentIndex];
+            document.getElementById('modalText').textContent = currentReminder;
+            document.getElementById('reminderModal').style.display = 'flex';
+            currentIndex = (currentIndex + 1) % reminders.length;
+        }
+    }, 5000);
+
+    function closeModal() {
+        document.getElementById('reminderModal').style.display = 'none';
+    }
+<\/script>
+</body>
+</html>`;
+SLIDES.push(`
+<div class="slide-inner">
+  <span class="kicker"><span class="dot"></span>E · GUIDED DRILL</span>
+  <h1 class="h1">Micro-Project: Interactive Reminder App</h1>
+  <p class="sub">A client-side reminder app using plain HTML, CSS &amp; vanilla JS DOM manipulation — an interval timer triggers a pop-up modal every few seconds.</p>
+  <div class="code-row">
+    ${codeCard('reminder-app.html', 'html', REMINDER_HTML)}
+    <div class="code-card">
+      <div class="code-head"><div class="fname"><span class="icon-inline" style="margin-right:7px;">${ICONS.html}</span>How to test it</div></div>
+      <div class="panel-notes">
+        <h4>Steps</h4>
+        <ul>
+          <li>Copy the code and save it as <strong>reminder-app.html</strong>.</li>
+          <li>Open the file in any modern browser.</li>
+          <li>Type a reminder and click <strong>Add Reminder</strong> — it appears in the list.</li>
+          <li>Wait 5 seconds — a modal pops up cycling through your saved reminders.</li>
+          <li>Click <strong>Close</strong> to dismiss; the timer keeps running in the background.</li>
+        </ul>
+        <h4>What to notice</h4>
+        <ul>
+          <li><strong>setInterval</strong> drives the recurring pop-up — a simple stateful, in-memory array on the client.</li>
+          <li>DOM nodes are created with <strong>createElement</strong> and appended live — no page reload needed.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>`);
+
+// 20. FAQs
+SLIDES.push(`
+<div class="slide-inner">
+  <span class="kicker"><span class="dot"></span>D · FAQs</span>
+  <h1 class="h1">Frequently Asked Questions</h1>
+  <div class="body-scroll">
+    <div class="grid" style="grid-template-columns:1fr;">
+      <div class="card"><h3>Q1. What is a non-schema database, and how does it differ from a schema database?</h3><p>A non-schema (NoSQL) database doesn't enforce a rigid table structure, so records can have varying fields. A traditional schema database enforces strict columns, data types, and relationships up front.</p></div>
+      <div class="card"><h3>Q2. Can JavaScript work with non-schema databases like MongoDB?</h3><p>Yes. JavaScript interoperates with all major NoSQL drivers via npm packages, letting developers query databases like MongoDB using concise, async/await syntax.</p></div>
+      <div class="card"><h3>Q3. What happens if a hardware device lacks a correct driver?</h3><p>Without a compatible driver, the OS can't translate requests into commands the hardware understands — the device becomes unusable or limited to basic generic function.</p></div>
+    </div>
+  </div>
+</div>`);
+
+// 21. ANSWER KEY — MCQ
+SLIDES.push(`
+<div class="slide-inner">
+  <span class="kicker"><span class="dot"></span>ANSWER KEY</span>
+  <h1 class="h1">Answer Key — Multiple Choice</h1>
+  <div class="body-scroll">
+    <div class="answer-grid">
+      <div class="ans-row"><div class="ans-check">A</div><div class="ans-body"><b>Q1 — Webcam Drivers</b><span>Handle communication between camera sensors and video software.</span></div></div>
+      <div class="ans-row"><div class="ans-check">D</div><div class="ans-body"><b>Q2 — USB Drivers</b><span>Manage USB protocols for the OS to talk to plugged-in peripherals.</span></div></div>
+      <div class="ans-row"><div class="ans-check">C</div><div class="ans-body"><b>Q3 — Scanner Drivers</b><span>Digitize optical signals into image/PDF formats the OS can read.</span></div></div>
+      <div class="ans-row"><div class="ans-check">B</div><div class="ans-body"><b>Q4 — Storage Drivers</b><span>Handle block-level read/write requests to SSDs and HDDs.</span></div></div>
+      <div class="ans-row"><div class="ans-check">D</div><div class="ans-body"><b>Q5 — Printer Drivers</b><span>Convert digital layouts into print languages physical printers execute.</span></div></div>
+    </div>
+  </div>
+</div>`);
+
+// 22. ANSWER KEY — IDENTIFICATION
+SLIDES.push(`
+<div class="slide-inner">
+  <span class="kicker"><span class="dot"></span>ANSWER KEY</span>
+  <h1 class="h1">Answer Key — Identification</h1>
+  <div class="body-scroll">
+    <div class="answer-grid">
+      <div class="ans-row"><div class="ans-check">✓</div><div class="ans-body"><b>1 — Column-Family Database</b><span>Columns instead of rows suit fast analytical & time-series queries.</span></div></div>
+      <div class="ans-row"><div class="ans-check">✓</div><div class="ans-body"><b>2 — Stateless Architecture</b><span>Every request must carry its own context, like tokens or IDs.</span></div></div>
+      <div class="ans-row"><div class="ans-check">✓</div><div class="ans-body"><b>3 — Device Driver</b><span>Translates OS requests into hardware-specific commands.</span></div></div>
+      <div class="ans-row"><div class="ans-check">✓</div><div class="ans-body"><b>4 — JavaScript</b><span>Dynamic cross-platform language with concise, async-friendly syntax.</span></div></div>
+      <div class="ans-row"><div class="ans-check">✓</div><div class="ans-body"><b>5 — Key-Value Store</b><span>Simple key/value pairs, e.g. Redis, ideal for caching.</span></div></div>
+      <div class="ans-row"><div class="ans-check">✓</div><div class="ans-body"><b>6 — Stateless Architecture (JWT)</b><span>Tokens let any server verify identity without shared session memory.</span></div></div>
+      <div class="ans-row"><div class="ans-check">✓</div><div class="ans-body"><b>7 — NoSQL / Non-Schema Database</b><span>Flexible fields per record absorb constantly changing shapes.</span></div></div>
+      <div class="ans-row"><div class="ans-check">✓</div><div class="ans-body"><b>8 — Device Driver (input)</b><span>An input driver converts stylus pressure into cursor data.</span></div></div>
+      <div class="ans-row"><div class="ans-check">✓</div><div class="ans-body"><b>9 — Graph Database</b><span>Nodes & edges naturally model relationships between purchases.</span></div></div>
+      <div class="ans-row"><div class="ans-check">✓</div><div class="ans-body"><b>10 — JavaScript</b><span>Universal language for web, server, and cross-platform development.</span></div></div>
+    </div>
+  </div>
+</div>`);
+
+// 23. CLOSING
+SLIDES.push(`
+<div class="slide-inner closing-slide">
+  <span class="kicker"><span class="dot"></span>CLOSING</span>
+  <p class="quote">"Good architecture remembers nothing so it can serve everyone."</p>
+  <p class="bye">Thanks for working through NoSQL, stateless systems, drivers &amp; JavaScript — build something small, and see how far a few concise lines can go.</p>
+</div>`);
+
+/* ============================= RENDER & NAVIGATION ============================= */
+const deckEl = document.getElementById('deck');
+let current = 0;
+SLIDES.forEach((html, i)=>{
+  const div = document.createElement('div');
+  div.className = 'slide';
+  div.innerHTML = `<div class="slide-inner-wrap" style="width:100%;height:100%;display:flex;">${html}</div>`;
+  deckEl.appendChild(div);
+});
+const slideEls = Array.from(document.querySelectorAll('.slide'));
+document.getElementById('tot').textContent = SLIDES.length;
+
+function render(prevIndex){
+  slideEls.forEach((el, i)=>{
+    el.classList.remove('active','leaving-back');
+    if(i === current){
+      el.classList.add('active');
+      if(prevIndex !== undefined && prevIndex > current) el.classList.add('leaving-back');
+    }
+  });
+  document.getElementById('cur').textContent = current + 1;
+  document.getElementById('progress-fill').style.width = ((current+1)/SLIDES.length*100) + '%';
+}
+function goTo(i){
+  const prev = current;
+  current = Math.max(0, Math.min(SLIDES.length-1, i));
+  render(prev);
+}
+function next(){ if(current < SLIDES.length-1) goTo(current+1); }
+function prev(){ if(current > 0) goTo(current-1); }
+
+render();
+
+/* ============================= INPUT HANDLING ============================= */
+document.addEventListener('keydown', (e)=>{
+  if(e.key === '?' ){ toggleShortcuts(); return; }
+  if(document.getElementById('shortcuts-overlay').classList.contains('show')){
+    if(e.key === 'Escape') toggleShortcuts();
+    return;
+  }
+  if(e.key === 'ArrowRight' || e.key === ' '){ next(); e.preventDefault(); }
+  else if(e.key === 'ArrowLeft'){ prev(); e.preventDefault(); }
+  else if(e.key === 'Home'){ goTo(0); e.preventDefault(); }
+  else if(e.key === 'End'){ goTo(SLIDES.length-1); e.preventDefault(); }
+});
+
+function toggleShortcuts(){
+  document.getElementById('shortcuts-overlay').classList.toggle('show');
+}
+document.getElementById('shortcuts-overlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'shortcuts-overlay') toggleShortcuts();
+});
+
+// Right-click = next (left-click stays free for selection/buttons)
+document.addEventListener('contextmenu', (e)=>{ e.preventDefault(); next(); });
+
+// Block browser back/forward mouse buttons (Mouse3/Mouse4) at capture, and repurpose them
+document.addEventListener('mousedown', (e)=>{
+  if(e.button === 3 || e.button === 4){
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }
+}, true);
+document.addEventListener('mouseup', (e)=>{
+  if(e.button === 3){ prev(); e.preventDefault(); e.stopImmediatePropagation(); }
+  else if(e.button === 4){ next(); e.preventDefault(); e.stopImmediatePropagation(); }
+}, true);
+window.addEventListener('popstate', (e)=>{ /* prevent history nav from disrupting deck */ });
+
+// Swipe support
+let touchStartX = null;
+document.addEventListener('touchstart', (e)=>{ touchStartX = e.touches[0].clientX; }, {passive:true});
+document.addEventListener('touchend', (e)=>{
+  if(touchStartX === null) return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if(Math.abs(dx) > 50){ dx < 0 ? next() : prev(); }
+  touchStartX = null;
+}, {passive:true});
+</script>
+</body>
+</html>

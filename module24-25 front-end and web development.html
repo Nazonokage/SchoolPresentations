@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Web Mapping with Leaflet.js</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+  :root{
+    --bg:#12151f;
+    --bg-raised:#1a1f2e;
+    --bg-raised-2:#171c29;
+    --shadow-dark:#090b11;
+    --shadow-light:#252c40;
+    --text:#eef1f8;
+    --text-dim:#b3bcd4;
+    --text-faint:#8791ab;
+    --accent:#4fd6c4;
+    --accent-soft:rgba(79,214,196,0.14);
+    --accent-2:#f5a962;
+    --accent-2-soft:rgba(245,169,98,0.14);
+    --accent-3:#7c9eff;
+    --accent-3-soft:rgba(124,158,255,0.14);
+    --danger:#ef7b8c;
+    --grid-line:rgba(124,158,255,0.05);
+    --hairline:rgba(238,241,248,0.055);
+    --radius-lg:24px;
+    --radius-md:18px;
+    --radius-sm:12px;
+    --code-bg:#0c0f17;
+    --font-display:'Space Grotesk',-apple-system,"Segoe UI",Roboto,sans-serif;
+    --font-body:'Inter',-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --font-mono:'JetBrains Mono',"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    overflow:hidden;
+    -webkit-tap-highlight-color:transparent;
+    user-select:none;
+  }
+  ::selection{ background:var(--accent); color:#0c1016; }
+  input, textarea{ user-select:text; }
+
+  .deck{
+    position:relative; width:100vw; height:100vh; overflow:hidden;
+    background:
+      radial-gradient(ellipse 1100px 750px at 12% -8%, rgba(124,158,255,0.09), transparent 60%),
+      radial-gradient(ellipse 1000px 700px at 105% 108%, rgba(79,214,196,0.08), transparent 60%),
+      var(--bg);
+  }
+  .deck::before{
+    content:"";
+    position:absolute; inset:0; z-index:0; pointer-events:none;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size:66px 66px;
+    -webkit-mask-image:radial-gradient(ellipse 78% 68% at 50% 42%, #000 0%, transparent 78%);
+    mask-image:radial-gradient(ellipse 78% 68% at 50% 42%, #000 0%, transparent 78%);
+  }
+  .slides{ position:relative; z-index:1; }
+
+  /* ---------- progress + counter ---------- */
+  .progress-track{
+    position:fixed; top:0; left:0; right:0; height:5px; z-index:50;
+    background:var(--shadow-dark);
+    box-shadow:inset 2px 2px 4px var(--shadow-dark), inset -2px -2px 4px var(--shadow-light);
+  }
+  .progress-bar{
+    height:100%; width:0%;
+    background:linear-gradient(90deg,var(--accent),var(--accent-3));
+    transition:width 350ms ease;
+  }
+  .counter{
+    position:fixed; bottom:22px; right:26px; z-index:50;
+    font-family:var(--font-mono);
+    font-size:15px; font-weight:500; letter-spacing:0.02em;
+    color:var(--text-dim);
+    background:var(--bg-raised);
+    border:1px solid var(--hairline);
+    padding:9px 18px; border-radius:999px;
+    box-shadow:6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);
+  }
+  .hint{
+    position:fixed; bottom:22px; left:26px; z-index:50;
+    font-size:15px; color:var(--text-faint);
+    background:var(--bg-raised);
+    border:1px solid var(--hairline);
+    padding:9px 18px; border-radius:999px;
+    box-shadow:6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);
+  }
+  .hint kbd{
+    font-family:var(--font-mono);
+    background:var(--bg); border-radius:6px; padding:1px 7px; font-size:14px;
+    box-shadow:inset 2px 2px 4px var(--shadow-dark), inset -2px -2px 4px var(--shadow-light);
+    color:var(--accent);
+  }
+
+  /* ---------- slides ---------- */
+  .slides{ position:relative; width:100%; height:100%; }
+  .slide{
+    position:absolute; inset:0;
+    display:none;
+    flex-direction:column;
+    padding:64px 84px 90px 84px;
+    overflow-y:auto;
+  }
+  .slide.active{ display:flex; }
+  @keyframes enterNext{ from{opacity:0; transform:translateX(56px);} to{opacity:1; transform:translateX(0);} }
+  @keyframes enterPrev{ from{opacity:0; transform:translateX(-56px);} to{opacity:1; transform:translateX(0);} }
+  .slide.enter-next{ animation:enterNext 350ms ease; }
+  .slide.enter-prev{ animation:enterPrev 350ms ease; }
+  @media (prefers-reduced-motion:reduce){
+    .slide.enter-next, .slide.enter-prev{ animation:none; }
+    .progress-bar{ transition:none; }
+  }
+
+  .eyebrow{
+    display:flex; align-items:center; gap:10px;
+    font-family:var(--font-mono);
+    font-size:13px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--accent); margin:0 0 16px 0;
+  }
+  .eyebrow::before{
+    content:""; width:22px; height:1px; flex-shrink:0;
+    background:linear-gradient(90deg,var(--accent),transparent);
+  }
+  h1.title, h2.title{ font-family:var(--font-display); }
+  h1.title{ font-size:48px; line-height:1.12; margin:0 0 12px 0; font-weight:700; letter-spacing:-0.015em; }
+  h2.title{ font-size:34px; line-height:1.2; margin:0 0 22px 0; font-weight:700; letter-spacing:-0.015em; }
+  .subtitle{ font-size:19px; color:var(--text-dim); max-width:760px; line-height:1.65; margin:0 0 8px 0; }
+
+  .content{ flex:1; min-height:0; display:flex; flex-direction:column; }
+
+  .card{
+    background:var(--bg-raised);
+    border:1px solid var(--hairline);
+    border-radius:var(--radius-md);
+    box-shadow:10px 10px 24px var(--shadow-dark), -10px -10px 24px var(--shadow-light);
+    padding:26px 28px;
+  }
+  .card.inset{
+    box-shadow:inset 6px 6px 12px var(--shadow-dark), inset -6px -6px 12px var(--shadow-light);
+  }
+  .grid{ display:grid; gap:22px; }
+  .grid-2{ grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+  .grid-3{ grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .grid-4{ grid-template-columns:repeat(4,minmax(0,1fr)); }
+
+  p{ font-size:17px; line-height:1.7; color:var(--text-dim); margin:0 0 12px 0; }
+  li{ font-size:17px; line-height:1.65; color:var(--text-dim); }
+  strong{ color:var(--text); }
+  a{ color:var(--accent); }
+
+  .badge{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--font-display);
+    font-size:15px; font-weight:600; color:var(--text);
+    background:var(--bg-raised); border:1px solid var(--hairline);
+    padding:9px 16px; border-radius:999px;
+    box-shadow:5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+  }
+  .badge svg{ width:22px; height:22px; flex-shrink:0; }
+  .badge-row{ display:flex; gap:14px; flex-wrap:wrap; margin-top:18px; }
+
+  .icon-chip{
+    width:52px; height:52px; border-radius:16px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--bg-raised); border:1px solid var(--hairline);
+    box-shadow:5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+  }
+  .icon-chip svg{ width:28px; height:28px; }
+
+  .num-chip{
+    width:40px; height:40px; border-radius:12px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-mono);
+    background:var(--bg); font-weight:600; font-size:16px; color:var(--accent);
+    box-shadow:inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+  }
+
+  .img-box{
+    border-radius:var(--radius-md); overflow:hidden;
+    border:1px solid var(--hairline);
+    box-shadow:10px 10px 24px var(--shadow-dark), -10px -10px 24px var(--shadow-light);
+  }
+  .img-box img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+  .footnote{ font-size:15px; color:var(--text-faint); margin-top:6px; }
+
+  .quote-mark{ font-family:var(--font-display); font-size:44px; color:var(--accent); line-height:1; margin-bottom:4px; display:block; }
+
+  /* code panels */
+  .code-row{ display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:22px; height:min(540px,60vh); min-height:0; }
+  .code-row.single{ grid-template-columns:minmax(0,1fr); }
+  .code-card{
+    display:flex; flex-direction:column; height:100%; min-height:0;
+    background:var(--code-bg); border:1px solid var(--hairline); border-radius:var(--radius-md); overflow:hidden;
+    box-shadow:10px 10px 24px var(--shadow-dark), -10px -10px 24px var(--shadow-light);
+  }
+  .code-head{
+    flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
+    padding:14px 18px; background:var(--bg-raised-2);
+    border-bottom:1px solid var(--hairline);
+  }
+  .code-head .fname{ font-family:var(--font-mono); font-size:14px; font-weight:500; color:var(--text-dim); letter-spacing:0.02em; }
+  .copy-btn{
+    font-family:var(--font-display);
+    font-size:14px; font-weight:600; color:var(--text);
+    background:var(--bg-raised); border:1px solid var(--hairline); cursor:pointer;
+    padding:8px 16px; border-radius:10px;
+    box-shadow:4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light);
+  }
+  .copy-btn:active, .copy-btn.copied{
+    box-shadow:inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+    color:var(--accent);
+  }
+  .code-card pre{
+    flex:1; overflow:auto; min-height:0; margin:0;
+    padding:18px 20px; font-size:15px; line-height:1.65;
+    font-family:var(--font-mono);
+  }
+  .code-card code{ white-space:pre; }
+  .tok-tag{ color:#7c9eff; } .tok-attr{ color:#f5a962; } .tok-str{ color:#8ee6b0; }
+  .tok-kw{ color:#c792ea; } .tok-fn{ color:#82d4f0; } .tok-com{ color:#6d7690; }
+  .tok-num{ color:#f5a962; } .tok-punct{ color:#9aa4ba; }
+
+  .notes-panel{
+    height:100%; min-height:0; overflow-y:auto;
+    display:flex; flex-direction:column; gap:14px;
+    background:var(--bg-raised); border:1px solid var(--hairline); border-radius:var(--radius-md);
+    padding:22px 24px;
+    box-shadow:10px 10px 24px var(--shadow-dark), -10px -10px 24px var(--shadow-light);
+  }
+  .notes-panel h3{ font-size:19px; margin:0 0 2px 0; color:var(--text); }
+  .step-line{ display:flex; gap:12px; align-items:flex-start; }
+  .step-line p{ margin:0; }
+  .step-line svg{ width:20px; height:20px; flex-shrink:0; margin-top:3px; }
+
+  /* MCQ */
+  .mcq-card{
+    background:var(--bg-raised); border:1px solid var(--hairline); border-radius:var(--radius-md);
+    padding:22px 24px;
+    box-shadow:8px 8px 18px var(--shadow-dark), -8px -8px 18px var(--shadow-light);
+  }
+  .mcq-q{ font-family:var(--font-display); font-size:18px; font-weight:600; color:var(--text); margin-bottom:12px; }
+  .mcq-opt{
+    font-size:15px; color:var(--text-dim); padding:9px 12px; border-radius:10px;
+    margin-bottom:7px; background:var(--bg);
+    box-shadow:inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+  }
+  .mcq-opt b{ font-family:var(--font-mono); color:var(--accent); margin-right:8px; }
+  .mcq-grid{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .mcq-centered{ max-width:calc(50% - 10px); margin:0 auto; }
+
+  .answer-card{
+    background:var(--bg-raised); border:1px solid var(--hairline); border-radius:var(--radius-md);
+    padding:18px 22px; box-shadow:8px 8px 18px var(--shadow-dark), -8px -8px 18px var(--shadow-light);
+  }
+  .answer-card .ans{ font-family:var(--font-mono); color:var(--accent); font-weight:600; font-size:16px; }
+  .answer-card p{ margin:6px 0 0 0; font-size:15px; }
+
+  /* shortcuts overlay */
+  .overlay{
+    position:fixed; inset:0; z-index:100; display:none;
+    align-items:center; justify-content:center;
+    background:rgba(6,7,11,0.78); backdrop-filter:blur(4px);
+  }
+  .overlay.show{ display:flex; }
+  .overlay-card{
+    background:var(--bg-raised); border:1px solid var(--hairline); border-radius:var(--radius-lg);
+    padding:40px 44px; max-width:560px; width:90%;
+    box-shadow:16px 16px 32px var(--shadow-dark), -16px -16px 32px var(--shadow-light);
+  }
+  .overlay-card h2{ font-family:var(--font-display); font-size:25px; font-weight:600; margin:0 0 20px 0; }
+  .shortcut-row{ display:flex; justify-content:space-between; align-items:center; padding:11px 0; border-bottom:1px solid var(--hairline); font-size:16px; color:var(--text-dim); }
+  .shortcut-row:last-child{ border-bottom:none; }
+  .shortcut-row kbd{
+    font-family:var(--font-mono);
+    background:var(--bg); color:var(--accent); font-weight:600;
+    padding:5px 12px; border-radius:8px; font-size:14px;
+    box-shadow:inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+  }
+
+  h3{ font-family:var(--font-display); font-size:19px; font-weight:600; color:var(--text); margin:0 0 8px 0; }
+
+  ::-webkit-scrollbar{ width:10px; height:10px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--shadow-light); border-radius:10px; }
+
+  @media (max-width:900px){
+    .slide{ padding:36px 22px 80px 22px; }
+    h1.title{ font-size:32px; }
+    h2.title{ font-size:26px; }
+    .grid-2, .grid-3, .grid-4{ grid-template-columns:1fr; }
+    .code-row{ grid-template-columns:1fr; height:auto; }
+    .code-row .code-card{ height:min(360px,50vh); }
+    .mcq-grid{ grid-template-columns:1fr; }
+    .mcq-centered{ max-width:100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck">
+  <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
+  <div class="counter" id="counter">1 / 21</div>
+  <div class="hint">Right-click or <kbd>&#8594;</kbd> next &nbsp;·&nbsp; <kbd>?</kbd> shortcuts</div>
+
+  <div class="slides" id="slides"></div>
+
+  <div class="overlay" id="shortcutsOverlay">
+    <div class="overlay-card">
+      <h2>Keyboard &amp; Mouse Shortcuts</h2>
+      <div class="shortcut-row"><span>Next slide</span><span><kbd>&#8594;</kbd> or right-click or Mouse4</span></div>
+      <div class="shortcut-row"><span>Previous slide</span><span><kbd>&#8592;</kbd> or Mouse3</span></div>
+      <div class="shortcut-row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+      <div class="shortcut-row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+      <div class="shortcut-row"><span>Toggle this panel</span><span><kbd>?</kbd></span></div>
+      <div class="shortcut-row"><span>Close panel</span><span><kbd>Esc</kbd></span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+/* =========================================================
+   Reusable inline SVG icon library (theme-matched, offline)
+   ========================================================= */
+var ICONS = {
+  leaf: '<svg viewBox="0 0 24 24" fill="none" role="img"><title>Leaflet.js</title><path d="M20 4C11 4 4 10 4 18c0 1 0 2 .3 2 4-6 9-9 14-10-4 2-8 5-11 10 1 .5 2 .5 3 .5 8 0 11-8 11-14 0-1 0-2-1.3-2.5z" fill="#4fd6c4"/></svg>',
+  globe: '<svg viewBox="0 0 24 24" fill="none" role="img"><title>OpenStreetMap</title><circle cx="12" cy="12" r="9" stroke="#7c9eff" stroke-width="1.6"/><path d="M3 12h18M12 3c2.7 2.6 4 5.6 4 9s-1.3 6.4-4 9c-2.7-2.6-4-5.6-4-9s1.3-6.4 4-9z" stroke="#7c9eff" stroke-width="1.6"/></svg>',
+  js: '<svg viewBox="0 0 24 24" role="img"><title>JavaScript</title><rect x="2" y="2" width="20" height="20" rx="4" fill="#f5d76e"/><text x="12" y="16.5" font-size="9" font-weight="800" text-anchor="middle" fill="#171b26" font-family="monospace">JS</text></svg>',
+  html: '<svg viewBox="0 0 24 24" role="img"><title>HTML5</title><rect x="2" y="2" width="20" height="20" rx="4" fill="#f5a962"/><text x="12" y="16" font-size="7" font-weight="800" text-anchor="middle" fill="#171b26" font-family="monospace">HTML</text></svg>',
+  css: '<svg viewBox="0 0 24 24" role="img"><title>CSS3</title><rect x="2" y="2" width="20" height="20" rx="4" fill="#7c9eff"/><text x="12" y="16" font-size="7.5" font-weight="800" text-anchor="middle" fill="#171b26" font-family="monospace">CSS</text></svg>',
+  pin: '<svg viewBox="0 0 24 24" fill="none" role="img"><title>Map pin</title><path d="M12 22s7-7.5 7-13a7 7 0 10-14 0c0 5.5 7 13 7 13z" fill="#f5a962"/><circle cx="12" cy="9" r="2.6" fill="#171b26"/></svg>',
+  dom: '<svg viewBox="0 0 24 24" fill="none" role="img"><title>DOM element</title><rect x="3" y="4" width="18" height="16" rx="3" stroke="#4fd6c4" stroke-width="1.6"/><path d="M3 9h18M9 9v11" stroke="#4fd6c4" stroke-width="1.6"/></svg>',
+  fn: '<svg viewBox="0 0 24 24" fill="none" role="img"><title>Function</title><path d="M8 4c-3 0-3 3-3 5v6c0 2 0 5-3 5M16 4c3 0 3 3 3 5v6c0 2 0 5 3 5" stroke="#c792ea" stroke-width="1.6"/></svg>',
+  data: '<svg viewBox="0 0 24 24" fill="none" role="img"><title>Data lookup</title><rect x="4" y="3" width="16" height="18" rx="2" stroke="#8ee6b0" stroke-width="1.6"/><path d="M8 8h8M8 12h8M8 16h5" stroke="#8ee6b0" stroke-width="1.6"/></svg>',
+  brush: '<svg viewBox="0 0 24 24" fill="none" role="img"><title>Paintbrush</title><path d="M19 3l-9 9M4 20c0-3 1-5 3-5 2 0 3 2 3 3 0 2-2 3-4 3-1 0-2-.4-2-1z" stroke="#f5a962" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 12l3 3 6-6-3-3-6 6z" fill="#4fd6c4"/></svg>',
+  binder: '<svg viewBox="0 0 24 24" fill="none" role="img"><title>Binder</title><rect x="5" y="3" width="14" height="18" rx="2" stroke="#7c9eff" stroke-width="1.6"/><circle cx="8.5" cy="7" r="0.9" fill="#7c9eff"/><circle cx="8.5" cy="12" r="0.9" fill="#7c9eff"/><circle cx="8.5" cy="17" r="0.9" fill="#7c9eff"/><path d="M12 7h5M12 12h5M12 17h3" stroke="#7c9eff" stroke-width="1.4"/></svg>',
+  restaurant: '<svg viewBox="0 0 24 24" fill="none" role="img"><title>Restaurant marker</title><path d="M7 2v8M5 2v5a2 2 0 004 0V2M17 2c-2 0-3 2-3 5s1 3 3 3v12" stroke="#f5a962" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" role="img"><title>Check</title><circle cx="12" cy="12" r="10" fill="#4fd6c4"/><path d="M7.5 12.5l3 3 6-6.5" stroke="#0c1016" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  spark: '<svg viewBox="0 0 24 24" fill="none" role="img"><title>Celebration</title><path d="M12 2v5M12 17v5M2 12h5M17 12h5M4.5 4.5l3.5 3.5M16 16l3.5 3.5M19.5 4.5L16 8M8 16l-3.5 3.5" stroke="#f5a962" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="3.2" fill="#4fd6c4"/></svg>',
+  quote: '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" role="img" style="flex-shrink:0;"><title>Quote</title><path d="M7 7c-2.2 0-4 1.8-4 4 0 2 1.4 3.6 3.3 3.9-.2 1.6-1 2.7-2.3 3.3l.8 1.3c2.6-1 4.2-3.2 4.2-6.5v-2c0-2.2-.8-4-2-4zM17 7c-2.2 0-4 1.8-4 4 0 2 1.4 3.6 3.3 3.9-.2 1.6-1 2.7-2.3 3.3l.8 1.3c2.6-1 4.2-3.2 4.2-6.5v-2c0-2.2-.8-4-2-4z" fill="#4fd6c4"/></svg>',
+  layers: '<svg viewBox="0 0 24 24" fill="none" role="img"><title>Layers</title><path d="M12 3l9 5-9 5-9-5 9-5z" stroke="#7c9eff" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 13l9 5 9-5M3 8l9 5 9-5" stroke="#7c9eff" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+  tile: '<svg viewBox="0 0 24 24" fill="none" role="img"><title>Tiles</title><rect x="3" y="3" width="8" height="8" rx="1.5" stroke="#4fd6c4" stroke-width="1.6"/><rect x="13" y="3" width="8" height="8" rx="1.5" stroke="#4fd6c4" stroke-width="1.6"/><rect x="3" y="13" width="8" height="8" rx="1.5" stroke="#4fd6c4" stroke-width="1.6"/><rect x="13" y="13" width="8" height="8" rx="1.5" stroke="#4fd6c4" stroke-width="1.6"/></svg>',
+  key: '<svg viewBox="0 0 24 24" fill="none" role="img"><title>No API key</title><circle cx="8" cy="15" r="4" stroke="#ef7b8c" stroke-width="1.6"/><path d="M11 12l9-9M17 6l2 2M14 9l2 2" stroke="#ef7b8c" stroke-width="1.6" stroke-linecap="round"/><path d="M4 4l16 16" stroke="#ef7b8c" stroke-width="1.6" stroke-linecap="round"/></svg>'
+};
+
+/* =========================================================
+   Slide content
+   ========================================================= */
+var slides = [];
+
+// 1. Title
+slides.push(
+'<div class="content" style="justify-content:center;">' +
+  '<div class="eyebrow">MODULE 24&ndash;25 &middot; FRONTEND WEB DEVELOPMENT</div>' +
+  '<h1 class="title" style="font-size:56px;">Interactive Web Mapping<br>with Leaflet.js</h1>' +
+  '<p class="subtitle" style="font-size:20px;">Combine HTML, CSS and JavaScript to build the <strong>&ldquo;Where You At?&rdquo;</strong> app &mdash; an interactive map that drops pins on locations your users type in, powered by the free and open-source Leaflet library.</p>' +
+  '<div class="badge-row">' +
+    '<span class="badge">' + ICONS.leaf + ' Leaflet.js</span>' +
+    '<span class="badge">' + ICONS.globe + ' OpenStreetMap</span>' +
+    '<span class="badge">' + ICONS.js + ' JavaScript</span>' +
+    '<span class="badge">' + ICONS.html + ' HTML5</span>' +
+    '<span class="badge">' + ICONS.css + ' CSS3</span>' +
+  '</div>' +
+  '<div style="margin-top:34px;">' +
+    '<svg viewBox="0 0 700 220" style="width:100%; max-width:640px; height:auto;" role="img"><title>Stylized map with route and pins</title>' +
+      '<rect x="0" y="0" width="700" height="220" rx="24" fill="#1c212f"/>' +
+      '<g opacity="0.35" stroke="#2a3145" stroke-width="1">' +
+        '<path d="M0 40h700M0 80h700M0 120h700M0 160h700M0 200h700"/>' +
+        '<path d="M60 0v220M160 0v220M260 0v220M360 0v220M460 0v220M560 0v220M660 0v220"/>' +
+      '</g>' +
+      '<path d="M40 180 C 160 120, 260 190, 360 110 S 560 70, 650 60" fill="none" stroke="#4fd6c4" stroke-width="3" stroke-dasharray="2 10" stroke-linecap="round"/>' +
+      '<circle cx="40" cy="180" r="7" fill="#7c9eff"/>' +
+      '<g transform="translate(348,86)">' + ICONS.pin.replace("<svg viewBox=\"0 0 24 24\"","<svg width=\"34\" height=\"34\" viewBox=\"0 0 24 24\"") + '</g>' +
+      '<g transform="translate(632,32)">' + ICONS.pin.replace("<svg viewBox=\"0 0 24 24\"","<svg width=\"34\" height=\"34\" viewBox=\"0 0 24 24\"") + '</g>' +
+    '</svg>' +
+  '</div>' +
+'</div>'
+);
+
+// 2. Lesson overview
+slides.push(
+'<div class="eyebrow">A. LESSON PREVIEW &amp; REVIEW</div>' +
+'<h2 class="title">What You&rsquo;ll Learn</h2>' +
+'<div class="content">' +
+  '<div class="grid grid-2" style="gap:22px;">' +
+    '<div class="card"><div style="display:flex; gap:16px; align-items:flex-start;"><div class="num-chip">1</div><div><h3>Understand the DOM</h3><p>Access specific HTML elements &mdash; input boxes, buttons, lists &mdash; from JavaScript so your page can react to user input.</p></div></div></div>' +
+    '<div class="card"><div style="display:flex; gap:16px; align-items:flex-start;"><div class="num-chip">2</div><div><h3>Implement Leaflet.js</h3><p>Use a lightweight, open-source library to render interactive, mobile-friendly maps in the browser.</p></div></div></div>' +
+    '<div class="card"><div style="display:flex; gap:16px; align-items:flex-start;"><div class="num-chip">3</div><div><h3>Build App Logic</h3><p>Write functions that add user-submitted locations to a list and update the map with markers in real time.</p></div></div></div>' +
+    '<div class="card"><div style="display:flex; gap:16px; align-items:flex-start;"><div class="num-chip">4</div><div><h3>Simulate Data</h3><p>Use a hardcoded JavaScript dictionary to convert place names into latitude &amp; longitude coordinates.</p></div></div></div>' +
+  '</div>' +
+'</div>'
+);
+
+// 3. Prerequisites
+slides.push(
+'<div class="eyebrow">PREREQUISITE RECAP</div>' +
+'<h2 class="title">Before We Start</h2>' +
+'<div class="content grid grid-2" style="align-items:stretch;">' +
+  '<div class="card">' +
+    '<h3>You should already be comfortable with:</h3>' +
+    '<ul style="margin:10px 0 0 20px; padding:0;">' +
+      '<li style="margin-bottom:8px;">Variables and arrays</li>' +
+      '<li style="margin-bottom:8px;">Functions</li>' +
+      '<li style="margin-bottom:8px;">Loops, especially <code>.forEach()</code></li>' +
+      '<li style="margin-bottom:8px;">Event listeners, e.g. <code>addEventListener</code></li>' +
+      '<li style="margin-bottom:8px;">Editing HTML &amp; CSS in a text editor or an online tool like jseditor.io / CodePen</li>' +
+    '</ul>' +
+  '</div>' +
+  '<div class="img-box"><img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80&w=1000" style="height:100%; min-height:260px;" alt="Conceptual image of a digital interactive map interface on a screen"></div>' +
+'</div>' +
+'<p class="footnote">Figure: Interactive mapping applications rely on JavaScript libraries and dynamic user input to display data on geographic layers.</p>'
+);
+
+// 4. What is Leaflet
+slides.push(
+'<div class="eyebrow">B. MAIN LESSON &middot; 1</div>' +
+'<h2 class="title">What is Leaflet.js?</h2>' +
+'<div class="content grid grid-2" style="align-items:center;">' +
+  '<div>' +
+    '<p><strong>Leaflet</strong> is a popular open-source JavaScript library for building interactive maps on the web. It is lightweight, fast, and works seamlessly on both desktop and mobile.</p>' +
+    '<p>Unlike proprietary services such as Google Maps &mdash; which require billing information and strict API keys &mdash; Leaflet leans on free, open tile servers like <strong>OpenStreetMap</strong>. That makes it ideal for student projects and prototyping.</p>' +
+    '<div class="badge-row">' +
+      '<span class="badge">' + ICONS.leaf + ' Leaflet</span>' +
+      '<span class="badge">' + ICONS.globe + ' OpenStreetMap</span>' +
+      '<span class="badge" style="color:var(--danger);">' + ICONS.key + ' No API key</span>' +
+    '</div>' +
+  '</div>' +
+  '<div class="card" style="text-align:center; padding:34px;">' +
+    '<svg viewBox="0 0 320 260" style="width:100%; max-width:300px; height:auto;" role="img"><title>Leaflet drawing a map from open tiles</title>' +
+      '<g transform="translate(60,30)">' + ICONS.leaf.replace('viewBox="0 0 24 24"','viewBox="0 0 24 24" width="60" height="60"') + '</g>' +
+      '<text x="160" y="70" text-anchor="middle" font-size="15" fill="#9aa4ba" font-family="sans-serif">Leaflet.js</text>' +
+      '<path d="M160 90v34" stroke="#4fd6c4" stroke-width="2" stroke-dasharray="4 4"/>' +
+      '<rect x="90" y="130" width="140" height="90" rx="14" fill="#171b26" stroke="#2a3145"/>' +
+      '<g transform="translate(140,150)">' + ICONS.tile.replace('viewBox="0 0 24 24"','viewBox="0 0 24 24" width="40" height="40"') + '</g>' +
+      '<text x="160" y="240" text-anchor="middle" font-size="14" fill="#6d7690" font-family="sans-serif">Map tiles from OpenStreetMap</text>' +
+    '</svg>' +
+  '</div>' +
+'</div>'
+);
+
+// 5. key features
+slides.push(
+'<div class="eyebrow">B. MAIN LESSON &middot; 1 (CONT.)</div>' +
+'<h2 class="title">Leaflet&rsquo;s Core Building Blocks</h2>' +
+'<div class="content grid grid-3">' +
+  '<div class="card"><div class="icon-chip">' + ICONS.tile + '</div><h3 style="margin-top:16px;">Tiles</h3><p>Leaflet draws the map background by fetching square image &ldquo;tiles&rdquo; from an online provider.</p></div>' +
+  '<div class="card"><div class="icon-chip">' + ICONS.layers + '</div><h3 style="margin-top:16px;">Layers</h3><p>You can stack multiple layers on a map &mdash; standard street view, satellite view, and more.</p></div>' +
+  '<div class="card"><div class="icon-chip">' + ICONS.pin + '</div><h3 style="margin-top:16px;">Markers &amp; Popups</h3><p>Drop pin markers at exact coordinates, and attach popup text that appears when they&rsquo;re clicked.</p></div>' +
+'</div>' +
+'<div class="card inset" style="margin-top:22px;">' +
+  '<div style="display:flex; gap:16px; align-items:flex-start;">' + ICONS.quote +
+  '<p style="margin:0;"><strong>Pro Tip:</strong> Leaflet does not provide the actual map images itself &mdash; it relies on a tile provider like OpenStreetMap. Our code fetches tiles from <code>https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png</code>, free for educational and non-commercial projects.</p>' +
+  '</div>' +
+'</div>'
+);
+
+// 6. Magic drawing board / DOM
+slides.push(
+'<div class="eyebrow">B. MAIN LESSON &middot; 2</div>' +
+'<h2 class="title">The &ldquo;Magic Drawing Board&rdquo;</h2>' +
+'<p style="max-width:820px;">Imagine your web page is a magic drawing board. JavaScript can talk to specific parts of that board &mdash; this is called <strong>DOM manipulation</strong>. Saving references to elements in variables means our code never has to search the whole page twice.</p>' +
+'<div class="content" style="margin-top:8px;">' +
+  '<svg viewBox="0 0 900 260" style="width:100%; height:auto; max-height:280px;" role="img"><title>Diagram mapping HTML elements to JavaScript variables</title>' +
+    '<g font-family="sans-serif">' +
+      '<rect x="20" y="30" width="230" height="56" rx="12" fill="#171b26" stroke="#2a3145"/><text x="135" y="64" text-anchor="middle" font-size="15" fill="#e9edf5">&lt;input id=&quot;locationInput&quot;&gt;</text>' +
+      '<rect x="20" y="102" width="230" height="56" rx="12" fill="#171b26" stroke="#2a3145"/><text x="135" y="136" text-anchor="middle" font-size="15" fill="#e9edf5">&lt;button id=&quot;addLocation...&quot;&gt;</text>' +
+      '<rect x="20" y="174" width="230" height="56" rx="12" fill="#171b26" stroke="#2a3145"/><text x="135" y="208" text-anchor="middle" font-size="15" fill="#e9edf5">&lt;ul id=&quot;locationsList&quot;&gt;</text>' +
+      '<path d="M250 58 C 330 58, 330 58, 400 58" stroke="#4fd6c4" stroke-width="2" fill="none" marker-end="url(#arrow6)"/>' +
+      '<path d="M250 130 C 330 130, 330 130, 400 130" stroke="#4fd6c4" stroke-width="2" fill="none" marker-end="url(#arrow6)"/>' +
+      '<path d="M250 202 C 330 202, 330 202, 400 202" stroke="#4fd6c4" stroke-width="2" fill="none" marker-end="url(#arrow6)"/>' +
+      '<rect x="410" y="30" width="280" height="56" rx="12" fill="#1c212f" stroke="#4fd6c4" stroke-width="1.4"/><text x="550" y="64" text-anchor="middle" font-size="15" fill="#4fd6c4">const locationInput</text>' +
+      '<rect x="410" y="102" width="280" height="56" rx="12" fill="#1c212f" stroke="#4fd6c4" stroke-width="1.4"/><text x="550" y="136" text-anchor="middle" font-size="15" fill="#4fd6c4">const addLocationButton</text>' +
+      '<rect x="410" y="174" width="280" height="56" rx="12" fill="#1c212f" stroke="#4fd6c4" stroke-width="1.4"/><text x="550" y="208" text-anchor="middle" font-size="15" fill="#4fd6c4">const locationsList</text>' +
+      '<text x="835" y="64" text-anchor="middle" font-size="13" fill="#6d7690">read value</text>' +
+      '<text x="835" y="136" text-anchor="middle" font-size="13" fill="#6d7690">listen for click</text>' +
+      '<text x="835" y="208" text-anchor="middle" font-size="13" fill="#6d7690">append &lt;li&gt;</text>' +
+    '</g>' +
+    '<defs><marker id="arrow6" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="#4fd6c4"/></marker></defs>' +
+  '</svg>' +
+'</div>'
+);
+
+// 7. App logic flow
+slides.push(
+'<div class="eyebrow">B. MAIN LESSON &middot; 3</div>' +
+'<h2 class="title">The Logic of &ldquo;Where You At?&rdquo;</h2>' +
+'<div class="content">' +
+  '<svg viewBox="0 0 980 130" style="width:100%; height:auto;" role="img"><title>Five step flow: setup, trigger, add location, update list, update map</title>' +
+    '<g font-family="sans-serif">' +
+      '<rect x="0" y="20" width="170" height="70" rx="16" fill="#1c212f" stroke="#2a3145"/><text x="85" y="50" text-anchor="middle" font-size="14" fill="#4fd6c4" font-weight="700">1. Setup</text><text x="85" y="70" text-anchor="middle" font-size="12" fill="#9aa4ba">init array &amp; map var</text>' +
+      '<rect x="202" y="20" width="170" height="70" rx="16" fill="#1c212f" stroke="#2a3145"/><text x="287" y="50" text-anchor="middle" font-size="14" fill="#4fd6c4" font-weight="700">2. Trigger</text><text x="287" y="70" text-anchor="middle" font-size="12" fill="#9aa4ba">user clicks Add</text>' +
+      '<rect x="404" y="20" width="170" height="70" rx="16" fill="#1c212f" stroke="#2a3145"/><text x="489" y="50" text-anchor="middle" font-size="14" fill="#4fd6c4" font-weight="700">3. addLocation()</text><text x="489" y="70" text-anchor="middle" font-size="12" fill="#9aa4ba">push + clear input</text>' +
+      '<rect x="606" y="20" width="170" height="70" rx="16" fill="#1c212f" stroke="#2a3145"/><text x="691" y="50" text-anchor="middle" font-size="14" fill="#4fd6c4" font-weight="700">4. updateList()</text><text x="691" y="70" text-anchor="middle" font-size="12" fill="#9aa4ba">rebuild &lt;li&gt; items</text>' +
+      '<rect x="808" y="20" width="170" height="70" rx="16" fill="#1c212f" stroke="#4fd6c4" stroke-width="1.6"/><text x="893" y="50" text-anchor="middle" font-size="14" fill="#4fd6c4" font-weight="700">5. updateMap()</text><text x="893" y="70" text-anchor="middle" font-size="12" fill="#9aa4ba">drop marker + fly</text>' +
+      '<path d="M170 55h32" stroke="#4fd6c4" stroke-width="2" marker-end="url(#arrow7)"/>' +
+      '<path d="M372 55h32" stroke="#4fd6c4" stroke-width="2" marker-end="url(#arrow7)"/>' +
+      '<path d="M574 55h32" stroke="#4fd6c4" stroke-width="2" marker-end="url(#arrow7)"/>' +
+      '<path d="M776 55h32" stroke="#4fd6c4" stroke-width="2" marker-end="url(#arrow7)"/>' +
+    '</g>' +
+    '<defs><marker id="arrow7" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="#4fd6c4"/></marker></defs>' +
+  '</svg>' +
+  '<div class="grid grid-2" style="margin-top:26px;">' +
+    '<div class="card"><h3>updateLocationsList()</h3><p>Clears the existing HTML list, loops through <code>locationsArray</code> with <code>.forEach()</code>, and creates a new <code>&lt;li&gt;</code> for every saved place.</p></div>' +
+    '<div class="card"><h3>updateMap(location)</h3><p>Creates the Leaflet map once, looks up the location&rsquo;s coordinates, then centers the map and drops a marker with a popup showing its name.</p></div>' +
+  '</div>' +
+'</div>'
+);
+
+// 8. Simulating data
+slides.push(
+'<div class="eyebrow">B. MAIN LESSON &middot; 4</div>' +
+'<h2 class="title">Simulating Real-World Data</h2>' +
+'<div class="content">' +
+  '<div class="code-card" style="height:250px; max-width:640px;">' +
+    '<div class="code-head"><span class="fname">lookup-table.js</span><button class="copy-btn" data-copy-target="snippet1">Copy</button></div>' +
+    '<pre><code id="snippet1"><span class="tok-kw">const</span> locationCoordinates = {\n' +
+'  <span class="tok-str">&quot;philippines&quot;</span>: [<span class="tok-num">13.41</span>, <span class="tok-num">122.56</span>],\n' +
+'  <span class="tok-str">&quot;taiwan&quot;</span>: [<span class="tok-num">23.697809</span>, <span class="tok-num">120.960518</span>],\n' +
+'  <span class="tok-str">&quot;manila&quot;</span>: [<span class="tok-num">14.599512</span>, <span class="tok-num">120.984222</span>],\n' +
+'  <span class="tok-str">&quot;iloilo&quot;</span>: [<span class="tok-num">10.720150</span>, <span class="tok-num">122.562103</span>]\n' +
+'};</code></pre>' +
+  '</div>' +
+  '<p style="margin-top:20px; max-width:820px;">To avoid a full Geocoding API, we use a plain JavaScript object as a lookup table. Typing &ldquo;Iloilo&rdquo; gets lowercased, matched against the object above, and resolved to <code>[10.720150, 122.562103]</code>.</p>' +
+  '<div class="card inset"><div style="display:flex; gap:16px; align-items:flex-start;">' + ICONS.quote + '<p style="margin:0;"><strong>Looking ahead:</strong> in a production app you would plug in the Google Maps Geocoding API, or a free alternative like OpenStreetMap&rsquo;s Nominatim, to convert any real address into coordinates automatically.</p></div></div>' +
+'</div>'
+);
+
+// 9. Architecture diagram
+slides.push(
+'<div class="eyebrow">B. MAIN LESSON &middot; HOW IT ALL CONNECTS</div>' +
+'<h2 class="title">From Keystroke to Pin on the Map</h2>' +
+'<div class="content">' +
+  '<svg viewBox="0 0 940 200" style="width:100%; height:auto;" role="img"><title>Box diagram: user input flows through JS functions to Leaflet to OpenStreetMap tiles</title>' +
+    '<g font-family="sans-serif">' +
+      '<rect x="0" y="60" width="190" height="80" rx="16" fill="#1c212f" stroke="#7c9eff" stroke-width="1.4"/><text x="95" y="94" text-anchor="middle" font-size="14" fill="#7c9eff" font-weight="700">User Input</text><text x="95" y="114" text-anchor="middle" font-size="12" fill="#9aa4ba">types a place, clicks</text>' +
+      '<rect x="250" y="60" width="190" height="80" rx="16" fill="#1c212f" stroke="#c792ea" stroke-width="1.4"/><text x="345" y="94" text-anchor="middle" font-size="14" fill="#c792ea" font-weight="700">JS Functions</text><text x="345" y="114" text-anchor="middle" font-size="12" fill="#9aa4ba">addLocation / updateMap</text>' +
+      '<rect x="500" y="60" width="190" height="80" rx="16" fill="#1c212f" stroke="#4fd6c4" stroke-width="1.4"/><text x="595" y="94" text-anchor="middle" font-size="14" fill="#4fd6c4" font-weight="700">Leaflet Map</text><text x="595" y="114" text-anchor="middle" font-size="12" fill="#9aa4ba">L.map(), L.marker()</text>' +
+      '<rect x="750" y="60" width="190" height="80" rx="16" fill="#1c212f" stroke="#f5a962" stroke-width="1.4"/><text x="845" y="94" text-anchor="middle" font-size="14" fill="#f5a962" font-weight="700">OSM Tile Server</text><text x="845" y="114" text-anchor="middle" font-size="12" fill="#9aa4ba">returns map images</text>' +
+      '<path d="M190 100h50" stroke="#9aa4ba" stroke-width="2" marker-end="url(#arrow9)"/>' +
+      '<path d="M440 100h50" stroke="#9aa4ba" stroke-width="2" marker-end="url(#arrow9)"/>' +
+      '<path d="M690 100h50" stroke="#9aa4ba" stroke-width="2" marker-end="url(#arrow9)"/>' +
+      '<text x="465" y="34" text-anchor="middle" font-size="12" fill="#6d7690">looks up lat/long in local dictionary</text>' +
+    '</g>' +
+    '<defs><marker id="arrow9" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="#9aa4ba"/></marker></defs>' +
+  '</svg>' +
+  '<p style="margin-top:14px; max-width:820px;">The map object is created only once. After that, every new location just asks Leaflet to fly to fresh coordinates and drop another marker &mdash; the tile server keeps supplying the background imagery underneath.</p>' +
+'</div>'
+);
+
+// 10. Key Quotes
+slides.push(
+'<div class="eyebrow">KEY QUOTES</div>' +
+'<h2 class="title">Worth Remembering</h2>' +
+'<div class="content grid grid-2">' +
+  '<div class="card"><span class="quote-mark">&ldquo;</span><p style="color:var(--text); font-size:18px;">Leaflet does not provide the actual map images itself. It relies on a tile provider like OpenStreetMap.</p></div>' +
+  '<div class="card"><span class="quote-mark">&ldquo;</span><p style="color:var(--text); font-size:18px;">Google Maps requires you to enter a credit card to get an API key, even for testing. Leaflet is 100% open-source.</p></div>' +
+  '<div class="card"><span class="quote-mark">&ldquo;</span><p style="color:var(--text); font-size:18px;">Data simulation is an excellent way to prototype an app&rsquo;s core functionality before connecting it to a paid or complex third-party API.</p></div>' +
+  '<div class="card"><span class="quote-mark">&ldquo;</span><p style="color:var(--text); font-size:18px;">DOM manipulation is the bridge between your static HTML and your dynamic JavaScript.</p></div>' +
+'</div>'
+);
+
+// 11. Analogies
+slides.push(
+'<div class="eyebrow">C. ANALOGIES &amp; USE CASES</div>' +
+'<h2 class="title">Two Ways to Picture It</h2>' +
+'<div class="content grid grid-2">' +
+  '<div class="card"><div class="icon-chip">' + ICONS.brush + '</div><h3 style="margin-top:16px;">Canvas &amp; Paintbrush</h3><p><strong>OpenStreetMap</strong> is the blank canvas. <strong>Leaflet.js</strong> is the easel and paintbrushes. Your <strong>JavaScript</strong> is the instruction sheet telling Leaflet where to paint. Without Leaflet, you&rsquo;d have to invent your own paint from scratch.</p></div>' +
+  '<div class="card"><div class="icon-chip">' + ICONS.binder + '</div><h3 style="margin-top:16px;">Binder of Sticky Notes</h3><p>Think of <code>locationsArray</code> as a physical binder. Every new city gets written on a sticky note and dropped in &mdash; that&rsquo;s <code>locationsArray.push(location)</code>. Reading them all back with <code>.forEach()</code> is just flipping through the binder in order.</p></div>' +
+'</div>'
+);
+
+// 12. Use case
+slides.push(
+'<div class="eyebrow">C. ANALOGIES &amp; USE CASES (CONT.)</div>' +
+'<h2 class="title">Real-World Use Case</h2>' +
+'<div class="content grid grid-2" style="align-items:center;">' +
+  '<div class="card"><div class="icon-chip">' + ICONS.restaurant + '</div><h3 style="margin-top:16px;">Restaurant Locator App</h3><p>A food delivery app doesn&rsquo;t just list results as text. When someone searches &ldquo;pizza in New York,&rdquo; it pulls the coordinates of every matching restaurant from a database, passes them to a mapping library, and drops dozens of markers at once. Tapping a marker reveals hours, ratings, and a link to order.</p><p style="margin-bottom:0;"><strong>&ldquo;Where You At?&rdquo; is a simplified prototype of exactly this technology.</strong></p></div>' +
+  '<svg viewBox="0 0 320 260" role="img" style="width:100%; max-width:320px; height:auto; display:block; margin:0 auto;"><title>Illustration of multiple markers on a city map</title>' +
+    '<rect x="10" y="10" width="300" height="240" rx="20" fill="#1c212f"/>' +
+    '<g opacity="0.3" stroke="#2a3145"><path d="M10 90h300M10 160h300M100 10v240M210 10v240"/></g>' +
+    '<g transform="translate(60,60)">' + ICONS.pin.replace('viewBox="0 0 24 24"','viewBox="0 0 24 24" width="30" height="30"') + '</g>' +
+    '<g transform="translate(150,110)">' + ICONS.pin.replace('viewBox="0 0 24 24"','viewBox="0 0 24 24" width="30" height="30"') + '</g>' +
+    '<g transform="translate(220,170)">' + ICONS.pin.replace('viewBox="0 0 24 24"','viewBox="0 0 24 24" width="30" height="30"') + '</g>' +
+    '<g transform="translate(90,180)">' + ICONS.pin.replace('viewBox="0 0 24 24"','viewBox="0 0 24 24" width="30" height="30"') + '</g>' +
+  '</svg>' +
+'</div>'
+);
+
+// 13. FAQ 1
+slides.push(
+'<div class="eyebrow">D. LESSON WRAP-UP &middot; FAQS (1/2)</div>' +
+'<h2 class="title">Frequently Asked Questions</h2>' +
+'<div class="content grid grid-2">' +
+  '<div class="card"><h3>Why is my map a blank white box?</h3><p>Usually one of three reasons: the Leaflet CSS/JS CDN links are missing from your HTML; the map <code>&lt;div&gt;</code> has no defined CSS height (Leaflet needs one, e.g. <code>#map { height: 400px; }</code>); or the tile provider URL is outdated or blocked by your network.</p></div>' +
+  '<div class="card"><h3>Does Leaflet need an API key like Google Maps?</h3><p><strong>No.</strong> That&rsquo;s one of its biggest strengths &mdash; Google Maps requires a credit card even for testing, while Leaflet and OpenStreetMap tiles are free for non-commercial use and development.</p></div>' +
+'</div>'
+);
+
+// 14. FAQ 2
+slides.push(
+'<div class="eyebrow">D. LESSON WRAP-UP &middot; FAQS (2/2)</div>' +
+'<h2 class="title">More Questions, Answered</h2>' +
+'<div class="content grid grid-2">' +
+  '<div class="card"><h3>How do I use real, live location data?</h3><p>Replace <code>getCoordinatesForLocation()</code>. Instead of checking a hardcoded object, call <code>fetch()</code> against a geocoding service like Nominatim (OpenStreetMap) &mdash; free and easy for small projects.</p></div>' +
+  '<div class="card"><h3>What does <code>L</code> stand for in <code>L.map()</code>?</h3><p><code>L</code> is the global namespace Leaflet exposes once you include its script. Everything in the library is accessed through the <code>L</code> prefix, avoiding conflicts with other libraries.</p></div>' +
+'</div>'
+);
+
+// 15. Guided project intro / wireframe
+slides.push(
+'<div class="eyebrow">E. GUIDED DRILLS / CODE PROJECT</div>' +
+'<h2 class="title">Building &ldquo;Where You At?&rdquo;</h2>' +
+'<div class="content grid grid-2" style="align-items:center;">' +
+  '<div>' +
+    '<div class="step-line" style="margin-bottom:16px;"><div class="num-chip">1</div><p>Create a folder on your computer.</p></div>' +
+    '<div class="step-line" style="margin-bottom:16px;"><div class="num-chip">2</div><p>Create a file named <code>index.html</code>.</p></div>' +
+    '<div class="step-line" style="margin-bottom:16px;"><div class="num-chip">3</div><p>Paste in the complete code from the next two slides.</p></div>' +
+    '<div class="step-line"><div class="num-chip">4</div><p>Double-click <code>index.html</code> to open it in your browser and try it out.</p></div>' +
+  '</div>' +
+  '<div class="card" style="padding:22px;">' +
+    '<svg viewBox="0 0 320 300" role="img" style="width:100%; max-width:300px; height:auto; display:block; margin:0 auto;"><title>Wireframe mockup of the Where You At app</title>' +
+      '<rect x="0" y="0" width="320" height="300" rx="18" fill="#171b26"/>' +
+      '<text x="16" y="30" font-size="16" fill="#e9edf5" font-weight="700" font-family="sans-serif">Where You At? App</text>' +
+      '<rect x="16" y="46" width="210" height="34" rx="8" fill="#1c212f" stroke="#2a3145"/><text x="26" y="68" font-size="12" fill="#6d7690" font-family="sans-serif">Enter location&hellip;</text>' +
+      '<rect x="234" y="46" width="70" height="34" rx="8" fill="#4fd6c4"/><text x="269" y="68" font-size="12" fill="#0c1016" font-weight="700" text-anchor="middle" font-family="sans-serif">Add</text>' +
+      '<text x="16" y="102" font-size="13" fill="#9aa4ba" font-family="sans-serif">Locations Saved:</text>' +
+      '<rect x="16" y="112" width="288" height="24" rx="6" fill="#1c212f"/><text x="24" y="129" font-size="12" fill="#e9edf5" font-family="sans-serif">Manila</text>' +
+      '<rect x="16" y="140" width="288" height="24" rx="6" fill="#1c212f"/><text x="24" y="157" font-size="12" fill="#e9edf5" font-family="sans-serif">Iloilo</text>' +
+      '<rect x="16" y="176" width="288" height="108" rx="12" fill="#1a1f2c" stroke="#2a3145"/>' +
+      '<g transform="translate(152,220)">' + ICONS.pin.replace('viewBox="0 0 24 24"','viewBox="0 0 24 24" width="16" height="16"') + '</g>' +
+      '<text x="160" y="266" font-size="12" fill="#6d7690" text-anchor="middle" font-family="sans-serif">#map (Leaflet)</text>' +
+    '</svg>' +
+  '</div>' +
+'</div>'
+);
+
+// 16. Code slide - HTML/CSS
+slides.push(
+'<div class="eyebrow">E. GUIDED DRILLS / CODE PROJECT</div>' +
+'<h2 class="title">Full Code &mdash; Markup &amp; Styles</h2>' +
+'<div class="content code-row">' +
+  '<div class="code-card">' +
+    '<div class="code-head"><span class="fname">index.html &mdash; head &amp; body</span><button class="copy-btn" data-copy-target="snippet2">Copy</button></div>' +
+    '<pre><code id="snippet2"><span class="tok-punct">&lt;!DOCTYPE html&gt;</span>\n' +
+'<span class="tok-tag">&lt;html</span> <span class="tok-attr">lang=</span><span class="tok-str">&quot;en&quot;</span><span class="tok-tag">&gt;</span>\n' +
+'<span class="tok-tag">&lt;head&gt;</span>\n' +
+'  <span class="tok-tag">&lt;meta</span> <span class="tok-attr">charset=</span><span class="tok-str">&quot;UTF-8&quot;</span><span class="tok-tag">&gt;</span>\n' +
+'  <span class="tok-tag">&lt;meta</span> <span class="tok-attr">name=</span><span class="tok-str">&quot;viewport&quot;</span> <span class="tok-attr">content=</span><span class="tok-str">&quot;width=device-width, initial-scale=1.0&quot;</span><span class="tok-tag">&gt;</span>\n' +
+'  <span class="tok-tag">&lt;title&gt;</span>Where You At? App<span class="tok-tag">&lt;/title&gt;</span>\n' +
+'  <span class="tok-com">&lt;!-- 1. Include Leaflet CSS --&gt;</span>\n' +
+'  <span class="tok-tag">&lt;link</span> <span class="tok-attr">rel=</span><span class="tok-str">&quot;stylesheet&quot;</span> <span class="tok-attr">href=</span><span class="tok-str">&quot;https://unpkg.com/leaflet@1.9.4/dist/leaflet.css&quot;</span> <span class="tok-tag">/&gt;</span>\n' +
+'  <span class="tok-tag">&lt;style&gt;</span>\n' +
+'    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }\n' +
+'    <span class="tok-com">/* the map MUST have a height to show up */</span>\n' +
+'    #map { height: 400px; border-radius: 8px; margin-top: 20px; border: 1px solid #ccc; }\n' +
+'    .input-group { display: flex; gap: 10px; margin-bottom: 10px; }\n' +
+'    input { flex: 1; padding: 8px; }\n' +
+'    button { padding: 8px 15px; background-color: #333; color: white; border: none; cursor: pointer; }\n' +
+'    ul { list-style-type: none; padding: 0; margin-top: 20px; }\n' +
+'    li { background-color: #f4f4f4; margin: 5px 0; padding: 8px; border-radius: 4px; cursor: pointer; }\n' +
+'    li:hover { background-color: #e0e0e0; }\n' +
+'  <span class="tok-tag">&lt;/style&gt;</span>\n' +
+'<span class="tok-tag">&lt;/head&gt;</span>\n' +
+'<span class="tok-tag">&lt;body&gt;</span>\n' +
+'  <span class="tok-tag">&lt;h1&gt;</span>Where You At? App<span class="tok-tag">&lt;/h1&gt;</span>\n' +
+'  <span class="tok-tag">&lt;div</span> <span class="tok-attr">class=</span><span class="tok-str">&quot;input-group&quot;</span><span class="tok-tag">&gt;</span>\n' +
+'    <span class="tok-tag">&lt;input</span> <span class="tok-attr">type=</span><span class="tok-str">&quot;text&quot;</span> <span class="tok-attr">id=</span><span class="tok-str">&quot;locationInput&quot;</span> <span class="tok-attr">placeholder=</span><span class="tok-str">&quot;Enter location (e.g., Manila, Iloilo)&quot;</span><span class="tok-tag">&gt;</span>\n' +
+'    <span class="tok-tag">&lt;button</span> <span class="tok-attr">id=</span><span class="tok-str">&quot;addLocationButton&quot;</span><span class="tok-tag">&gt;</span>Add Location<span class="tok-tag">&lt;/button&gt;</span>\n' +
+'  <span class="tok-tag">&lt;/div&gt;</span>\n' +
+'  <span class="tok-tag">&lt;h3&gt;</span>Locations Saved:<span class="tok-tag">&lt;/h3&gt;</span>\n' +
+'  <span class="tok-tag">&lt;ul</span> <span class="tok-attr">id=</span><span class="tok-str">&quot;locationsList&quot;</span><span class="tok-tag">&gt;&lt;/ul&gt;</span>\n' +
+'  <span class="tok-tag">&lt;div</span> <span class="tok-attr">id=</span><span class="tok-str">&quot;map&quot;</span><span class="tok-tag">&gt;&lt;/div&gt;</span>\n' +
+'  <span class="tok-com">&lt;!-- 2. Include Leaflet JS after the body --&gt;</span>\n' +
+'  <span class="tok-tag">&lt;script</span> <span class="tok-attr">src=</span><span class="tok-str">&quot;https://unpkg.com/leaflet@1.9.4/dist/leaflet.js&quot;</span><span class="tok-tag">&gt;&lt;\/script&gt;</span>\n' +
+'  <span class="tok-com">&lt;!-- JavaScript logic continues on the next slide --&gt;</span>\n' +
+'<span class="tok-tag">&lt;/body&gt;</span>\n' +
+'<span class="tok-tag">&lt;/html&gt;</span></code></pre>' +
+  '</div>' +
+  '<div class="notes-panel">' +
+    '<h3>What&rsquo;s happening here</h3>' +
+    '<div class="step-line">' + ICONS.check + '<p>Leaflet&rsquo;s CSS and JS are pulled in from a CDN &mdash; CSS in the <code>&lt;head&gt;</code>, JS just before <code>&lt;/body&gt;</code>.</p></div>' +
+    '<div class="step-line">' + ICONS.check + '<p>The <code>#map</code> div is given an explicit height in CSS. Skip this and the map renders invisibly at 0px tall.</p></div>' +
+    '<div class="step-line">' + ICONS.check + '<p>Three elements carry IDs the JavaScript will grab: the input, the button, and the list.</p></div>' +
+    '<div class="step-line">' + ICONS.check + '<p>How to test: open the page and confirm the input box, button, and an empty map placeholder all appear before any JS runs.</p></div>' +
+  '</div>' +
+'</div>'
+);
+
+// 17. Code slide - JS
+slides.push(
+'<div class="eyebrow">E. GUIDED DRILLS / CODE PROJECT</div>' +
+'<h2 class="title">Full Code &mdash; Application Logic</h2>' +
+'<div class="content code-row">' +
+  '<div class="code-card">' +
+    '<div class="code-head"><span class="fname">index.html &mdash; script</span><button class="copy-btn" data-copy-target="snippet3">Copy</button></div>' +
+    '<pre><code id="snippet3"><span class="tok-com">// --- Select DOM Elements ---</span>\n' +
+'<span class="tok-kw">const</span> <span class="tok-fn">locationInput</span> = document.getElementById(<span class="tok-str">&quot;locationInput&quot;</span>);\n' +
+'<span class="tok-kw">const</span> <span class="tok-fn">addLocationButton</span> = document.getElementById(<span class="tok-str">&quot;addLocationButton&quot;</span>);\n' +
+'<span class="tok-kw">const</span> <span class="tok-fn">locationsList</span> = document.getElementById(<span class="tok-str">&quot;locationsList&quot;</span>);\n\n' +
+'<span class="tok-com">// --- App State ---</span>\n' +
+'<span class="tok-kw">let</span> locationsArray = [];\n' +
+'<span class="tok-kw">let</span> map;\n\n' +
+'<span class="tok-com">// --- Hardcoded Coordinates Lookup Table ---</span>\n' +
+'<span class="tok-kw">function</span> <span class="tok-fn">getCoordinatesForLocation</span>(location) {\n' +
+'  <span class="tok-kw">const</span> locationCoordinates = {\n' +
+'    <span class="tok-str">&quot;philippines&quot;</span>: [<span class="tok-num">13.41</span>, <span class="tok-num">122.56</span>],\n' +
+'    <span class="tok-str">&quot;taiwan&quot;</span>: [<span class="tok-num">23.697809</span>, <span class="tok-num">120.960518</span>],\n' +
+'    <span class="tok-str">&quot;manila&quot;</span>: [<span class="tok-num">14.599512</span>, <span class="tok-num">120.984222</span>],\n' +
+'    <span class="tok-str">&quot;iloilo&quot;</span>: [<span class="tok-num">10.720150</span>, <span class="tok-num">122.562103</span>]\n' +
+'  };\n' +
+'  <span class="tok-kw">return</span> locationCoordinates[location.toLowerCase()] || <span class="tok-kw">null</span>;\n' +
+'}\n\n' +
+'<span class="tok-com">// --- Event Listener for the Button ---</span>\n' +
+'addLocationButton.addEventListener(<span class="tok-str">&quot;click&quot;</span>, addLocation);\n\n' +
+'<span class="tok-com">// 1. Main trigger function</span>\n' +
+'<span class="tok-kw">function</span> <span class="tok-fn">addLocation</span>() {\n' +
+'  <span class="tok-kw">const</span> location = locationInput.value.trim();\n' +
+'  <span class="tok-kw">if</span> (location !== <span class="tok-str">&quot;&quot;</span>) {\n' +
+'    locationsArray.push(location);\n' +
+'    locationInput.value = <span class="tok-str">&quot;&quot;</span>;\n' +
+'    updateLocationsList();\n' +
+'    updateMap(location);\n' +
+'  }\n' +
+'}\n\n' +
+'<span class="tok-com">// 2. Update the HTML List</span>\n' +
+'<span class="tok-kw">function</span> <span class="tok-fn">updateLocationsList</span>() {\n' +
+'  locationsList.innerHTML = <span class="tok-str">&quot;&quot;</span>;\n' +
+'  locationsArray.forEach((location) =&gt; {\n' +
+'    <span class="tok-kw">const</span> li = document.createElement(<span class="tok-str">&quot;li&quot;</span>);\n' +
+'    li.textContent = location;\n' +
+'    li.addEventListener(<span class="tok-str">&quot;click&quot;</span>, () =&gt; updateMap(location));\n' +
+'    locationsList.appendChild(li);\n' +
+'  });\n' +
+'}\n\n' +
+'<span class="tok-com">// 3. Update the Map with a new marker</span>\n' +
+'<span class="tok-kw">function</span> <span class="tok-fn">updateMap</span>(location) {\n' +
+'  <span class="tok-kw">if</span> (!map) {\n' +
+'    map = L.map(<span class="tok-str">&quot;map&quot;</span>).setView([<span class="tok-num">12.8797</span>, <span class="tok-num">121.7740</span>], <span class="tok-num">6</span>);\n' +
+'    L.tileLayer(<span class="tok-str">&quot;https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png&quot;</span>, {\n' +
+'      attribution: <span class="tok-str">&#39;&amp;copy; OpenStreetMap contributors&#39;</span>\n' +
+'    }).addTo(map);\n' +
+'  }\n' +
+'  <span class="tok-kw">const</span> coordinates = getCoordinatesForLocation(location);\n' +
+'  <span class="tok-kw">if</span> (coordinates) {\n' +
+'    map.flyTo(coordinates, <span class="tok-num">10</span>);\n' +
+'    L.marker(coordinates).addTo(map).bindPopup(location);\n' +
+'  } <span class="tok-kw">else</span> {\n' +
+'    alert(<span class="tok-str">&quot;Location not found in our coordinates list. Try &#39;Manila&#39; or &#39;Iloilo&#39;!&quot;</span>);\n' +
+'  }\n' +
+'}</code></pre>' +
+  '</div>' +
+  '<div class="notes-panel">' +
+    '<h3>How to test it</h3>' +
+    '<div class="step-line">' + ICONS.check + '<p>Type <strong>Manila</strong> and click <strong>Add Location</strong> &mdash; the map should initialize and fly to Manila with a marker.</p></div>' +
+    '<div class="step-line">' + ICONS.check + '<p>Add <strong>Iloilo</strong> next &mdash; a second marker appears and the map flies there instead.</p></div>' +
+    '<div class="step-line">' + ICONS.check + '<p>Click any saved location in the list &mdash; the map should fly back to it (the bonus click handler).</p></div>' +
+    '<div class="step-line">' + ICONS.check + '<p>Try an unlisted place, like &ldquo;Cebu&rdquo; &mdash; you should see the friendly alert, since it isn&rsquo;t in the lookup table.</p></div>' +
+  '</div>' +
+'</div>'
+);
+
+// 18. Recap (right before activities)
+slides.push(
+'<div class="eyebrow">RECAP</div>' +
+'<h2 class="title">Key Takeaways</h2>' +
+'<div class="content grid grid-2">' +
+  '<div class="card"><div class="icon-chip">' + ICONS.leaf + '</div><h3 style="margin-top:16px;">Leaflet.js</h3><p>Adds beautiful, interactive maps to a page entirely for free, using open-source map data.</p></div>' +
+  '<div class="card"><div class="icon-chip">' + ICONS.dom + '</div><h3 style="margin-top:16px;">DOM Manipulation</h3><p>The bridge between static HTML and dynamic JavaScript &mdash; select once, update forever.</p></div>' +
+  '<div class="card"><div class="icon-chip">' + ICONS.data + '</div><h3 style="margin-top:16px;">Simulated Data</h3><p>A hardcoded lookup object is a great way to prototype before wiring in a real API.</p></div>' +
+  '<div class="card"><div class="icon-chip">' + ICONS.fn + '</div><h3 style="margin-top:16px;">App Logic</h3><p>Small, focused functions &mdash; add, update list, update map &mdash; keep the app easy to follow.</p></div>' +
+'</div>'
+);
+
+// 19. Activities MCQ (page 1 of 2)
+slides.push(
+'<div class="eyebrow">F. SKILL-BUILDING CHECK &middot; MULTIPLE CHOICE (1/2)</div>' +
+'<h2 class="title">Test Your Understanding</h2>' +
+'<div class="content">' +
+  '<div class="mcq-grid">' +
+    '<div class="mcq-card"><div class="mcq-q">1. What does <code>document.getElementById(&quot;locationInput&quot;)</code> do?</div>' +
+      '<div class="mcq-opt"><b>a)</b> Creates a new text input box on the page</div>' +
+      '<div class="mcq-opt"><b>b)</b> Finds the existing HTML element with that ID so we can interact with it</div>' +
+      '<div class="mcq-opt"><b>c)</b> Converts the text input into coordinate numbers</div>' +
+      '<div class="mcq-opt"><b>d)</b> Deletes the map from the screen</div></div>' +
+    '<div class="mcq-card"><div class="mcq-q">2. What is the primary purpose of <code>getCoordinatesForLocation(location)</code>?</div>' +
+      '<div class="mcq-opt"><b>a)</b> To connect to a live weather API</div>' +
+      '<div class="mcq-opt"><b>b)</b> To translate a place name into a latitude/longitude array from a hardcoded list</div>' +
+      '<div class="mcq-opt"><b>c)</b> To create the Leaflet tile layer</div>' +
+      '<div class="mcq-opt"><b>d)</b> To clear the input box after a location is added</div></div>' +
+  '</div>' +
+  '<div class="mcq-card mcq-centered" style="margin-top:20px;"><div class="mcq-q">3. Why does <code>updateLocationsList</code> use <code>document.createElement(&quot;li&quot;)</code>?</div>' +
+      '<div class="mcq-opt"><b>a)</b> To dynamically generate a new list item for every location added</div>' +
+      '<div class="mcq-opt"><b>b)</b> To clear the HTML list</div>' +
+      '<div class="mcq-opt"><b>c)</b> To initialize the Leaflet map</div>' +
+      '<div class="mcq-opt"><b>d)</b> To create the input box</div></div>' +
+'</div>'
+);
+
+// 19b. Activities MCQ (page 2 of 2)
+slides.push(
+'<div class="eyebrow">F. SKILL-BUILDING CHECK &middot; MULTIPLE CHOICE (2/2)</div>' +
+'<h2 class="title">Test Your Understanding, Continued</h2>' +
+'<div class="content">' +
+  '<div class="mcq-grid">' +
+    '<div class="mcq-card"><div class="mcq-q">4. What triggers <code>updateMap</code> to run?</div>' +
+      '<div class="mcq-opt"><b>a)</b> Every 5 seconds automatically</div>' +
+      '<div class="mcq-opt"><b>b)</b> When the user refreshes the browser</div>' +
+      '<div class="mcq-opt"><b>c)</b> Immediately after clicking &ldquo;Add Location,&rdquo; as part of <code>addLocation</code></div>' +
+      '<div class="mcq-opt"><b>d)</b> When the user resizes their browser window</div></div>' +
+    '<div class="mcq-card"><div class="mcq-q">5. Why does the Leaflet <code>#map</code> div need an explicit CSS height?</div>' +
+      '<div class="mcq-opt"><b>a)</b> Because Leaflet is heavy and needs lots of memory</div>' +
+      '<div class="mcq-opt"><b>b)</b> Without it, an unstyled div defaults to 0px tall, making the map invisible</div>' +
+      '<div class="mcq-opt"><b>c)</b> Because Google Maps requires it</div>' +
+      '<div class="mcq-opt"><b>d)</b> Because the CSS height determines marker color</div></div>' +
+  '</div>' +
+'</div>'
+);
+
+// 20. Answer key
+slides.push(
+'<div class="eyebrow">ANSWER KEY</div>' +
+'<h2 class="title">Answers &amp; Explanations</h2>' +
+'<div class="content grid grid-2">' +
+  '<div class="answer-card"><div class="ans">1 &mdash; b</div><p>It&rsquo;s a DOM selection method: it locates the element with that ID and returns a reference so the script can read or change it.</p></div>' +
+  '<div class="answer-card"><div class="ans">2 &mdash; b</div><p>Since we skip a paid Geocoding API, this function simulates a coordinate lookup using a plain JavaScript object.</p></div>' +
+  '<div class="answer-card"><div class="ans">3 &mdash; a</div><p>Each time a location is added, the loop uses <code>createElement</code> to build a fresh bullet point showing that place.</p></div>' +
+  '<div class="answer-card"><div class="ans">4 &mdash; c</div><p>Inside <code>addLocation</code>, the last line explicitly calls <code>updateMap(location)</code> right after processing input.</p></div>' +
+  '<div class="answer-card" style="grid-column:1 / span 2;"><div class="ans">5 &mdash; b</div><p>A standard <code>&lt;div&gt;</code> has no height of its own. Without a CSS height, the map renders at 0px tall &mdash; a blank grey or white box.</p></div>' +
+'</div>'
+);
+
+// 21. Closing
+slides.push(
+'<div class="content" style="justify-content:center; align-items:flex-start;">' +
+  '<div style="margin-bottom:18px;">' + ICONS.spark.replace('viewBox="0 0 24 24"','viewBox="0 0 24 24" width="52" height="52"') + '</div>' +
+  '<div class="eyebrow">NICE WORK</div>' +
+  '<h1 class="title">You Just Mapped Your First App</h1>' +
+  '<div class="card inset" style="max-width:760px; margin:18px 0 22px 0;">' +
+    '<span class="quote-mark">&ldquo;</span>' +
+    '<p style="color:var(--text); font-size:19px; margin:0;">Leaflet is 100% open-source, and OpenStreetMap tiles are available for free &mdash; making it the go-to choice for student and hobbyist mapping.</p>' +
+  '</div>' +
+  '<p class="subtitle">From here, try swapping the hardcoded dictionary for a real Nominatim lookup, or add more cities of your own. Great work getting &ldquo;Where You At?&rdquo; up and running!</p>' +
+'</div>'
+);
+
+/* =========================================================
+   Render slides
+   ========================================================= */
+var container = document.getElementById("slides");
+for (var i = 0; i < slides.length; i++){
+  var sec = document.createElement("section");
+  sec.className = "slide";
+  sec.setAttribute("data-index", String(i));
+  sec.innerHTML = slides[i];
+  container.appendChild(sec);
+}
+
+var slideEls = document.querySelectorAll(".slide");
+var currentIndex = 0;
+var progressBar = document.getElementById("progressBar");
+var counterEl = document.getElementById("counter");
+var overlay = document.getElementById("shortcutsOverlay");
+var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function updateChrome(){
+  var pct = (currentIndex / (slideEls.length - 1)) * 100;
+  progressBar.style.width = pct + "%";
+  counterEl.textContent = (currentIndex + 1) + " / " + slideEls.length;
+}
+
+function goTo(newIndex){
+  if (newIndex < 0 || newIndex >= slideEls.length || newIndex === currentIndex) return;
+  var dir = newIndex > currentIndex ? "next" : "prev";
+  var oldEl = slideEls[currentIndex];
+  oldEl.classList.remove("active", "enter-next", "enter-prev");
+  oldEl.style.display = "none";
+  currentIndex = newIndex;
+  var newEl = slideEls[currentIndex];
+  newEl.style.display = "flex";
+  newEl.classList.remove("enter-next", "enter-prev");
+  if (!reduceMotion){
+    void newEl.offsetWidth;
+    newEl.classList.add(dir === "next" ? "enter-next" : "enter-prev");
+  }
+  newEl.classList.add("active");
+  updateChrome();
+}
+
+function next(){ goTo(currentIndex + 1); }
+function prev(){ goTo(currentIndex - 1); }
+function first(){ goTo(0); }
+function last(){ goTo(slideEls.length - 1); }
+
+slideEls[0].style.display = "flex";
+slideEls[0].classList.add("active");
+updateChrome();
+
+/* ---------- keyboard ---------- */
+document.addEventListener("keydown", function(e){
+  if (overlay.classList.contains("show")){
+    if (e.key === "Escape" || e.key === "?"){ overlay.classList.remove("show"); }
+    return;
+  }
+  if (e.key === "ArrowRight" || e.key === "PageDown"){ next(); }
+  else if (e.key === "ArrowLeft" || e.key === "PageUp"){ prev(); }
+  else if (e.key === "Home"){ first(); }
+  else if (e.key === "End"){ last(); }
+  else if (e.key === "?"){ overlay.classList.add("show"); }
+});
+
+/* ---------- right-click = next, block context menu ---------- */
+document.addEventListener("contextmenu", function(e){
+  e.preventDefault();
+  next();
+});
+
+/* ---------- Mouse4 / Mouse5 (browser back/forward buttons) ---------- */
+document.addEventListener("mousedown", function(e){
+  if (e.button === 3){
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    prev();
+  } else if (e.button === 4){
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    next();
+  }
+}, true);
+
+/* ---------- swipe on mobile ---------- */
+var touchStartX = 0, touchStartY = 0;
+document.addEventListener("touchstart", function(e){
+  if (!e.changedTouches || !e.changedTouches.length) return;
+  touchStartX = e.changedTouches[0].clientX;
+  touchStartY = e.changedTouches[0].clientY;
+}, { passive:true });
+
+document.addEventListener("touchend", function(e){
+  if (!e.changedTouches || !e.changedTouches.length) return;
+  var dx = e.changedTouches[0].clientX - touchStartX;
+  var dy = e.changedTouches[0].clientY - touchStartY;
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)){
+    if (dx < 0){ next(); } else { prev(); }
+  }
+}, { passive:true });
+
+/* ---------- copy buttons ---------- */
+document.addEventListener("click", function(e){
+  var btn = e.target.closest ? e.target.closest(".copy-btn") : null;
+  if (!btn) return;
+  var targetId = btn.getAttribute("data-copy-target");
+  var codeEl = document.getElementById(targetId);
+  if (!codeEl) return;
+  var text = codeEl.textContent;
+  var restore = btn.textContent;
+  function markCopied(){
+    btn.textContent = "Copied!";
+    btn.classList.add("copied");
+    setTimeout(function(){
+      btn.textContent = restore;
+      btn.classList.remove("copied");
+    }, 1600);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(markCopied, markCopied);
+  } else {
+    markCopied();
+  }
+});
+
+})();
+</script>
+</body>
+</html>
