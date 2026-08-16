@@ -20,7 +20,7 @@ Comprehensive coverage of **System Integration**, **SOA**, **Middleware**, **Tes
 
 ---
 
-## � Lecture Modules
+## 📄 Lecture Modules
 
 Navigate through the course with interactive slide decks:
 
@@ -80,10 +80,7 @@ All materials available in the **[prelims/](prelims)** folder:
 ├── 📄 SIA_M23_Web_Frameworks.html                ← Web Framework Patterns
 ├── 📄 module24-web-services-nodejs.html          ← Node.js Web Services
 │
-├── 📁 prelims/                                   ← 🎯 Study & Review
-│   ├── reviewers/                                ← Course Reviewers
-│   ├── summatives/                               ← Practice Tests
-│   └── answer_keys/                              ← Solutions
+├── 📁 prelims/                                   ← 🎯 Study & Review (reviewers, summatives, answer keys)
 │
 └── 📄 README.md                                  ← You are here 👈
 ```
