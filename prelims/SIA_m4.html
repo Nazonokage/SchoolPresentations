@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 4 · System Integration & Information Processing</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    * { box-sizing: border-box; margin:0; padding:0; }
+    html, body { height:100%; overflow:hidden; background:var(--bg); color:var(--ink); font-family:'Inter', sans-serif; }
+    h1,h2,h3 { font-family:'Inter', sans-serif; font-weight:600; letter-spacing:-0.01em; }
+    code, pre, .mono { font-family:'JetBrains Mono', monospace; }
+
+    /* ——— ENTERPRISE THEME ——— */
+    :root {
+      --bg: #0F1724;
+      --bg-alt: #192237;
+      --accent: #4B9EFF;
+      --accent-soft: #7BB8FF;
+      --accent-strong: #1A6FD9;
+      --card: #1C2840;
+      --card-border: rgba(75, 158, 255, 0.18);
+      --shadow: rgba(0, 0, 0, 0.5);
+      --ink: #EAF0F8;
+      --ink-soft: #9BB0C8;
+      --eyebrow-ink: #7BB8FF;
+      --card-ink: #EAF0F8;
+      --card-ink-soft: #9BB0C8;
+      --card-accent: #4B9EFF;
+      --step-num-ink: #0F1724;
+      --tick: 300ms;
+      --table-border: rgba(75, 158, 255, 0.15);
+      --answer-bg: #1A2D3D;
+    }
+
+    #app { position:relative; width:100vw; height:100vh; overflow:hidden; }
+
+    .progress-track { position:fixed; top:0; left:0; right:0; height:3px; background:rgba(75,158,255,0.12); z-index:50; }
+    .progress-fill { height:100%; width:0%; background:linear-gradient(90deg, var(--accent-strong), var(--accent)); transition: width 350ms ease; }
+
+    .enterprise-gauge {
+      position:fixed; top:18px; right:22px; z-index:50;
+      display:flex; flex-direction:column; align-items:center; gap:4px;
+      font-family:'JetBrains Mono', monospace; font-size:9px; letter-spacing:0.12em;
+      color:var(--ink-soft); user-select:none; pointer-events:none;
+      transition: color var(--tick) ease;
+    }
+    .enterprise-gauge svg { width:32px; height:32px; display:block; }
+    .enterprise-gauge .pulse { transform-origin:center; }
+    @media (prefers-reduced-motion: no-preference) {
+      .enterprise-gauge .pulse { animation: entPulse 3s ease-in-out infinite; }
+    }
+    @keyframes entPulse {
+      0% { opacity:0.5; transform:scale(0.95); }
+      50% { opacity:1; transform:scale(1.05); }
+      100% { opacity:0.5; transform:scale(0.95); }
+    }
+    .gauge-label { text-transform:uppercase; font-weight:600; letter-spacing:0.08em; }
+
+    .stage { position:absolute; inset:0; }
+    .slide {
+      position:absolute; inset:0;
+      overflow-y:auto; overflow-x:hidden;
+      display:flex; flex-direction:column; align-items:stretch; justify-content:safe center;
+      padding: 76px clamp(28px, 7vw, 120px) 90px;
+      opacity:0; transform:translateX(0) scale(1);
+      will-change: transform, opacity;
+    }
+    .slide.active { opacity:1; transform:translateX(0) scale(1); transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:5; }
+    .slide.enter-fwd { transform:translateX(64px) scale(0.985); opacity:0; }
+    .slide.enter-bwd { transform:translateX(-64px) scale(0.985); opacity:0; }
+    .slide.exit-fwd { transform:translateX(-64px) scale(0.985); opacity:0; transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:4; }
+    .slide.exit-bwd { transform:translateX(64px) scale(0.985); opacity:0; transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:4; }
+    @media (prefers-reduced-motion: reduce) {
+      .slide, .slide.active, .slide.enter-fwd, .slide.enter-bwd, .slide.exit-fwd, .slide.exit-bwd {
+        transition: opacity 120ms linear !important; transform:none !important;
+      }
+    }
+    .slide-inner { max-width:1000px; width:100%; margin:0 auto; }
+
+    .eyebrow {
+      font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:0.14em;
+      text-transform:uppercase; font-weight:500; color:var(--eyebrow-ink);
+      display:flex; align-items:center; gap:10px; margin-bottom:12px;
+      transition: color var(--tick) ease;
+    }
+    .eyebrow::after { content:''; flex:1; height:0; border-top:1.5px dashed var(--card-border); }
+    h2.slide-title { font-size:clamp(26px, 3.8vw, 42px); font-weight:700; line-height:1.15; margin-bottom:18px; letter-spacing:-0.02em; }
+    .lede { font-size:16px; color:var(--ink-soft); margin:-6px 0 20px; max-width:70ch; line-height:1.5; }
+
+    .card {
+      background:var(--card); border:1px solid var(--card-border); border-radius:10px;
+      padding:18px 20px; min-width:0;
+      box-shadow: 0 4px 16px var(--shadow);
+      transition: background var(--tick) ease, border-color var(--tick) ease;
+    }
+    .card h3 { font-size:15px; font-weight:600; margin-bottom:5px; color:var(--card-ink); }
+    .card p, .card li { font-size:14.5px; color:var(--card-ink-soft); line-height:1.5; }
+    .card p + p { margin-top:8px; }
+    .card strong { color:var(--card-ink); }
+
+    .card-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(0, 1fr)); gap:14px; min-width:0; }
+    .card-grid.cols-2 { grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .card-grid.cols-3 { grid-template-columns:repeat(3, minmax(0,1fr)); }
+    .card-grid.cols-4 { grid-template-columns:repeat(4, minmax(0,1fr)); }
+    @media (max-width:760px){ .card-grid.cols-4{grid-template-columns:repeat(2, minmax(0,1fr));} .card-grid.cols-3{grid-template-columns:repeat(2, minmax(0,1fr));} .card-grid.cols-2{grid-template-columns:minmax(0,1fr);} }
+
+    .two-col { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:24px; align-items:start; min-width:0; }
+    @media (max-width:760px){ .two-col { grid-template-columns:minmax(0,1fr); } }
+    .two-col > * { min-width:0; }
+
+    ul.ticket-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+    ul.ticket-list li { position:relative; padding-left:22px; font-size:15px; line-height:1.5; color:var(--ink); }
+    ul.ticket-list li::before { content:'▹'; position:absolute; left:0; color:var(--accent); font-weight:700; }
+    .card ul.ticket-list li { font-size:14.5px; color:var(--card-ink-soft); }
+    .card ul.ticket-list li strong { color:var(--card-ink); }
+
+    .quote-block { font-family:'Inter', sans-serif; font-weight:500; font-size:18px; line-height:1.5; color:var(--ink); border-left:3px solid var(--accent); padding:4px 0 4px 18px; margin:6px 0 18px; }
+    .note { background:var(--card); border:1px dashed var(--card-border); border-radius:10px; padding:12px 16px; font-size:14px; color:var(--card-ink-soft); margin-top:14px; }
+    .note b { color:var(--card-ink); }
+
+    .answer-box {
+      background:var(--answer-bg);
+      border:1px solid var(--card-border);
+      border-radius:10px;
+      padding:14px 18px;
+      margin-top:10px;
+    }
+    .answer-box .label { font-weight:600; color:var(--accent-soft); font-size:13px; letter-spacing:0.05em; }
+    .answer-box .value { font-size:16px; color:var(--card-ink); margin-top:2px; }
+
+    .step-card { display:flex; flex-direction:column; gap:8px; }
+    .step-head { display:flex; align-items:center; gap:10px; margin-bottom:2px; }
+    .step-num {
+      width:28px; height:28px; flex-shrink:0; border-radius:50%;
+      background:var(--accent); color:var(--step-num-ink);
+      display:flex; align-items:center; justify-content:center;
+      font-weight:700; font-size:13.5px; font-family:'JetBrains Mono', monospace;
+    }
+    .step-head h3 { margin-bottom:0; font-size:16px; }
+
+    .mermaid-wrap {
+      background:var(--card); border:1px solid var(--card-border); border-radius:10px;
+      padding:20px; display:flex; align-items:center; justify-content:center; min-height:280px;
+      box-shadow: 0 4px 16px var(--shadow);
+    }
+    .mermaid-wrap .mermaid { width:100%; }
+
+    .hud { position:fixed; bottom:16px; right:20px; z-index:50; display:flex; align-items:center; gap:12px; }
+    .counter { font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:500; background:var(--card); border:1px solid var(--card-border); color:var(--card-ink); padding:6px 14px; border-radius:999px; box-shadow:0 4px 14px var(--shadow); transition: background var(--tick) ease, color var(--tick) ease, border-color var(--tick) ease; }
+    .hint { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--ink-soft); letter-spacing:0.05em; display:none; }
+    @media (min-width:640px){ .hint { display:block; } }
+
+    .click-zone { position:fixed; inset:0; z-index:1; cursor:pointer; }
+    .slide::-webkit-scrollbar { width:5px; }
+    .slide::-webkit-scrollbar-thumb { background:var(--card-border); border-radius:8px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+<div id="app">
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+  <div class="enterprise-gauge" id="enterpriseGauge">
+    <svg viewBox="0 0 32 32" fill="none">
+      <rect x="4" y="8" width="24" height="18" rx="2" stroke="var(--accent)" stroke-width="1.2" fill="var(--accent)" opacity="0.12" />
+      <rect x="8" y="12" width="16" height="2" rx="1" fill="var(--accent)" opacity="0.5" class="pulse" />
+      <rect x="8" y="16" width="12" height="2" rx="1" fill="var(--accent)" opacity="0.3" class="pulse" style="animation-delay:0.4s;" />
+      <rect x="8" y="20" width="14" height="2" rx="1" fill="var(--accent)" opacity="0.4" class="pulse" style="animation-delay:0.8s;" />
+    </svg>
+    <span class="gauge-label" id="gaugeLabel">Module 4</span>
+  </div>
+
+  <div class="click-zone" id="clickZone"></div>
+  <div class="stage" id="stage"></div>
+
+  <div class="hud">
+    <span class="hint">click / → to continue</span>
+    <div class="counter" id="counter">1 / 10</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var S = [];
+
+  // ——— MERMAID SETUP ———
+  if (window.mermaid) {
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'dark',
+      themeVariables: {
+        background: '#1C2840',
+        primaryColor: '#1C2840',
+        primaryBorderColor: '#4B9EFF',
+        primaryTextColor: '#EAF0F8',
+        lineColor: '#4B9EFF',
+        secondaryColor: '#192237',
+        tertiaryColor: '#1A2D3D',
+        fontFamily: 'Inter, sans-serif'
+      },
+      flowchart: { curve: 'basis' }
+    });
+  }
+  var mermaidCounter = 0;
+  function renderMermaidIn(el){
+    if (!window.mermaid) return;
+    var nodes = el.querySelectorAll('.mermaid');
+    if (!nodes.length) return;
+    nodes.forEach(function(n){
+      n.removeAttribute('data-processed');
+      n.id = 'mmd-' + (mermaidCounter++);
+    });
+    mermaid.run({ nodes: nodes }).catch(function(err){ console.error('Mermaid render error:', err); });
+  }
+
+  // ——— SLIDES ———
+
+  // 1. Cover
+  S.push({
+    eyebrow: 'Module 4 · System Integration',
+    title: 'Foundations of System Integration & Information Processing',
+    lede: 'From raw data to unified systems — how information becomes valuable, and how components come together.',
+    body:
+      '<div class="card-grid cols-3">' +
+        '<div class="card"><h3>🎯 Information Processing</h3><p>Raw data becomes valuable information only when it is timely, accurate, and complete.</p></div>' +
+        '<div class="card"><h3>🔗 System Integration</h3><p>The engineering process of unifying independent sub-systems into one cohesive whole.</p></div>' +
+        '<div class="card"><h3>🔄 The 6-Step Lifecycle</h3><p>From requirements gathering all the way through to ongoing maintenance.</p></div>' +
+      '</div>' +
+      '<div class="quote-block">"Writing a functional program requires systematic planning, rigorous research, and observation of environmental behavior before jumping into the code."</div>'
+  });
+
+  // 2. Information Processing Foundations
+  S.push({
+    eyebrow: 'Lesson Preview · Review',
+    title: 'What Makes Information Useful?',
+    lede: 'Building on INPUT → PROCESS → STORAGE → OUTPUT, raw data must be mapped and contextualized into graphs, charts, or structured representations to become meaningful.',
+    body:
+      '<div class="card-grid cols-3">' +
+        '<div class="card"><h3>⏱️ Timely</h3><p>Information must be available precisely when required. A delay in obtaining it renders it completely useless.</p></div>' +
+        '<div class="card"><h3>🎯 Accuracy</h3><p>The data must be precise — even the slightest errors significantly impact decision-making. Systems must minimize errors to preserve data integrity.</p></div>' +
+        '<div class="card"><h3>📦 Completeness</h3><p>Information should always be whole. Incomplete datasets lead directly to incorrect choices and unintended operational results.</p></div>' +
+      '</div>' +
+      '<div class="note"><b>💡 Together:</b> Timely + Accurate + Complete is what makes information trustworthy enough for a system to act on.</div>'
+  });
+
+  // 3. Defining System Integration
+  S.push({
+    eyebrow: 'The Engineering Mindset',
+    title: 'What Is System Integration?',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>📐 Definition</h3><p><strong>System Integration</strong> is the engineering process of bringing together component sub-systems into one cohesive system — an aggregation of subsystems cooperating so the overarching system can deliver comprehensive functionality.</p><p>There is no single "standard" blueprint: every company runs different subsystems to reach different goals.</p></div>' +
+        '<div class="card"><h3>🌐 Real-World Examples</h3><ul class="ticket-list">' +
+          '<li><strong>Facebook, Pinterest & Snapchat</strong> rely heavily on system integration principles.</li>' +
+          '<li>They validate architectures before scaling features.</li>' +
+          '<li>They run predictive data analytics across subsystems.</li>' +
+          '<li>They manage massive distributed systems safely.</li>' +
+        '</ul></div>' +
+      '</div>'
+  });
+
+  // 4. The 6-Step Lifecycle diagram
+  S.push({
+    eyebrow: 'The Integration Lifecycle',
+    title: 'Six Steps, One Cohesive System',
+    lede: 'To optimize workflows and ensure seamless data connectivity, a systems integrator follows a distinct lifecycle.',
+    body:
+      '<div class="mermaid-wrap">' +
+        '<svg viewBox="0 0 900 300" style="width:100%; height:auto; max-width:820px;" xmlns="http://www.w3.org/2000/svg">' +
+          '<defs>' +
+            '<marker id="lcArrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+              '<path d="M0,0 L10,5 L0,10 z" fill="var(--accent)" />' +
+            '</marker>' +
+          '</defs>' +
+          '<line x1="280" y1="57" x2="312" y2="57" stroke="var(--accent)" stroke-width="2" marker-end="url(#lcArrow)" />' +
+          '<line x1="580" y1="57" x2="612" y2="57" stroke="var(--accent)" stroke-width="2" marker-end="url(#lcArrow)" />' +
+          '<line x1="750" y1="84" x2="750" y2="202" stroke="var(--accent)" stroke-width="2" marker-end="url(#lcArrow)" />' +
+          '<line x1="620" y1="237" x2="588" y2="237" stroke="var(--accent)" stroke-width="2" marker-end="url(#lcArrow)" />' +
+          '<line x1="320" y1="237" x2="288" y2="237" stroke="var(--accent)" stroke-width="2" marker-end="url(#lcArrow)" />' +
+          '<rect x="20" y="30" width="260" height="54" rx="6" fill="var(--card)" stroke="var(--accent)" stroke-opacity="0.55" stroke-width="1.5" />' +
+          '<text x="150" y="62" text-anchor="middle" font-family="Inter, sans-serif" font-size="15" fill="var(--ink)">1. Requirements Gathering</text>' +
+          '<rect x="320" y="30" width="260" height="54" rx="6" fill="var(--card)" stroke="var(--accent)" stroke-opacity="0.55" stroke-width="1.5" />' +
+          '<text x="450" y="62" text-anchor="middle" font-family="Inter, sans-serif" font-size="15" fill="var(--ink)">2. Analysis</text>' +
+          '<rect x="620" y="30" width="260" height="54" rx="6" fill="var(--card)" stroke="var(--accent)" stroke-opacity="0.55" stroke-width="1.5" />' +
+          '<text x="750" y="62" text-anchor="middle" font-family="Inter, sans-serif" font-size="15" fill="var(--ink)">3. Architecture Design</text>' +
+          '<rect x="620" y="210" width="260" height="54" rx="6" fill="var(--card)" stroke="var(--accent)" stroke-opacity="0.55" stroke-width="1.5" />' +
+          '<text x="750" y="242" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" fill="var(--ink)">4. Systems Integration Design</text>' +
+          '<rect x="320" y="210" width="260" height="54" rx="6" fill="var(--card)" stroke="var(--accent)" stroke-opacity="0.55" stroke-width="1.5" />' +
+          '<text x="450" y="242" text-anchor="middle" font-family="Inter, sans-serif" font-size="15" fill="var(--ink)">5. Implementation</text>' +
+          '<rect x="20" y="210" width="260" height="54" rx="6" fill="var(--card)" stroke="var(--accent)" stroke-opacity="0.55" stroke-width="1.5" />' +
+          '<text x="150" y="242" text-anchor="middle" font-family="Inter, sans-serif" font-size="15" fill="var(--ink)">6. Maintenance</text>' +
+        '</svg>' +
+      '</div>' +
+      '<div class="note"><b>💡 Notice:</b> Each stage feeds the next — skipping requirements or analysis creates risk that only resurfaces later, during implementation.</div>'
+  });
+
+  // 5. Steps 1–2
+  S.push({
+    eyebrow: 'Lifecycle Detail',
+    title: 'Step 1–2 · Requirements Gathering & Analysis',
+    body:
+      '<div class="two-col">' +
+        '<div class="card step-card"><div class="step-head"><span class="step-num">1</span><h3>Requirements Gathering</h3></div>' +
+          '<p><strong>What it is:</strong> One or more foundational meetings where ideas, specifications, and expectations are detailed with a systems integrator.</p>' +
+          '<p><strong>Why it matters:</strong> There is no single "standard" integration blueprint — every company operates different subsystems toward unique goals, so the integrator must fully understand requirements to deliver an efficient, user-friendly outcome.</p></div>' +
+        '<div class="card step-card"><div class="step-head"><span class="step-num">2</span><h3>Analysis</h3></div>' +
+          '<p><strong>What it is:</strong> Business analysts conduct a deep evaluation of the gathered expectations to determine operational feasibility.</p>' +
+          '<p><strong>Why it matters:</strong> What a client wants is not always what the system actually needs. Careful, professional listening keeps the system configuration realistic and viable.</p></div>' +
+      '</div>'
+  });
+
+  // 6. Steps 3–4
+  S.push({
+    eyebrow: 'Lifecycle Detail',
+    title: 'Step 3–4 · Architecture Design & Systems Integration Design',
+    body:
+      '<div class="two-col">' +
+        '<div class="card step-card"><div class="step-head"><span class="step-num">3</span><h3>Architecture Design</h3></div>' +
+          '<p><strong>What it is:</strong> The strategic blueprinting process where the integrator organizes the layout for putting the distinct subsystems together.</p>' +
+          '<p><strong>Why it matters:</strong> Integrators must establish a rock-solid structural foundation before physical execution begins, to eliminate downstream risks and ensure flawless data flow.</p></div>' +
+        '<div class="card step-card"><div class="step-head"><span class="step-num">4</span><h3>Systems Integration Design</h3></div>' +
+          '<p><strong>What it is:</strong> The technical phase where independent software modules are physically or logically linked into a unified architecture.</p>' +
+          '<p><strong>Why it matters:</strong> Depending on the quantity and size of the systems involved, linking varied platforms while preventing data loss or bottlenecks takes precise, intentional timing.</p></div>' +
+      '</div>'
+  });
+
+  // 7. Steps 5–6
+  S.push({
+    eyebrow: 'Lifecycle Detail',
+    title: 'Step 5–6 · Implementation & Maintenance',
+    body:
+      '<div class="two-col">' +
+        '<div class="card step-card"><div class="step-head"><span class="step-num">5</span><h3>Implementation</h3></div>' +
+          '<p><strong>What it is:</strong> The stage where the integrated system is thoroughly verified and tested. Test engineers look for bugs, resolve errors, and run secondary operational testing.</p>' +
+          '<p><strong>Why it matters:</strong> This ensures the product delivered to end users is errorless, letting the internal team comfortably adapt to the new workflow.</p></div>' +
+        '<div class="card step-card"><div class="step-head"><span class="step-num">6</span><h3>Maintenance</h3></div>' +
+          '<p><strong>What it is:</strong> Ongoing monitoring and modification of system components after product release.</p>' +
+          '<p><strong>Why it matters:</strong> Custom integration provides a competitive advantage over rigid off-the-shelf software, since components can be modified, scaled, or upgraded any time the company evolves.</p></div>' +
+      '</div>'
+  });
+
+  // 8. Check for Understanding
+  S.push({
+    eyebrow: 'Check for Understanding',
+    title: 'Review Questions',
+    lede: 'Answer these questions based on the module content.',
+    body:
+      '<div style="display:flex; flex-direction:column; gap:16px;">' +
+        '<div class="card"><h3>1. Little-to-no abstraction from hardware</h3><p style="color:var(--ink-soft);">It is a programming language that provides little or no abstraction from a computer\'s instruction set architecture — commands or functions map closely to processor instructions. What is this called?</p></div>' +
+        '<div class="card"><h3>2. Unifying sub-systems</h3><p style="color:var(--ink-soft);">In engineering, what is the process of bringing together component sub-systems into one system called?</p></div>' +
+        '<div class="card"><h3>3. True or False</h3><p style="color:var(--ink-soft);">Social media platforms use this integration approach when building out their systems.</p></div>' +
+      '</div>' +
+      '<div class="note"><b>💡 Tip:</b> Review the lifecycle diagram and step cards. Answers are on the next slide.</div>'
+  });
+
+  // 9. Answers
+  S.push({
+    eyebrow: 'Check for Understanding',
+    title: 'Answers',
+    lede: 'Check your answers below.',
+    body:
+      '<div style="display:flex; flex-direction:column; gap:12px;">' +
+        '<div class="answer-box"><div class="label">1. Little-to-no abstraction from hardware</div><div class="value"><strong>Low-level programming</strong> — commands map closely to processor instructions.</div></div>' +
+        '<div class="answer-box"><div class="label">2. Unifying sub-systems</div><div class="value"><strong>System Integration</strong></div></div>' +
+        '<div class="answer-box"><div class="label">3. True or False</div><div class="value"><strong>True</strong> — Facebook, Pinterest, and Snapchat all rely on it.</div></div>' +
+      '</div>'
+  });
+
+  // 10. Wrap-up
+  S.push({
+    eyebrow: 'Lesson Wrap-Up',
+    title: 'Key Takeaways',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>📌 The Three Pillars of Useful Info</h3><ul class="ticket-list">' +
+          '<li><strong>Timely:</strong> Available exactly when it\'s needed.</li>' +
+          '<li><strong>Accuracy:</strong> Precise, error-minimized data.</li>' +
+          '<li><strong>Completeness:</strong> Whole datasets, no gaps.</li>' +
+        '</ul></div>' +
+        '<div class="card"><h3>🔗 6-Step Recap</h3><ul class="ticket-list">' +
+          '<li>Requirements Gathering → Analysis → Architecture Design</li>' +
+          '<li>→ Systems Integration Design → Implementation → Maintenance</li>' +
+          '<li>Custom integration lets components scale as the company evolves.</li>' +
+        '</ul></div>' +
+      '</div>' +
+      '<div class="quote-block" style="margin-top:12px;">"Custom integration provides a competitive advantage over rigid off-the-shelf software — components can be modified, scaled, or upgraded anytime the company evolves."</div>'
+  });
+
+  // ——— GAUGE ———
+  function applyGauge(t){
+    var label = t < 0.3 ? 'Module 4' : (t < 0.75 ? 'Integration' : 'Lifecycle');
+    document.getElementById('gaugeLabel').textContent = label;
+  }
+
+  // ——— RENDER & NAV ———
+  var stage = document.getElementById('stage');
+  var counterEl = document.getElementById('counter');
+  var progressFill = document.getElementById('progressFill');
+  var total = S.length;
+  var current = 0;
+  var animating = false;
+
+  function buildSlideEl(idx){
+    var d = S[idx];
+    var el = document.createElement('div');
+    el.className = 'slide';
+    el.innerHTML =
+      '<div class="slide-inner">' +
+        '<div class="eyebrow">' + d.eyebrow + '</div>' +
+        '<h2 class="slide-title">' + d.title + '</h2>' +
+        (d.lede ? '<div class="lede">' + d.lede + '</div>' : '') +
+        d.body +
+      '</div>';
+    return el;
+  }
+
+  function updateHud(){
+    counterEl.textContent = (current+1) + ' / ' + total;
+    progressFill.style.width = ((current) / (total-1) * 100) + '%';
+    applyGauge(current / (total-1));
+  }
+
+  var curEl = buildSlideEl(0);
+  curEl.classList.add('active');
+  stage.appendChild(curEl);
+  updateHud();
+  renderMermaidIn(curEl);
+
+  function goTo(idx, dir){
+    if(animating || idx === current || idx < 0 || idx >= total) return;
+    animating = true;
+    var nextEl = buildSlideEl(idx);
+    nextEl.classList.add(dir > 0 ? 'enter-fwd' : 'enter-bwd');
+    stage.appendChild(nextEl);
+    renderMermaidIn(nextEl);
+    void nextEl.offsetWidth;
+    var oldEl = curEl;
+    requestAnimationFrame(function(){
+      oldEl.classList.remove('active');
+      oldEl.classList.add(dir > 0 ? 'exit-fwd' : 'exit-bwd');
+      nextEl.classList.remove('enter-fwd','enter-bwd');
+      nextEl.classList.add('active');
+    });
+    current = idx;
+    curEl = nextEl;
+    updateHud();
+    setTimeout(function(){
+      if(oldEl && oldEl.parentNode) oldEl.parentNode.removeChild(oldEl);
+      animating = false;
+    }, 420);
+  }
+
+  function next(){ goTo(current+1, 1); }
+  function prev(){ goTo(current-1, -1); }
+
+  document.getElementById('clickZone').addEventListener('click', function(e){
+    var w = window.innerWidth;
+    if(e.clientX < w * 0.25){ prev(); } else { next(); }
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown'){ e.preventDefault(); next(); }
+    else if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); prev(); }
+    else if(e.key === 'Home'){ e.preventDefault(); goTo(0, -1); }
+    else if(e.key === 'End'){ e.preventDefault(); goTo(total-1, 1); }
+    else if(e.key === 'ArrowUp'){ e.preventDefault(); prev(); }
+    else if(e.key === 'ArrowDown'){ e.preventDefault(); next(); }
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Module 6 · Web Services, SOA &amp; Microservices</title>
+<style>
+  @font-face { font-family: 'system-mono'; src: local('IBM Plex Mono'), local('SFMono-Regular'); }
+
+  :root{
+    --bg:#0B0F14;
+    --panel:#121A24;
+    --panel-2:#0F161F;
+    --line:#22303F;
+    --line-soft:#1A2532;
+    --text:#E7EDF3;
+    --text-dim:#8FA0B3;
+    --text-faint:#5E6E80;
+    --teal:#2DD4BF;
+    --teal-dim:#1B7A70;
+    --amber:#F2A65A;
+    --danger:#F2745A;
+    --radius:10px;
+    --font-display:'IBM Plex Mono', 'SFMono-Regular', Menlo, Consolas, monospace;
+    --font-body:'IBM Plex Sans','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  }
+
+  *{box-sizing:border-box; min-width:0;}
+  html,body{
+    margin:0; padding:0; height:100%; background:var(--bg); color:var(--text);
+    font-family:var(--font-body); overflow:hidden; -webkit-font-smoothing:antialiased;
+  }
+  body{ background-image:
+      radial-gradient(circle at 10% 10%, rgba(45,212,191,0.05), transparent 40%),
+      radial-gradient(circle at 90% 90%, rgba(242,166,90,0.04), transparent 40%);
+  }
+
+  /* ---------- chrome ---------- */
+  #progress-track{ position:fixed; top:0; left:0; right:0; height:3px; background:var(--line-soft); z-index:100;}
+  #progress-fill{ height:100%; width:0%; background:linear-gradient(90deg,var(--teal),var(--amber)); transition:width .3s ease;}
+  #counter{
+    position:fixed; right:22px; bottom:18px; z-index:100; font-family:var(--font-display);
+    font-size:15px; color:var(--text-dim); letter-spacing:0.05em; background:rgba(18,26,36,0.7);
+    padding:6px 12px; border:1px solid var(--line); border-radius:999px; backdrop-filter:blur(6px);
+  }
+  #hint{
+    position:fixed; left:22px; bottom:18px; z-index:100; font-family:var(--font-display); font-size:14px;
+    color:var(--text-faint); letter-spacing:0.03em;
+  }
+  #hint kbd{ background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:1px 6px; color:var(--text-dim); font-family:var(--font-display);}
+
+  /* ---------- stage ---------- */
+  #stage{ position:relative; width:100vw; height:100vh; overflow:hidden; }
+  .slide{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    padding: clamp(28px,4vh,56px) clamp(40px,6vw,110px);
+    opacity:0; transform:translateX(48px); pointer-events:none;
+    transition: opacity .35s ease, transform .35s ease;
+  }
+  .slide.active{ opacity:1; transform:translateX(0); pointer-events:auto; z-index:2; }
+  .slide.prep-left{ transform:translateX(-48px); opacity:0; }
+  .slide.prep-right{ transform:translateX(48px); opacity:0; }
+  .slide.exit-left{ transform:translateX(-48px); opacity:0; }
+  .slide.exit-right{ transform:translateX(48px); opacity:0; }
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition:opacity .01s linear; transform:none !important; }
+  }
+
+  .slide.overflow-ok{ overflow-y:auto; }
+
+  .eyebrow{
+    font-family:var(--font-display); font-size:15px; letter-spacing:0.22em; color:var(--teal);
+    text-transform:uppercase; display:flex; align-items:center; gap:10px; margin-bottom:10px;
+  }
+  .eyebrow::before{ content:''; width:8px; height:8px; border-radius:50%; background:var(--teal); box-shadow:0 0 0 3px rgba(45,212,191,0.15); }
+  .eyebrow .trace{ flex:1; height:1px; background:repeating-linear-gradient(90deg,var(--line) 0 6px, transparent 6px 11px); }
+
+  h1.title{
+    font-family:var(--font-display); font-weight:700; font-size:clamp(28px, 3.6vw, 46px);
+    letter-spacing:-0.01em; margin:0 0 clamp(14px,2vh,26px) 0; color:var(--text); line-height:1.15;
+  }
+  h1.title .accent{ color:var(--amber); }
+
+  .lede{ font-size:clamp(16px,1.15vw,19px); color:var(--text-dim); max-width:900px; line-height:1.55; margin-bottom:18px;}
+
+  .content{ flex:1; min-height:0; display:flex; flex-direction:column; gap:14px; }
+
+  /* ---------- generic building blocks ---------- */
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:stretch; }
+  .grid-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .grid-5{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; }
+
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px 18px; display:flex; flex-direction:column; gap:8px;
+  }
+  .card h3{ margin:0; font-size:18px; color:var(--text); font-family:var(--font-display); font-weight:600;}
+  .card p{ margin:0; font-size:16px; color:var(--text-dim); line-height:1.5;}
+  .card .tag{ align-self:flex-start; font-family:var(--font-display); font-size:13px; letter-spacing:0.1em; color:var(--teal); border:1px solid var(--teal-dim); padding:2px 8px; border-radius:999px; text-transform:uppercase;}
+
+  ul.bullets{ margin:0; padding-left:18px; color:var(--text-dim); font-size:16px; line-height:1.65; }
+  ul.bullets li{ margin-bottom:6px; }
+  ul.bullets li b, ul.bullets li strong{ color:var(--text); }
+
+  .quote-block{
+    border-left:3px solid var(--amber); background:var(--panel); border-radius:0 var(--radius) var(--radius) 0;
+    padding:16px 20px; font-style:italic; color:var(--text); font-size:clamp(16px,1.3vw,20px); line-height:1.6;
+  }
+  .quote-block cite{ display:block; margin-top:10px; font-style:normal; font-family:var(--font-display); font-size:14px; color:var(--text-faint); letter-spacing:0.05em;}
+
+  table.term-table{ width:100%; border-collapse:collapse; font-size:16px; }
+  table.term-table th{ text-align:left; font-family:var(--font-display); font-size:14px; letter-spacing:0.08em; text-transform:uppercase; color:var(--teal); border-bottom:1px solid var(--line); padding:8px 10px; }
+  table.term-table td{ border-bottom:1px solid var(--line-soft); padding:9px 10px; color:var(--text-dim); vertical-align:top; }
+  table.term-table td b{ color:var(--text); }
+  table.term-table tr:hover td{ background:rgba(45,212,191,0.03); }
+
+  /* ---------- diagrams ---------- */
+  .diagram{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; flex:1; }
+  .flow-row{ display:flex; align-items:center; justify-content:center; gap:0; width:100%; flex-wrap:wrap; }
+  .node{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:14px 20px; text-align:center; font-size:16px; color:var(--text); min-width:150px;
+    box-shadow:0 0 0 0 rgba(45,212,191,0); transition:box-shadow .2s;
+  }
+  .node.hi{ border-color:var(--teal-dim); box-shadow:0 0 0 3px rgba(45,212,191,0.08); }
+  .node .n-label{ font-family:var(--font-display); font-size:13px; color:var(--teal); letter-spacing:0.08em; text-transform:uppercase; display:block; margin-bottom:4px;}
+  .arrow-h{ width:clamp(30px,4vw,70px); height:2px; background:repeating-linear-gradient(90deg,var(--teal) 0 6px, transparent 6px 10px); position:relative; }
+  .arrow-h::after{ content:''; position:absolute; right:-1px; top:-4px; border:5px solid transparent; border-left-color:var(--teal); }
+
+  .tree{ display:flex; flex-direction:column; align-items:center; width:100%; gap:0;}
+  .tree .root{ margin-bottom:0; }
+  .tree .stem{ width:2px; height:26px; background:var(--line); }
+  .tree .bar{ height:2px; background:var(--line); width:min(760px,86%); position:relative; }
+  .tree .branches{ display:flex; justify-content:space-between; width:min(760px,86%); }
+  .tree .branch{ display:flex; flex-direction:column; align-items:center; width:23%; }
+  .tree .branch .stem{ height:22px; }
+
+  .hub-diagram{ display:flex; flex-direction:column; align-items:center; gap:0; width:100%; }
+  .hub-diagram .stem{ width:2px; height:24px; background:var(--line); }
+  .hub-diagram .hub{ background:linear-gradient(180deg,var(--panel),var(--panel-2)); border:1px solid var(--teal-dim); border-radius:var(--radius); padding:14px 26px; font-family:var(--font-display); font-size:15px; letter-spacing:0.05em; color:var(--teal); text-align:center; }
+  .hub-diagram .bar{ height:2px; background:var(--line); width:min(720px,80%); margin-top:0; }
+  .hub-diagram .spokes{ display:flex; justify-content:space-between; width:min(720px,80%); margin-top:0; }
+  .hub-diagram .spoke{ display:flex; flex-direction:column; align-items:center; width:31%; }
+  .hub-diagram .spoke .stem{ height:20px; }
+
+  code, pre, .mono{ font-family:var(--font-display); }
+
+  /* ---------- code blocks ---------- */
+  .code-wrap{ position:relative; background:#0D1319; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; flex:1; display:flex; flex-direction:column; min-height:0;}
+  .code-head{ display:flex; align-items:center; justify-content:space-between; padding:8px 14px; border-bottom:1px solid var(--line); background:#0F161F;}
+  .code-lang{ font-family:var(--font-display); font-size:14px; letter-spacing:0.1em; color:var(--text-dim); text-transform:uppercase;}
+  .copy-btn{
+    font-family:var(--font-display); font-size:14px; color:var(--text-dim); background:var(--panel);
+    border:1px solid var(--line); border-radius:6px; padding:5px 12px; cursor:pointer; transition:all .15s;
+  }
+  .copy-btn:hover{ color:var(--teal); border-color:var(--teal-dim); }
+  .copy-btn.copied{ color:var(--teal); border-color:var(--teal); }
+  .code-body{ padding:16px 18px; overflow:auto; font-size:16px; line-height:1.65; max-height:56vh; }
+  .code-body pre{ margin:0; white-space:pre; }
+  .tok-tag{ color:#6FA8DC; } .tok-attr{ color:var(--amber); } .tok-str{ color:var(--teal); }
+  .tok-key{ color:#6FA8DC; } .tok-num{ color:#C792EA; } .tok-bool{ color:#C792EA; }
+  .tok-punc{ color:var(--text-faint); } .tok-comment{ color:var(--text-faint); font-style:italic; }
+
+  /* ---------- activities ---------- */
+  .qa-list{ display:flex; flex-direction:column; gap:12px; overflow-y:auto; }
+  .qa-item{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:14px 18px; }
+  .qa-item .qnum{ font-family:var(--font-display); color:var(--amber); font-size:15px; margin-right:8px; }
+  .qa-item .qtext{ color:var(--text); font-size:16px; }
+  .choices{ display:grid; grid-template-columns:1fr 1fr; gap:6px 18px; margin-top:8px; }
+  .choice{ font-size:16px; color:var(--text-dim); }
+  .choice b{ color:var(--teal); font-family:var(--font-display); margin-right:6px; }
+  .wordbank{ font-size:16px; color:var(--text-dim); background:var(--panel-2); border:1px dashed var(--line); border-radius:8px; padding:10px 14px; margin-bottom:8px; }
+  .wordbank b{ color:var(--amber); }
+
+  .answers-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px 28px; overflow-y:auto; }
+  .answers-grid .ans-block h4{ font-family:var(--font-display); color:var(--teal); font-size:15px; letter-spacing:0.08em; text-transform:uppercase; margin:0 0 8px 0; }
+  .ans-item{ font-size:16px; color:var(--text-dim); margin-bottom:6px; line-height:1.5; }
+  .ans-item b{ color:var(--text); }
+
+  .recap-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+  .recap-grid .card{ align-items:center; text-align:center; }
+  .recap-grid .num{ font-family:var(--font-display); font-size:26px; color:var(--amber); }
+
+  /* ---------- title slide ---------- */
+  .title-slide{ align-items:center; justify-content:center; text-align:center; }
+  .title-slide .kicker{ font-family:var(--font-display); color:var(--teal); letter-spacing:0.3em; font-size:16px; margin-bottom:22px; text-transform:uppercase;}
+  .title-slide h1{ font-family:var(--font-display); font-size:clamp(38px,6vw,72px); margin:0; line-height:1.1; }
+  .title-slide h1 .accent{ color:var(--amber); }
+  .title-slide .sub{ margin-top:22px; color:var(--text-dim); font-size:clamp(16px,1.3vw,20px); max-width:760px; }
+  .title-slide .trace-line{ margin-top:40px; width:min(600px,60vw); height:1px; background:repeating-linear-gradient(90deg,var(--line) 0 8px, transparent 8px 14px); position:relative; }
+  .title-slide .trace-line::before, .title-slide .trace-line::after{ content:''; position:absolute; top:-3px; width:7px; height:7px; border-radius:50%; background:var(--teal); }
+  .title-slide .trace-line::before{ left:0; } .title-slide .trace-line::after{ right:0; }
+
+  /* ---------- shortcuts modal ---------- */
+  #shortcuts-modal{
+    position:fixed; inset:0; background:rgba(5,8,12,0.75); backdrop-filter:blur(3px); z-index:200;
+    display:none; align-items:center; justify-content:center;
+  }
+  #shortcuts-modal.show{ display:flex; }
+  #shortcuts-modal .box{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:28px 34px;
+    max-width:460px; width:90%;
+  }
+  #shortcuts-modal h2{ font-family:var(--font-display); font-size:18px; margin:0 0 16px 0; color:var(--teal); }
+  #shortcuts-modal .row{ display:flex; justify-content:space-between; font-size:16px; color:var(--text-dim); padding:7px 0; border-bottom:1px solid var(--line-soft); }
+  #shortcuts-modal .row kbd{ background:var(--panel-2); border:1px solid var(--line); border-radius:5px; padding:2px 8px; color:var(--text); font-family:var(--font-display); }
+  #shortcuts-modal .close-hint{ margin-top:16px; font-size:14px; color:var(--text-faint); text-align:center; }
+
+  @media (max-width: 900px){
+    .grid-2, .grid-3, .grid-5, .recap-grid, .answers-grid{ grid-template-columns:1fr; }
+    .tree .branches, .hub-diagram .spokes{ flex-direction:column; align-items:center; gap:16px; width:100%; }
+    .tree .branch, .hub-diagram .spoke{ width:80%; }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress-track"><div id="progress-fill"></div></div>
+<div id="counter">1 / 18</div>
+<div id="hint">Right-click / <kbd>&rarr;</kbd> next &nbsp;·&nbsp; <kbd>&larr;</kbd> back &nbsp;·&nbsp; <kbd>?</kbd> shortcuts</div>
+
+<div id="stage">
+
+  <!-- 1 -->
+  <section class="slide title-slide">
+    <div class="kicker">Module 06 · Systems &amp; Architecture Track</div>
+    <h1>Web Services, SOA <span class="accent">&amp; Microservices</span></h1>
+    <div class="sub">How independent services find each other, speak a common language, and keep the whole system running even when one part breaks.</div>
+    <div class="trace-line"></div>
+  </section>
+
+  <!-- 2 -->
+  <section class="slide">
+    <div class="eyebrow">A · Lesson Preview<span class="trace"></span></div>
+    <h1 class="title">From Wiring to Architecture</h1>
+    <div class="lede">In Module 5 you learned the fundamental integration methods &mdash; Point-to-Point, Vertical, Horizontal/ESB, and Common Data Format &mdash; plus jargon like Interfaces, Messages, EDI, and XML. Module 6 elevates these into real-world network architecture: Web Services, SOA, REST vs. SOAP, and Microservices.</div>
+    <div class="content" style="justify-content:center;">
+      <div class="quote-block">
+        Building modern software systems isn't about writing massive monolithic programs from scratch &mdash; it's about composing independent, specialized web services that talk to each other effortlessly across networks.
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="slide">
+    <div class="eyebrow">B · Main Lesson<span class="trace"></span></div>
+    <h1 class="title">What Is a Web Service?</h1>
+    <div class="lede">A standardized software mechanism designed to support interoperable machine-to-machine interaction over a network &mdash; typically the Internet or an Intranet.</div>
+    <div class="content">
+      <div class="diagram" style="flex:0 0 auto; padding:6px 0 2px;">
+        <div class="flow-row">
+          <div class="node"><span class="n-label">Client</span>Browser / Mobile App</div>
+          <div class="arrow-h"></div>
+          <div class="node hi"><span class="n-label">Web Service</span>REST / SOAP Endpoint</div>
+          <div class="arrow-h"></div>
+          <div class="node"><span class="n-label">Server</span>Business Logic + Database</div>
+        </div>
+      </div>
+      <div class="grid-3" style="flex:1;">
+        <div class="card"><span class="tag">Independence</span><h3>Platform &amp; Language</h3><p>A client written in C# on Windows can seamlessly communicate with a Java web service running on Linux.</p></div>
+        <div class="card"><span class="tag">Transport</span><h3>Network Communication</h3><p>Data transmission uses standard web protocols such as HTTP/HTTPS.</p></div>
+        <div class="card"><span class="tag">Contract</span><h3>Self-Describing Interfaces</h3><p>Methods &amp; data formats are defined through standard descriptions &mdash; WSDL for SOAP, OpenAPI/Swagger for REST.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="slide">
+    <div class="eyebrow">B · Main Lesson<span class="trace"></span></div>
+    <h1 class="title">Service-Oriented Architecture (SOA)</h1>
+    <div class="lede">An architectural pattern where software applications are designed as a collection of discrete, loosely coupled, and reusable services.</div>
+    <div class="content">
+      <div class="diagram" style="flex:0 0 auto; padding:4px 0 0;">
+        <svg viewBox="0 0 640 280" style="width:100%; max-width:680px; height:auto;">
+          <defs>
+            <marker id="soa-arrow-teal" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L7,3 L0,6 Z" fill="var(--teal)"/>
+            </marker>
+            <marker id="soa-arrow-amber" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L7,3 L0,6 Z" fill="var(--amber)"/>
+            </marker>
+          </defs>
+
+          <path d="M140,200 C160,150 220,90 262,58" fill="none" stroke="var(--teal)" stroke-width="1.6" marker-end="url(#soa-arrow-teal)"/>
+          <text x="128" y="140" font-family="var(--font-display)" font-size="15" fill="var(--teal)">1 · Publish</text>
+
+          <path d="M378,58 C430,95 480,150 500,198" fill="none" stroke="var(--teal)" stroke-width="1.6" marker-end="url(#soa-arrow-teal)"/>
+          <text x="418" y="140" font-family="var(--font-display)" font-size="15" fill="var(--teal)">2 · Find</text>
+
+          <path d="M460,236 L180,236" fill="none" stroke="var(--amber)" stroke-width="1.6" stroke-dasharray="5 5" marker-end="url(#soa-arrow-amber)"/>
+          <text x="320" y="266" text-anchor="middle" font-family="var(--font-display)" font-size="15" fill="var(--amber)">3 · Bind &amp; Invoke</text>
+
+          <rect x="250" y="10" width="140" height="64" rx="10" fill="var(--panel)" stroke="var(--teal-dim)" stroke-width="1.5"/>
+          <text x="320" y="35" text-anchor="middle" font-family="var(--font-display)" font-size="12" letter-spacing="1.5" fill="var(--teal)">SERVICE</text>
+          <text x="320" y="58" text-anchor="middle" font-family="var(--font-display)" font-size="17" fill="var(--text)">Registry</text>
+
+          <rect x="10" y="192" width="170" height="64" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+          <text x="95" y="217" text-anchor="middle" font-family="var(--font-display)" font-size="12" letter-spacing="1.5" fill="var(--text-faint)">SERVICE</text>
+          <text x="95" y="240" text-anchor="middle" font-family="var(--font-display)" font-size="17" fill="var(--text)">Provider</text>
+
+          <rect x="460" y="192" width="170" height="64" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+          <text x="545" y="217" text-anchor="middle" font-family="var(--font-display)" font-size="12" letter-spacing="1.5" fill="var(--text-faint)">SERVICE</text>
+          <text x="545" y="240" text-anchor="middle" font-family="var(--font-display)" font-size="17" fill="var(--text)">Consumer</text>
+        </svg>
+      </div>
+      <div class="grid-2" style="flex:1;">
+        <div class="card"><span class="tag">01</span><h3>Loose Coupling</h3><p>Services remain independent; changes inside one service don't break connected systems as long as the interface stays unchanged.</p></div>
+        <div class="card"><span class="tag">02</span><h3>Reusability</h3><p>Services perform distinct business functions &mdash; Payment Processing, User Authentication &mdash; that multiple applications can share.</p></div>
+        <div class="card"><span class="tag">03</span><h3>Interoperability</h3><p>Built on open standards so different systems can exchange data effortlessly.</p></div>
+        <div class="card"><span class="tag">04</span><h3>Abstraction</h3><p>Internal operational logic is hidden from clients &mdash; they only interact with the published service interface.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="slide">
+    <div class="eyebrow">B · Main Lesson<span class="trace"></span></div>
+    <h1 class="title">REST vs. SOAP</h1>
+    <div class="lede">Two dominant paradigms for building web service APIs.</div>
+    <div class="content" style="overflow-y:auto;">
+      <table class="term-table">
+        <thead><tr><th>Feature</th><th>SOAP</th><th>REST</th></tr></thead>
+        <tbody>
+          <tr><td><b>Protocol Type</b></td><td>Strict, standard-based Protocol</td><td>Flexible, architectural Style</td></tr>
+          <tr><td><b>Data Format</b></td><td>Exclusively XML</td><td>Multiple formats (JSON, XML, Plain Text, HTML)</td></tr>
+          <tr><td><b>Transport</b></td><td>HTTP, SMTP, TCP, etc.</td><td>Primarily HTTP/HTTPS</td></tr>
+          <tr><td><b>Performance</b></td><td>Heavier overhead (XML envelope wrapping)</td><td>Lightweight, faster, highly scalable</td></tr>
+          <tr><td><b>Security</b></td><td>Built-in WS-Security (enterprise-grade)</td><td>Transport layer security (HTTPS, OAuth 2.0, JWT)</td></tr>
+          <tr><td><b>Best Used For</b></td><td>Financial transactions, legacy enterprise banking</td><td>Mobile apps, cloud APIs, modern web apps</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="slide">
+    <div class="eyebrow">B · Main Lesson<span class="trace"></span></div>
+    <h1 class="title">Monolithic vs. Microservices</h1>
+    <div class="lede">As systems evolved from central SOA implementations, design shifted from large single-unit applications toward distributed microservices.</div>
+    <div class="content grid-2" style="align-items:stretch;">
+      <div class="card" style="align-items:center;">
+        <span class="tag">Monolith</span>
+        <div class="node" style="width:100%;">UI / Interface Layer</div>
+        <div class="node" style="width:100%;">Business Logic (All Domains)</div>
+        <div class="node" style="width:100%;">Database Data Access</div>
+        <div class="node hi" style="width:100%; border-color:var(--amber);">Single Database</div>
+      </div>
+      <div class="card">
+        <span class="tag">Microservices</span>
+        <div class="grid-2" style="gap:8px;">
+          <div class="node hi">User Service<br><span style="font-size:13px;color:var(--text-faint);">(own DB)</span></div>
+          <div class="node hi">Orders Service<br><span style="font-size:13px;color:var(--text-faint);">(own DB)</span></div>
+          <div class="node hi">Payment Service<br><span style="font-size:13px;color:var(--text-faint);">(own DB)</span></div>
+          <div class="node hi">Inventory Service<br><span style="font-size:13px;color:var(--text-faint);">(own DB)</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="slide">
+    <div class="eyebrow">B · Main Lesson<span class="trace"></span></div>
+    <h1 class="title">Two Ways to Build the Same App</h1>
+    <div class="content grid-2">
+      <div class="card" style="align-items:center; text-align:center;">
+        <span class="tag">Monolithic Architecture</span>
+        <svg viewBox="0 0 160 175" width="168" height="184" style="margin:4px 0;">
+          <rect x="20" y="10" width="120" height="130" rx="8" fill="none" stroke="var(--line)" stroke-width="2"/>
+          <line x1="20" y1="53" x2="140" y2="53" stroke="var(--line)" stroke-width="1.5"/>
+          <line x1="20" y1="96" x2="140" y2="96" stroke="var(--line)" stroke-width="1.5"/>
+          <text x="80" y="35" text-anchor="middle" font-family="var(--font-display)" font-size="13" fill="var(--text-dim)">UI Layer</text>
+          <text x="80" y="78" text-anchor="middle" font-family="var(--font-display)" font-size="13" fill="var(--text-dim)">Business Logic</text>
+          <text x="80" y="121" text-anchor="middle" font-family="var(--font-display)" font-size="13" fill="var(--text-dim)">Data Access</text>
+          <line x1="80" y1="140" x2="80" y2="148" stroke="var(--amber)" stroke-width="2"/>
+          <ellipse cx="80" cy="148" rx="24" ry="7" fill="none" stroke="var(--amber)" stroke-width="2"/>
+          <line x1="56" y1="148" x2="56" y2="162" stroke="var(--amber)" stroke-width="2"/>
+          <line x1="104" y1="148" x2="104" y2="162" stroke="var(--amber)" stroke-width="2"/>
+          <path d="M56 162 A24 7 0 0 0 104 162" fill="none" stroke="var(--amber)" stroke-width="2"/>
+        </svg>
+        <h3>One Codebase, One Deploy</h3>
+        <p>All components &mdash; UI, business logic, data access &mdash; are bundled into a single executable codebase. Simple to deploy initially, but difficult to scale, update, or maintain as team sizes expand.</p>
+      </div>
+      <div class="card" style="align-items:center; text-align:center;">
+        <span class="tag">Microservices Architecture</span>
+        <svg viewBox="0 0 260 175" width="250" height="168" style="margin:4px 0;">
+          <rect x="100" y="70" width="60" height="34" rx="6" fill="var(--panel)" stroke="var(--teal-dim)" stroke-width="2"/>
+          <text x="130" y="91" text-anchor="middle" font-family="var(--font-display)" font-size="11" fill="var(--teal)">Gateway</text>
+
+          <rect x="10" y="10" width="64" height="30" rx="5" fill="none" stroke="var(--teal)" stroke-width="1.8"/>
+          <text x="42" y="29" text-anchor="middle" font-family="var(--font-display)" font-size="11" fill="var(--text)">Users</text>
+
+          <rect x="186" y="10" width="64" height="30" rx="5" fill="none" stroke="var(--teal)" stroke-width="1.8"/>
+          <text x="218" y="29" text-anchor="middle" font-family="var(--font-display)" font-size="11" fill="var(--text)">Orders</text>
+
+          <rect x="10" y="135" width="64" height="30" rx="5" fill="none" stroke="var(--teal)" stroke-width="1.8"/>
+          <text x="42" y="154" text-anchor="middle" font-family="var(--font-display)" font-size="11" fill="var(--text)">Payments</text>
+
+          <rect x="186" y="135" width="64" height="30" rx="5" fill="none" stroke="var(--teal)" stroke-width="1.8"/>
+          <text x="218" y="154" text-anchor="middle" font-family="var(--font-display)" font-size="11" fill="var(--text)">Inventory</text>
+
+          <line x1="100" y1="80" x2="74" y2="35" stroke="var(--line)" stroke-width="1.5"/>
+          <line x1="160" y1="80" x2="186" y2="35" stroke="var(--line)" stroke-width="1.5"/>
+          <line x1="100" y1="95" x2="74" y2="140" stroke="var(--line)" stroke-width="1.5"/>
+          <line x1="160" y1="95" x2="186" y2="140" stroke="var(--line)" stroke-width="1.5"/>
+        </svg>
+        <h3>Many Small, Autonomous Services</h3>
+        <p>Decomposes an application into small services organized around business capabilities. Each microservice manages its own data storage and communicates via REST APIs or message brokers.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="slide">
+    <div class="eyebrow">C · Use Cases &amp; Analogies<span class="trace"></span></div>
+    <h1 class="title">Analogy: Restaurant Operations</h1>
+    <div class="content grid-2" style="align-items:center;">
+      <div class="card">
+        <span class="tag">Monolithic</span>
+        <svg viewBox="0 0 64 48" width="88" height="66" style="margin:2px 0;">
+          <rect x="4" y="14" width="34" height="20" rx="2" fill="none" stroke="var(--text-dim)" stroke-width="2"/>
+          <path d="M38 20 L52 20 L58 28 L58 34 L38 34 Z" fill="none" stroke="var(--text-dim)" stroke-width="2"/>
+          <rect x="10" y="18" width="10" height="8" fill="none" stroke="var(--amber)" stroke-width="1.5"/>
+          <circle cx="16" cy="38" r="4" fill="none" stroke="var(--text-dim)" stroke-width="2"/>
+          <circle cx="48" cy="38" r="4" fill="none" stroke="var(--text-dim)" stroke-width="2"/>
+          <line x1="4" y1="38" x2="12" y2="38" stroke="var(--text-dim)" stroke-width="2"/>
+          <line x1="20" y1="38" x2="44" y2="38" stroke="var(--text-dim)" stroke-width="2"/>
+        </svg>
+        <h3>The Food Truck</h3>
+        <p>One chef cooks the burger, fries the chips, takes cash, and cleans up. If the chef gets sick, the entire operation halts.</p>
+      </div>
+      <div class="card">
+        <span class="tag">SOA / Microservices</span>
+        <svg viewBox="0 0 64 48" width="88" height="66" style="margin:2px 0;">
+          <rect x="4" y="20" width="14" height="14" rx="1.5" fill="none" stroke="var(--teal)" stroke-width="2"/>
+          <rect x="25" y="14" width="14" height="20" rx="1.5" fill="none" stroke="var(--teal)" stroke-width="2"/>
+          <rect x="46" y="20" width="14" height="14" rx="1.5" fill="none" stroke="var(--teal)" stroke-width="2"/>
+          <line x1="11" y1="20" x2="11" y2="10" stroke="var(--amber)" stroke-width="2"/>
+          <line x1="32" y1="14" x2="32" y2="6" stroke="var(--amber)" stroke-width="2"/>
+          <line x1="53" y1="20" x2="53" y2="10" stroke="var(--amber)" stroke-width="2"/>
+          <path d="M11 10 L32 6 L53 10" fill="none" stroke="var(--amber)" stroke-width="1.5" stroke-dasharray="3 3"/>
+        </svg>
+        <h3>The Restaurant Chain</h3>
+        <p><b>Order Service (Waiter):</b> receives orders &amp; forwards messages.<br>
+           <b>Kitchen Service (Cooks):</b> prepares food independently.<br>
+           <b>Payment Service (Cashier):</b> handles transactions.<br>
+           If the payment reader breaks, the kitchen keeps cooking!</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section class="slide">
+    <div class="eyebrow">C · Use Cases<span class="trace"></span></div>
+    <h1 class="title">Enterprise Scenario: Ride-Hailing</h1>
+    <div class="lede">A global ride-hailing application uses microservices to power every ride.</div>
+    <div class="content">
+      <div class="tree" style="flex:0 0 auto; padding:4px 0 2px;">
+        <div class="root node hi"><span class="n-label">Client</span>Ride-Hailing App</div>
+        <div class="stem"></div>
+        <div class="bar"></div>
+        <div class="branches">
+          <div class="branch"><div class="stem"></div><div class="node">Geolocation Service</div></div>
+          <div class="branch"><div class="stem"></div><div class="node">Pricing Engine</div></div>
+          <div class="branch"><div class="stem"></div><div class="node">Notification Service</div></div>
+          <div class="branch"><div class="stem"></div><div class="node">Payment Gateway</div></div>
+        </div>
+      </div>
+      <div class="content grid-2" style="flex:1;">
+        <div class="card"><h3>Geolocation Service</h3><p>Tracks driver coordinates using lightweight JSON messaging.</p></div>
+        <div class="card"><h3>Pricing Engine Service</h3><p>Calculates fares dynamically based on demand.</p></div>
+        <div class="card"><h3>Notification Service</h3><p>Sends push alerts to passenger mobile devices.</p></div>
+        <div class="card"><h3>Payment Gateway API</h3><p>Processes credit cards safely via third-party web services.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 -->
+  <section class="slide">
+    <div class="eyebrow">D · Wrap-Up · FAQ<span class="trace"></span></div>
+    <h1 class="title">Frequently Asked Questions</h1>
+    <div class="content" style="gap:14px; overflow-y:auto;">
+      <div class="card">
+        <h3>Q1 &mdash; What is an API, and how does it relate to Web Services?</h3>
+        <p>An <b>API</b> is any set of rules that lets software programs talk to each other. All Web Services are APIs, but not all APIs are Web Services &mdash; a local OS-internal API doesn't require a network.</p>
+      </div>
+      <div class="card">
+        <h3>Q2 &mdash; Why is REST preferred over SOAP for modern web &amp; mobile apps?</h3>
+        <p>REST uses lightweight formats like <b>JSON</b>, which need less bandwidth, parse faster in JavaScript engines, and perform better over mobile networks.</p>
+      </div>
+      <div class="card">
+        <h3>Q3 &mdash; Does Microservices replace SOA completely?</h3>
+        <p>Not necessarily. Microservices can be viewed as an evolved, fine-grained implementation of SOA &mdash; focused on independent deployment, containerization (Docker, Kubernetes), and isolated data per service.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 -->
+  <section class="slide">
+    <div class="eyebrow">E · Guided Drills<span class="trace"></span></div>
+    <h1 class="title">Payload Example &mdash; SOAP (XML)</h1>
+    <div class="lede">A payment request, the SOAP way &mdash; wrapped in an envelope.</div>
+    <div class="content" style="min-height:0;">
+      <div class="code-wrap">
+        <div class="code-head"><span class="code-lang">XML · SOAP</span><button class="copy-btn" data-copy-target="code-soap">Copy</button></div>
+        <div class="code-body"><pre id="code-soap"></pre></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 -->
+  <section class="slide">
+    <div class="eyebrow">E · Guided Drills<span class="trace"></span></div>
+    <h1 class="title">Payload Example &mdash; REST (JSON)</h1>
+    <div class="lede">The same payment request, the REST way &mdash; lean and direct.</div>
+    <div class="content" style="min-height:0;">
+      <div class="code-wrap">
+        <div class="code-head"><span class="code-lang">JSON · REST</span><button class="copy-btn" data-copy-target="code-rest">Copy</button></div>
+        <div class="code-body"><pre id="code-rest"></pre></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13 -->
+  <section class="slide">
+    <div class="eyebrow">E · Guided Drills<span class="trace"></span></div>
+    <h1 class="title">Calling a Web Service in JavaScript</h1>
+    <div class="lede">Fetching user profile data from a RESTful endpoint.</div>
+    <div class="content" style="min-height:0;">
+      <div class="code-wrap">
+        <div class="code-head"><span class="code-lang">JavaScript</span><button class="copy-btn" data-copy-target="code-js">Copy</button></div>
+        <div class="code-body"><pre id="code-js"></pre></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14 -->
+  <section class="slide">
+    <div class="eyebrow">Key Quotes<span class="trace"></span></div>
+    <h1 class="title">Worth Remembering</h1>
+    <div class="content" style="justify-content:center; gap:24px;">
+      <div class="quote-block">
+        Building modern software systems isn't about writing massive monolithic programs from scratch &mdash; it's about composing independent, specialized web services that talk to each other effortlessly across networks.
+        <cite>&mdash; Module 6 opening note</cite>
+      </div>
+      <div class="quote-block">
+        If the payment reader breaks, the kitchen can keep cooking!
+        <cite>&mdash; on fault isolation in SOA / Microservices</cite>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15 : Activities MC -->
+  <section class="slide overflow-ok">
+    <div class="eyebrow">F · Skill-Building Check<span class="trace"></span></div>
+    <h1 class="title">Activity &mdash; Multiple Choice</h1>
+    <div class="content qa-list">
+      <div class="qa-item">
+        <span class="qnum">MC-1</span><span class="qtext">What architectural style relies on lightweight, HTTP-based stateless communication and commonly uses JSON?</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> Monolithic</div><div class="choice"><b>B.</b> REST</div>
+          <div class="choice"><b>C.</b> SOAP</div><div class="choice"><b>D.</b> Direct Database Connection</div>
+        </div>
+      </div>
+      <div class="qa-item">
+        <span class="qnum">MC-2</span><span class="qtext">What type of architecture structures an application as a collection of loosely coupled, independently deployable services?</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> Single-tier Architecture</div><div class="choice"><b>B.</b> Microservices Architecture</div>
+          <div class="choice"><b>C.</b> Hardcoded Architecture</div><div class="choice"><b>D.</b> Legacy Monolith</div>
+        </div>
+      </div>
+      <div class="qa-item">
+        <span class="qnum">MC-3</span><span class="qtext">True or False: SOAP requires data payloads to be formatted strictly in XML.</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> True</div><div class="choice"><b>B.</b> False</div>
+        </div>
+      </div>
+      <div class="qa-item">
+        <span class="qnum">MC-4</span><span class="qtext">In SOA, what property ensures that changing the internal code of one service does not break dependent client applications?</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> Tight Coupling</div><div class="choice"><b>B.</b> Loose Coupling</div>
+          <div class="choice"><b>C.</b> Monolithic Binding</div><div class="choice"><b>D.</b> Synchronous Locking</div>
+        </div>
+      </div>
+      <div class="qa-item">
+        <span class="qnum">MC-5</span><span class="qtext">What open web protocol standard is primarily used for RESTful API communications over the internet?</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> FTP</div><div class="choice"><b>B.</b> HTTP/HTTPS</div>
+          <div class="choice"><b>C.</b> SMTP</div><div class="choice"><b>D.</b> Telnet</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16 : Activities Concept Matrix -->
+  <section class="slide overflow-ok">
+    <div class="eyebrow">F · Skill-Building Check<span class="trace"></span></div>
+    <h1 class="title">Activity &mdash; Concept Summary Matrix</h1>
+    <div class="lede">Fill in the blanks to summarize the key differences between Monolith and Microservices.</div>
+    <div class="content" style="overflow-y:auto;">
+      <table class="term-table">
+        <thead><tr><th>Property</th><th>Monolith</th><th>Microservices</th></tr></thead>
+        <tbody>
+          <tr><td><b>Deployment</b></td><td>Single large deployment package</td><td>___________</td></tr>
+          <tr><td><b>Database</b></td><td>Centralized shared database</td><td>___________</td></tr>
+          <tr><td><b>Scalability</b></td><td>Scale entire application</td><td>___________</td></tr>
+          <tr><td><b>Fault Isolation</b></td><td>Single error can crash whole app</td><td>___________</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 17 : Recap -->
+  <section class="slide">
+    <div class="eyebrow">Recap<span class="trace"></span></div>
+    <h1 class="title">What to Carry Forward</h1>
+    <div class="content recap-grid">
+      <div class="card">
+        <svg viewBox="0 0 40 40" width="48" height="48">
+          <circle cx="20" cy="8" r="4" fill="none" stroke="var(--teal)" stroke-width="2"/>
+          <circle cx="8" cy="30" r="4" fill="none" stroke="var(--teal)" stroke-width="2"/>
+          <circle cx="32" cy="30" r="4" fill="none" stroke="var(--teal)" stroke-width="2"/>
+          <line x1="18" y1="11" x2="10" y2="27" stroke="var(--line)" stroke-width="1.5"/>
+          <line x1="22" y1="11" x2="30" y2="27" stroke="var(--line)" stroke-width="1.5"/>
+          <line x1="12" y1="30" x2="28" y2="30" stroke="var(--line)" stroke-width="1.5"/>
+        </svg>
+        <div class="num">01</div><h3>Web Services</h3><p>Standardized, self-describing mechanisms for machine-to-machine communication across platforms and languages.</p>
+      </div>
+      <div class="card">
+        <svg viewBox="0 0 40 40" width="48" height="48">
+          <circle cx="15" cy="20" r="9" fill="none" stroke="var(--teal)" stroke-width="2"/>
+          <circle cx="25" cy="20" r="9" fill="none" stroke="var(--amber)" stroke-width="2"/>
+        </svg>
+        <div class="num">02</div><h3>SOA Principles</h3><p>Loose coupling, reusability, interoperability, and abstraction hold services together without locking them to each other.</p>
+      </div>
+      <div class="card">
+        <svg viewBox="0 0 40 40" width="48" height="48">
+          <defs>
+            <marker id="recap-arrow-teal" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L6,3 L0,6 Z" fill="var(--teal)"/>
+            </marker>
+            <marker id="recap-arrow-amber" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L6,3 L0,6 Z" fill="var(--amber)"/>
+            </marker>
+          </defs>
+          <path d="M4,14 H30" fill="none" stroke="var(--teal)" stroke-width="2" marker-end="url(#recap-arrow-teal)"/>
+          <path d="M36,26 H10" fill="none" stroke="var(--amber)" stroke-width="2" marker-end="url(#recap-arrow-amber)"/>
+        </svg>
+        <div class="num">03</div><h3>REST &gt; SOAP (usually)</h3><p>Lighter, JSON-based REST wins for mobile &amp; modern web; SOAP still rules strict, enterprise-grade transactions.</p>
+      </div>
+      <div class="card">
+        <svg viewBox="0 0 40 40" width="48" height="48">
+          <rect x="4" y="4" width="12" height="12" rx="2" fill="none" stroke="var(--teal)" stroke-width="2"/>
+          <rect x="24" y="4" width="12" height="12" rx="2" fill="none" stroke="var(--teal)" stroke-width="2"/>
+          <rect x="4" y="24" width="12" height="12" rx="2" fill="none" stroke="var(--teal)" stroke-width="2"/>
+          <rect x="24" y="24" width="12" height="12" rx="2" fill="none" stroke="var(--teal)" stroke-width="2"/>
+        </svg>
+        <div class="num">04</div><h3>Microservices</h3><p>Small, autonomous, independently deployable services isolate failure and scale only where it's needed.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 18 : Answers -->
+  <section class="slide overflow-ok">
+    <div class="eyebrow">Answer Key<span class="trace"></span></div>
+    <h1 class="title">All Answers &amp; Explanations</h1>
+    <div class="content answers-grid">
+      <div class="ans-block">
+        <h4>Multiple Choice</h4>
+        <div class="ans-item"><b>MC-1: B &mdash; REST.</b> Stateless, HTTP-based, and typically JSON &mdash; the definition of REST.</div>
+        <div class="ans-item"><b>MC-2: B &mdash; Microservices Architecture.</b> The defining trait: independently deployable, loosely coupled services.</div>
+        <div class="ans-item"><b>MC-3: A &mdash; True.</b> SOAP mandates XML payloads inside its envelope; REST allows multiple formats.</div>
+        <div class="ans-item"><b>MC-4: B &mdash; Loose Coupling.</b> Interfaces stay stable even as internal implementation changes.</div>
+        <div class="ans-item"><b>MC-5: B &mdash; HTTP/HTTPS.</b> The transport REST APIs are built on.</div>
+      </div>
+      <div class="ans-block">
+        <h4>Concept Summary Matrix</h4>
+        <div class="ans-item"><b>Deployment:</b> Independent deployment per service.</div>
+        <div class="ans-item"><b>Database:</b> Decentralized / database-per-service.</div>
+        <div class="ans-item"><b>Scalability:</b> Scale specific heavy-traffic services.</div>
+        <div class="ans-item"><b>Fault Isolation:</b> Failures isolated to the affected microservice.</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div id="shortcuts-modal">
+  <div class="box">
+    <h2>Keyboard &amp; Mouse Shortcuts</h2>
+    <div class="row"><span>Next slide</span><kbd>&rarr;</kbd></div>
+    <div class="row"><span>Previous slide</span><kbd>&larr;</kbd></div>
+    <div class="row"><span>First / Last slide</span><kbd>Home</kbd> / <kbd>End</kbd></div>
+    <div class="row"><span>Next slide</span><span>Right-click</span></div>
+    <div class="row"><span>Next slide</span><span>Mouse button 4 (forward)</span></div>
+    <div class="row"><span>Previous slide</span><span>Mouse button 3 (back)</span></div>
+    <div class="row"><span>Show this panel</span><kbd>?</kbd></div>
+    <div class="close-hint">Press Esc or click outside to close</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ================= SLIDE NAVIGATION =================
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length;
+  var idx = 0;
+  var progressFill = document.getElementById('progress-fill');
+  var counter = document.getElementById('counter');
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function updateChrome(){
+    progressFill.style.width = ((idx+1)/total*100) + '%';
+    counter.textContent = (idx+1) + ' / ' + total;
+  }
+
+  function goTo(newIdx, direction){
+    newIdx = Math.max(0, Math.min(total-1, newIdx));
+    if(newIdx === idx) return;
+    var cur = slides[idx];
+    var next = slides[newIdx];
+
+    if(reduceMotion){
+      cur.classList.remove('active');
+      next.classList.add('active');
+      idx = newIdx;
+      updateChrome();
+      return;
+    }
+
+    cur.classList.remove('active');
+    cur.classList.add(direction > 0 ? 'exit-left' : 'exit-right');
+
+    next.classList.remove('exit-left','exit-right','prep-left','prep-right');
+    next.classList.add(direction > 0 ? 'prep-right' : 'prep-left');
+    void next.offsetWidth; // reflow
+    requestAnimationFrame(function(){
+      next.classList.remove('prep-left','prep-right');
+      next.classList.add('active');
+    });
+
+    setTimeout(function(){
+      cur.classList.remove('exit-left','exit-right');
+    }, 380);
+
+    idx = newIdx;
+    updateChrome();
+  }
+
+  function next(){ goTo(idx+1, 1); }
+  function prev(){ goTo(idx-1, -1); }
+  function first(){ goTo(0, -1); }
+  function last(){ goTo(total-1, 1); }
+
+  slides[0].classList.add('active');
+  updateChrome();
+
+  // ================= INTERACTIVE ELEMENT CHECK =================
+  function isInteractive(el){
+    return !!(el.closest && el.closest('button, a, input, textarea, select, [contenteditable="true"], .copy-btn'));
+  }
+
+  // ================= KEYBOARD =================
+  document.addEventListener('keydown', function(e){
+    var modal = document.getElementById('shortcuts-modal');
+    if(e.key === '?'){
+      modal.classList.toggle('show');
+      return;
+    }
+    if(modal.classList.contains('show')){
+      if(e.key === 'Escape') modal.classList.remove('show');
+      return;
+    }
+    if(e.key === 'ArrowRight'){ next(); }
+    else if(e.key === 'ArrowLeft'){ prev(); }
+    else if(e.key === 'Home'){ first(); }
+    else if(e.key === 'End'){ last(); }
+  });
+
+  document.getElementById('shortcuts-modal').addEventListener('click', function(e){
+    if(e.target === this) this.classList.remove('show');
+  });
+
+  // ================= MOUSE: right-click + side buttons =================
+  var firedForThisPress = false;
+
+  document.addEventListener('mousedown', function(e){
+    if(isInteractive(e.target)) return;
+
+    if(e.button === 2){ // right click
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if(!firedForThisPress){ next(); firedForThisPress = true; }
+    } else if(e.button === 3){ // back / thumb
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if(!firedForThisPress){ prev(); firedForThisPress = true; }
+    } else if(e.button === 4){ // forward
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if(!firedForThisPress){ next(); firedForThisPress = true; }
+    }
+  }, true); // capture phase
+
+  document.addEventListener('mouseup', function(){ firedForThisPress = false; });
+
+  document.addEventListener('contextmenu', function(e){
+    if(isInteractive(e.target)) return; // allow normal context menu on links/buttons
+    e.preventDefault();
+  });
+
+  document.addEventListener('auxclick', function(e){
+    if(isInteractive(e.target)) return;
+    e.preventDefault();
+  });
+
+  // ================= TOUCH SWIPE =================
+  var touchStartX = 0, touchStartY = 0;
+  document.addEventListener('touchstart', function(e){
+    if(!e.touches || !e.touches.length) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, {passive:true});
+
+  document.addEventListener('touchend', function(e){
+    if(!e.changedTouches || !e.changedTouches.length) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
+    if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)*1.5){
+      if(dx < 0) next(); else prev();
+    }
+  }, {passive:true});
+
+  // ================= SYNTAX HIGHLIGHT (single-pass tokenizer) =================
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function tokenizeXML(code){
+    var i = 0, n = code.length, out = '';
+    while(i < n){
+      if(code[i] === '<'){
+        var end = code.indexOf('>', i);
+        if(end === -1){ out += escapeHtml(code.slice(i)); break; }
+        var tag = code.slice(i, end+1);
+        // split into < / tagname , attrs , >
+        var tagMatch = tag.match(/^(<\/?)([a-zA-Z0-9:_-]+)([\s\S]*?)(\/?>)$/);
+        if(tagMatch){
+          out += '<span class="tok-punc">'+escapeHtml(tagMatch[1])+'</span>';
+          out += '<span class="tok-tag">'+escapeHtml(tagMatch[2])+'</span>';
+          var attrs = tagMatch[3];
+          attrs = attrs.replace(/([a-zA-Z0-9:_-]+)(=)("[^"]*")/g, function(_, a, eq, val){
+            return '<span class="tok-attr">'+escapeHtml(a)+'</span>'+eq+'<span class="tok-str">'+escapeHtml(val)+'</span>';
+          });
+          out += attrs;
+          out += '<span class="tok-punc">'+escapeHtml(tagMatch[4])+'</span>';
+        } else if(tag.indexOf('<?') === 0){
+          out += '<span class="tok-comment">'+escapeHtml(tag)+'</span>';
+        } else {
+          out += escapeHtml(tag);
+        }
+        i = end+1;
+      } else {
+        var next = code.indexOf('<', i);
+        if(next === -1){ out += escapeHtml(code.slice(i)); break; }
+        out += escapeHtml(code.slice(i, next));
+        i = next;
+      }
+    }
+    return out;
+  }
+
+  function tokenizeJSON(code){
+    var re = /("(?:\\.|[^"\\])*")(\s*:)?|(\btrue\b|\bfalse\b|\bnull\b)|(-?\d+\.?\d*(?:[eE][+-]?\d+)?)|([{}\[\],])/g;
+    return code.replace(re, function(match, str, colon, boolnull, num, punc){
+      if(str){
+        var cls = colon ? 'tok-key' : 'tok-str';
+        return '<span class="'+cls+'">'+escapeHtml(str)+'</span>'+(colon?escapeHtml(colon):'');
+      }
+      if(boolnull) return '<span class="tok-bool">'+escapeHtml(boolnull)+'</span>';
+      if(num) return '<span class="tok-num">'+escapeHtml(num)+'</span>';
+      if(punc) return '<span class="tok-punc">'+escapeHtml(punc)+'</span>';
+      return escapeHtml(match);
+    });
+  }
+
+  var codeSamples = {
+    'code-soap': '<?xml version="1.0"?>\n<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope/">\n  <soap:Header/>\n  <soap:Body>\n    <ProcessPaymentRequest xmlns="http://api.paymentservice.com/">\n      <AccountID>ACC-98421</AccountID>\n      <Amount currency="USD">150.00</Amount>\n    </ProcessPaymentRequest>\n  </soap:Body>\n</soap:Envelope>',
+    'code-rest': '{\n  "accountId": "ACC-98421",\n  "amount": 150.00,\n  "currency": "USD"\n}',
+    'code-js': '// Example: Querying a RESTful Web Service endpoint for user profile data\nasync function fetchUserProfile(userId) {\n  try {\n    const response = await fetch(`https://api.example.com/v1/users/${userId}`, {\n      method: \'GET\',\n      headers: {\n        \'Accept\': \'application/json\',\n        \'Authorization\': \'Bearer YOUR_API_TOKEN\'\n      }\n    });\n\n    if (!response.ok) {\n      throw new Error(`HTTP Error! Status: ${response.status}`);\n    }\n\n    const userData = await response.json();\n    console.log("User Profile Retrieved:", userData);\n  } catch (error) {\n    console.error("Failed to call Web Service:", error);\n  }\n}\n\n// Call function for test user\nfetchUserProfile(102);'
+  };
+
+  function tokenizeJS(code){
+    var re = /(\/\/[^\n]*)|(`(?:\\.|[^`\\])*`)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|\b(async|await|function|const|let|var|try|catch|throw|new|return|if|typeof)\b|\b(true|false|null|undefined)\b|\b(\d+\.?\d*)\b|([{}()\[\].,;:])/g;
+    return code.replace(re, function(m, comment, template, str, kw, boolnull, num, punc){
+      if(comment) return '<span class="tok-comment">'+escapeHtml(comment)+'</span>';
+      if(template) return '<span class="tok-str">'+escapeHtml(template)+'</span>';
+      if(str) return '<span class="tok-str">'+escapeHtml(str)+'</span>';
+      if(kw) return '<span class="tok-key">'+escapeHtml(kw)+'</span>';
+      if(boolnull) return '<span class="tok-bool">'+escapeHtml(boolnull)+'</span>';
+      if(num) return '<span class="tok-num">'+escapeHtml(num)+'</span>';
+      if(punc) return '<span class="tok-punc">'+escapeHtml(punc)+'</span>';
+      return escapeHtml(m);
+    });
+  }
+
+  Object.keys(codeSamples).forEach(function(id){
+    var el = document.getElementById(id);
+    if(!el) return;
+    var raw = codeSamples[id];
+    if(id.indexOf('soap') !== -1) el.innerHTML = tokenizeXML(raw);
+    else if(id.indexOf('rest') !== -1) el.innerHTML = tokenizeJSON(raw);
+    else if(id.indexOf('js') !== -1) el.innerHTML = tokenizeJS(raw);
+  });
+
+  // ================= COPY BUTTONS =================
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var targetId = btn.getAttribute('data-copy-target');
+      var text = codeSamples[targetId] || '';
+      var done = function(){
+        var orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function(){ btn.textContent = orig === 'Copied!' ? 'Copy' : orig; btn.classList.remove('copied'); }, 1200);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, function(){
+          fallbackCopy(text); done();
+        });
+      } else {
+        fallbackCopy(text); done();
+      }
+    });
+  });
+
+  function fallbackCopy(text){
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try{ document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta);
+  }
+
+})();
+</script>
+
+</body>
+</html>

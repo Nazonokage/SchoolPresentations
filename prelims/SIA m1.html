@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIA — System Integration & Architecture · Enterprise</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    * { box-sizing: border-box; margin:0; padding:0; }
+    html, body { height:100%; overflow:hidden; background:var(--bg); color:var(--ink); font-family:'Inter', sans-serif; }
+    h1,h2,h3 { font-family:'Inter', sans-serif; font-weight:600; letter-spacing:-0.01em; }
+    code, pre, .mono { font-family:'JetBrains Mono', monospace; }
+
+    /* ——— ENTERPRISE THEME ——— */
+    :root {
+      --bg: #0F1724;
+      --bg-alt: #192237;
+      --accent: #4B9EFF;
+      --accent-soft: #7BB8FF;
+      --accent-strong: #1A6FD9;
+      --card: #1C2840;
+      --card-border: rgba(75, 158, 255, 0.18);
+      --shadow: rgba(0, 0, 0, 0.5);
+      --ink: #EAF0F8;
+      --ink-soft: #9BB0C8;
+      --eyebrow-ink: #7BB8FF;
+      --card-ink: #EAF0F8;
+      --card-ink-soft: #9BB0C8;
+      --card-accent: #4B9EFF;
+      --step-num-ink: #0F1724;
+      --tick: 300ms;
+      --table-border: rgba(75, 158, 255, 0.15);
+    }
+
+    #app { position:relative; width:100vw; height:100vh; overflow:hidden; }
+
+    .progress-track { position:fixed; top:0; left:0; right:0; height:3px; background:rgba(75,158,255,0.12); z-index:50; }
+    .progress-fill { height:100%; width:0%; background:linear-gradient(90deg, var(--accent-strong), var(--accent)); transition: width 350ms ease; }
+
+    .enterprise-gauge {
+      position:fixed; top:18px; right:22px; z-index:50;
+      display:flex; flex-direction:column; align-items:center; gap:4px;
+      font-family:'JetBrains Mono', monospace; font-size:9px; letter-spacing:0.12em;
+      color:var(--ink-soft); user-select:none; pointer-events:none;
+      transition: color var(--tick) ease;
+    }
+    .enterprise-gauge svg { width:32px; height:32px; display:block; }
+    .enterprise-gauge .pulse { transform-origin:center; }
+    @media (prefers-reduced-motion: no-preference) {
+      .enterprise-gauge .pulse { animation: entPulse 3s ease-in-out infinite; }
+    }
+    @keyframes entPulse {
+      0% { opacity:0.5; transform:scale(0.95); }
+      50% { opacity:1; transform:scale(1.05); }
+      100% { opacity:0.5; transform:scale(0.95); }
+    }
+    .gauge-label { text-transform:uppercase; font-weight:600; letter-spacing:0.08em; }
+
+    .stage { position:absolute; inset:0; }
+    .slide {
+      position:absolute; inset:0;
+      overflow-y:auto; overflow-x:hidden;
+      display:flex; flex-direction:column; align-items:stretch; justify-content:safe center;
+      padding: 76px clamp(28px, 7vw, 120px) 90px;
+      opacity:0; transform:translateX(0) scale(1);
+      will-change: transform, opacity;
+    }
+    .slide.active { opacity:1; transform:translateX(0) scale(1); transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:5; }
+    .slide.enter-fwd { transform:translateX(64px) scale(0.985); opacity:0; }
+    .slide.enter-bwd { transform:translateX(-64px) scale(0.985); opacity:0; }
+    .slide.exit-fwd { transform:translateX(-64px) scale(0.985); opacity:0; transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:4; }
+    .slide.exit-bwd { transform:translateX(64px) scale(0.985); opacity:0; transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:4; }
+    @media (prefers-reduced-motion: reduce) {
+      .slide, .slide.active, .slide.enter-fwd, .slide.enter-bwd, .slide.exit-fwd, .slide.exit-bwd {
+        transition: opacity 120ms linear !important; transform:none !important;
+      }
+    }
+    .slide-inner { max-width:1000px; width:100%; margin:0 auto; }
+
+    .eyebrow {
+      font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:0.14em;
+      text-transform:uppercase; font-weight:500; color:var(--eyebrow-ink);
+      display:flex; align-items:center; gap:10px; margin-bottom:12px;
+      transition: color var(--tick) ease;
+    }
+    .eyebrow::after { content:''; flex:1; height:0; border-top:1.5px dashed var(--card-border); }
+    h2.slide-title { font-size:clamp(26px, 3.8vw, 42px); font-weight:700; line-height:1.15; margin-bottom:18px; letter-spacing:-0.02em; }
+    .lede { font-size:16px; color:var(--ink-soft); margin:-6px 0 20px; max-width:70ch; line-height:1.5; }
+
+    .card {
+      background:var(--card); border:1px solid var(--card-border); border-radius:10px;
+      padding:18px 20px; min-width:0;
+      box-shadow: 0 4px 16px var(--shadow);
+      transition: background var(--tick) ease, border-color var(--tick) ease;
+    }
+    .card h3 { font-size:15px; font-weight:600; margin-bottom:5px; color:var(--card-ink); }
+    .card p, .card li { font-size:14.5px; color:var(--card-ink-soft); line-height:1.5; }
+    .card strong { color:var(--card-ink); }
+
+    .card-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(0, 1fr)); gap:14px; min-width:0; }
+    .card-grid.cols-2 { grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .card-grid.cols-3 { grid-template-columns:repeat(3, minmax(0,1fr)); }
+    .card-grid.cols-4 { grid-template-columns:repeat(4, minmax(0,1fr)); }
+    @media (max-width:760px){ .card-grid.cols-4{grid-template-columns:repeat(2, minmax(0,1fr));} .card-grid.cols-3{grid-template-columns:repeat(2, minmax(0,1fr));} .card-grid.cols-2{grid-template-columns:minmax(0,1fr);} }
+
+    .two-col { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:24px; align-items:start; min-width:0; }
+    @media (max-width:760px){ .two-col { grid-template-columns:minmax(0,1fr); } }
+    .two-col > * { min-width:0; }
+
+    ul.ticket-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+    ul.ticket-list li { position:relative; padding-left:22px; font-size:15px; line-height:1.5; color:var(--ink); }
+    ul.ticket-list li::before { content:'▹'; position:absolute; left:0; color:var(--accent); font-weight:700; }
+
+    .quote-block { font-family:'Inter', sans-serif; font-weight:500; font-size:18px; line-height:1.5; color:var(--ink); border-left:3px solid var(--accent); padding:4px 0 4px 18px; margin:6px 0 18px; }
+    .note { background:var(--card); border:1px dashed var(--card-border); border-radius:10px; padding:12px 16px; font-size:14px; color:var(--card-ink-soft); margin-top:14px; }
+    .note b { color:var(--card-ink); }
+
+    /* ——— IMAGE / ANALOGY BLOCK ——— */
+    .analogy-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));
+      gap:18px;
+      margin:10px 0 6px;
+    }
+    .analogy-item {
+      background:var(--card);
+      border:1px solid var(--card-border);
+      border-radius:12px;
+      padding:16px 14px 14px;
+      text-align:center;
+      box-shadow: 0 4px 12px var(--shadow);
+      transition: background var(--tick) ease;
+    }
+    .analogy-item .emoji-big {
+      font-size:44px;
+      line-height:1.2;
+      display:block;
+      margin-bottom:6px;
+    }
+    .analogy-item .label {
+      font-weight:600;
+      color:var(--card-ink);
+      font-size:15px;
+      letter-spacing:-0.01em;
+    }
+    .analogy-item .desc {
+      font-size:13px;
+      color:var(--card-ink-soft);
+      margin-top:4px;
+      line-height:1.4;
+    }
+
+    pre.code-block {
+      background:#0B111E; color:#D4E4F0; border-radius:10px; padding:16px 18px;
+      font-size:13px; line-height:1.6; overflow-x:auto; margin:0; min-width:0;
+      box-shadow: inset 0 0 0 1px rgba(75,158,255,0.06), 0 6px 16px var(--shadow);
+      border:1px solid rgba(75,158,255,0.06);
+    }
+    pre.code-block code { white-space:pre; }
+    .tok-kw{ color:#FFB86C; font-weight:600; }
+    .tok-str{ color:#A3D9A5; }
+    .tok-com{ color:#6A8A9E; font-style:italic; }
+    .tok-type{ color:#6AB0D6; }
+    .tok-num{ color:#D99A6C; }
+    .tok-fn{ color:#66D9FF; }
+    .tok-prop{ color:#B5A9E8; }
+    .tok-tag{ color:#4B9EFF; }
+    .tok-attr{ color:#FFB86C; }
+    .tok-selector{ color:#A3D9A5; }
+
+    .code-cap { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:6px; }
+
+    .two-col pre.code-block { max-width:100%; overflow-x:auto; white-space:pre-wrap; word-break:break-word; }
+    .two-col .code-block code { white-space:pre-wrap; word-break:break-word; }
+
+    .hud { position:fixed; bottom:16px; right:20px; z-index:50; display:flex; align-items:center; gap:12px; }
+    .counter { font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:500; background:var(--card); border:1px solid var(--card-border); color:var(--card-ink); padding:6px 14px; border-radius:999px; box-shadow:0 4px 14px var(--shadow); transition: background var(--tick) ease, color var(--tick) ease, border-color var(--tick) ease; }
+    .hint { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--ink-soft); letter-spacing:0.05em; display:none; }
+    @media (min-width:640px){ .hint { display:block; } }
+
+    .click-zone { position:fixed; inset:0; z-index:1; cursor:pointer; }
+    .slide::-webkit-scrollbar { width:5px; }
+    .slide::-webkit-scrollbar-thumb { background:var(--card-border); border-radius:8px; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+  <div class="enterprise-gauge" id="enterpriseGauge">
+    <svg viewBox="0 0 32 32" fill="none">
+      <rect x="4" y="8" width="24" height="18" rx="2" stroke="var(--accent)" stroke-width="1.2" fill="var(--accent)" opacity="0.12" />
+      <rect x="8" y="12" width="16" height="2" rx="1" fill="var(--accent)" opacity="0.5" class="pulse" />
+      <rect x="8" y="16" width="12" height="2" rx="1" fill="var(--accent)" opacity="0.3" class="pulse" style="animation-delay:0.4s;" />
+      <rect x="8" y="20" width="14" height="2" rx="1" fill="var(--accent)" opacity="0.4" class="pulse" style="animation-delay:0.8s;" />
+    </svg>
+    <span class="gauge-label" id="gaugeLabel">Enterprise</span>
+  </div>
+
+  <div class="click-zone" id="clickZone"></div>
+  <div class="stage" id="stage"></div>
+
+  <div class="hud">
+    <span class="hint">click / → to continue</span>
+    <div class="counter" id="counter">1 / 24</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Single-pass tokenizer
+  var KEYWORDS = ['const','let','var','function','return','if','else','try','catch','throw','new','this','class','extends','super','import','export','default','from','as','async','await','require','module','exports','console','log','error','warn','info','app','express','mongoose','Schema','model','find','findOne','findById','save','create','updateOne','deleteOne','then','catch','finally','next','use','listen','get','post','put','patch','delete','all','route','param','query','body','params','send','json','status','set','header','end','render','redirect','sendFile','download','attachment','cookie','clearCookie','session','engine','view','static','Router','Promise','resolve','reject','process','env','PORT','NODE_ENV','connect','connection','disconnect','open','close','on','once','emit','listener','removeListener','setTimeout','setInterval','clearTimeout','clearInterval','Buffer','String','Number','Boolean','Object','Array','Date','RegExp','Error','TypeError','ReferenceError','SyntaxError','URIError','EvalError','RangeError','aggregate','populate','select','sort','limit','skip','lean','exec','toJSON','toObject','isValid','validate','pre','post','virtual','index','unique','required','trim','lowercase','uppercase','match','enum','min','max','minlength','maxlength','default','get','set','alias','ref','autopopulate','discriminator','plugin','statics','methods','query','aggregate','findOneAndUpdate','findOneAndDelete','findOneAndReplace','bulkWrite','insertMany','updateMany','deleteMany','estimatedDocumentCount','countDocuments','distinct','watch','changeStream','startSession','withTransaction','commitTransaction','abortTransaction','endSession','System','Integration','Architecture','ERP','SIA','IS','Information','Systems','Organizational','Management','Business','Enterprise','Planning','Resource','Data','Analytics','Decision','Storage','Behavioral','Value','Chain','Silos','Strategic','Operational','Efficiency','Quality','Supply','Connectivity','Dashboard','Manual','Communication','Budgeting','Competitive','Market','Costs','Revenue','Forecast','Risk','Compliance','Governance','Scalability','Interoperability','Middleware','API','Legacy','Modernization','Digital','Transformation','Workflow','Automation','Orchestration','Cloud','OnPremise','Hybrid','Container','Microservices','DevOps','Agile','Waterfall','SDLC','ITIL','COBIT','TOGAF','Zachman','SOA','ESB','BPM','CRM','SCM','HCM','BI','IoT','AI','ML','Blockchain','Cybersecurity','Privacy','GDPR','HIPAA','SOC','ISO','NIST'];
+  var KW_RE = new RegExp('\\b(' + KEYWORDS.join('|') + ')\\b', 'i');
+  var TOKEN_RE = /(\/\/.*$)|("(?:\\.|[^"\\])*")|('(?:\\.|[^'\\])')|\b([A-Za-z_][A-Za-z0-9_]*)\b|\b(\d+\.?\d*)\b/gm;
+
+  function highlightCode(src){
+    var esc = escapeHtml(src);
+    return esc.replace(TOKEN_RE, function(match, comment, str, chr, word, num){
+      if(comment !== undefined) return '<span class="tok-com">' + comment + '</span>';
+      if(str !== undefined) return '<span class="tok-str">' + str + '</span>';
+      if(chr !== undefined) return '<span class="tok-str">' + chr + '</span>';
+      if(word !== undefined){
+        if(KW_RE.test(word)) return '<span class="tok-kw">' + word + '</span>';
+        if(/^[A-Z]/.test(word)) return '<span class="tok-type">' + word + '</span>';
+        return word;
+      }
+      if(num !== undefined) return '<span class="tok-num">' + num + '</span>';
+      return match;
+    });
+  }
+  function code(src){
+    return '<pre class="code-block"><code>' + highlightCode(src.replace(/^\n/,'').replace(/\n$/,'')) + '</code></pre>';
+  }
+
+  var S = [];
+
+  // ——— SLIDE CONTENT ———
+  S.push({
+    eyebrow: 'Module 1 · SIA',
+    title: 'System Integration & Architecture',
+    lede: 'A study guide covering the intersection of information systems, enterprise integration, and organizational strategy.',
+    body:
+      '<div class="quote-block">"Systems integration allows heterogeneous information systems to communicate and share data seamlessly."</div>' +
+      '<div class="card-grid cols-3">' +
+        '<div class="card"><h3>🔗 Integration</h3><p>Connecting diverse IS into a unified whole. Enables seamless data flow across departments.</p></div>' +
+        '<div class="card"><h3>🏛️ Architecture</h3><p>The blueprint that defines structure, standards, and governance for the integrated system.</p></div>' +
+        '<div class="card"><h3>📊 ERP</h3><p>Enterprise Resource Planning — the crown jewel of integration, unifying business functions.</p></div>' +
+      '</div>' +
+      '<div class="analogy-grid">' +
+        '<div class="analogy-item"><span class="emoji-big">🧩</span><div class="label">Jigsaw Puzzle</div><div class="desc">Each piece is a system — integration assembles them into a complete picture.</div></div>' +
+        '<div class="analogy-item"><span class="emoji-big">🏗️</span><div class="label">Building Blueprint</div><div class="desc">Architecture is the plan that ensures all parts fit and work together.</div></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'What is SIA?',
+    title: 'System Integration & Architecture Defined',
+    lede: 'SIA addresses both the technical and organizational dimensions of information systems.',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>📌 Definition</h3><p><strong>Systems integration</strong> allows a heterogeneous IS to communicate and share information seamlessly.</p><p style="margin-top:8px;"><strong>Heterogeneous</strong> = diverse in content or character.</p></div>' +
+        '<div class="card"><h3>🏢 Organizational Growth</h3><ul class="ticket-list">' +
+          '<li>Key issue for organizational growth — management must pay close attention.</li>' +
+          '<li><strong>ERP</strong> systems integrate different systems into one organization-wide application.</li>' +
+          '<li>Compiled into one complete system to streamline processes and information.</li>' +
+        '</ul></div>' +
+      '</div>' +
+      '<div class="analogy-grid">' +
+        '<div class="analogy-item"><span class="emoji-big">🌐</span><div class="label">Universal Translator</div><div class="desc">Heterogeneous systems speak different "languages" — integration translates between them.</div></div>' +
+        '<div class="analogy-item"><span class="emoji-big">🧠</span><div class="label">Nervous System</div><div class="desc">Like the human body, an integrated IS sends signals across the entire organization.</div></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'Role of Information Systems',
+    title: 'The IS Backbone',
+    lede: 'SIA goes beyond technical engineering — it touches every corner of the organization.',
+    body:
+      '<div class="card-grid cols-4">' +
+        '<div class="card"><h3>📋 Planning</h3><p>Strategic and operational planning supported by integrated data.</p></div>' +
+        '<div class="card"><h3>📁 Record Keeping</h3><p>Centralized, accessible records for compliance and analysis.</p></div>' +
+        '<div class="card"><h3>📈 Data Analytics</h3><p>Actionable insights from consolidated data sources.</p></div>' +
+        '<div class="card"><h3>📣 Marketing</h3><p>Customer insights and campaign tracking across channels.</p></div>' +
+      '</div>' +
+      '<div class="analogy-grid">' +
+        '<div class="analogy-item"><span class="emoji-big">🔄</span><div class="label">Central Hub</div><div class="desc">IS is the hub that connects all business functions, like a transportation hub connects routes.</div></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'What is an Information System?',
+    title: 'Information System Definition',
+    lede: 'An IS empowers the organization by supporting communication, decision making, budgeting, and more.',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>🏢 Core</h3><p>An organization involves <strong>people working together for a common goal</strong>.</p><p style="margin-top:8px;">Internal and external transactions occur daily — an effective IS is critical to maintain a competitive edge.</p></div>' +
+        '<div class="card"><h3>📈 Evolution</h3><ul class="ticket-list">' +
+          '<li>Most companies have evolved operations to manage risk decisions.</li>' +
+          '<li>Competitive business sectors demand tougher risk management.</li>' +
+          '<li>IS empowers communication, decision making, and budgeting.</li>' +
+        '</ul></div>' +
+      '</div>' +
+      '<div class="analogy-grid">' +
+        '<div class="analogy-item"><span class="emoji-big">⚙️</span><div class="label">Engine Control Unit</div><div class="desc">Like an ECU in a car, IS monitors, adjusts, and optimizes organizational performance.</div></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'Real-World Application',
+    title: 'From Code to Market',
+    lede: 'Technical excellence alone does not guarantee success — market validation is essential.',
+    body:
+      '<div class="quote-block">"No matter how well you create an IoT system, a parking counter, or a game, it cannot succeed if it doesn\'t win the market."</div>' +
+      '<div class="two-col">' +
+        '<div class="card"><h3>⚙️ Technical Focus</h3><ul class="ticket-list"><li>Designing prototypes</li><li>Coding and testing</li><li>Validating exact results</li></ul></div>' +
+        '<div class="card"><h3>📊 Business Reality</h3><ul class="ticket-list"><li>Satisfy clients</li><li>Manage costs</li><li>Endure market demands</li></ul></div>' +
+      '</div>' +
+      '<div class="analogy-grid">' +
+        '<div class="analogy-item"><span class="emoji-big">🏆</span><div class="label">Product-Market Fit</div><div class="desc">A perfect engine (code) is useless without a vehicle (market) that needs it.</div></div>' +
+        '<div class="analogy-item"><span class="emoji-big">🎯</span><div class="label">Archery</div><div class="desc">Technical skill (aiming) must be paired with understanding the target (market needs).</div></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'Subject Scope',
+    title: 'What This Subject Covers',
+    body:
+      '<div class="card-grid cols-4">' +
+        '<div class="card"><h3>📘 Information System</h3><p>Understanding the IS landscape and its role.</p></div>' +
+        '<div class="card"><h3>📐 Analysis & Design</h3><p>Structured approaches to system development.</p></div>' +
+        '<div class="card"><h3>🧩 Software Engineering</h3><p>Best practices for building reliable systems.</p></div>' +
+        '<div class="card"><h3>💻 Programming</h3><p>Practical implementation skills.</p></div>' +
+      '</div>' +
+      '<div class="analogy-grid">' +
+        '<div class="analogy-item"><span class="emoji-big">🧰</span><div class="label">Toolkit</div><div class="desc">This subject gives you the complete toolkit — from theory to code.</div></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'Core Benefits — 1',
+    title: 'Information Storage',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>📁 Why Storage Matters</h3><ul class="ticket-list"><li>Every organization needs records of activities.</li><li>Find the root cause of problems and deploy proper solutions.</li><li>Manual data storage costs significant time — especially when searching.</li></ul></div>' +
+        '<div class="card"><h3>📊 Analytical Value</h3><ul class="ticket-list"><li>Analyze historical impacts.</li><li>Prepare accurate cost estimates and forecasts.</li><li>Enable data-driven decision making.</li></ul></div>' +
+      '</div>' +
+      '<div class="analogy-grid">' +
+        '<div class="analogy-item"><span class="emoji-big">📚</span><div class="label">Digital Library</div><div class="desc">IS is like a library — organized, searchable, and always available.</div></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'Core Benefits — 2',
+    title: 'Easier Decision Making',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>🎯 Management Support</h3><ul class="ticket-list"><li>Utilize the IS to choose the best course of action.</li><li>Execute organizational tasks with confidence.</li><li>Calculate KPIs: costs, sales, profits.</li></ul></div>' +
+        '<div class="card"><h3>📈 Scenario Analysis</h3><ul class="ticket-list"><li>Run multiple predictive scenarios.</li><li>Compare appealing alternatives.</li><li>Make informed strategic choices.</li></ul></div>' +
+      '</div>' +
+      '<div class="analogy-grid">' +
+        '<div class="analogy-item"><span class="emoji-big">🧭</span><div class="label">Compass & Map</div><div class="desc">IS provides direction and visibility for leaders navigating complex decisions.</div></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'Core Benefits — 3',
+    title: 'Behavioral Change',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>🗣️ Communication</h3><ul class="ticket-list"><li>Employers and employees communicate rapidly and effectively.</li><li>Information flows fluidly from management to lower levels and vice versa.</li></ul></div>' +
+        '<div class="card"><h3>💪 Motivation</h3><ul class="ticket-list"><li>Increases motivation and dedication.</li><li>Employees involved in decision-making feel more engaged.</li><li>Creates a culture of transparency and inclusion.</li></ul></div>' +
+      '</div>' +
+      '<div class="analogy-grid">' +
+        '<div class="analogy-item"><span class="emoji-big">🌊</span><div class="label">Ripples in Water</div><div class="desc">Information flows like ripples — a small change at the top affects the entire organization.</div></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'IS in the Organization',
+    title: 'Value Chain & Silos',
+    lede: 'Information Systems play a critical role across the enterprise value chain.',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>📊 Value Chain Role</h3><ul class="ticket-list"><li>Supports primary and secondary activities.</li><li>Evolved to support the organization\'s evolving information needs.</li></ul></div>' +
+        '<div class="card"><h3>🏢 Horizontal Silos</h3><ul class="ticket-list"><li>Accounting · Finance</li><li>Marketing · Customer Service</li><li>HR Management · Operations</li><li>Manufacturing</li></ul></div>' +
+      '</div>' +
+      '<div class="analogy-grid">' +
+        '<div class="analogy-item"><span class="emoji-big">🏭</span><div class="label">Assembly Line</div><div class="desc">Each silo is a station on the assembly line — IS connects them into a continuous flow.</div></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'Vertical Silos',
+    title: 'Management Levels',
+    lede: 'IS provides analytical and decision-making support for three distinct management levels.',
+    body:
+      '<div class="card-grid cols-3">' +
+        '<div class="card"><h3>📈 Strategic</h3><p>Executive-level decisions. Long-term vision, competitive positioning, and enterprise strategy.</p></div>' +
+        '<div class="card"><h3>📊 Middle</h3><p>Tactical decisions. Resource allocation, performance monitoring, and departmental coordination.</p></div>' +
+        '<div class="card"><h3>📋 Operational</h3><p>Day-to-day execution. Transaction processing, reporting, and routine operations.</p></div>' +
+      '</div>' +
+      '<div class="analogy-grid">' +
+        '<div class="analogy-item"><span class="emoji-big">🗼</span><div class="label">Lighthouse</div><div class="desc">Strategic level is the light (vision), middle is the structure, operational is the foundation.</div></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'System Integration',
+    title: 'What is System Integration?',
+    lede: 'The process of combining subsystems into one all-encompassing larger system.',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>🔗 Definition</h3><p><strong>System Integration</strong> refers to the process by which multiple individual subsystems or sub-components are combined into one all-encompassing larger system, allowing them to function together.</p><p style="margin-top:8px;">This integration creates a <strong>symbiosis</strong> that allows the main system to achieve the overarching functionality required by the organization.</p></div>' +
+        '<div class="card"><h3>🎯 Outcome</h3><ul class="ticket-list"><li>Subsystems function together as a cohesive whole.</li><li>Main system achieves overarching functionality.</li><li>Eliminates silos and redundancies.</li></ul></div>' +
+      '</div>' +
+      '<div class="analogy-grid">' +
+        '<div class="analogy-item"><span class="emoji-big">🎻</span><div class="label">Orchestra</div><div class="desc">Each instrument (subsystem) plays its part — the conductor (integration) ensures harmony.</div></div>' +
+        '<div class="analogy-item"><span class="emoji-big">🧬</span><div class="label">DNA</div><div class="desc">Integration is the DNA that binds all parts of the organization into a living whole.</div></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'Value of Integration',
+    title: 'Efficiency, Speed, and Connectivity',
+    body:
+      '<div class="card-grid cols-3">' +
+        '<div class="card"><h3>⚡ Efficiency & Quality</h3><p>Eliminates manual data sharing between departments. Improves productivity and system quality.</p></div>' +
+        '<div class="card"><h3>🚀 Information Speed</h3><p>Increase in information flow speeds alongside significantly reduced operational costs.</p></div>' +
+        '<div class="card"><h3>🔗 Supply Chain Connectivity</h3><p>Connects with suppliers, customers, and shareholders. Real-time visibility via dashboards.</p></div>' +
+      '</div>' +
+      '<div class="analogy-grid">' +
+        '<div class="analogy-item"><span class="emoji-big">🚄</span><div class="label">High-Speed Rail</div><div class="desc">Integration is the rail network — information travels fast, efficiently, and reliably.</div></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'Check for Understanding',
+    title: 'Review Questions & Answers',
+    body:
+      '<div style="display:flex; flex-direction:column; gap:14px;">' +
+        '<div class="card"><h3>1. What is System Integration and Architecture?</h3><p><strong>Answer:</strong> Allowing a heterogeneous information system to communicate or integrate and share information seamlessly with one another.</p></div>' +
+        '<div class="card"><h3>2. ERP stands for?</h3><p><strong>Answer:</strong> Enterprise Resource Planning.</p></div>' +
+        '<div class="card"><h3>3. What are the 3 benefits of using SIA?</h3><p><strong>Answer:</strong> Information Storage, Easier Decision Making, and Behavioral Change.</p></div>' +
+        '<div class="card"><h3>4. ________________ It refers to the process by which multiple individual subsystems or sub-components are combined into one all-encompassing larger system thereby allowing the subsystems to function together.</h3><p><strong>Answer:</strong> System Integration.</p></div>' +
+      '</div>' +
+      '<div class="analogy-grid">' +
+        '<div class="analogy-item"><span class="emoji-big">✅</span><div class="label">Knowledge Check</div><div class="desc">Review these questions to solidify your understanding of SIA.</div></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'Lesson Wrap-Up',
+    title: 'FAQs & Next Steps',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>❓ Frequently Asked</h3><ul class="ticket-list"><li><strong>Are there steps in the System Integration and Design process?</strong></li><li style="color:var(--ink-soft);">(Content to be covered in upcoming theoretical modules.)</li></ul></div>' +
+        '<div class="card"><h3>📚 Upcoming Topics</h3><ul class="ticket-list"><li>Integration methodologies</li><li>Architecture frameworks (TOGAF, Zachman)</li><li>Middleware and ESB</li><li>API management and microservices</li></ul></div>' +
+      '</div>' +
+      '<div class="analogy-grid">' +
+        '<div class="analogy-item"><span class="emoji-big">🚀</span><div class="label">Launch Pad</div><div class="desc">This is just the beginning — future modules will dive deeper into design and implementation.</div></div>' +
+      '</div>'
+  });
+
+  // ——— GAUGE ———
+  function applyGauge(t){
+    var label = t < 0.4 ? 'Enterprise' : (t < 0.7 ? 'Integration' : 'Architecture');
+    document.getElementById('gaugeLabel').textContent = label;
+  }
+
+  // ——— RENDER & NAV ———
+  var stage = document.getElementById('stage');
+  var counterEl = document.getElementById('counter');
+  var progressFill = document.getElementById('progressFill');
+  var total = S.length;
+  var current = 0;
+  var animating = false;
+
+  function buildSlideEl(idx){
+    var d = S[idx];
+    var el = document.createElement('div');
+    el.className = 'slide';
+    el.innerHTML =
+      '<div class="slide-inner">' +
+        '<div class="eyebrow">' + d.eyebrow + '</div>' +
+        '<h2 class="slide-title">' + d.title + '</h2>' +
+        (d.lede ? '<div class="lede">' + d.lede + '</div>' : '') +
+        d.body +
+      '</div>';
+    return el;
+  }
+
+  function updateHud(){
+    counterEl.textContent = (current+1) + ' / ' + total;
+    progressFill.style.width = ((current) / (total-1) * 100) + '%';
+    applyGauge(current / (total-1));
+  }
+
+  var curEl = buildSlideEl(0);
+  curEl.classList.add('active');
+  stage.appendChild(curEl);
+  updateHud();
+
+  function goTo(idx, dir){
+    if(animating || idx === current || idx < 0 || idx >= total) return;
+    animating = true;
+    var nextEl = buildSlideEl(idx);
+    nextEl.classList.add(dir > 0 ? 'enter-fwd' : 'enter-bwd');
+    stage.appendChild(nextEl);
+    void nextEl.offsetWidth;
+    var oldEl = curEl;
+    requestAnimationFrame(function(){
+      oldEl.classList.remove('active');
+      oldEl.classList.add(dir > 0 ? 'exit-fwd' : 'exit-bwd');
+      nextEl.classList.remove('enter-fwd','enter-bwd');
+      nextEl.classList.add('active');
+    });
+    current = idx;
+    curEl = nextEl;
+    updateHud();
+    setTimeout(function(){
+      if(oldEl && oldEl.parentNode) oldEl.parentNode.removeChild(oldEl);
+      animating = false;
+    }, 420);
+  }
+
+  function next(){ goTo(current+1, 1); }
+  function prev(){ goTo(current-1, -1); }
+
+  document.getElementById('clickZone').addEventListener('click', function(e){
+    var w = window.innerWidth;
+    if(e.clientX < w * 0.25){ prev(); } else { next(); }
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown'){ e.preventDefault(); next(); }
+    else if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); prev(); }
+    else if(e.key === 'Home'){ e.preventDefault(); goTo(0, -1); }
+    else if(e.key === 'End'){ e.preventDefault(); goTo(total-1, 1); }
+    else if(e.key === 'ArrowUp'){ e.preventDefault(); prev(); }
+    else if(e.key === 'ArrowDown'){ e.preventDefault(); next(); }
+  });
+})();
+</script>
+</body>
+</html>

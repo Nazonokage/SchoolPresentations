@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIA M20 – Database Integration 2: SQLite, MySQL & WAMPP</title>
+<style>
+  :root {
+    --bg: #181c1f;
+    --bg2: #1d2226;
+    --card: #222a2e;
+    --shadow-dark: #0f1315;
+    --shadow-light: #2d3a40;
+    --accent:  #60a5fa;   /* SQLite blue */
+    --accent2: #4ade80;   /* MySQL green */
+    --accent3: #fb923c;   /* WAMPP amber */
+    --accent4: #a78bfa;   /* phpMyAdmin purple */
+    --accent5: #f472b6;   /* pink highlight */
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --danger: #f87171;
+    --warning: #fbbf24;
+    --radius: 20px;
+    --radius-sm: 12px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+
+  #progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3)); transition: width .35s ease; z-index: 999; }
+  #counter { position: fixed; bottom: 14px; right: 20px; font-size: 16px; color: var(--text-muted); z-index: 999; }
+
+  #deck { width: 100%; height: 100%; position: relative; }
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    padding: 36px 52px;
+    opacity: 0; pointer-events: none;
+    transition: opacity .35s ease, transform .35s ease;
+    transform: translateX(60px);
+  }
+  .slide.active  { opacity: 1; pointer-events: auto; transform: translateX(0); }
+  .slide.exit-left  { opacity: 0; transform: translateX(-60px); }
+  .slide.exit-right { opacity: 0; transform: translateX(60px); }
+  @media (prefers-reduced-motion: reduce) {
+    .slide { transition: opacity .15s ease; transform: none !important; }
+  }
+
+  .eyebrow    { font-size: 12px; text-transform: uppercase; letter-spacing: 2.8px; color: var(--accent); margin-bottom: 8px; font-weight: 700; }
+  .slide-title { font-size: clamp(24px, 3.2vw, 40px); font-weight: 800; color: var(--text); text-align: center; line-height: 1.2; margin-bottom: 24px; }
+  .slide-title span { color: var(--accent); }
+
+  .card { background: var(--card); border-radius: var(--radius); box-shadow: 6px 6px 16px var(--shadow-dark), -4px -4px 12px var(--shadow-light); padding: 22px 26px; }
+  .card-inset { background: var(--bg2); border-radius: var(--radius-sm); box-shadow: inset 3px 3px 8px var(--shadow-dark), inset -2px -2px 6px var(--shadow-light); padding: 14px 18px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; width: 100%; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; width: 100%; }
+  .grid-2-wide { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; width: 100%; }
+
+  p, li, td, th { font-size: 17px; line-height: 1.65; color: var(--text); }
+  h3 { font-size: 19px; font-weight: 700; color: var(--accent); margin-bottom: 9px; }
+  h4 { font-size: 17px; font-weight: 600; color: var(--accent3); margin-bottom: 7px; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  strong { color: var(--accent2); }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--card); box-shadow: 3px 3px 8px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
+    border-radius: 50px; padding: 7px 15px; font-size: 16px; font-weight: 600; color: var(--text);
+  }
+  .badge.blue   { color: var(--accent);  }
+  .badge.green  { color: var(--accent2); }
+  .badge.orange { color: var(--accent3); }
+  .badge.purple { color: var(--accent4); }
+  .badge.pink   { color: var(--accent5); }
+  .badge.yellow { color: var(--warning); }
+  .badge.red    { color: var(--danger);  }
+
+  /* code */
+  .code-wrap { position: relative; border-radius: var(--radius-sm); overflow: hidden; background: #0d1117; display: flex; flex-direction: column; min-height: 0; }
+  .code-header { display: flex; align-items: center; justify-content: space-between; padding: 9px 16px; background: #161b22; flex-shrink: 0; }
+  .code-lang { font-size: 16px; color: #8b949e; font-family: monospace; }
+  .copy-btn { font-size: 15px; padding: 5px 13px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; background: var(--card); color: var(--text); box-shadow: 3px 3px 7px var(--shadow-dark), -2px -2px 5px var(--shadow-light); transition: all .15s; }
+  .copy-btn.copied { box-shadow: inset 2px 2px 5px var(--shadow-dark), inset -1px -1px 4px var(--shadow-light); color: var(--accent2); }
+  pre { flex: 1; overflow: auto; padding: 16px; margin: 0; font-size: 14.5px; line-height: 1.75; font-family: 'Cascadia Code','Fira Code',Consolas,monospace; min-height: 0; }
+  .kw  { color: #ff7b72; font-weight: 700; }
+  .str { color: #a5d6ff; }
+  .cm  { color: #8b949e; font-style: italic; }
+  .num { color: #f0db4f; }
+  .tbl { color: #7ee787; }
+  .op  { color: #ffa657; }
+  .tp  { color: #d2a8ff; }
+
+  /* drill cards */
+  .drill-card { background: var(--card); border-radius: var(--radius); box-shadow: 6px 6px 16px var(--shadow-dark), -4px -4px 12px var(--shadow-light); padding: 18px 22px; cursor: pointer; transition: transform .15s; user-select: none; }
+  .drill-card:hover { transform: translateY(-2px); }
+  .drill-q { font-size: 16px; color: var(--text-muted); margin-bottom: 8px; line-height: 1.5; }
+  .drill-blank { font-family: monospace; font-size: 14px; background: var(--bg2); border-radius: 8px; padding: 10px 14px; color: var(--text); border: 1px solid rgba(96,165,250,.2); line-height: 1.8; }
+  .drill-reveal { display: none; background: rgba(74,222,128,.07); border-radius: 8px; padding: 10px 14px; margin-top: 8px; font-family: monospace; font-size: 15px; color: var(--accent2); border: 1px solid rgba(74,222,128,.2); line-height: 1.8; }
+  .drill-card.shown .drill-reveal { display: block; }
+  .drill-hint { font-size: 13px; color: var(--text-muted); margin-top: 6px; text-align: right; }
+  .drill-card.shown .drill-hint { display: none; }
+
+  /* table */
+  .tbl-wrap { width: 100%; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 16px; }
+  th { background: var(--bg); color: var(--accent); padding: 11px 14px; text-align: left; font-size: 15px; text-transform: uppercase; letter-spacing: .8px; }
+  td { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,.07); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(96,165,250,.04); }
+
+  /* MCQ */
+  .mcq-card { background: var(--card); border-radius: var(--radius); box-shadow: 6px 6px 16px var(--shadow-dark), -4px -4px 12px var(--shadow-light); padding: 20px 24px; display: flex; flex-direction: column; gap: 11px; }
+  .mcq-q { font-size: 17px; font-weight: 600; color: var(--text); line-height: 1.5; }
+  .mcq-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mcq-opt { background: var(--bg2); border-radius: 10px; padding: 9px 13px; font-size: 16px; box-shadow: inset 2px 2px 5px var(--shadow-dark), inset -1px -1px 4px var(--shadow-light); }
+
+  /* answer key */
+  .ans-row { display: flex; align-items: flex-start; gap: 13px; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+  .ans-num { background: var(--accent); color: #001020; border-radius: 50%; width: 28px; height: 28px; min-width: 28px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; }
+  .ans-text { font-size: 17px; line-height: 1.55; }
+  .ans-correct { color: var(--accent2); font-weight: 700; }
+
+  /* shortcuts */
+  #shortcuts-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.72); z-index: 9999; align-items: center; justify-content: center; }
+  #shortcuts-overlay.show { display: flex; }
+  .shortcuts-box { background: var(--card); border-radius: var(--radius); padding: 34px 42px; box-shadow: 10px 10px 30px var(--shadow-dark); max-width: 400px; width: 90%; }
+  .shortcuts-box h2 { font-size: 21px; color: var(--accent); margin-bottom: 16px; text-align: center; }
+  .shortcut-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.07); }
+  .shortcut-row:last-child { border-bottom: none; }
+  .shortcut-key  { background: var(--bg2); border-radius: 7px; padding: 4px 10px; font-size: 15px; font-family: monospace; color: var(--accent); }
+  .shortcut-desc { font-size: 16px; color: var(--text-muted); }
+  .close-btn { display: block; margin: 18px auto 0; background: var(--card); box-shadow: 4px 4px 10px var(--shadow-dark), -2px -2px 7px var(--shadow-light); border: none; border-radius: 12px; padding: 9px 26px; font-size: 17px; color: var(--text); cursor: pointer; }
+
+  .w-full { width: 100%; }
+  .mt-2 { margin-top: 10px; }
+  .mt-3 { margin-top: 14px; }
+  .mt-4 { margin-top: 20px; }
+  .flex-col { display: flex; flex-direction: column; }
+  .inner-scroll { overflow-y: auto; max-height: 58vh; padding-right: 4px; }
+  .inner-scroll::-webkit-scrollbar { width: 5px; }
+  .inner-scroll::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
+  .trace { position: absolute; opacity: .05; pointer-events: none; }
+
+  /* vs divider */
+  .vs-pill { background: var(--card); box-shadow: 4px 4px 10px var(--shadow-dark), -3px -3px 8px var(--shadow-light); border-radius: 50px; padding: 8px 18px; font-size: 18px; font-weight: 800; color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+<div id="counter">1 / 20</div>
+<div id="deck"></div>
+
+<div id="shortcuts-overlay">
+  <div class="shortcuts-box">
+    <h2>⌨️ Shortcuts</h2>
+    <div class="shortcut-row"><span class="shortcut-key">→ / Right-click</span><span class="shortcut-desc">Next slide</span></div>
+    <div class="shortcut-row"><span class="shortcut-key">←</span><span class="shortcut-desc">Prev slide</span></div>
+    <div class="shortcut-row"><span class="shortcut-key">Home / End</span><span class="shortcut-desc">First / Last</span></div>
+    <div class="shortcut-row"><span class="shortcut-key">?</span><span class="shortcut-desc">Toggle this</span></div>
+    <div class="shortcut-row"><span class="shortcut-key">Tap drill</span><span class="shortcut-desc">Reveal answer</span></div>
+    <button class="close-btn" onclick="closeShortcuts()">Close</button>
+  </div>
+</div>
+
+<script>
+const slides = [
+
+/* ══════════════════════════════════════════════
+   SLIDE 1 — TITLE
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="0" style="background:radial-gradient(ellipse at 50% 40%, #001020 0%, var(--bg) 68%)">
+  <!-- tiny file icon trace (SQLite) -->
+  <svg class="trace" style="right:30px;top:30px;width:280px;height:280px" viewBox="0 0 280 280" fill="none" aria-hidden="true">
+    <rect x="60" y="20" width="160" height="200" rx="12" stroke="white" stroke-width="1.5"/>
+    <path d="M140 20 L140 80 L200 80" stroke="white" stroke-width="1.5" fill="none"/>
+    <line x1="80" y1="110" x2="200" y2="110" stroke="white" stroke-width="1"/>
+    <line x1="80" y1="135" x2="200" y2="135" stroke="white" stroke-width="1"/>
+    <line x1="80" y1="160" x2="160" y2="160" stroke="white" stroke-width="1"/>
+    <text x="140" y="220" text-anchor="middle" font-size="11" fill="white" font-family="monospace">.sqlite</text>
+  </svg>
+  <!-- server cylinders trace (MySQL) -->
+  <svg class="trace" style="left:20px;bottom:20px;width:240px;height:240px" viewBox="0 0 240 240" fill="none" aria-hidden="true">
+    <ellipse cx="120" cy="50" rx="70" ry="20" stroke="white" stroke-width="1.5"/>
+    <path d="M50 50 L50 150" stroke="white" stroke-width="1.5"/>
+    <path d="M190 50 L190 150" stroke="white" stroke-width="1.5"/>
+    <ellipse cx="120" cy="150" rx="70" ry="20" stroke="white" stroke-width="1.5"/>
+    <ellipse cx="120" cy="100" rx="70" ry="20" stroke="white" stroke-width="1" opacity=".5"/>
+  </svg>
+
+  <div style="text-align:center;max-width:840px">
+    <div class="eyebrow">System Integration &amp; Architecture · Module 20</div>
+    <h1 style="font-size:clamp(28px,4.8vw,52px);font-weight:800;line-height:1.1;margin-bottom:14px">
+      Database Integration 2<br><span style="color:var(--accent)">SQLite, MySQL &amp; WAMPP</span>
+    </h1>
+    <p style="font-size:19px;color:var(--text-muted);margin-bottom:26px">Knowing <em>which</em> database to use is as important as knowing <em>how</em> to use one.</p>
+    <div style="display:flex;gap:13px;flex-wrap:wrap;justify-content:center">
+      <span class="badge blue">📄 SQLite</span>
+      <span class="badge green">🗄️ MySQL</span>
+      <span class="badge orange">🧪 WAMPP Stack</span>
+      <span class="badge purple">🖥️ phpMyAdmin</span>
+      <span class="badge yellow">💻 SQL Drills</span>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 2 — LESSON PREVIEW
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="1">
+  <div class="eyebrow">Lesson Preview</div>
+  <div class="slide-title">Broadening Our <span>Database Landscape</span></div>
+  <div class="grid-2 w-full" style="max-width:900px;align-items:start">
+    <div class="card">
+      <h3>📡 Coming From M19…</h3>
+      <p style="color:var(--text-muted)">Last module: <strong>MySQL fundamentals</strong> — tables, rows, columns, SELECT, WHERE, INSERT, UPDATE, DELETE.</p>
+      <p class="mt-2">Now: we meet <strong>SQLite</strong> (the lightweight alternative), understand when to use each, and set up <strong>WAMPP</strong> for local practice.</p>
+    </div>
+    <div class="card">
+      <h3>🎯 Learning Objectives</h3>
+      <ul>
+        <li>Identify key features of <strong>SQLite</strong> (serverless, embedded)</li>
+        <li>Compare <strong>SQLite vs MySQL</strong> (embedded vs client-server)</li>
+        <li>Set up <strong>WAMPP</strong> + <strong>phpMyAdmin</strong></li>
+        <li>Execute SQL: <code style="color:var(--accent2);background:var(--bg2);padding:2px 6px;border-radius:4px">CREATE DATABASE</code>, <code style="color:var(--accent2);background:var(--bg2);padding:2px 6px;border-radius:4px">DROP TABLE</code>, <code style="color:var(--accent2);background:var(--bg2);padding:2px 6px;border-radius:4px">UPDATE</code></li>
+      </ul>
+    </div>
+  </div>
+  <div class="card mt-4" style="max-width:900px;width:100%;background:linear-gradient(135deg,rgba(96,165,250,.08),rgba(74,222,128,.06))">
+    <p style="text-align:center;font-size:17px">💡 The right database choice can make or break a system — from a smartwatch to Facebook's global infrastructure.</p>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 3 — WHAT IS SQLITE
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="2">
+  <div class="eyebrow">Core Concept</div>
+  <div class="slide-title">What is <span>SQLite</span>?</div>
+  <div class="grid-2-wide w-full" style="max-width:940px;align-items:start">
+    <div class="card">
+      <h3>Embedded, Server-less RDBMS</h3>
+      <p>SQLite is one of the most popular relational database systems available today. Unlike MySQL, it is an <strong>embedded, server-less RDBMS</strong> — an in-memory open-source library.</p>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:14px">
+        <div class="card-inset" style="border-left:3px solid var(--accent)">
+          <h4 style="color:var(--accent)">Zero Configuration</h4>
+          <p style="font-size:16px">Requires <strong>absolutely no setup, no installation, no license</strong>. No server process to start or stop. Just a file.</p>
+        </div>
+        <div class="card-inset" style="border-left:3px solid var(--accent2)">
+          <h4 style="color:var(--accent2)">Single Cross-Platform File</h4>
+          <p style="font-size:16px">The <strong>entire database</strong> lives in one portable <code style="color:var(--accent2)">.sqlite</code> file — works on Windows, macOS, and Linux without conversion.</p>
+        </div>
+        <div class="card-inset" style="border-left:3px solid var(--accent3)">
+          <h4 style="color:var(--accent3)">Incredibly Lightweight</h4>
+          <p style="font-size:16px">Often <strong>less than 500kB</strong> in size. Small enough to be embedded directly into device firmware.</p>
+        </div>
+      </div>
+    </div>
+    <div class="flex-col" style="gap:16px">
+      <div class="card" style="border-top:3px solid var(--accent)">
+        <h3 style="font-size:18px">🎨 Adobe Lightroom</h3>
+        <p style="font-size:15px;color:var(--text-muted)"><strong>Adobe</strong> uses SQLite as the application file format for <strong>Photoshop Lightroom</strong> — your entire photo library catalog is a single .sqlite file.</p>
+      </div>
+      <div class="card" style="border-top:3px solid var(--accent2)">
+        <h3 style="font-size:18px">✈️ Airbus A350 XWB</h3>
+        <p style="font-size:15px;color:var(--text-muted)"><strong>Airbus</strong> uses SQLite in the <strong>flight software</strong> of their A350 XWB aircraft — proving its reliability in safety-critical, embedded systems.</p>
+      </div>
+      <div class="card-inset" style="border-left:3px solid var(--warning)">
+        <p style="font-size:15px">📱 Also used in: iPhones, Android devices, Firefox, Chrome, Skype, iTunes, and virtually every mobile app that stores local data.</p>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 4 — WHY USE SQLITE (FEATURES TABLE)
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="3">
+  <div class="eyebrow">SQLite Deep-Dive</div>
+  <div class="slide-title">Why Use <span>SQLite</span>?</div>
+  <div style="max-width:920px;width:100%">
+    <div class="card w-full" style="margin-bottom:18px">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Feature</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><strong style="color:var(--accent)">Zero Setup &amp; Admin</strong></td><td>No license, installation, or admin configuration needed. No server process to start, stop, or maintain.</td></tr>
+            <tr><td><strong style="color:var(--accent2)">Serverless Design</strong></td><td>Reads and writes directly to ordinary disk files. No separate server process required whatsoever.</td></tr>
+            <tr><td><strong style="color:var(--accent3)">Cross-Platform</strong></td><td>A SQLite file is compatible across macOS, Windows, and Linux without any conversion.</td></tr>
+            <tr><td><strong style="color:var(--accent4)">Flexibility</strong></td><td>Work on multiple databases simultaneously within the same session — great for testing and temporary operations.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="grid-3 w-full" style="gap:14px">
+      <div class="card-inset" style="text-align:center">
+        <div style="font-size:28px;margin-bottom:8px">📱</div>
+        <h4>Mobile &amp; Embedded</h4>
+        <p style="font-size:14px;color:var(--text-muted)">Phones, TVs, digital cameras, IoT devices — limited power, zero overhead</p>
+      </div>
+      <div class="card-inset" style="text-align:center">
+        <div style="font-size:28px;margin-bottom:8px">🌐</div>
+        <h4>Low-Medium Traffic Web</h4>
+        <p style="font-size:14px;color:var(--text-muted)">Efficiently handles HTTP requests for smaller web apps without a separate server</p>
+      </div>
+      <div class="card-inset" style="text-align:center">
+        <div style="font-size:28px;margin-bottom:8px">🎓</div>
+        <h4>Education &amp; Prototyping</h4>
+        <p style="font-size:14px;color:var(--text-muted)">Zero headache for beginners — learn SQL instantly with no server setup</p>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 5 — SQLITE vs MYSQL (HEAD-TO-HEAD)
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="4">
+  <div class="eyebrow">The Big Comparison</div>
+  <div class="slide-title"><span>SQLite</span> vs <span style="color:var(--accent2)">MySQL</span></div>
+  <div style="max-width:940px;width:100%">
+    <!-- VS header -->
+    <div style="display:flex;align-items:center;gap:16px;justify-content:center;margin-bottom:18px">
+      <div class="badge blue" style="font-size:18px;padding:10px 22px">📄 SQLite</div>
+      <div class="vs-pill">VS</div>
+      <div class="badge green" style="font-size:18px;padding:10px 22px">🗄️ MySQL</div>
+    </div>
+    <div class="card w-full">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Dimension</th><th style="color:var(--accent)">SQLite</th><th style="color:var(--accent2)">MySQL</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Architecture</strong></td><td>Embedded, <strong>server-less</strong></td><td><strong>Client-Server</strong> model</td></tr>
+            <tr><td><strong>Setup</strong></td><td>Zero config — just a file</td><td>Requires server install &amp; config</td></tr>
+            <tr><td><strong>Size</strong></td><td>Under 500kB</td><td>Much larger (server software)</td></tr>
+            <tr><td><strong>Concurrent Users</strong></td><td>Low — file locks on writes</td><td>Very high — built for thousands</td></tr>
+            <tr><td><strong>Best For</strong></td><td>Mobile, embedded, local, testing</td><td>Global web apps, enterprise</td></tr>
+            <tr><td><strong>Who Made It</strong></td><td>D. Richard Hipp (open source)</td><td>MySQL AB (now Oracle, 1994)</td></tr>
+            <tr><td><strong>License</strong></td><td>Public Domain (free forever)</td><td>Open-source (GPL) + paid enterprise</td></tr>
+            <tr><td><strong>Examples</strong></td><td>Lightroom, A350, Chrome, iOS</td><td>Facebook, YouTube, Uber, Wikipedia</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 6 — WHEN TO USE WHICH
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="5">
+  <div class="eyebrow">Decision Guide</div>
+  <div class="slide-title">Choosing the <span>Right Database</span></div>
+  <div class="grid-2 w-full" style="max-width:900px;align-items:start">
+    <div class="card" style="border-top:4px solid var(--accent)">
+      <div style="text-align:center;margin-bottom:14px">
+        <span style="font-size:38px">📄</span>
+        <h3 style="margin-top:6px">Use SQLite When…</h3>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <div class="card-inset"><p style="font-size:16px">✅ Building a <strong>mobile app</strong> (Android, iOS) that stores data locally on the device</p></div>
+        <div class="card-inset"><p style="font-size:16px">✅ Working with <strong>embedded IoT devices</strong> (smartwatches, cameras, TVs)</p></div>
+        <div class="card-inset"><p style="font-size:16px">✅ <strong>Prototyping or learning</strong> SQL with zero server setup</p></div>
+        <div class="card-inset"><p style="font-size:16px">✅ Running a <strong>small or low-traffic website</strong> where simplicity matters more than scale</p></div>
+        <div class="card-inset"><p style="font-size:16px">✅ <strong>Archiving or transforming</strong> large datasets into compact, portable files</p></div>
+      </div>
+    </div>
+    <div class="card" style="border-top:4px solid var(--accent2)">
+      <div style="text-align:center;margin-bottom:14px">
+        <span style="font-size:38px">🗄️</span>
+        <h3 style="margin-top:6px;color:var(--accent2)">Use MySQL When…</h3>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <div class="card-inset"><p style="font-size:16px">✅ Building a <strong>high-traffic web app</strong> with thousands of simultaneous users</p></div>
+        <div class="card-inset"><p style="font-size:16px">✅ <strong>Multiple users</strong> need to read and write to the database concurrently</p></div>
+        <div class="card-inset"><p style="font-size:16px">✅ Requiring <strong>robust user management</strong>, permissions, and access control</p></div>
+        <div class="card-inset"><p style="font-size:16px">✅ Running <strong>complex analytics</strong> and JOIN queries across many tables</p></div>
+        <div class="card-inset"><p style="font-size:16px">✅ Building for scale like <strong>Uber, Netflix, Pinterest, Amazon, Twitter</strong></p></div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 7 — WHAT IS WAMPP
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="6">
+  <div class="eyebrow">Local Dev Stack</div>
+  <div class="slide-title">What is <span>WAMPP</span>?</div>
+  <div class="grid-2-wide w-full" style="max-width:940px;align-items:start">
+    <div class="card">
+      <h3>Windows · Apache · MySQL · PHP · Perl/Python</h3>
+      <p>WAMPP bundles everything you need to run a complete web server environment on your <strong>Windows PC</strong> — with a single installer.</p>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+        <div class="card-inset" style="border-left:3px solid var(--accent3)">
+          <h4>🚀 Simple Deployment</h4>
+          <p style="font-size:15px">One installer → Apache HTTP Server + MariaDB/MySQL + PHP + Perl. Start serving web pages in minutes.</p>
+        </div>
+        <div class="card-inset" style="border-left:3px solid var(--accent)">
+          <h4 style="color:var(--accent)">🔀 Seamless Transitions</h4>
+          <p style="font-size:15px">Uses the <strong>exact same components</strong> as live production servers. Moving your app from WAMPP to a web host is straightforward.</p>
+        </div>
+        <div class="card-inset" style="border-left:3px solid var(--accent2)">
+          <h4 style="color:var(--accent2)">🎛️ Easy Control Panel</h4>
+          <p style="font-size:15px">Start and stop <strong>Apache</strong> and <strong>MySQL</strong> individually with a single click. Tray icon turns <strong>green</strong> when all services are live.</p>
+        </div>
+        <div class="card-inset" style="border-left:3px solid var(--accent4)">
+          <h4 style="color:var(--accent4)">📦 Pre-loaded Modules</h4>
+          <p style="font-size:15px">Comes with OpenSSL, <strong>phpMyAdmin</strong>, MediaWiki, Joomla, and WordPress out of the box.</p>
+        </div>
+      </div>
+    </div>
+    <div class="flex-col" style="gap:16px">
+      <!-- WAMPP letter breakdown -->
+      <div class="card">
+        <h3>WAMPP Decoded</h3>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+          ${[
+            ['#1a75ff','W','Windows','Operating System'],
+            ['#ff6b35','A','Apache','Web Server (Middle Tier)'],
+            ['#00b894','M','MySQL/MariaDB','Database (Backend)'],
+            ['#9b59b6','P','PHP','Server-side Language'],
+            ['#e67e22','P','Perl / Python','Optional Scripting'],
+          ].map(([col,letter,name,role])=>`
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="width:36px;height:36px;border-radius:8px;background:${col}22;border:2px solid ${col};display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:${col};flex-shrink:0">${letter}</div>
+              <div><p style="font-size:16px;font-weight:700;margin:0">${name}</p><p style="font-size:13px;color:var(--text-muted);margin:0">${role}</p></div>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="card-inset" style="border-left:3px solid var(--accent3)">
+        <p style="font-size:15px">🌐 Access your site at <code style="color:var(--accent3)">http://localhost</code> — save files in <code style="color:var(--accent3)">C:\wamp64\www\</code></p>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 8 — phpMyAdmin
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="7">
+  <div class="eyebrow">Database Management GUI</div>
+  <div class="slide-title">What is <span style="color:var(--accent4)">phpMyAdmin</span>?</div>
+  <div class="grid-2 w-full" style="max-width:900px;align-items:start">
+    <div class="card">
+      <h3 style="color:var(--accent4)">Graphical Interface for MySQL</h3>
+      <p>phpMyAdmin is a free, open-source <strong>web-based administration tool</strong> for MySQL and MariaDB — developed primarily in PHP.</p>
+      <p class="mt-2">Instead of typing SQL into a black terminal, it provides a <strong>Graphical User Interface (GUI)</strong> in your browser.</p>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+        <div class="card-inset"><p style="font-size:16px">✅ Create &amp; manage databases visually</p></div>
+        <div class="card-inset"><p style="font-size:16px">✅ Design tables with point-and-click</p></div>
+        <div class="card-inset"><p style="font-size:16px">✅ Run SQL queries via a clean text box — click "Go"</p></div>
+        <div class="card-inset"><p style="font-size:16px">✅ Web-based — access from any device on your local network</p></div>
+      </div>
+    </div>
+    <div class="flex-col" style="gap:16px">
+      <!-- phpMyAdmin URL card -->
+      <div class="card" style="background:linear-gradient(135deg,rgba(167,139,250,.1),rgba(96,165,250,.07))">
+        <h3 style="color:var(--accent4)">🌐 How to access it</h3>
+        <div class="card-inset mt-2" style="font-family:monospace;font-size:16px;text-align:center;color:var(--accent4)">
+          http://localhost/phpmyadmin
+        </div>
+        <p style="font-size:15px;color:var(--text-muted);margin-top:10px">Start WAMPP first → tray icon green → then open this URL in your browser.</p>
+      </div>
+      <!-- History card -->
+      <div class="card">
+        <h3 style="font-size:17px">📜 Historical Trivia</h3>
+        <ul style="font-size:15px">
+          <li>Created in <strong>1998</strong> by Tobias Ratschiller</li>
+          <li>Abandoned in <strong>2000</strong></li>
+          <li>Community revived it in <strong>2001</strong></li>
+          <li>Now one of the most popular MySQL tools worldwide 🌍</li>
+        </ul>
+      </div>
+      <div class="card-inset" style="border-left:3px solid var(--accent4)">
+        <p style="font-size:15px">💡 Open the <strong>SQL tab</strong> inside phpMyAdmin to run any SQL command and see results immediately — no terminal needed.</p>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 9 — WAMPP SETUP STEPS
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="8">
+  <div class="eyebrow">Lab — Setup</div>
+  <div class="slide-title">Setting Up <span>WAMPP</span></div>
+  <div style="max-width:900px;width:100%">
+    <div style="display:flex;flex-direction:column;gap:11px">
+      ${[
+        ['blue',  '1','⬇️ Download WAMPP','Visit <strong>wampserver.com</strong> and download the free Windows installer. Choose the 64-bit version for most modern PCs.'],
+        ['orange','2','🔧 Install the Package','Run the installer — it sets up Apache, MySQL/MariaDB, PHP, and phpMyAdmin automatically in one go.'],
+        ['green', '3','🚀 Launch WampServer','Click the WampServer icon. A tray icon appears in the bottom-right corner of your taskbar.'],
+        ['blue',  '4','▶ Start Apache &amp; MySQL','When the tray icon turns <strong style="color:#34d399">green</strong>, both Apache and MySQL are running. Click the icon to start/stop individual services.'],
+        ['purple','5','🌐 Open localhost','Go to <code style="color:var(--accent4)">http://localhost</code> in your browser — you should see the WAMPP welcome dashboard.'],
+        ['orange','6','📁 Save project files','Navigate to <code style="color:var(--accent3)">C:\\wamp64\\www\\</code> and create a project folder (e.g., <code>my_ecommerce</code>). Save your <code>.php</code>, <code>.html</code>, and <code>.css</code> files here.'],
+        ['purple','7','🖥️ Open phpMyAdmin','Visit <code style="color:var(--accent4)">http://localhost/phpmyadmin</code> to manage your MySQL databases with a GUI.'],
+      ].map(([col, num, title, desc]) => `
+        <div style="display:grid;grid-template-columns:44px 1fr;gap:0 14px;align-items:start">
+          <div class="badge ${col}" style="width:44px;height:44px;border-radius:50%;justify-content:center;padding:0;font-size:16px;font-weight:800;flex-shrink:0;margin-top:2px">${num}</div>
+          <div class="card" style="padding:12px 18px">
+            <h4 style="margin:0 0 4px">${title}</h4>
+            <p style="font-size:15px">${desc}</p>
+          </div>
+        </div>`).join('')}
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 10 — ANALOGIES
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="9">
+  <div class="eyebrow">Analogies</div>
+  <div class="slide-title">Making It <span>Click</span></div>
+  <div class="grid-2 w-full" style="max-width:900px;align-items:start">
+    <div class="card">
+      <h3>📚 Big Library vs. Notebook</h3>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px">
+        <div class="card-inset" style="border-left:4px solid var(--accent2)">
+          <h4 style="color:var(--accent2)">🗄️ MySQL = Massive Public Library</h4>
+          <p style="font-size:15px">Dedicated staff (Server), complex infrastructure, fees, a librarian. Serves <strong>thousands of students simultaneously</strong> across a whole city.</p>
+        </div>
+        <div class="card-inset" style="border-left:4px solid var(--accent)">
+          <h4 style="color:var(--accent)">📄 SQLite = Personal Spiral Notebook</h4>
+          <p style="font-size:15px">No librarian, no building. Just <strong>write your data on paper</strong>. Cheap, zero setup, perfect for personal notes. But if 500 people try to write in it at the exact same time — it falls apart.</p>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>👨‍🍳 WAMPP = Local "Test Kitchen"</h3>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px">
+        <div class="card-inset">
+          <p style="font-size:16px">You wouldn't open a restaurant without first testing recipes in a small <strong>test kitchen</strong>.</p>
+        </div>
+        <div class="card-inset" style="border:1.5px solid rgba(251,146,60,.3)">
+          <h4 style="color:var(--accent3)">WAMPP = Your Test Kitchen</h4>
+          <p style="font-size:15px">Mirrors the exact components of a live server (Apache, MySQL, PHP) but runs <strong>only on your personal Windows PC</strong>. Test, fail, fix — at zero cost before going live.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 11 — USE CASE: SMARTWATCH
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="10">
+  <div class="eyebrow">Use Case</div>
+  <div class="slide-title">The Smartwatch <span>Fitness App</span></div>
+  <div style="max-width:880px;width:100%">
+    <div class="card" style="margin-bottom:18px">
+      <p style="text-align:center;font-size:17px">A single app uses <strong>both</strong> SQLite and MySQL — each for the right job at the right time.</p>
+    </div>
+    <div class="grid-2 w-full" style="margin-bottom:18px">
+      <div class="card" style="border-left:4px solid var(--accent)">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px">
+          <span style="font-size:36px">⌚</span>
+          <div>
+            <div style="font-size:12px;text-transform:uppercase;letter-spacing:2px;color:var(--accent);font-weight:700">On the Watch</div>
+            <h3 style="margin:0;color:var(--accent)">SQLite</h3>
+          </div>
+        </div>
+        <p style="font-size:16px">The watch uses a tiny SQLite database to store real-time <strong>steps, heart rate, and GPS location</strong> every second.</p>
+        <p style="font-size:15px;color:var(--text-muted);margin-top:8px">Embedded directly into the watch's OS — uses almost <strong>no battery</strong>, requires <strong>no internet</strong> connection.</p>
+      </div>
+      <div class="card" style="border-left:4px solid var(--accent2)">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px">
+          <span style="font-size:36px">☁️</span>
+          <div>
+            <div style="font-size:12px;text-transform:uppercase;letter-spacing:2px;color:var(--accent2);font-weight:700">In the Cloud</div>
+            <h3 style="margin:0;color:var(--accent2)">MySQL</h3>
+          </div>
+        </div>
+        <p style="font-size:16px">When you sync at end of day, raw data uploads to a massive <strong>MySQL cluster</strong> serving millions of users.</p>
+        <p style="font-size:15px;color:var(--text-muted);margin-top:8px">Runs complex analytics, sends <strong>global leaderboards</strong> back to your phone — handles massive concurrency.</p>
+      </div>
+    </div>
+    <!-- Flow diagram -->
+    <div style="display:flex;align-items:center;gap:10px;justify-content:center;flex-wrap:wrap">
+      <div class="card-inset" style="text-align:center;min-width:120px"><span style="font-size:22px">⌚</span><br><span style="font-size:15px;color:var(--accent)">SQLite<br><span style="color:var(--text-muted);font-size:13px">stores locally</span></span></div>
+      <div style="font-size:20px;color:var(--text-muted);font-weight:700">→ sync →</div>
+      <div class="card-inset" style="text-align:center;min-width:120px"><span style="font-size:22px">📱</span><br><span style="font-size:15px;color:var(--text-muted)">Phone<br><span style="font-size:13px">uploads data</span></span></div>
+      <div style="font-size:20px;color:var(--text-muted);font-weight:700">→</div>
+      <div class="card-inset" style="text-align:center;min-width:120px"><span style="font-size:22px">☁️</span><br><span style="font-size:15px;color:var(--accent2)">MySQL<br><span style="color:var(--text-muted);font-size:13px">cloud analytics</span></span></div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 12 — SQL DRILLS CODE (CREATE/DROP)
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="11">
+  <div class="eyebrow">SQL Reference</div>
+  <div class="slide-title">CREATE &amp; DROP <span>Commands</span></div>
+  <div style="max-width:960px;width:100%;height:min(520px,58vh);display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:stretch">
+    <div class="code-wrap" style="height:100%">
+      <div class="code-header">
+        <span class="code-lang">Database &amp; Table Management</span>
+        <button class="copy-btn" onclick="copyCode(this,'create-drop')">Copy</button>
+      </div>
+      <pre id="create-drop"><span class="cm">-- Create a brand new database</span>
+<span class="kw">CREATE DATABASE</span> testDB;
+
+<span class="cm">-- Delete an entire database (careful!)</span>
+<span class="kw">DROP DATABASE</span> testDB;
+
+<span class="cm">-- Create a table with typed columns</span>
+<span class="kw">CREATE TABLE</span> <span class="tbl">Person</span> (
+  <span class="tbl">PersonID</span>   <span class="tp">INT</span>,
+  <span class="tbl">LastName</span>   <span class="tp">VARCHAR</span>(<span class="num">255</span>),
+  <span class="tbl">FirstName</span>  <span class="tp">VARCHAR</span>(<span class="num">255</span>),
+  <span class="tbl">Address</span>    <span class="tp">VARCHAR</span>(<span class="num">255</span>),
+  <span class="tbl">City</span>       <span class="tp">VARCHAR</span>(<span class="num">255</span>)
+);
+
+<span class="cm">-- Delete an entire table and its data</span>
+<span class="kw">DROP TABLE</span> <span class="tbl">Person</span>;
+
+<span class="cm">-- Just remove all rows (keep structure)</span>
+<span class="kw">TRUNCATE TABLE</span> <span class="tbl">Person</span>;
+
+<span class="cm">-- Add a new column to existing table</span>
+<span class="kw">ALTER TABLE</span> <span class="tbl">Person</span>
+<span class="kw">ADD</span> <span class="tbl">Email</span> <span class="tp">VARCHAR</span>(<span class="num">255</span>);</pre>
+    </div>
+    <div class="flex-col" style="gap:14px;height:100%">
+      <div class="card">
+        <h3>⚡ Command Quick-Reference</h3>
+        <div style="display:flex;flex-direction:column;gap:9px;margin-top:4px">
+          <div class="card-inset" style="border-left:3px solid var(--accent2)"><p style="font-size:15px"><code style="color:var(--accent2)">CREATE DATABASE</code> — makes a new empty database</p></div>
+          <div class="card-inset" style="border-left:3px solid var(--danger)"><p style="font-size:15px"><code style="color:var(--danger)">DROP DATABASE</code> — permanently deletes the whole DB</p></div>
+          <div class="card-inset" style="border-left:3px solid var(--accent2)"><code style="color:var(--accent2);font-size:15px">CREATE TABLE</code><p style="font-size:15px;margin-top:4px">Define column names &amp; data types (INT, VARCHAR, DATE…)</p></div>
+          <div class="card-inset" style="border-left:3px solid var(--danger)"><p style="font-size:15px"><code style="color:var(--danger)">DROP TABLE</code> — deletes the table AND all its data</p></div>
+          <div class="card-inset" style="border-left:3px solid var(--accent)"><p style="font-size:15px"><code style="color:var(--accent)">TRUNCATE TABLE</code> — empties the table, keeps structure</p></div>
+        </div>
+      </div>
+      <div class="card-inset" style="flex:1;border-left:3px solid var(--warning)">
+        <h4 style="color:var(--warning)">⚠️ DROP is irreversible!</h4>
+        <p style="font-size:15px;color:var(--text-muted)"><code>DROP DATABASE</code> and <code>DROP TABLE</code> have <strong>no undo</strong>. Always double-check your WHERE clause and the object name before executing these in production.</p>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 13 — SQL DRILLS CODE (UPDATE/SET)
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="12">
+  <div class="eyebrow">SQL Reference</div>
+  <div class="slide-title">UPDATE with <span>WHERE</span></div>
+  <div style="max-width:960px;width:100%;height:min(480px,55vh);display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:stretch">
+    <div class="code-wrap" style="height:100%">
+      <div class="code-header">
+        <span class="code-lang">UPDATE — The Right Way</span>
+        <button class="copy-btn" onclick="copyCode(this,'update-code')">Copy</button>
+      </div>
+      <pre id="update-code"><span class="cm">-- ✅ CORRECT — only updates Norway rows</span>
+<span class="kw">UPDATE</span> <span class="tbl">Customers</span>
+<span class="kw">SET</span>    <span class="tbl">City</span> <span class="op">=</span> <span class="str">'Oslo'</span>
+<span class="kw">WHERE</span>  <span class="tbl">Country</span> <span class="op">=</span> <span class="str">'Norway'</span>;
+
+<span class="cm">-- ❌ WRONG — updates EVERY row!</span>
+<span class="cm">-- (no WHERE clause = catastrophe)</span>
+<span class="kw">UPDATE</span> <span class="tbl">Customers</span>
+<span class="kw">SET</span>    <span class="tbl">City</span> <span class="op">=</span> <span class="str">'Oslo'</span>;
+
+<span class="cm">-- ✅ Update multiple columns at once</span>
+<span class="kw">UPDATE</span> <span class="tbl">Customers</span>
+<span class="kw">SET</span>    <span class="tbl">City</span>    <span class="op">=</span> <span class="str">'Bergen'</span>,
+       <span class="tbl">Country</span> <span class="op">=</span> <span class="str">'Norway'</span>
+<span class="kw">WHERE</span>  <span class="tbl">CustomerID</span> <span class="op">=</span> <span class="num">42</span>;
+
+<span class="cm">-- ✅ Delete only specific rows</span>
+<span class="kw">DELETE FROM</span> <span class="tbl">Customers</span>
+<span class="kw">WHERE</span>  <span class="tbl">Country</span> <span class="op">=</span> <span class="str">'Norway'</span>;
+
+<span class="cm">-- ❌ Deletes ALL rows — avoid!</span>
+<span class="kw">DELETE FROM</span> <span class="tbl">Customers</span>;</pre>
+    </div>
+    <div class="flex-col" style="gap:14px;height:100%">
+      <div class="card">
+        <h3>🚨 The Golden Rule</h3>
+        <div class="card-inset" style="border:2px solid var(--warning);margin-top:6px">
+          <p style="font-size:17px;text-align:center;color:var(--warning);font-weight:700">Always use WHERE<br>with UPDATE and DELETE</p>
+        </div>
+        <p style="font-size:16px;color:var(--text-muted);margin-top:12px">Without a WHERE clause, you change or delete <strong>every single row</strong> in the table. This is one of the most common and catastrophic SQL mistakes — and there is no Ctrl+Z.</p>
+      </div>
+      <div class="card-inset" style="flex:1;border-left:3px solid var(--accent3)">
+        <h4 style="color:var(--accent3)">💡 Test in phpMyAdmin</h4>
+        <p style="font-size:15px;color:var(--text-muted)">Open WAMPP → go to <code>localhost/phpmyadmin</code> → click the SQL tab → paste any UPDATE above → click <strong>"Go"</strong> to see it execute safely on a test table.</p>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 14 — INTERACTIVE SQL DRILLS
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="13">
+  <div class="eyebrow">Hands-On Drills</div>
+  <div class="slide-title">SQL Fill-in-the-Blanks <span>(Tap to Reveal)</span></div>
+  <div style="max-width:960px;width:100%;display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">
+    <div class="drill-card" onclick="this.classList.toggle('shown')">
+      <div class="drill-q">1. Create a new database called <strong>testDB</strong>.</div>
+      <div class="drill-blank">________ ________ testDB;</div>
+      <div class="drill-reveal">CREATE DATABASE testDB;</div>
+      <div class="drill-hint">👆 Tap to reveal</div>
+    </div>
+    <div class="drill-card" onclick="this.classList.toggle('shown')">
+      <div class="drill-q">2. Delete (drop) a database named <strong>testDB</strong>.</div>
+      <div class="drill-blank">________ ________ testDB;</div>
+      <div class="drill-reveal">DROP DATABASE testDB;</div>
+      <div class="drill-hint">👆 Tap to reveal</div>
+    </div>
+    <div class="drill-card" onclick="this.classList.toggle('shown')">
+      <div class="drill-q">3. Create a new table called <strong>Person</strong> with 5 columns (PersonID, LastName, FirstName, Address, City).</div>
+      <div class="drill-blank">________ ________ Person (<br>&nbsp;&nbsp;PersonID int,<br>&nbsp;&nbsp;LastName varchar(255),<br>&nbsp;&nbsp;FirstName varchar(255),<br>&nbsp;&nbsp;Address varchar(255),<br>&nbsp;&nbsp;City varchar(255)<br>);</div>
+      <div class="drill-reveal">CREATE TABLE Person (...);</div>
+      <div class="drill-hint">👆 Tap to reveal</div>
+    </div>
+    <div class="drill-card" onclick="this.classList.toggle('shown')">
+      <div class="drill-q">4. Delete the table called <strong>Persons</strong> (and all its data).</div>
+      <div class="drill-blank">________ ________ Persons;</div>
+      <div class="drill-reveal">DROP TABLE Persons;</div>
+      <div class="drill-hint">👆 Tap to reveal</div>
+    </div>
+    <div class="drill-card" onclick="this.classList.toggle('shown')" style="grid-column:1/-1">
+      <div class="drill-q">5. Set the <strong>City</strong> column to "Oslo" — but only for rows where <strong>Country</strong> = "Norway".</div>
+      <div class="drill-blank">________ Customers<br>________ City = 'Oslo'<br>________ Country = 'Norway';</div>
+      <div class="drill-reveal">UPDATE Customers<br>SET City = 'Oslo'<br>WHERE Country = 'Norway';</div>
+      <div class="drill-hint">👆 Tap to reveal</div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 15 — FAQ
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="14">
+  <div class="eyebrow">FAQ Deep-Dive</div>
+  <div class="slide-title">Frequently Asked <span>Questions</span></div>
+  <div style="max-width:860px;width:100%" class="inner-scroll">
+    <div class="card" style="margin-bottom:14px">
+      <h3>❓ Why choose SQLite over MySQL?</h3>
+      <p>Choose SQLite for <strong>portability, minimal setup, and low memory usage</strong> — mobile apps, embedded IoT devices, testing. Choose MySQL when you have <strong>multiple concurrent users</strong>, robust security needs, or require heavy analytics.</p>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <h3>❓ Is SQLite suitable for Facebook-scale traffic?</h3>
+      <p>Absolutely not. SQLite <strong>locks the entire database file when writing</strong>. If thousands of users try to update their profiles at once, it becomes a massive bottleneck. Facebook uses MySQL and advanced NoSQL databases engineered for <strong>millions of concurrent transactions per second</strong>.</p>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <h3>❓ Do I still have to type SQL in the terminal with WAMPP?</h3>
+      <p>No! WAMPP comes bundled with <strong>phpMyAdmin</strong>. Visit <code style="color:var(--accent4)">http://localhost/phpmyadmin</code> after starting WAMPP — this gives you a visual dashboard to create databases, design tables, and run queries via a text box, not a black command prompt.</p>
+    </div>
+    <div class="card">
+      <h3>❓ Is MySQL still free to use?</h3>
+      <p>Yes. Despite being owned by Oracle, MySQL remains <strong>open-source and free</strong> under the GNU General Public License (GPL). However, for large enterprise clients needing premium support and proprietary features, Oracle sells commercial licenses at a fee.</p>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 16 — KEY QUOTES
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="15">
+  <div class="eyebrow">Key Takeaways</div>
+  <div class="slide-title">Key <span>Insights</span></div>
+  <div style="max-width:820px;width:100%;display:flex;flex-direction:column;gap:16px">
+    <div class="card"><div style="border-left:4px solid var(--accent);padding-left:20px;font-size:18px;font-style:italic;color:var(--text-muted);line-height:1.7">"<strong>SQLite is serverless</strong> — an embedded, zero-configuration, file-based database perfect for mobile apps, embedded devices, and testing. The entire database is one portable file under 500kB."</div></div>
+    <div class="card"><div style="border-left:4px solid var(--accent2);padding-left:20px;font-size:18px;font-style:italic;color:var(--text-muted);line-height:1.7">"<strong>MySQL is client-server</strong> — it runs on a central server, handles high concurrency, and is the industry standard for massive enterprise websites. It requires setup but scales to millions of users."</div></div>
+    <div class="card"><div style="border-left:4px solid var(--accent3);padding-left:20px;font-size:18px;font-style:italic;color:var(--text-muted);line-height:1.7">"<strong>WAMPP</strong> lets you run a complete Apache/MySQL/PHP environment on your Windows PC. Same components as a live production server — perfect for testing before deployment."</div></div>
+    <div class="card"><div style="border-left:4px solid var(--warning);padding-left:20px;font-size:18px;font-style:italic;color:var(--text-muted);line-height:1.7">"<strong>Always use WHERE with UPDATE and DELETE.</strong> Without it, you modify or destroy every row in the table. There is no undo — this is the most common catastrophic SQL mistake."</div></div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 17 — RECAP
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="16">
+  <div class="eyebrow">Before Activities</div>
+  <div class="slide-title">Quick <span>Recap</span></div>
+  <div class="grid-2 w-full" style="max-width:880px;align-items:start">
+    <div class="card">
+      <h3>Core Concepts</h3>
+      <ul>
+        <li><strong>SQLite</strong> = embedded, serverless, single-file RDBMS (&lt;500kB)</li>
+        <li><strong>MySQL</strong> = client-server RDBMS for high concurrency (Oracle)</li>
+        <li>SQLite → mobile, IoT, testing · MySQL → enterprise web apps</li>
+        <li><strong>WAMPP</strong> = Windows + Apache + MySQL + PHP + Perl (local stack)</li>
+        <li><strong>phpMyAdmin</strong> = GUI for MySQL at <code style="color:var(--accent4);font-size:14px">localhost/phpmyadmin</code></li>
+        <li>Project files go in <code style="color:var(--accent3);font-size:14px">C:\wamp64\www\</code></li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Key SQL Commands</h3>
+      <div style="display:flex;flex-direction:column;gap:9px;margin-top:4px">
+        <div class="badge green  w-full" style="justify-content:flex-start;font-family:monospace;font-size:15px">CREATE DATABASE testDB</div>
+        <div class="badge red    w-full" style="justify-content:flex-start;font-family:monospace;font-size:15px">DROP DATABASE testDB</div>
+        <div class="badge green  w-full" style="justify-content:flex-start;font-family:monospace;font-size:15px">CREATE TABLE Person (...)</div>
+        <div class="badge red    w-full" style="justify-content:flex-start;font-family:monospace;font-size:15px">DROP TABLE Person</div>
+        <div class="badge orange w-full" style="justify-content:flex-start;font-family:monospace;font-size:15px">UPDATE ... SET ... WHERE</div>
+        <div class="badge yellow w-full" style="justify-content:flex-start;font-size:15px">⚠️ WHERE clause = essential!</div>
+      </div>
+    </div>
+  </div>
+  <div class="card mt-4" style="max-width:880px;width:100%;background:linear-gradient(135deg,rgba(96,165,250,.08),rgba(74,222,128,.06));text-align:center">
+    <p style="font-size:18px">🧪 Activity time — test your knowledge! ↓</p>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 18 — MCQ 1–4
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="17">
+  <div class="eyebrow">Skill-Building Check</div>
+  <div class="slide-title">Multiple Choice <span>Questions</span> (1–4)</div>
+  <div class="grid-2 w-full" style="max-width:960px;align-items:start">
+    <div class="mcq-card">
+      <div class="mcq-q">1. In the context of relational databases, SQLite is defined as a(n) ___ system.</div>
+      <div class="mcq-opts">
+        <div class="mcq-opt">A. Client-server</div>
+        <div class="mcq-opt">B. Embedded, server-less</div>
+        <div class="mcq-opt">C. Cloud-only</div>
+        <div class="mcq-opt">D. Mainframe-heavy</div>
+      </div>
+    </div>
+    <div class="mcq-card">
+      <div class="mcq-q">2. Which major aircraft manufacturer uses SQLite in the flight software of their A350 XWB aircraft?</div>
+      <div class="mcq-opts">
+        <div class="mcq-opt">A. Boeing</div>
+        <div class="mcq-opt">B. Embraer</div>
+        <div class="mcq-opt">C. Airbus</div>
+        <div class="mcq-opt">D. Lockheed Martin</div>
+      </div>
+    </div>
+    <div class="mcq-card">
+      <div class="mcq-q">3. Which feature of SQLite makes it ideal for mobile application development?</div>
+      <div class="mcq-opts">
+        <div class="mcq-opt">A. Supports thousands of concurrent users</div>
+        <div class="mcq-opt">B. Small file size (&lt;500kB) and zero configuration</div>
+        <div class="mcq-opt">C. Built-in advanced graphical user interface</div>
+        <div class="mcq-opt">D. Exclusively owned by Oracle</div>
+      </div>
+    </div>
+    <div class="mcq-card">
+      <div class="mcq-q">4. What is the primary purpose of phpMyAdmin software?</div>
+      <div class="mcq-opts">
+        <div class="mcq-opt">A. To replace Apache web servers</div>
+        <div class="mcq-opt">B. To provide a GUI for managing MySQL/MariaDB databases</div>
+        <div class="mcq-opt">C. To act as a cloud hosting provider</div>
+        <div class="mcq-opt">D. To convert SQLite databases into MySQL</div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 19 — MCQ 5–6
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="18">
+  <div class="eyebrow">Skill-Building Check</div>
+  <div class="slide-title">Multiple Choice <span>Questions</span> (5–6)</div>
+  <div class="grid-2 w-full" style="max-width:860px;align-items:start">
+    <div class="mcq-card">
+      <div class="mcq-q">5. WAMPP is a local development stack designed specifically for the ___ operating system.</div>
+      <div class="mcq-opts">
+        <div class="mcq-opt">A. macOS</div>
+        <div class="mcq-opt">B. Linux</div>
+        <div class="mcq-opt">C. Windows</div>
+        <div class="mcq-opt">D. Android</div>
+      </div>
+    </div>
+    <div class="mcq-card">
+      <div class="mcq-q">6. You are writing a SQL UPDATE command. Which keyword must be paired with it as best practice?</div>
+      <div class="mcq-opts">
+        <div class="mcq-opt">A. DROP</div>
+        <div class="mcq-opt">B. UPDATE</div>
+        <div class="mcq-opt">C. WHERE</div>
+        <div class="mcq-opt">D. CREATE</div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 20 — ANSWER KEY + FINAL
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="19">
+  <div class="eyebrow">Answer Key</div>
+  <div class="slide-title">Answers &amp; <span>Explanations</span></div>
+  <div style="max-width:860px;width:100%" class="inner-scroll">
+    <div class="ans-row">
+      <div class="ans-num">1</div>
+      <div class="ans-text"><span class="ans-correct">B — Embedded, server-less.</span> SQLite is an embedded, server-less RDBMS that operates as an in-memory open-source library — no separate server process needed, no installation, no configuration.</div>
+    </div>
+    <div class="ans-row">
+      <div class="ans-num">2</div>
+      <div class="ans-text"><span class="ans-correct">C — Airbus.</span> Airbus uses SQLite in the flight software of the A350 XWB family — demonstrating its reliability even in safety-critical, embedded aviation systems.</div>
+    </div>
+    <div class="ans-row">
+      <div class="ans-num">3</div>
+      <div class="ans-text"><span class="ans-correct">B — Small file size (&lt;500kB) and zero configuration.</span> This is the core reason SQLite dominates mobile development — it requires no installation, uses minimal battery, and the entire database is one portable file.</div>
+    </div>
+    <div class="ans-row">
+      <div class="ans-num">4</div>
+      <div class="ans-text"><span class="ans-correct">B — GUI for managing MySQL/MariaDB databases.</span> phpMyAdmin provides a web-based graphical interface so you can manage databases visually at <code style="color:var(--accent4)">localhost/phpmyadmin</code> — no terminal required.</div>
+    </div>
+    <div class="ans-row">
+      <div class="ans-num">5</div>
+      <div class="ans-text"><span class="ans-correct">C — Windows.</span> WAMPP (Windows, Apache, MySQL, PHP) is tailored specifically for Windows. XAMPP is the cross-platform equivalent that also runs on macOS and Linux.</div>
+    </div>
+    <div class="ans-row" style="border-bottom:none">
+      <div class="ans-num">6</div>
+      <div class="ans-text"><span class="ans-correct">C — WHERE.</span> The WHERE clause is critical with UPDATE — without it, every single row in the table gets updated. This is one of the most common catastrophic SQL mistakes and there is no undo.</div>
+    </div>
+    <div class="card mt-4" style="background:linear-gradient(135deg,rgba(96,165,250,.1),rgba(74,222,128,.06));text-align:center">
+      <div style="font-size:42px;margin-bottom:8px">🎓</div>
+      <p style="font-size:20px;font-weight:700">Module 20 Complete!</p>
+      <p style="font-size:17px;color:var(--text-muted);margin-top:8px">You now know <em>which</em> database to use and <em>why</em>. SQLite for embedded, MySQL for scale, WAMPP for development. Go practice in phpMyAdmin! 🗄️⚡</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:16px">
+        <span class="badge blue">SQLite ✓</span>
+        <span class="badge green">MySQL ✓</span>
+        <span class="badge orange">WAMPP ✓</span>
+        <span class="badge purple">phpMyAdmin ✓</span>
+        <span class="badge yellow">SQL Drills ✓</span>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+];
+
+/* ENGINE */
+const deck = document.getElementById('deck');
+const total = slides.length;
+let current = 0;
+
+slides.forEach(html => {
+  const w = document.createElement('div');
+  w.innerHTML = html;
+  deck.appendChild(w.firstElementChild);
+});
+
+const allSlides = document.querySelectorAll('.slide');
+const bar = document.getElementById('progress-bar');
+const ctr = document.getElementById('counter');
+
+function goTo(idx, dir = 1) {
+  if (idx < 0 || idx >= total) return;
+  const prev = allSlides[current];
+  prev.classList.remove('active');
+  prev.classList.add(dir > 0 ? 'exit-left' : 'exit-right');
+  setTimeout(() => prev.classList.remove('exit-left','exit-right'), 400);
+  current = idx;
+  const next = allSlides[current];
+  next.style.transform = dir > 0 ? 'translateX(60px)' : 'translateX(-60px)';
+  next.classList.add('active');
+  setTimeout(() => { next.style.transform = ''; }, 10);
+  bar.style.width = ((current + 1) / total * 100) + '%';
+  ctr.textContent = (current + 1) + ' / ' + total;
+}
+
+allSlides[0].classList.add('active');
+bar.style.width = (1 / total * 100) + '%';
+
+document.addEventListener('keydown', e => {
+  if (e.key==='ArrowRight'||e.key==='ArrowDown') goTo(current+1, 1);
+  else if (e.key==='ArrowLeft'||e.key==='ArrowUp') goTo(current-1,-1);
+  else if (e.key==='Home') goTo(0,-1);
+  else if (e.key==='End')  goTo(total-1,1);
+  else if (e.key==='?') toggleShortcuts();
+});
+document.addEventListener('contextmenu', e => { e.preventDefault(); goTo(current+1,1); });
+document.addEventListener('mousedown', e => {
+  if (e.button===3){e.preventDefault();e.stopImmediatePropagation();goTo(current+1, 1);}
+  if (e.button===4){e.preventDefault();e.stopImmediatePropagation();goTo(current-1,-1);}
+}, true);
+let touchX=0;
+document.addEventListener('touchstart',e=>{touchX=e.touches[0].clientX;},{passive:true});
+document.addEventListener('touchend',e=>{
+  const dx=touchX-e.changedTouches[0].clientX;
+  if(Math.abs(dx)>40) dx>0?goTo(current+1,1):goTo(current-1,-1);
+});
+function copyCode(btn,id){
+  const pre=document.getElementById(id);
+  navigator.clipboard.writeText(pre?pre.innerText:'').then(()=>{
+    btn.textContent='Copied!';btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},1800);
+  });
+}
+function toggleShortcuts(){document.getElementById('shortcuts-overlay').classList.toggle('show');}
+function closeShortcuts() {document.getElementById('shortcuts-overlay').classList.remove('show');}
+document.getElementById('shortcuts-overlay').addEventListener('click',e=>{
+  if(e.target===document.getElementById('shortcuts-overlay'))closeShortcuts();
+});
+</script>
+</body>
+</html>
