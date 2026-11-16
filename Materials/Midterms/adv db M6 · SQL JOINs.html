@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Module 6 · SQL JOINs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <style>
+        /* ------------------------------------------------------------
+           phpMyAdmin–inspired dark theme (same as previous modules)
+           ------------------------------------------------------------ */
+        :root {
+            --bg: #151828;
+            --bg-deep: #0e1120;
+            --bg-card: #1e2340;
+            --bg-card-hover: #282f52;
+            --shadow-light: rgba(255, 255, 255, 0.04);
+            --shadow-dark: rgba(0, 0, 0, 0.6);
+            --shadow-dark-strong: rgba(0, 0, 0, 0.8);
+            --text-primary: #e8e4d4;
+            --text-muted: #9499b0;
+            --text-dim: #636a82;
+            --accent: #4a9eb5;
+            --accent-soft: #1e334a;
+            --accent-2: #e8a838;
+            --accent-2-soft: #2f2a1a;
+            --warn: #d97a5a;
+            --warn-soft: #3a2824;
+            --panel-dark: #0d1020;
+            --panel-dark-2: #161a30;
+            --tok-keyword: #6fc2d0;
+            --tok-type: #c8a8e0;
+            --tok-string: #e8c86a;
+            --tok-number: #e8916a;
+            --tok-comment: #6a728a;
+            --tok-punct: #8890a8;
+            --tok-text: #e8e2d4;
+            --tok-php: #a8c8e0;
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --radius-sm: 10px;
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0; padding: 0; height: 100%;
+            background: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            -webkit-font-smoothing: antialiased;
+        }
+        body { overflow: hidden; }
+        #app { position: fixed; inset: 0; }
+        .stage { position: absolute; inset: 0; }
+        .slide-panel {
+            position: absolute; inset: 0;
+            overflow-y: auto; overflow-x: hidden;
+            opacity: 0; pointer-events: none;
+            transform: translateX(0) scale(1);
+            transition: opacity .38s ease, transform .38s ease;
+            z-index: 1;
+            -webkit-overflow-scrolling: touch;
+        }
+        .slide-panel.active {
+            opacity: 1; transform: translateX(0) scale(1);
+            pointer-events: auto; z-index: 2;
+        }
+        .slide-panel.from-right { transform: translateX(48px) scale(.98); }
+        .slide-panel.from-left { transform: translateX(-48px) scale(.98); }
+        .slide-panel.to-left { transform: translateX(-48px) scale(.98); opacity: 0; }
+        .slide-panel.to-right { transform: translateX(48px) scale(.98); opacity: 0; }
+        @media (prefers-reduced-motion: reduce) {
+            .slide-panel { transition: opacity .15s linear !important; transform: none !important; }
+            .slide-panel.from-right, .slide-panel.from-left, .slide-panel.to-left, .slide-panel.to-right { transform: none !important; }
+        }
+
+        .slide {
+            min-height: 100%;
+            display: flex;
+            padding: clamp(28px, 5vw, 72px) clamp(24px, 8vw, 120px);
+        }
+        .slide-inner {
+            margin: auto;
+            width: 100%;
+            max-width: 1000px;
+            padding: 8px 0 40px;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: .06em;
+            color: var(--accent);
+            background: var(--accent-soft);
+            padding: 5px 14px 5px 12px;
+            border-radius: 999px;
+            box-shadow: inset 0 1px 0 rgba(74,158,181,0.25), 0 4px 12px rgba(0,0,0,0.3);
+            margin-bottom: 18px;
+            border: 1px solid rgba(74,158,181,0.15);
+        }
+        .eyebrow::before { content: "◆"; font-size: 10px; opacity: .7; }
+        h1.title {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: clamp(28px, 4.4vw, 46px);
+            line-height: 1.12;
+            margin: 0 0 12px;
+            letter-spacing: -.01em;
+            color: var(--text-primary);
+        }
+        p.subtitle {
+            font-size: clamp(15px, 1.6vw, 18px);
+            color: var(--text-muted);
+            max-width: 640px;
+            line-height: 1.55;
+            margin: 0 0 28px;
+        }
+
+        .neu {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            box-shadow: 8px 8px 20px var(--shadow-dark), -4px -4px 12px var(--shadow-light);
+            border: 1px solid rgba(255,255,255,0.04);
+        }
+        .neu-sm {
+            border-radius: var(--radius-md);
+            box-shadow: 6px 6px 14px var(--shadow-dark), -3px -3px 10px var(--shadow-light);
+            border: 1px solid rgba(255,255,255,0.03);
+        }
+        .neu-inset {
+            background: var(--bg-deep);
+            border-radius: var(--radius-md);
+            box-shadow: inset 4px 4px 12px var(--shadow-dark-strong), inset -3px -3px 10px var(--shadow-light);
+            border: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .content-card {
+            padding: clamp(20px, 3vw, 32px);
+            margin-top: 8px;
+        }
+
+        ul.bullets {
+            list-style: none;
+            margin: 0; padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        ul.bullets li {
+            position: relative;
+            padding-left: 28px;
+            font-size: clamp(15px, 1.5vw, 17px);
+            line-height: 1.55;
+            color: var(--text-primary);
+        }
+        ul.bullets li::before {
+            content: "";
+            position: absolute; left: 0; top: 7px;
+            width: 9px; height: 9px;
+            border-radius: 3px;
+            background: var(--accent);
+            box-shadow: 0 2px 6px rgba(74,158,181,0.4);
+        }
+        ul.bullets li b, ul.bullets li strong { color: #fff; font-weight: 700; }
+        ul.bullets li code {
+            font-family: var(--font-mono);
+            background: var(--accent-soft);
+            color: var(--accent);
+            padding: 1px 6px; border-radius: 6px;
+            font-size: .92em;
+        }
+
+        .tip {
+            display: flex; gap: 14px; align-items: flex-start;
+            margin-top: 22px;
+            padding: 16px 20px;
+            border-radius: var(--radius-md);
+            background: var(--accent-2-soft);
+            box-shadow: inset 2px 2px 8px rgba(0,0,0,0.5), inset -2px -2px 8px rgba(232,168,56,0.06);
+            border: 1px solid rgba(232,168,56,0.12);
+        }
+        .tip .icon { font-size: 20px; line-height: 1.4; }
+        .tip .txt { font-size: 14.5px; color: #e8d8a8; line-height: 1.55; }
+        .tip .txt b { color: #f0d870; }
+
+        .warning {
+            display: flex; gap: 14px; align-items: flex-start;
+            margin-top: 22px;
+            padding: 16px 20px;
+            border-radius: var(--radius-md);
+            background: var(--warn-soft);
+            box-shadow: inset 2px 2px 8px rgba(0,0,0,0.5), inset -2px -2px 8px rgba(217,122,90,0.05);
+            border: 1px solid rgba(217,122,90,0.15);
+        }
+        .warning .icon { font-size: 20px; }
+        .warning .txt { font-size: 14.5px; color: #e8b8a8; line-height: 1.55; }
+        .warning .txt b { color: #f0b8a0; }
+
+        table.data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 14.5px;
+        }
+        table.data-table th {
+            font-family: var(--font-mono);
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            font-size: 11.5px;
+            color: var(--text-muted);
+            text-align: left;
+            padding: 10px 16px;
+            border-bottom: 2px solid rgba(255,255,255,0.06);
+        }
+        table.data-table td {
+            padding: 13px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            vertical-align: top;
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+        table.data-table tr:last-child td { border-bottom: none; }
+        table.data-table td.mono, table.data-table th.mono { font-family: var(--font-mono); }
+        table.data-table code.cell-code {
+            font-family: var(--font-mono);
+            background: var(--accent-soft);
+            color: var(--accent);
+            padding: 2px 8px; border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
+            gap: 16px;
+            margin-top: 6px;
+        }
+        .card {
+            min-width: 0;
+            padding: 18px 20px;
+            border-radius: var(--radius-md);
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.04);
+            box-shadow: 4px 4px 12px var(--shadow-dark), -2px -2px 8px var(--shadow-light);
+        }
+        .card .card-title {
+            font-family: var(--font-mono);
+            font-weight: 600;
+            font-size: 14.5px;
+            color: var(--accent);
+            margin-bottom: 8px;
+            word-break: break-word;
+        }
+        .card .card-desc {
+            font-size: 13.8px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .twocol {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 20px;
+            margin-top: 6px;
+        }
+        .col {
+            min-width: 0;
+            padding: 22px 24px;
+            border-radius: var(--radius-md);
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.04);
+            box-shadow: 6px 6px 16px var(--shadow-dark), -3px -3px 10px var(--shadow-light);
+        }
+        .col-head {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 19px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+            color: var(--text-primary);
+        }
+        .col-head .dot {
+            width: 11px; height: 11px;
+            border-radius: 50%;
+        }
+        .col.dml .dot { background: var(--accent-2); }
+        .col.ddl .dot { background: var(--accent); }
+        .col ul {
+            list-style: none;
+            margin: 0 0 12px; padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+        }
+        .col li {
+            font-family: var(--font-mono);
+            font-size: 14.5px;
+            color: var(--text-primary);
+        }
+        .col .desc {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+        .note-strip {
+            margin-top: 18px;
+            font-size: 13px;
+            color: var(--text-muted);
+            padding: 12px 18px;
+            border-radius: 14px;
+            grid-column: 1 / -1;
+            background: var(--bg-deep);
+            border: 1px solid rgba(255,255,255,0.04);
+            box-shadow: inset 2px 2px 8px rgba(0,0,0,0.4);
+        }
+
+        .code-block { margin-top: 18px; }
+        .code-label {
+            font-family: var(--font-mono);
+            font-size: 11.5px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            margin-bottom: 8px;
+            padding-left: 4px;
+        }
+        .code-panel {
+            background: var(--panel-dark);
+            border-radius: var(--radius-md);
+            box-shadow: 6px 6px 16px var(--shadow-dark), -4px -4px 12px var(--shadow-light);
+            border: 1px solid rgba(255,255,255,0.04);
+            overflow: hidden;
+        }
+        .code-panel .titlebar {
+            display: flex; gap: 6px;
+            padding: 10px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            background: rgba(0,0,0,0.2);
+        }
+        .code-panel .titlebar span {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+        }
+        .code-panel .titlebar span:nth-child(1) { background: #c96a56; }
+        .code-panel .titlebar span:nth-child(2) { background: #d1a44e; }
+        .code-panel .titlebar span:nth-child(3) { background: #6ea87e; }
+        .code-panel pre {
+            margin: 0;
+            padding: 16px 22px 20px;
+            font-family: var(--font-mono);
+            font-size: clamp(12.5px, 1.35vw, 14.5px);
+            line-height: 1.7;
+            color: var(--tok-text);
+            overflow-x: auto;
+            white-space: pre;
+        }
+        .tok-keyword { color: var(--tok-keyword); font-weight: 600; }
+        .tok-type { color: var(--tok-type); }
+        .tok-string { color: var(--tok-string); }
+        .tok-number { color: var(--tok-number); }
+        .tok-comment { color: var(--tok-comment); font-style: italic; }
+        .tok-punct { color: var(--tok-punct); }
+        .tok-php { color: var(--tok-php); }
+
+        .code-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+        .code-grid.two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+
+        .diagram-panel {
+            padding: 24px clamp(16px, 3vw, 30px);
+            margin-top: 6px;
+            background: var(--bg-deep);
+            border-radius: var(--radius-md);
+            border: 1px solid rgba(255,255,255,0.04);
+            box-shadow: inset 4px 4px 14px var(--shadow-dark-strong), inset -3px -3px 10px var(--shadow-light);
+        }
+        .diagram-panel pre {
+            margin: 0;
+            font-family: var(--font-mono);
+            font-size: clamp(11px, 1.3vw, 14px);
+            line-height: 1.7;
+            color: var(--text-primary);
+            text-align: center;
+            overflow-x: auto;
+            white-space: pre;
+        }
+
+        .quiz-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-top: 6px;
+        }
+        .quiz-item {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            padding: 18px 22px;
+            border-radius: var(--radius-md);
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.04);
+            box-shadow: 4px 4px 12px var(--shadow-dark), -2px -2px 8px var(--shadow-light);
+        }
+        .quiz-item .qnum {
+            font-family: var(--font-mono);
+            font-weight: 700;
+            color: #fff;
+            background: var(--accent);
+            width: 30px; height: 30px;
+            min-width: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center; justify-content: center;
+            font-size: 13.5px;
+            box-shadow: 0 2px 8px rgba(74,158,181,0.3);
+        }
+        .quiz-item.answer .qnum {
+            background: var(--accent-2);
+            box-shadow: 0 2px 8px rgba(232,168,56,0.3);
+        }
+        .quiz-item .qtext {
+            font-size: 15.5px;
+            line-height: 1.55;
+            padding-top: 3px;
+            color: var(--text-primary);
+        }
+        .quiz-item .qtext .ans {
+            font-family: var(--font-mono);
+            font-weight: 700;
+            color: var(--accent-2);
+            display: block;
+            margin-bottom: 5px;
+            font-size: 16px;
+        }
+        .quiz-item .qtext .explain {
+            color: var(--text-muted);
+            font-size: 13.5px;
+            line-height: 1.5;
+        }
+
+        .chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 22px;
+        }
+        .chip {
+            font-family: var(--font-mono);
+            font-size: 12.5px;
+            padding: 8px 16px;
+            border-radius: 999px;
+            color: var(--accent);
+            background: var(--accent-soft);
+            border: 1px solid rgba(74,158,181,0.12);
+        }
+        .chip.gold {
+            color: var(--accent-2);
+            background: var(--accent-2-soft);
+            border-color: rgba(232,168,56,0.12);
+        }
+
+        #chrome {
+            position: fixed;
+            left: 0; right: 0; bottom: 0;
+            z-index: 10;
+            pointer-events: none;
+        }
+        #progress-track {
+            height: 5px;
+            margin: 0 clamp(20px, 6vw, 90px) 0;
+            background: var(--bg-deep);
+            border-radius: 999px;
+            box-shadow: inset 2px 2px 6px var(--shadow-dark-strong), inset -2px -2px 6px var(--shadow-light);
+            overflow: hidden;
+        }
+        #progress-fill {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-2));
+            border-radius: 999px;
+            transition: width .35s ease;
+        }
+        #counter {
+            position: absolute;
+            right: clamp(20px, 6vw, 90px);
+            bottom: 18px;
+            font-family: var(--font-mono);
+            font-size: 12.5px;
+            color: var(--text-muted);
+            background: var(--bg-card);
+            padding: 6px 14px;
+            border-radius: 999px;
+            box-shadow: 4px 4px 12px var(--shadow-dark), -2px -2px 8px var(--shadow-light);
+            border: 1px solid rgba(255,255,255,0.04);
+        }
+        #nav-hint {
+            position: absolute;
+            left: clamp(20px, 6vw, 90px);
+            bottom: 18px;
+            font-family: var(--font-mono);
+            font-size: 11.5px;
+            color: var(--text-dim);
+            opacity: .6;
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-deep); }
+        ::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 8px; }
+
+        @media (max-width: 760px) {
+            .twocol, .code-grid.two { grid-template-columns: minmax(0, 1fr); }
+            .card-grid { --cols: 2 !important; }
+            #nav-hint { display: none; }
+        }
+        @media (max-width: 480px) {
+            .card-grid { --cols: 1 !important; }
+        }
+
+        /* Venn diagram container */
+        .venn-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-top: 8px;
+        }
+        .venn-cell {
+            text-align: center;
+            background: var(--bg-card);
+            border-radius: var(--radius-sm);
+            padding: 10px 6px 14px;
+            border: 1px solid rgba(255,255,255,0.04);
+            box-shadow: 4px 4px 12px var(--shadow-dark), -2px -2px 8px var(--shadow-light);
+        }
+        .venn-cell .label {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--accent-2);
+            margin-bottom: 4px;
+            display: block;
+        }
+        .venn-cell svg {
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+        @media (max-width: 620px) {
+            .venn-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="stage">
+            <div class="slide-panel active" id="panelA"></div>
+            <div class="slide-panel" id="panelB"></div>
+        </div>
+        <div id="chrome">
+            <div id="progress-track"><div id="progress-fill"></div></div>
+            <div id="counter">1 / 1</div>
+            <div id="nav-hint">click or → next · ← back</div>
+        </div>
+    </div>
+
+    <script>
+        /* ---------------------------------------------------------------
+           SQL / PHP syntax highlighter (reused from Module 4)
+           ------------------------------------------------------------ */
+        function escapeHtml(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function highlightSQL(raw) {
+            var code = escapeHtml(raw);
+            var KEYWORDS = ['CREATE', 'DATABASE', 'TABLE', 'ALTER', 'DROP', 'TRUNCATE', 'ADD', 'MODIFY', 'COLUMN',
+                'SELECT', 'INSERT', 'INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE', 'FROM', 'WHERE',
+                'PRIMARY', 'KEY', 'FOREIGN', 'REFERENCES', 'NOT', 'NULL', 'DEFAULT', 'UNIQUE', 'CHECK',
+                'AUTO_INCREMENT', 'USE', 'SHOW', 'DATABASES', 'TABLES', 'EXIT', 'AND', 'OR', 'CONSTRAINT',
+                'ON', 'DELETE', 'CASCADE', 'SET', 'NULL', 'RESTRICT', 'NO', 'ACTION', 'INDEX',
+                'BETWEEN', 'LIKE', 'GRANT', 'REVOKE', 'DENY', 'ALL', 'PRIVILEGES', 'TO', 'FROM',
+                'SHOW', 'GRANTS', 'INNER', 'LEFT', 'RIGHT', 'FULL', 'OUTER', 'JOIN'
+            ];
+            var TYPES = ['INT', 'INTEGER', 'VARCHAR2', 'VARCHAR', 'CHAR', 'DECIMAL', 'NUMBER', 'SMALLINT', 'DATE',
+                'TINYINT', 'BIGINT', 'FLOAT', 'DOUBLE', 'TEXT', 'BLOB'
+            ];
+            var kw = KEYWORDS.join('|');
+            var ty = TYPES.join('|');
+            var re = new RegExp(
+                '(--[^\\n]*)' +
+                "|('(?:[^']|'')*')" +
+                '|\\b(' + kw + ')\\b' +
+                '|\\b(' + ty + ')\\b' +
+                '|\\b(\\d+(?:\\.\\d+)?)\\b' +
+                '|([(),;.])',
+                'gi'
+            );
+            return code.replace(re, function(match, comment, string, keyword, type, number, punct) {
+                if (comment) return '<span class="tok-comment">' + comment + '</span>';
+                if (string) return '<span class="tok-string">' + string + '</span>';
+                if (keyword) return '<span class="tok-keyword">' + match + '</span>';
+                if (type) return '<span class="tok-type">' + match + '</span>';
+                if (number) return '<span class="tok-number">' + match + '</span>';
+                if (punct) return '<span class="tok-punct">' + match + '</span>';
+                return match;
+            });
+        }
+
+        function highlightPHP(code) {
+            var escaped = escapeHtml(code);
+            var keywords = [
+                '\\$\\w+',
+                '\\b(if|else|foreach|while|function|return|echo|print|die|isset|empty|array|new|class|public|private|protected|static|const|\\?php|\\?>)\\b',
+                '\\b(CREATE|DATABASE|TABLE|ALTER|DROP|TRUNCATE|ADD|MODIFY|COLUMN|SELECT|INSERT|INTO|VALUES|UPDATE|SET|DELETE|FROM|WHERE|PRIMARY|KEY|FOREIGN|REFERENCES|NOT|NULL|DEFAULT|UNIQUE|CHECK|AUTO_INCREMENT|USE|SHOW|DATABASES|TABLES|EXIT|AND|OR|LIKE|BETWEEN|GRANT|REVOKE|DENY|ALL|PRIVILEGES|TO|FROM|SHOW|GRANTS|INNER|LEFT|RIGHT|FULL|OUTER|JOIN)\\b',
+                '\\b(mysqli_connect|mysqli_query|mysqli_error|mysqli_close|mysqli_num_rows|mysqli_fetch_assoc|mysqli_affected_rows|mysqli_connect_error)\\b'
+            ];
+            var regex = new RegExp('(' + keywords.join('|') + ')|("(?:[^"]|"")*")|(\'(?:[^\']|\'\')*\')|(--[^\\n]*)|(\\/\\*.*?\\*\\/)', 'gi');
+            return escaped.replace(regex, function(match, varMatch, keyword, string1, string2, comment1, comment2) {
+                if (varMatch) return '<span class="tok-php">' + match + '</span>';
+                if (keyword) return '<span class="tok-keyword">' + match + '</span>';
+                if (string1 || string2) return '<span class="tok-string">' + match + '</span>';
+                if (comment1 || comment2) return '<span class="tok-comment">' + match + '</span>';
+                return match;
+            });
+        }
+
+        /* ---------------------------------------------------------------
+           Slide content — Module 6: SQL JOINs
+           ------------------------------------------------------------ */
+        var slides = [];
+
+        // ---- 0: HERO ----
+        slides.push({
+            type: 'hero',
+            badge: 'MODULE 6 · SQL JOINS',
+            title: '<span class="accent">JOIN</span> the <span class="accent2">Data</span>',
+            sub: 'Learn how to combine data from multiple tables using INNER, LEFT, RIGHT, and FULL OUTER JOINs — and use them in PHP.',
+            stack: [{ rows: 3, lbl: 'INNER' }, { rows: 2, lbl: 'LEFT' }, { rows: 4, lbl: 'RIGHT' }]
+        });
+
+        // ---- 1: Lesson Preview ----
+        slides.push({
+            type: 'content',
+            eyebrow: 'REVIEW &amp; PREVIEW',
+            title: 'From DCL to JOINs',
+            blocks: [{
+                t: 'p',
+                text: 'In the previous lesson, you learned <b>Data Control Language</b> (GRANT, REVOKE, DENY) for managing database security. Now we shift to <b>SQL JOINs</b> — the essential tool for <i>combining data</i> across multiple tables.'
+            }, {
+                t: 'ul',
+                items: [
+                    'SQL JOINs let you <b>retrieve related data</b> from two or more tables in a single query.',
+                    'You\'ll learn <b>INNER JOIN</b>, <b>LEFT JOIN</b>, <b>RIGHT JOIN</b>, and <b>FULL OUTER JOIN</b>.',
+                    'You\'ll also practice writing JOIN queries in <b>PHP</b> with <code>mysqli</code>.'
+                ]
+            }, {
+                t: 'tip',
+                text: 'Think of JOINs as the "glue" that connects your database tables — they make relational databases truly powerful.'
+            }]
+        });
+
+        // ---- 2: Multiple Table Queries ----
+        slides.push({
+            type: 'content',
+            eyebrow: 'MULTIPLE TABLE QUERIES',
+            title: 'Combining Data Across Tables',
+            blocks: [{
+                t: 'p',
+                text: 'In real‑world databases, data is often split across multiple tables. <b>Multiple table queries</b> let you combine them using <b>join conditions</b> that define how rows match.'
+            }, {
+                t: 'ul',
+                items: [
+                    '<b>INNER JOIN</b> — returns only matching rows from both tables.',
+                    '<b>LEFT JOIN</b> — all rows from the left table, plus matches from the right (or <code>NULL</code>).',
+                    '<b>RIGHT JOIN</b> — all rows from the right table, plus matches from the left (or <code>NULL</code>).',
+                    '<b>FULL OUTER JOIN</b> — all rows from both tables, with <code>NULL</code> where no match exists.'
+                ]
+            }, {
+                t: 'tip',
+                text: 'When working with large tables, always consider performance — use <b>indexes</b> on join columns to speed up queries.'
+            }]
+        });
+
+        // ---- 3: SQL JOIN Overview ----
+        slides.push({
+            type: 'content',
+            eyebrow: 'SQL JOIN · OVERVIEW',
+            title: 'Why JOIN Matters',
+            blocks: [{
+                t: 'p',
+                text: 'SQL JOIN is a <b>crucial concept</b> in database management that enables users to combine data from multiple tables into a single dataset.'
+            }, {
+                t: 'ul',
+                items: [
+                    'Most real‑world data is <b>distributed</b> across multiple tables (e.g., customers, orders, products).',
+                    'JOINs allow you to <b>query related data</b> based on common fields (e.g., <code>customer_id</code>).',
+                    'Without JOINs, you\'d have to manually merge data — which is <b>inefficient and error‑prone</b>.'
+                ]
+            }, {
+                t: 'tip',
+                text: 'JOINs are at the heart of <b>relational databases</b> — they enable complex queries that drive real‑world applications.'
+            }]
+        });
+
+        // ---- 4: JOIN Types — Venn Diagrams ----
+        slides.push({
+            type: 'content',
+            eyebrow: 'JOIN TYPES · VENN DIAGRAMS',
+            title: 'Visualising JOINs',
+            blocks: [{
+                t: 'p',
+                text: 'The easiest way to understand JOINs is through <b>Venn diagrams</b>. Each circle represents a table — the shaded area shows which rows are returned.'
+            }, {
+                t: 'venn',
+                // rendered inline in renderBlock
+            }, {
+                t: 'ul',
+                items: [
+                    '<b>INNER JOIN</b> — only the intersection (matching rows).',
+                    '<b>LEFT JOIN</b> — all of Table A + intersection.',
+                    '<b>RIGHT JOIN</b> — all of Table B + intersection.',
+                    '<b>FULL OUTER JOIN</b> — everything from both tables.'
+                ]
+            }]
+        });
+
+        // ---- 5: Benefits of JOIN ----
+        slides.push({
+            type: 'content',
+            eyebrow: 'BENEFITS OF JOIN',
+            title: 'Why Use SQL JOIN?',
+            blocks: [{
+                t: 'p',
+                text: 'Using SQL JOIN to combine data from multiple tables provides several benefits for database management and data analysis:'
+            }, {
+                t: 'ul',
+                items: [
+                    '<b>a. Reduces Data Duplication</b> — eliminates redundant data by normalising tables.',
+                    '<b>b. Improves Data Consistency</b> — updates in one table reflect across linked tables.',
+                    '<b>c. Simplifies Data Analysis</b> — perform calculations and aggregations across the combined dataset.',
+                    '<b>d. Increases Efficiency</b> — retrieve only the data you need, without manual merging.',
+                    '<b>e. Enhances Flexibility</b> — choose the right join type for your analysis needs.'
+                ]
+            }, {
+                t: 'tip',
+                text: 'JOINs are the foundation of <b>data normalisation</b> — they let you keep data in separate, well‑structured tables while still answering complex questions.'
+            }]
+        });
+
+        // ---- 6: INNER JOIN in PHP ----
+        slides.push({
+            type: 'content',
+            eyebrow: 'PHP · INNER JOIN',
+            title: 'INNER JOIN in PHP',
+            blocks: [{
+                t: 'p',
+                text: 'Here\'s a complete PHP script that connects to a database and performs an <b>INNER JOIN</b> between <code>customers</code> and <code>orders</code> tables.'
+            }, {
+                t: 'codegroup',
+                items: [{
+                    label: 'INNER JOIN with mysqli',
+                    lang: 'php',
+                    code: '<?php\n$servername = "localhost";\n$username = "username";\n$password = "password";\n$dbname = "database_name";\n\n$conn = new mysqli($servername, $username, $password, $dbname);\n\nif ($conn->connect_error) {\n    die("Connection failed: " . $conn->connect_error);\n}\n\n$sql = "SELECT customers.name, orders.date, orders.total_amount\n        FROM customers\n        INNER JOIN orders\n        ON customers.customer_id = orders.customer_id";\n\n$result = $conn->query($sql);\n\nif ($result->num_rows > 0) {\n    while($row = $result->fetch_assoc()) {\n        echo "Customer: " . $row["name"] . " - Order date: " . $row["date"] . " - Total: " . $row["total_amount"] . "<br>";\n    }\n} else {\n    echo "0 results";\n}\n$conn->close();\n?>'
+                }]
+            }, {
+                t: 'tip',
+                text: 'You can easily switch to <b>LEFT JOIN</b>, <b>RIGHT JOIN</b>, or <b>FULL OUTER JOIN</b> by changing the JOIN keyword in the SQL query.'
+            }]
+        });
+
+        // ---- 7: Skill Building — Step by Step ----
+        slides.push({
+            type: 'content',
+            eyebrow: 'SKILL BUILDING · EXERCISE',
+            title: 'Step‑by‑Step: JOIN in PHP',
+            blocks: [{
+                t: 'p',
+                text: 'Assume you have a database <code>mydatabase</code> with two tables: <b>Users</b> and <b>Orders</b>. Follow the steps to write a PHP script that joins them.'
+            }, {
+                t: 'table',
+                headers: ['Table: Users', '', '', ''],
+                rows: [
+                    ['user_id', 'name', 'email', 'phone'],
+                    ['1', 'John Doe', 'john@example.com', '555-1234'],
+                    ['2', 'Jane Smith', 'jane@example.com', '555-5678'],
+                    ['3', 'Bob Brown', 'bob@example.com', '555-9012']
+                ]
+            }, {
+                t: 'table',
+                headers: ['Table: Orders', '', '', ''],
+                rows: [
+                    ['order_id', 'user_id', 'order_date', 'total_amount'],
+                    ['1001', '1', '2022-03-05', '50.00'],
+                    ['1002', '1', '2022-04-10', '25.00'],
+                    ['1003', '2', '2022-02-28', '100.00'],
+                    ['1004', '3', '2022-01-15', '75.00']
+                ]
+            }, {
+                t: 'p',
+                text: '<b>Step 1:</b> Connect to the database using <code>mysqli_connect()</code>.'
+            }, {
+                t: 'code',
+                label: 'Step 1: Connection',
+                lang: 'php',
+                code: '$servername = "localhost";\n$username = "your_username";\n$password = "your_password";\n$dbname = "your_database";\n\n$conn = mysqli_connect($servername, $username, $password, $dbname);\nif (!$conn) {\n    die("Connection failed: " . mysqli_connect_error());\n}'
+            }, {
+                t: 'p',
+                text: '<b>Step 2:</b> Write the SQL query with INNER JOIN.'
+            }, {
+                t: 'code',
+                label: 'Step 2: Query',
+                lang: 'sql',
+                code: '$sql = "SELECT Users.name, Orders.order_date, Orders.total_amount\n        FROM Users\n        INNER JOIN Orders\n        ON Users.user_id = Orders.user_id";'
+            }, {
+                t: 'p',
+                text: '<b>Step 3:</b> Execute the query and fetch results.'
+            }, {
+                t: 'code',
+                label: 'Step 3 & 4: Execute & Fetch',
+                lang: 'php',
+                code: '$result = mysqli_query($conn, $sql);\nwhile ($row = mysqli_fetch_assoc($result)) {\n    echo "Name: " . $row["name"] . "<br>";\n    echo "Order date: " . $row["order_date"] . "<br>";\n    echo "Total amount: " . $row["total_amount"] . "<br><br>";\n}'
+            }, {
+                t: 'tip',
+                text: 'You can use <b>LEFT JOIN</b>, <b>RIGHT JOIN</b>, or <b>FULL OUTER JOIN</b> by changing the JOIN type in the SQL query.'
+            }]
+        });
+
+        // ---- 8: Check for Understanding ----
+        slides.push({
+            type: 'content',
+            eyebrow: 'CHECK FOR UNDERSTANDING',
+            title: 'Quiz: SQL JOINs',
+            blocks: [{
+                t: 'p',
+                text: 'Based on the content notes, provide what is being asked in each number.'
+            }, {
+                t: 'qlist',
+                mode: 'q',
+                items: [
+                    'In SQL, the JOIN keyword is used to combine data from <u>______</u> or more tables.',
+                    'The FULL OUTER JOIN keyword returns all rows from <u>______</u> tables, with NULL values where there is no match.',
+                    'The LEFT JOIN keyword returns all rows from the <u>______</u> table and matching rows from the right table.',
+                    'The RIGHT JOIN keyword returns all rows from the <u>______</u> table and matching rows from the left table.',
+                    'TRUE OR FALSE: In a SQL query that joins two tables, you use the JOIN keyword to specify the columns to join on.',
+                    'TRUE OR FALSE: <code>mysqli_connect()</code> is a PHP function that can be used to connect to a MySQL database.',
+                    'In a SQL query that joins two tables, you use the <u>______</u> keyword to specify the columns to join.'
+                ]
+            }]
+        });
+
+        // ---- 9: Answer Key ----
+        slides.push({
+            type: 'content',
+            eyebrow: 'ANSWER KEY · QUIZ',
+            title: 'Quiz Answers',
+            blocks: [{
+                t: 'qlist',
+                mode: 'a',
+                items: [
+                    { ans: 'two', explain: 'JOIN combines data from two or more tables.' },
+                    { ans: 'both', explain: 'FULL OUTER JOIN returns all rows from both tables.' },
+                    { ans: 'left', explain: 'LEFT JOIN returns all rows from the left table.' },
+                    { ans: 'right', explain: 'RIGHT JOIN returns all rows from the right table.' },
+                    { ans: 'FALSE — you use the ON keyword to specify columns to join on', explain: 'The ON clause defines the join condition.' },
+                    { ans: 'TRUE', explain: 'mysqli_connect() is a valid PHP function for connecting to MySQL.' },
+                    { ans: 'ON', explain: 'The ON keyword specifies the columns to join on.' }
+                ]
+            }, {
+                t: 'tip',
+                text: 'Remember: <b>INNER</b> for matches only, <b>LEFT/RIGHT</b> for all rows on one side, <b>FULL</b> for everything.'
+            }]
+        });
+
+        // ---- 10: FAQ ----
+        slides.push({
+            type: 'content',
+            eyebrow: 'FREQUENTLY ASKED QUESTIONS',
+            title: 'FAQ',
+            blocks: [{
+                t: 'ul',
+                items: [
+                    '<b>How can you write a SQL query that joins two tables in PHP?</b><br/>Use the <code>JOIN</code> keyword and specify the columns to join on using the <code>ON</code> keyword.',
+                    '<b>How can you connect to a MySQL database using PHP?</b><br/>Use <code>mysqli_connect()</code> with hostname, username, password, and database name.',
+                    '<b>What is SQL JOIN and why is it important in database management?</b><br/>SQL JOIN combines data from two or more tables based on a related column. It\'s important because it allows you to retrieve related data in a single query, reducing complexity and improving efficiency.'
+                ]
+            }, {
+                t: 'tip',
+                text: 'Always <b>test your JOINs</b> on a small dataset first to ensure you\'re getting the expected results.'
+            }]
+        });
+
+        // ---- 11: Closing ----
+        slides.push({
+            type: 'closing',
+            title: 'Module 6 Complete!',
+            sub: 'You now understand SQL JOINs and how to use them in PHP. You can combine data from multiple tables with INNER, LEFT, RIGHT, and FULL OUTER JOINs — and you know how to write and execute JOIN queries in PHP.',
+            chips: ['INNER JOIN', 'LEFT JOIN', 'RIGHT JOIN', 'FULL OUTER JOIN', 'PHP', 'mysqli', 'Venn Diagrams']
+        });
+
+        /* ---------------------------------------------------------------
+           Rendering
+           ------------------------------------------------------------ */
+        function renderBlock(b) {
+            if (b.t === 'p') {
+                return '<p style="font-size:15.5px;color:var(--text-muted);line-height:1.6;margin:0 0 6px;">' + b.text + '</p>';
+            }
+            if (b.t === 'ul') {
+                return '<ul class="bullets">' + b.items.map(function(i) { return '<li>' + i + '</li>'; }).join('') + '</ul>';
+            }
+            if (b.t === 'tip') {
+                return '<div class="tip neu-inset"><div class="icon">💡</div><div class="txt">' + b.text + '</div></div>';
+            }
+            if (b.t === 'warning') {
+                return '<div class="warning neu-inset"><div class="icon">⚠️</div><div class="txt">' + b.text + '</div></div>';
+            }
+            if (b.t === 'table') {
+                var thead = '<thead><tr>' + b.headers.map(function(h) { return '<th>' + h + '</th>'; }).join('') + '</tr></thead>';
+                var tbody = '<tbody>' + b.rows.map(function(r) {
+                    return '<tr>' + r.map(function(c) { return '<td>' + c + '</td>'; }).join('') + '</tr>';
+                }).join('') + '</tbody>';
+                return '<div class="neu content-card"><table class="data-table">' + thead + tbody + '</table></div>';
+            }
+            if (b.t === 'venn') {
+                var svgInner = '<svg width="120" height="70" viewBox="0 0 150 80" xmlns="http://www.w3.org/2000/svg"><defs><clipPath id="ic"><circle cx="55" cy="40" r="30"/></clipPath></defs><circle cx="55" cy="40" r="30" fill="none" stroke="#666" stroke-width="1.5"/><circle cx="95" cy="40" r="30" fill="none" stroke="#666" stroke-width="1.5"/><circle cx="95" cy="40" r="30" fill="#6fc2d0" clip-path="url(#ic)"/><text x="35" y="44" font-family="sans-serif" font-size="9" fill="#e8e4d4">A</text><text x="95" y="44" font-family="sans-serif" font-size="9" fill="#e8e4d4">B</text></svg>';
+                var svgLeft = '<svg width="120" height="70" viewBox="0 0 150 80" xmlns="http://www.w3.org/2000/svg"><circle cx="55" cy="40" r="30" fill="#6fc2d0" stroke="#666" stroke-width="1.5"/><circle cx="95" cy="40" r="30" fill="none" stroke="#666" stroke-width="1.5"/><text x="35" y="44" font-family="sans-serif" font-size="9" fill="#e8e4d4">A</text><text x="95" y="44" font-family="sans-serif" font-size="9" fill="#e8e4d4">B</text></svg>';
+                var svgRight = '<svg width="120" height="70" viewBox="0 0 150 80" xmlns="http://www.w3.org/2000/svg"><circle cx="55" cy="40" r="30" fill="none" stroke="#666" stroke-width="1.5"/><circle cx="95" cy="40" r="30" fill="#6fc2d0" stroke="#666" stroke-width="1.5"/><text x="35" y="44" font-family="sans-serif" font-size="9" fill="#e8e4d4">A</text><text x="95" y="44" font-family="sans-serif" font-size="9" fill="#e8e4d4">B</text></svg>';
+                var svgFull = '<svg width="120" height="70" viewBox="0 0 150 80" xmlns="http://www.w3.org/2000/svg"><circle cx="55" cy="40" r="30" fill="#6fc2d0" stroke="#666" stroke-width="1.5"/><circle cx="95" cy="40" r="30" fill="#6fc2d0" stroke="#666" stroke-width="1.5"/><text x="35" y="44" font-family="sans-serif" font-size="9" fill="#e8e4d4">A</text><text x="95" y="44" font-family="sans-serif" font-size="9" fill="#e8e4d4">B</text></svg>';
+                return '<div class="venn-grid">' +
+                    '<div class="venn-cell"><span class="label">INNER</span>' + svgInner + '</div>' +
+                    '<div class="venn-cell"><span class="label">LEFT</span>' + svgLeft + '</div>' +
+                    '<div class="venn-cell"><span class="label">RIGHT</span>' + svgRight + '</div>' +
+                    '<div class="venn-cell"><span class="label">FULL</span>' + svgFull + '</div>' +
+                    '</div>';
+            }
+            if (b.t === 'code') {
+                var lang = b.lang || 'sql';
+                var highlighted = (lang === 'php') ? highlightPHP(b.code) : highlightSQL(b.code);
+                return '<div class="code-block"><div class="code-label">' + b.label + '</div>' +
+                    '<div class="code-panel"><div class="titlebar"><span></span><span></span><span></span></div>' +
+                    '<pre>' + highlighted + '</pre></div></div>';
+            }
+            if (b.t === 'codegroup') {
+                var cls = b.items.length > 1 ? 'code-grid two' : 'code-grid';
+                var items = b.items.map(function(it) {
+                    var lang = it.lang || 'sql';
+                    var highlighted = (lang === 'php') ? highlightPHP(it.code) : highlightSQL(it.code);
+                    return '<div class="code-block" style="margin-top:0;"><div class="code-label">' + it.label + '</div>' +
+                        '<div class="code-panel"><div class="titlebar"><span></span><span></span><span></span></div>' +
+                        '<pre>' + highlighted + '</pre></div></div>';
+                }).join('');
+                return '<div class="' + cls + '" style="margin-top:18px;">' + items + '</div>';
+            }
+            if (b.t === 'qlist') {
+                if (b.mode === 'q') {
+                    var qitems = b.items.map(function(q, i) {
+                        return '<div class="quiz-item"><div class="qnum">' + (i + 1) + '</div><div class="qtext">' + q + '</div></div>';
+                    }).join('');
+                    return '<div class="quiz-list">' + qitems + '</div>';
+                } else {
+                    var aitems = b.items.map(function(a, i) {
+                        return '<div class="quiz-item answer"><div class="qnum">' + (i + 1) + '</div>' +
+                            '<div class="qtext"><span class="ans">' + a.ans + '</span><span class="explain">' + a.explain + '</span></div></div>';
+                    }).join('');
+                    return '<div class="quiz-list">' + aitems + '</div>';
+                }
+            }
+            return '';
+        }
+
+        function renderSlide(slide) {
+            if (slide.type === 'hero') {
+                var stackHtml = slide.stack.map(function(s) {
+                    var rows = '';
+                    for (var i = 0; i < s.rows; i++) { rows += '<i></i>'; }
+                    return '<div class="stack-item neu"><div class="rows">' + rows + '</div><div class="lbl">' + s.lbl + '</div></div>';
+                }).join('');
+                return '<div class="slide"><div class="slide-inner hero-wrap">' +
+                    '<div class="hero-badge">' + slide.badge + '</div>' +
+                    '<h1 class="hero-title">' + slide.title + '</h1>' +
+                    '<p class="hero-sub">' + slide.sub + '</p>' +
+                    '<div class="stack-diagram">' + stackHtml + '</div>' +
+                    '</div></div>';
+            }
+            if (slide.type === 'content') {
+                var blocksHtml = slide.blocks.map(renderBlock).join('');
+                return '<div class="slide"><div class="slide-inner">' +
+                    '<div class="eyebrow">' + slide.eyebrow + '</div>' +
+                    '<h1 class="title">' + slide.title + '</h1>' +
+                    blocksHtml +
+                    '</div></div>';
+            }
+            if (slide.type === 'closing') {
+                var chips = slide.chips.map(function(c) {
+                    var gold = ['INNER JOIN', 'LEFT JOIN', 'RIGHT JOIN', 'FULL OUTER JOIN'].includes(c) ? ' gold' : '';
+                    return '<span class="chip' + gold + '">' + c + '</span>';
+                }).join('');
+                return '<div class="slide"><div class="slide-inner hero-wrap">' +
+                    '<div class="hero-badge">MODULE 6 · COMPLETE</div>' +
+                    '<h1 class="hero-title" style="font-size:clamp(30px,5vw,52px);">' + slide.title + '</h1>' +
+                    '<p class="hero-sub">' + slide.sub + '</p>' +
+                    '<div class="chip-row">' + chips + '</div>' +
+                    '</div></div>';
+            }
+            return '';
+        }
+
+        /* ---------------------------------------------------------------
+           Navigation engine
+           ------------------------------------------------------------ */
+        var current = 0;
+        var total = slides.length;
+        var panelA = document.getElementById('panelA');
+        var panelB = document.getElementById('panelB');
+        var activePanel = panelA;
+        var idlePanel = panelB;
+        var animating = false;
+        var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        function updateChrome() {
+            document.getElementById('counter').textContent = (current + 1) + ' / ' + total;
+            document.getElementById('progress-fill').style.width = (((current + 1) / total) * 100) + '%';
+        }
+
+        function goTo(index, direction) {
+            if (animating) return;
+            if (index < 0 || index >= total) return;
+            animating = true;
+
+            idlePanel.innerHTML = renderSlide(slides[index]);
+            idlePanel.scrollTop = 0;
+
+            if (reduceMotion) {
+                idlePanel.className = 'slide-panel';
+                void idlePanel.offsetWidth;
+                idlePanel.classList.add('active');
+                activePanel.classList.remove('active');
+                swapPanels(index);
+                return;
+            }
+
+            var enterCls = direction === 'back' ? 'from-left' : 'from-right';
+            var exitCls = direction === 'back' ? 'to-right' : 'to-left';
+
+            idlePanel.classList.remove('active');
+            idlePanel.className = 'slide-panel ' + enterCls;
+            void idlePanel.offsetWidth;
+
+            requestAnimationFrame(function() {
+                idlePanel.classList.add('active');
+                idlePanel.classList.remove(enterCls);
+                activePanel.classList.add(exitCls);
+                activePanel.classList.remove('active');
+            });
+
+            setTimeout(function() {
+                activePanel.className = 'slide-panel';
+                swapPanels(index);
+            }, 400);
+        }
+
+        function swapPanels(index) {
+            current = index;
+            var tmp = activePanel;
+            activePanel = idlePanel;
+            idlePanel = tmp;
+            updateChrome();
+            animating = false;
+        }
+
+        function next() { goTo(current + 1, 'forward'); }
+        function prev() { goTo(current - 1, 'back'); }
+        function first() { goTo(0, 'back'); }
+        function last() { goTo(total - 1, 'forward'); }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === ' ') { next(); e.preventDefault(); }
+            else if (e.key === 'ArrowLeft') { prev(); e.preventDefault(); }
+            else if (e.key === 'Home') { first(); e.preventDefault(); }
+            else if (e.key === 'End') { last(); e.preventDefault(); }
+        });
+
+        document.getElementById('app').addEventListener('click', function() {
+            next();
+        });
+
+        // init
+        panelA.innerHTML = renderSlide(slides[0]);
+        updateChrome();
+    </script>
+</body>
+</html>

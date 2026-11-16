@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>DC104 Advanced Database — Summative Exam Prep</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@700;800&family=Inter:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #21262d;
+    --border: #30363d;
+    --accent: #58a6ff;
+    --accent2: #3fb950;
+    --accent3: #f78166;
+    --accent4: #d2a8ff;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --yellow: #e3b341;
+    --radius: 10px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 18px;
+    height: 100dvh;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  #deck { width: 100%; height: 100dvh; position: relative; overflow: hidden; }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    padding: 40px 56px 32px;
+    opacity: 0; pointer-events: none;
+    transform: translateX(60px);
+    transition: opacity 350ms ease, transform 350ms ease;
+  }
+  .slide.active { opacity: 1; pointer-events: all; transform: translateX(0); }
+  .slide.exit-left { opacity: 0; transform: translateX(-60px); }
+  .slide.exit-right { opacity: 0; transform: translateX(60px); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .slide { transition: opacity 200ms ease; transform: none !important; }
+  }
+
+  /* EYEBROW + TITLE */
+  .eyebrow {
+    font-size: 13px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--accent); font-weight: 600; margin-bottom: 8px;
+  }
+  .slide-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(28px, 3.5vw, 44px);
+    font-weight: 800; line-height: 1.15;
+    color: var(--text); margin-bottom: 20px;
+  }
+
+  /* PROGRESS */
+  #progress-bar {
+    position: fixed; top: 0; left: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent4));
+    transition: width 300ms ease; z-index: 100;
+  }
+  #counter {
+    position: fixed; bottom: 18px; right: 24px;
+    font-size: 17px; color: var(--muted);
+    font-family: 'JetBrains Mono', monospace; z-index: 100;
+  }
+
+  /* MCQ — 2-per-page grid */
+  .mcq-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 20px;
+    flex: 1;
+    min-height: 0;
+  }
+  .mcq-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px 28px;
+    display: flex; flex-direction: column; gap: 0; overflow-y: auto;
+  }
+  .q-label {
+    font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin-bottom: 10px;
+  }
+  .q-text {
+    font-size: 19px; font-weight: 600; line-height: 1.5;
+    color: var(--text); margin-bottom: 16px;
+  }
+  .options { display: flex; flex-direction: column; gap: 8px; }
+  .option {
+    font-size: 17px; color: var(--muted); padding: 9px 14px;
+    border-radius: 8px; border: 1px solid transparent;
+    cursor: pointer; transition: background 150ms, border-color 150ms, color 150ms;
+    line-height: 1.4;
+  }
+  .option:hover { background: var(--surface2); border-color: var(--border); color: var(--text); }
+  .option.correct { background: rgba(63,185,80,.15); border-color: var(--accent2); color: var(--accent2); }
+  .option.wrong { background: rgba(247,129,102,.1); border-color: var(--accent3); color: var(--accent3); }
+  .q-note {
+    display: none; margin-top: 14px; font-size: 16px; color: var(--muted);
+    border-top: 1px solid var(--border); padding-top: 12px; line-height: 1.5;
+  }
+
+  /* IDENTIFICATION */
+  .id-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; flex:1; }
+  .id-item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 20px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .id-num { font-size: 12px; letter-spacing: 2px; color: var(--accent); font-weight: 700; }
+  .id-clue { font-size: 17px; color: var(--text); line-height: 1.5; flex: 1; }
+  .id-answer-box {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 10px 14px; cursor: pointer;
+    font-size: 17px; color: transparent; transition: color 200ms;
+    font-family: 'JetBrains Mono', monospace; font-weight: 600;
+    min-height: 40px;
+  }
+  .id-answer-box.revealed { color: var(--accent4); border-color: var(--accent4); }
+  .reveal-btn {
+    padding: 9px 14px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--muted); font-size: 16px; cursor: pointer;
+    transition: background 150ms, color 150ms;
+  }
+  .reveal-btn:hover { background: var(--border); color: var(--text); }
+
+  /* OUTPUT SLIDE */
+  .output-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 16px; flex:1; height: min(500px,58vh); }
+  .code-panel {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    display: flex; flex-direction: column; overflow: hidden; height: 100%;
+  }
+  .code-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .code-lang { font-size: 14px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+  .copy-btn {
+    font-size: 14px; padding: 5px 14px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--surface2);
+    color: var(--muted); cursor: pointer; transition: all 150ms;
+    box-shadow: 2px 2px 4px rgba(0,0,0,.4), -1px -1px 3px rgba(255,255,255,.03);
+  }
+  .copy-btn:hover { color: var(--text); border-color: var(--accent); }
+  .copy-btn.copied {
+    color: var(--accent2); border-color: var(--accent2);
+    box-shadow: inset 1px 1px 3px rgba(0,0,0,.5);
+  }
+  pre {
+    flex: 1; overflow: auto; min-height: 0;
+    padding: 16px; font-family: 'JetBrains Mono', monospace;
+    font-size: 15px; line-height: 1.65; color: var(--text);
+    white-space: pre; tab-size: 2;
+  }
+  .output-panel {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    display: flex; flex-direction: column; overflow: hidden; height: 100%;
+  }
+  .output-header {
+    padding: 10px 16px; border-bottom: 1px solid var(--border);
+    font-size: 14px; color: var(--muted); font-family: 'JetBrains Mono', monospace;
+    flex-shrink: 0;
+  }
+  .output-content { flex:1; overflow: auto; padding: 18px; }
+  .guess-input {
+    font-family: 'JetBrains Mono', monospace; font-size: 17px;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); padding: 11px 14px; width: 100%; margin-bottom: 12px;
+    outline: none; transition: border-color 150ms;
+  }
+  .guess-input:focus { border-color: var(--accent); }
+  .check-btn {
+    padding: 11px 22px; border-radius: 6px; font-size: 17px; cursor: pointer;
+    background: var(--accent); border: none; color: #0d1117; font-weight: 600;
+    transition: opacity 150ms;
+  }
+  .check-btn:hover { opacity: .85; }
+  .feedback { font-size: 17px; margin-top: 12px; font-family: 'JetBrains Mono', monospace; line-height: 1.6; }
+  .feedback.correct { color: var(--accent2); }
+  .feedback.wrong { color: var(--accent3); }
+
+  /* ANSWER KEY */
+  .ak-table { width: 100%; border-collapse: collapse; font-size: 17px; }
+  .ak-table th, .ak-table td { padding: 11px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+  .ak-table th { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: 2px; }
+  .ak-table td:first-child { color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+  .ak-table td:nth-child(2) { color: var(--accent4); font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+  .ak-scroll { flex:1; overflow-y: auto; }
+
+  /* BADGES */
+  .badge {
+    display: inline-block; padding: 4px 12px; border-radius: 20px;
+    font-size: 15px; font-weight: 600; letter-spacing: .5px;
+  }
+  .badge-blue { background: rgba(88,166,255,.15); color: var(--accent); border: 1px solid rgba(88,166,255,.3); }
+  .badge-green { background: rgba(63,185,80,.15); color: var(--accent2); border: 1px solid rgba(63,185,80,.3); }
+  .badge-red { background: rgba(247,129,102,.15); color: var(--accent3); border: 1px solid rgba(247,129,102,.3); }
+  .badge-purple { background: rgba(210,168,255,.15); color: var(--accent4); border: 1px solid rgba(210,168,255,.3); }
+  .badge-yellow { background: rgba(227,179,65,.15); color: var(--yellow); border: 1px solid rgba(227,179,65,.3); }
+
+  /* HERO */
+  .hero-content { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 22px; }
+  .hero-title {
+    font-family: 'Syne', sans-serif; font-size: clamp(38px, 6vw, 74px);
+    font-weight: 800; line-height: 1.05;
+    background: linear-gradient(135deg, var(--accent), var(--accent4));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .hero-sub { font-size: clamp(19px, 2vw, 24px); color: var(--muted); max-width: 580px; line-height: 1.65; }
+  .tag-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+
+  /* SECTION INTRO */
+  .section-hero {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px; text-align: center;
+  }
+  .section-num {
+    font-family: 'Syne', sans-serif; font-size: clamp(80px,15vw,140px);
+    font-weight: 800; line-height: 1;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent4) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    opacity: .2;
+  }
+  .section-label {
+    font-family: 'Syne', sans-serif; font-size: clamp(30px, 4vw, 54px);
+    font-weight: 800; color: var(--text); margin-top: -32px;
+  }
+  .section-desc { font-size: 19px; color: var(--muted); max-width: 520px; line-height: 1.65; }
+
+  /* SHORTCUTS */
+  #shortcuts {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.8);
+    z-index: 200; align-items: center; justify-content: center;
+  }
+  #shortcuts.open { display: flex; }
+  .shortcuts-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 32px 40px; min-width: 340px;
+  }
+  .shortcuts-box h3 { font-family: 'Syne', sans-serif; font-size: 24px; margin-bottom: 20px; }
+  .shortcut-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 17px; }
+  .shortcut-row:last-child { border-bottom: none; }
+  .key { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 3px 10px; font-family: 'JetBrains Mono', monospace; font-size: 15px; color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+<div id="counter">1 / 1</div>
+
+<div id="shortcuts">
+  <div class="shortcuts-box">
+    <h3>Keyboard Shortcuts</h3>
+    <div class="shortcut-row"><span>Next slide</span><span><span class="key">→</span></span></div>
+    <div class="shortcut-row"><span>Prev slide</span><span><span class="key">←</span></span></div>
+    <div class="shortcut-row"><span>First slide</span><span><span class="key">Home</span></span></div>
+    <div class="shortcut-row"><span>Last slide</span><span><span class="key">End</span></span></div>
+    <div class="shortcut-row"><span>Shortcuts</span><span><span class="key">?</span></span></div>
+    <div class="shortcut-row"><span>Close</span><span><span class="key">Esc</span></span></div>
+  </div>
+</div>
+
+<div id="deck"></div>
+
+<script>
+const slides = [];
+function slide(html) { slides.push(html); }
+
+// ── TITLE ─────────────────────────────────────────────────────────────────
+slide(`
+<div class="slide">
+  <div class="hero-content">
+    <div>
+      <div class="eyebrow">DC104 Advanced Database</div>
+      <div class="hero-title">Summative<br>Exam Prep</div>
+    </div>
+    <div class="hero-sub">30-item practice exam covering Node.js, HTTP, MVC, SQL JOINs, and Backup & Recovery.</div>
+    <div class="tag-row">
+      <span class="badge badge-blue">10 Multiple Choice</span>
+      <span class="badge badge-purple">15 Identification</span>
+      <span class="badge badge-yellow">5 Guess the Output</span>
+    </div>
+    <div style="margin-top:12px; color:var(--muted); font-size:17px;">
+      Press <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-family:'JetBrains Mono',monospace;color:var(--accent);">→</kbd> to begin &nbsp;·&nbsp;
+      <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-family:'JetBrains Mono',monospace;color:var(--accent);">?</kbd> for shortcuts
+    </div>
+  </div>
+  <svg viewBox="0 0 600 120" style="position:absolute;bottom:0;left:0;width:100%;opacity:.07" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <text x="0" y="100" font-family="JetBrains Mono" font-size="90" fill="#58a6ff" letter-spacing="-4">&gt;_</text>
+  </svg>
+</div>`);
+
+// ── SECTION INTRO: MCQ ────────────────────────────────────────────────────
+slide(`
+<div class="slide">
+  <div class="section-hero">
+    <div class="section-num">I</div>
+    <div class="section-label">Multiple Choice</div>
+    <div class="section-desc">10 questions · 2 per page · Click an option to check your answer.</div>
+    <div class="tag-row" style="justify-content:center;margin-top:6px;">
+      <span class="badge badge-blue">Node.js</span>
+      <span class="badge badge-green">HTTP</span>
+      <span class="badge badge-purple">MVC</span>
+      <span class="badge badge-red">SQL JOINs</span>
+      <span class="badge badge-yellow">Backup</span>
+    </div>
+  </div>
+</div>`);
+
+// MCQ — 2-per-page helper
+function mcqPair(slideLabel, qa) {
+  function buildCard(q, opts, correct, note, uid) {
+    const letters = ['A','B','C','D'];
+    const optHtml = opts.map((o,i) => `<div class="option" data-correct="${letters[i]===correct}" onclick="checkOpt(this,'note-${uid}')">${letters[i]}. ${o}</div>`).join('');
+    return `
+      <div class="mcq-card">
+        <div class="q-label">${q.label}</div>
+        <div class="q-text">${q.text}</div>
+        <div class="options">${optHtml}</div>
+        ${note ? `<div class="q-note" id="note-${uid}">${note}</div>` : ''}
+      </div>`;
+  }
+  const cards = qa.map((item, i) => buildCard(item.q, item.opts, item.correct, item.note, slideLabel + '_' + i)).join('');
+  return `
+<div class="slide">
+  <div class="eyebrow">Multiple Choice · ${slideLabel}</div>
+  <div class="slide-title">Questions ${qa[0].q.label.replace('Question ','').split(' ')[0]}–${qa[qa.length-1].q.label.replace('Question ','').split(' ')[0]}</div>
+  <div class="mcq-grid">${cards}</div>
+</div>`;
+}
+
+const mcqData = [
+  {
+    q: { label: 'Question 1', text: 'Which module must you <code style="background:var(--surface2);padding:1px 6px;border-radius:4px;font-family:JetBrains Mono,monospace;color:var(--accent4);">require()</code> to create an HTTP server in Node.js without any external packages?' },
+    opts: ['fs','path','http','events'], correct: 'C',
+    note: 'The built-in <code style="font-family:JetBrains Mono,monospace;color:var(--accent4);">http</code> module provides <code style="font-family:JetBrains Mono,monospace;color:var(--accent4);">createServer()</code>.'
+  },
+  {
+    q: { label: 'Question 2', text: 'What does the <strong>Model</strong> component manage in the MVC design pattern?' },
+    opts: ['HTML rendering and templates','User input from forms','Business logic and database interaction','HTTP routing and middleware'], correct: 'C',
+    note: 'Model = data + business logic. Controllers call the Model; Views render the result.'
+  },
+  {
+    q: { label: 'Question 3', text: 'Which command-line tool is commonly used in Node.js scripts (via <code style="font-family:JetBrains Mono,monospace;color:var(--accent4);">child_process</code>) to export a MySQL database to a <code style="font-family:JetBrains Mono,monospace;color:var(--accent4);">.sql</code> file?' },
+    opts: ['pg_dump','mysql','mysqldump','dbexport'], correct: 'C',
+    note: '<code style="font-family:JetBrains Mono,monospace;color:var(--accent4);">mysqldump</code> produces SQL dump files; <code style="font-family:JetBrains Mono,monospace;color:var(--accent4);">mysql</code> is used to restore them.'
+  },
+  {
+    q: { label: 'Question 4', text: 'Which SQL JOIN returns <em>only</em> the rows that have a matching value in <strong>both</strong> tables?' },
+    opts: ['LEFT JOIN','RIGHT JOIN','INNER JOIN','FULL OUTER JOIN'], correct: 'C',
+    note: 'INNER JOIN filters out rows without a match on both sides.'
+  },
+  {
+    q: { label: 'Question 5', text: 'What is the correct way to import the <code style="font-family:JetBrains Mono,monospace;color:var(--accent4);">http</code> module using CommonJS syntax?' },
+    opts: ["import http from 'http';","import { http } from 'node:http';","const http = require('http');","const http = import('http');"], correct: 'C',
+    note: 'CommonJS uses <code style="font-family:JetBrains Mono,monospace;color:var(--accent4);">require()</code>; ES Modules use <code style="font-family:JetBrains Mono,monospace;color:var(--accent4);">import</code>.'
+  },
+  {
+    q: { label: 'Question 6', text: 'In an Express MVC app, which component handles incoming requests, calls the Model, and selects the View to render?' },
+    opts: ['Model','View','Controller','Router'], correct: 'C',
+    note: 'The Controller is the mediator — it connects Model and View.'
+  },
+  {
+    q: { label: 'Question 7', text: 'Which keyword specifies the column condition connecting two tables in a SQL JOIN, e.g., <code style="font-family:JetBrains Mono,monospace;color:var(--accent4);">___ a.id = b.fk</code>?' },
+    opts: ['WHERE','USING','ON','JOIN'], correct: 'C',
+    note: '<code style="font-family:JetBrains Mono,monospace;color:var(--accent4);">ON</code> specifies the column condition, e.g., <code style="font-family:JetBrains Mono,monospace;color:var(--accent4);">ON a.id = b.a_id</code>.'
+  },
+  {
+    q: { label: 'Question 8', text: 'What does <code style="font-family:JetBrains Mono,monospace;color:var(--accent4);">package.json</code> primarily store in a Node.js project?' },
+    opts: ['Database connection strings','Route definitions','Project metadata and dependencies','SSL certificates'], correct: 'C',
+    note: '<code style="font-family:JetBrains Mono,monospace;color:var(--accent4);">package.json</code> is the manifest: name, version, scripts, and dependencies.'
+  },
+  {
+    q: { label: 'Question 9', text: 'A LEFT JOIN between <em>customers</em> and <em>orders</em> will …' },
+    opts: ['Return only customers who have placed orders','Return only orders that have a matching customer','Return all customers, NULL for orders if none exist','Return all rows from both tables regardless of match'], correct: 'C',
+    note: 'LEFT JOIN keeps all left-table rows; unmatched right-side columns become NULL.'
+  },
+  {
+    q: { label: 'Question 10', text: 'Node.js is single-threaded and non-blocking. What mechanism handles asynchronous operations?' },
+    opts: ['Thread pool','Message queue only','The event loop with callbacks / promises','Blocking synchronous calls queued by OS'], correct: 'C',
+    note: 'The event loop delegates I/O to the OS and runs callbacks when they complete.'
+  }
+];
+
+// push 2 per slide: Q1+2, Q3+4, Q5+6, Q7+8, Q9+10
+for (let i = 0; i < mcqData.length; i += 2) {
+  const pair = mcqData.slice(i, i + 2);
+  const label = `${i+1}–${Math.min(i+2, mcqData.length)} of 10`;
+  slide(mcqPair(label, pair));
+}
+
+// ── SECTION INTRO: IDENTIFICATION ─────────────────────────────────────────
+slide(`
+<div class="slide">
+  <div class="section-hero">
+    <div class="section-num">II</div>
+    <div class="section-label">Identification</div>
+    <div class="section-desc">15 items · Click <em>Reveal Answer</em> on any card to check yourself.</div>
+  </div>
+</div>`);
+
+function idSlide(eyebrow, title, items) {
+  const cards = items.map(({num,clue,ans}) => `
+    <div class="id-item">
+      <div class="id-num">ITEM ${num}</div>
+      <div class="id-clue">${clue}</div>
+      <div class="id-answer-box" id="ans-${num}">✦ ${ans}</div>
+      <button class="reveal-btn" onclick="document.getElementById('ans-${num}').classList.toggle('revealed')">Reveal Answer</button>
+    </div>`).join('');
+  return `
+<div class="slide">
+  <div class="eyebrow">${eyebrow}</div>
+  <div class="slide-title">${title}</div>
+  <div class="id-grid" style="flex:1;">${cards}</div>
+</div>`;
+}
+
+slide(idSlide("Identification · Items 1–3","Set 1 — Core Concepts",[
+  {num:1, clue:"The process of bringing a database back to a consistent state after a failure or data-loss event.", ans:"recovery"},
+  {num:2, clue:"The SQL JOIN type that returns ALL rows from the left table even if there is no matching row on the right.", ans:"LEFT JOIN"},
+  {num:3, clue:"The built-in Node.js module used to read and write files on the filesystem.", ans:"fs"},
+]));
+
+slide(idSlide("Identification · Items 4–6","Set 2 — MVC & Files",[
+  {num:4, clue:"The MVC component responsible for rendering HTML templates and presenting data to the user.", ans:"View"},
+  {num:5, clue:"The file extension of a SQL dump file produced by mysqldump.", ans:".sql"},
+  {num:6, clue:"The command typed in the terminal to run a Node.js script, e.g., ___ app.js.", ans:"node"},
+]));
+
+slide(idSlide("Identification · Items 7–9","Set 3 — SQL & Patterns",[
+  {num:7, clue:"The SQL keyword that specifies the column condition connecting two tables in a JOIN.", ans:"ON"},
+  {num:8, clue:"The three-letter acronym for the design pattern separating an app into Model, View, and Controller.", ans:"MVC"},
+  {num:9, clue:"The shell command used to <em>restore</em> a MySQL database from a <code style='font-family:JetBrains Mono,monospace;color:var(--accent4);'>.sql</code> file.", ans:"mysql"},
+]));
+
+slide(idSlide("Identification · Items 10–12","Set 4 — Node.js Internals",[
+  {num:10, clue:"The HTTP server method that makes the server start accepting connections on a specified port.", ans:"listen()"},
+  {num:11, clue:"This Node.js global variable holds the absolute path of the <em>directory</em> containing the currently executing script.", ans:"__dirname"},
+  {num:12, clue:"The Express-compatible templating engine that uses <code style='font-family:JetBrains Mono,monospace;color:var(--accent4);'>&lt;%= %&gt;</code> tags to embed JavaScript in HTML.", ans:"EJS"},
+]));
+
+slide(idSlide("Identification · Items 13–15","Set 5 — Advanced",[
+  {num:13, clue:"The SQL JOIN that returns ALL rows from BOTH tables, filling NULLs where there is no match. Not natively supported in MySQL — requires UNION.", ans:"FULL OUTER JOIN"},
+  {num:14, clue:"The built-in Node.js module that provides <code style='font-family:JetBrains Mono,monospace;color:var(--accent4);'>exec()</code> and <code style='font-family:JetBrains Mono,monospace;color:var(--accent4);'>spawn()</code> for running shell commands.", ans:"child_process"},
+  {num:15, clue:"The MVC component that holds business logic, communicates with the database, and returns data to the Controller.", ans:"Model"},
+]));
+
+// ── SECTION INTRO: GTO ────────────────────────────────────────────────────
+slide(`
+<div class="slide">
+  <div class="section-hero">
+    <div class="section-num">III</div>
+    <div class="section-label">Guess the Output</div>
+    <div class="section-desc">5 code snippets · Type your answer then click Check.</div>
+  </div>
+</div>`);
+
+function gtoSlide(itemNum, code, answer, hint) {
+  const uid = 'gto' + itemNum;
+  const codeEsc = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return `
+<div class="slide">
+  <div class="eyebrow">Guess the Output · Item ${itemNum} of 5</div>
+  <div class="slide-title">What will this code print?</div>
+  <div class="output-grid">
+    <div class="code-panel">
+      <div class="code-header">
+        <span class="code-lang">javascript</span>
+        <button class="copy-btn" onclick="copyCode(this,'${uid}-pre')">Copy</button>
+      </div>
+      <pre id="${uid}-pre">${codeEsc}</pre>
+    </div>
+    <div class="output-panel">
+      <div class="output-header">// Your answer</div>
+      <div class="output-content">
+        <div style="margin-bottom:8px;font-size:17px;color:var(--muted);">What does this print to the console?</div>
+        ${hint ? `<div style="font-size:16px;color:var(--muted);margin-bottom:14px;font-style:italic;">Hint: ${hint}</div>` : ''}
+        <input class="guess-input" id="${uid}-input" placeholder="Type your answer here…"
+          onkeydown="if(event.key==='Enter')checkGTO('${uid}','${answer.replace(/\n/g,'\\n').replace(/'/g,"\\'")}')"/>
+        <button class="check-btn" onclick="checkGTO('${uid}','${answer.replace(/\n/g,'\\n').replace(/'/g,"\\'")}')">Check Answer</button>
+        <div class="feedback" id="${uid}-fb"></div>
+      </div>
+    </div>
+  </div>
+</div>`;
+}
+
+slide(gtoSlide(1,
+`const http = require('http');
+
+const server = http.createServer((req, res) => {
+  res.statusCode = 200;
+  res.end('Hello!');
+});
+
+server.listen(3000, () => {
+  console.log('listening');
+});`,
+  "listening",
+  "The callback inside listen() runs once the server is ready."));
+
+slide(gtoSlide(2,
+`const { exec } = require('child_process');
+
+exec('echo backup_done', (err, stdout) => {
+  console.log(stdout.trim());
+});
+
+console.log(2);`,
+  "2\nbackup_done",
+  "exec() is async — synchronous code runs first."));
+
+slide(gtoSlide(3,
+`const mysql = require('mysql2/promise');
+
+async function run() {
+  const data = [
+    { id: 1, name: 'Alice' },
+    { id: 2, name: 'Bob' }
+  ];
+  const result = data.filter(row => row.id > 1);
+  console.log(result.length);
+}
+
+run();`,
+  "1",
+  "filter() keeps rows where id > 1 — only Bob remains."));
+
+slide(gtoSlide(4,
+`function add(a, b) { return a + b; }
+function multiply(a, b) { return a * b; }
+module.exports = { add, multiply };
+
+// In another file:
+const { add, multiply } = require('./math');
+console.log(multiply(add(1, 1), add(2, 0)));`,
+  "4",
+  "add(1,1)=2, add(2,0)=2, multiply(2,2)=4."));
+
+slide(gtoSlide(5,
+`const nums = [10, 25, 50, 40];
+const total = nums.reduce((acc, n) => acc + n, 0);
+const avg = total / nums.length;
+console.log(avg);`,
+  "31.25",
+  "Sum = 125, divided by 4 items."));
+
+// ── ANSWER KEYS ───────────────────────────────────────────────────────────
+slide(`
+<div class="slide">
+  <div class="eyebrow">Answer Key</div>
+  <div class="slide-title">Multiple Choice — Answers</div>
+  <div class="ak-scroll">
+    <table class="ak-table">
+      <thead><tr><th>#</th><th>Answer</th><th>Key Reason</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>C — http</td><td>Built-in module; use <code style="font-family:JetBrains Mono,monospace;">require('http')</code> — no install needed.</td></tr>
+        <tr><td>2</td><td>C — Model</td><td>Model = business logic + database queries.</td></tr>
+        <tr><td>3</td><td>C — mysqldump</td><td>Standard MySQL backup utility; outputs .sql files.</td></tr>
+        <tr><td>4</td><td>C — INNER JOIN</td><td>Returns only rows matching in BOTH tables.</td></tr>
+        <tr><td>5</td><td>C — const http = require('http')</td><td>CommonJS syntax; <code style="font-family:JetBrains Mono,monospace;">import</code> is ESM.</td></tr>
+        <tr><td>6</td><td>C — Controller</td><td>Controller mediates: request → Model → View.</td></tr>
+        <tr><td>7</td><td>C — ON</td><td>Syntax: <code style="font-family:JetBrains Mono,monospace;">JOIN table ON a.id = b.fk</code>.</td></tr>
+        <tr><td>8</td><td>C — Project metadata and dependencies</td><td>name, version, scripts, dependencies all live here.</td></tr>
+        <tr><td>9</td><td>C — All customers, NULL for orders if none</td><td>LEFT JOIN keeps all left-table rows.</td></tr>
+        <tr><td>10</td><td>C — The event loop</td><td>Single-threaded async via event loop + OS I/O delegation.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>`);
+
+slide(`
+<div class="slide">
+  <div class="eyebrow">Answer Key</div>
+  <div class="slide-title">Identification — Answers</div>
+  <div class="ak-scroll">
+    <table class="ak-table">
+      <thead><tr><th>#</th><th>Answer</th><th>#</th><th>Answer</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>recovery</td><td>9</td><td>mysql</td></tr>
+        <tr><td>2</td><td>LEFT JOIN</td><td>10</td><td>listen()</td></tr>
+        <tr><td>3</td><td>fs</td><td>11</td><td>__dirname</td></tr>
+        <tr><td>4</td><td>View</td><td>12</td><td>EJS</td></tr>
+        <tr><td>5</td><td>.sql</td><td>13</td><td>FULL OUTER JOIN</td></tr>
+        <tr><td>6</td><td>node</td><td>14</td><td>child_process</td></tr>
+        <tr><td>7</td><td>ON</td><td>15</td><td>Model</td></tr>
+        <tr><td>8</td><td>MVC</td><td></td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>`);
+
+slide(`
+<div class="slide">
+  <div class="eyebrow">Answer Key</div>
+  <div class="slide-title">Guess the Output — Answers</div>
+  <div class="ak-scroll">
+    <table class="ak-table">
+      <thead><tr><th>#</th><th>Output</th><th>Explanation</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code style="font-family:JetBrains Mono,monospace;color:var(--accent2);">listening</code></td><td>server.listen() callback fires once the server is ready; only that string is logged.</td></tr>
+        <tr><td>2</td><td><code style="font-family:JetBrains Mono,monospace;color:var(--accent2);">2<br>backup_done</code></td><td>Synchronous console.log(2) runs first; exec() callback runs after the event-loop tick.</td></tr>
+        <tr><td>3</td><td><code style="font-family:JetBrains Mono,monospace;color:var(--accent2);">1</code></td><td>filter(id &gt; 1) keeps only Bob → array length = 1.</td></tr>
+        <tr><td>4</td><td><code style="font-family:JetBrains Mono,monospace;color:var(--accent2);">4</code></td><td>add(1,1)=2, add(2,0)=2, multiply(2,2)=4.</td></tr>
+        <tr><td>5</td><td><code style="font-family:JetBrains Mono,monospace;color:var(--accent2);">31.25</code></td><td>10+25+50+40=125 ÷ 4 = 31.25.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>`);
+
+// ── CLOSING ───────────────────────────────────────────────────────────────
+slide(`
+<div class="slide">
+  <div class="hero-content" style="align-items:center;text-align:center;">
+    <svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Celebration">
+      <title>Celebration</title>
+      <circle cx="40" cy="40" r="38" fill="rgba(88,166,255,.12)" stroke="rgba(88,166,255,.4)" stroke-width="1.5"/>
+      <text x="50%" y="54%" font-size="36" text-anchor="middle" dominant-baseline="middle">🚀</text>
+    </svg>
+    <div class="hero-title" style="font-size:clamp(32px,5vw,58px);">You're ready.<br>Go ace it!</div>
+    <div class="hero-sub" style="text-align:center;">"The expert in anything was once a beginner who refused to give up."</div>
+    <div style="margin-top:20px;">
+      <span class="badge badge-blue" style="font-size:17px;padding:10px 22px;">Good luck on your exam! 💙</span>
+    </div>
+  </div>
+</div>`);
+
+// ─────────────────────────────────────────────────────────────────────────
+// RENDER ENGINE
+// ─────────────────────────────────────────────────────────────────────────
+const deck = document.getElementById('deck');
+const total = slides.length;
+let current = 0;
+let animating = false;
+
+slides.forEach(html => {
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = html.trim();
+  deck.appendChild(wrapper.firstElementChild);
+});
+
+const allSlides = Array.from(deck.querySelectorAll('.slide'));
+
+function updateUI() {
+  document.getElementById('progress-bar').style.width = ((current + 1) / total * 100) + '%';
+  document.getElementById('counter').textContent = `${current + 1} / ${total}`;
+}
+
+function goTo(n, dir = 1) {
+  if (animating || n < 0 || n >= total || n === current) return;
+  animating = true;
+  const prev = allSlides[current];
+  const next = allSlides[n];
+  prev.classList.remove('active');
+  prev.classList.add(dir > 0 ? 'exit-left' : 'exit-right');
+  next.style.transform = dir > 0 ? 'translateX(60px)' : 'translateX(-60px)';
+  next.classList.add('active');
+  setTimeout(() => {
+    prev.classList.remove('exit-left','exit-right');
+    next.style.transform = '';
+    animating = false;
+  }, 380);
+  current = n;
+  updateUI();
+}
+
+allSlides[0].classList.add('active');
+updateUI();
+
+document.addEventListener('keydown', e => {
+  if (e.key === '?') { document.getElementById('shortcuts').classList.toggle('open'); return; }
+  if (e.key === 'Escape') { document.getElementById('shortcuts').classList.remove('open'); return; }
+  if (e.key === 'ArrowRight' || e.key === 'PageDown') goTo(current + 1, 1);
+  if (e.key === 'ArrowLeft'  || e.key === 'PageUp')   goTo(current - 1, -1);
+  if (e.key === 'Home') goTo(0, -1);
+  if (e.key === 'End')  goTo(total - 1, 1);
+});
+
+document.addEventListener('contextmenu', e => { e.preventDefault(); goTo(current + 1, 1); });
+document.addEventListener('mousedown', e => {
+  if (e.button === 3) { e.preventDefault(); e.stopImmediatePropagation(); goTo(current + 1, 1); }
+  if (e.button === 4) { e.preventDefault(); e.stopImmediatePropagation(); goTo(current - 1, -1); }
+}, true);
+
+let tx = 0;
+document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, {passive:true});
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - tx;
+  if (Math.abs(dx) > 50) goTo(dx < 0 ? current + 1 : current - 1, dx < 0 ? 1 : -1);
+});
+
+function checkOpt(el, noteId) {
+  const block = el.closest('.options');
+  if (block.dataset.answered) return;
+  block.dataset.answered = '1';
+  const isCorrect = el.dataset.correct === 'true';
+  el.classList.add(isCorrect ? 'correct' : 'wrong');
+  if (!isCorrect) block.querySelectorAll('.option').forEach(o => { if (o.dataset.correct === 'true') o.classList.add('correct'); });
+  const note = document.getElementById(noteId);
+  if (note) note.style.display = 'block';
+}
+
+function checkGTO(uid, answer) {
+  const input = document.getElementById(uid + '-input');
+  const fb    = document.getElementById(uid + '-fb');
+  const norm  = s => s.replace(/\\n/g,'\n').replace(/\s+$/,'').replace(/^\s+/,'').toLowerCase();
+  const correct = norm(input.value) === norm(answer);
+  fb.className = 'feedback ' + (correct ? 'correct' : 'wrong');
+  fb.textContent = correct
+    ? '✓ Correct! Output: ' + answer.replace(/\\n/g,' → ')
+    : '✗ Not quite. Expected: ' + answer.replace(/\\n/g,' → ');
+}
+
+function copyCode(btn, id) {
+  const pre = document.getElementById(id);
+  navigator.clipboard.writeText(pre.textContent).then(() => {
+    btn.textContent = 'Copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+document.getElementById('shortcuts').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+</script>
+</body>
+</html>

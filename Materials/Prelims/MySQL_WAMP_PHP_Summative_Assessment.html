@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Summative Assessment · MySQL, WAMP &amp; PHP</title>
+<style>
+  :root{
+    --bg:#0a0e14;
+    --bg-deep:#060911;
+    --bg-panel:#10161f;
+    --bg-card:#141c29;
+    --bg-card-hover:#1b2536;
+    --border:#232f42;
+    --border-soft:#1a2433;
+    --text-primary:#e9eef4;
+    --text-muted:#93a1b5;
+    --text-dim:#5b6a80;
+    --accent:#4fe0c8;
+    --accent-soft:#0f322d;
+    --accent-strong:#2ee6c4;
+    --accent2:#ffb454;
+    --accent2-soft:#3a2a10;
+    --danger:#ff7a7a;
+    --danger-soft:#3a1a1a;
+    --good:#4fe0c8;
+    --radius-lg:20px;
+    --radius-md:14px;
+    --radius-sm:9px;
+    --font-display:'Space Grotesk','Segoe UI',system-ui,-apple-system,sans-serif;
+    --font-body:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,'Cascadia Code',Consolas,'Courier New',monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text-primary);font-family:var(--font-body);-webkit-font-smoothing:antialiased;}
+  body{overflow:hidden;}
+  body::before{
+    content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(ellipse 900px 500px at 12% -8%, rgba(79,224,200,.10), transparent 60%),
+      radial-gradient(ellipse 800px 600px at 105% 105%, rgba(255,180,84,.08), transparent 60%);
+  }
+  #app{position:fixed;inset:0;z-index:1;}
+  .stage{position:absolute;inset:0;}
+  .slide-panel{
+    position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
+    opacity:0;pointer-events:none;transform:translateX(0) scale(1);
+    transition:opacity .35s ease, transform .35s ease;z-index:1;
+    -webkit-overflow-scrolling:touch;
+  }
+  .slide-panel.active{opacity:1;transform:translateX(0) scale(1);pointer-events:auto;z-index:2;}
+  .slide-panel.from-right{transform:translateX(46px) scale(.985);}
+  .slide-panel.from-left{transform:translateX(-46px) scale(.985);}
+  @media (prefers-reduced-motion:reduce){
+    .slide-panel{transition:opacity .01s linear;}
+    .slide-panel.from-right,.slide-panel.from-left{transform:none;}
+  }
+  .slide-inner{
+    min-height:100%;display:flex;flex-direction:column;justify-content:center;
+    padding:64px 88px 56px;max-width:1440px;margin:0 auto;
+  }
+  ::-webkit-scrollbar{width:10px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
+
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;font-family:var(--font-mono);
+    font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);
+    margin-bottom:18px;font-weight:600;
+  }
+  .eyebrow::before{content:"$";color:var(--accent2);font-weight:700;}
+  .title{font-family:var(--font-display);font-weight:700;font-size:clamp(28px,3.4vw,44px);line-height:1.14;margin:0 0 22px;letter-spacing:-.01em;}
+  .title .accent{color:var(--accent);}
+  .title .accent2{color:var(--accent2);}
+  .subtitle{color:var(--text-muted);font-size:16.5px;line-height:1.65;max-width:820px;margin:0 0 8px;}
+
+  p{font-size:15.5px;line-height:1.7;color:var(--text-muted);}
+  b{color:var(--text-primary);}
+  code.inline{font-family:var(--font-mono);background:var(--bg-panel);border:1px solid var(--border);padding:1px 7px;border-radius:6px;color:var(--accent2);font-size:.92em;}
+
+  /* ---- code blocks ---- */
+  .codeblock{background:var(--bg-deep);border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;margin:14px 0;box-shadow:0 10px 30px rgba(0,0,0,.35);}
+  .code-head{display:flex;align-items:center;justify-content:space-between;padding:9px 16px;background:var(--bg-panel);border-bottom:1px solid var(--border);}
+  .code-lang{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);}
+  .copy-btn{font-family:var(--font-mono);font-size:11.5px;background:var(--bg-card);color:var(--text-muted);border:1px solid var(--border);padding:5px 11px;border-radius:7px;cursor:pointer;transition:.18s;}
+  .copy-btn:hover{background:var(--bg-card-hover);color:var(--text-primary);border-color:var(--accent);}
+  .copy-btn.copied{background:var(--accent-soft);color:var(--accent);border-color:var(--accent);}
+  .codeblock pre{margin:0;padding:16px 18px;overflow-x:auto;}
+  .codeblock code{font-family:var(--font-mono);font-size:13.3px;line-height:1.65;white-space:pre;color:var(--text-primary);}
+  .tok-kw{color:#ff9d6b;font-weight:600;}
+  .tok-str{color:#a8e88a;}
+  .tok-num{color:#7fd6ff;}
+  .tok-com{color:var(--text-dim);font-style:italic;}
+  .tok-fn{color:#4fe0c8;}
+  .tok-punc{color:var(--text-muted);}
+  .tok-var{color:#ffb454;}
+
+  /* ---- question shell ---- */
+  .qhead{display:flex;align-items:center;gap:12px;margin-bottom:6px;}
+  .qnum{font-family:var(--font-mono);font-size:13px;color:var(--accent2);background:var(--accent2-soft);border:1px solid rgba(255,180,84,.35);padding:3px 10px;border-radius:20px;font-weight:700;}
+  .qtext{font-size:16.5px;color:var(--text-primary);font-weight:600;line-height:1.5;}
+  .ask{font-family:var(--font-mono);font-size:13px;color:var(--accent);margin-top:8px;letter-spacing:.02em;}
+  .ask::before{content:"› ";color:var(--accent2);}
+
+  .gto-grid{display:grid;gap:20px;}
+  .gto-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px 24px;min-width:0;}
+
+  .ref-table{width:100%;border-collapse:collapse;margin-top:18px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;font-size:14.5px;}
+  .ref-table th{font-family:var(--font-mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent2);background:var(--bg-panel);text-align:left;padding:11px 14px;border-bottom:1px solid var(--border);}
+  .ref-table td{padding:10px 14px;color:var(--text-primary);border-bottom:1px solid var(--border-soft);font-family:var(--font-mono);font-size:13.5px;}
+  .ref-table tr:last-child td{border-bottom:none;}
+  .ref-table .empty-cell{color:var(--text-dim);font-style:italic;}
+  .mini-ref{margin-bottom:16px;}
+  .mini-ref-label{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px;}
+  .ref-table.small th{padding:7px 10px;font-size:10px;}
+  .ref-table.small td{padding:7px 10px;font-size:12px;}
+
+  .idlist{display:flex;flex-direction:column;gap:14px;}
+  .id-row{display:grid;grid-template-columns:52px minmax(0,1fr);gap:16px;align-items:start;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);padding:15px 18px;min-width:0;}
+  .id-row .qtext{font-weight:500;font-size:15px;}
+  .blank{border-bottom:2px dotted var(--accent2);padding:0 6px;color:transparent;}
+
+  .mc-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px 30px;min-width:0;}
+  .mc-options{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px;}
+  .mc-opt{display:flex;gap:12px;align-items:flex-start;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px 16px;min-width:0;}
+  .mc-letter{font-family:var(--font-mono);font-weight:700;color:var(--accent);flex-shrink:0;}
+  .mc-opt span.opt-text{color:var(--text-muted);font-size:14.5px;line-height:1.5;}
+
+  .tip,.warning{border-radius:var(--radius-md);padding:14px 18px;font-size:14px;line-height:1.6;margin-top:14px;border:1px solid;}
+  .tip{background:var(--accent-soft);border-color:rgba(79,224,200,.3);color:#bdf5ea;}
+  .warning{background:var(--danger-soft);border-color:rgba(255,122,122,.35);color:#ffd0d0;}
+  .tip::before{content:"◆ TIP  ";font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;color:var(--accent);}
+  .warning::before{content:"⚠ NOTE  ";font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;color:var(--danger);}
+
+  /* welcome */
+  .hero{display:flex;flex-direction:column;gap:20px;}
+  .hero-badge{font-family:var(--font-mono);font-size:12px;letter-spacing:.16em;color:var(--accent2);border:1px solid rgba(255,180,84,.35);background:var(--accent2-soft);display:inline-block;padding:6px 14px;border-radius:20px;width:fit-content;}
+  .hero-title{font-family:var(--font-display);font-weight:700;font-size:clamp(34px,5vw,58px);line-height:1.06;margin:6px 0 6px;letter-spacing:-.02em;}
+  .hero-sub{color:var(--text-muted);font-size:17px;line-height:1.7;max-width:760px;}
+  .cover-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:26px;}
+  .cover-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);padding:18px;min-width:0;}
+  .cover-card .n{font-family:var(--font-mono);color:var(--accent2);font-size:26px;font-weight:700;}
+  .cover-card .l{color:var(--text-muted);font-size:12.5px;letter-spacing:.04em;text-transform:uppercase;margin-top:4px;}
+  .format-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:14px;}
+  .format-card{background:var(--bg-panel);border:1px dashed var(--border);border-radius:var(--radius-md);padding:16px 18px;min-width:0;}
+  .format-card .num{font-family:var(--font-mono);font-size:24px;color:var(--accent);font-weight:700;}
+  .format-card .lbl{color:var(--text-primary);font-weight:600;font-size:14px;margin-top:2px;}
+  .format-card .desc{color:var(--text-dim);font-size:12.5px;margin-top:4px;line-height:1.5;}
+
+  /* recap */
+  .recap-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:8px;}
+  .recap-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);padding:18px 20px;min-width:0;}
+  .recap-card h3{margin:0 0 8px;font-family:var(--font-display);font-size:15.5px;color:var(--accent);}
+  .recap-card ul{margin:0;padding-left:18px;color:var(--text-muted);font-size:13.6px;line-height:1.7;}
+
+  /* answer key */
+  .ak-cols{display:grid;grid-template-columns:1fr 1fr;gap:26px;}
+  .ak-section h3{font-family:var(--font-display);font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent2);margin:0 0 12px;border-bottom:1px solid var(--border);padding-bottom:8px;}
+  .ak-item{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;margin-bottom:11px;align-items:baseline;}
+  .ak-num{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);}
+  .ak-ans{color:var(--text-primary);font-weight:600;font-size:13.6px;}
+  .ak-exp{color:var(--text-dim);font-size:12.3px;display:block;margin-top:1px;line-height:1.5;}
+  .ak-full{grid-column:1/-1;}
+
+  /* closing */
+  .closing-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;height:100%;gap:18px;}
+  .closing-emoji{font-size:64px;}
+  .closing-title{font-family:var(--font-display);font-weight:700;font-size:clamp(32px,5vw,54px);background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .closing-sub{color:var(--text-muted);font-size:16.5px;max-width:600px;line-height:1.7;}
+  .closing-stats{display:flex;gap:14px;margin-top:10px;}
+  .closing-stat{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 22px;}
+  .closing-stat .n{font-family:var(--font-mono);color:var(--accent);font-size:22px;font-weight:700;}
+  .closing-stat .l{color:var(--text-dim);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;margin-top:2px;}
+
+  /* progress + counter */
+  #progress-track{position:fixed;top:0;left:0;right:0;height:3px;background:var(--border-soft);z-index:50;}
+  #progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%;transition:width .3s ease;}
+  #counter{position:fixed;bottom:20px;right:26px;font-family:var(--font-mono);font-size:12.5px;color:var(--text-dim);background:var(--bg-panel);border:1px solid var(--border);padding:6px 13px;border-radius:20px;z-index:50;}
+  #hint{position:fixed;bottom:20px;left:26px;font-family:var(--font-mono);font-size:11.5px;color:var(--text-dim);z-index:50;}
+  #hint kbd{background:var(--bg-panel);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--text-muted);}
+
+  /* shortcuts modal */
+  #shortcuts-overlay{position:fixed;inset:0;background:rgba(6,9,17,.72);backdrop-filter:blur(3px);z-index:100;display:none;align-items:center;justify-content:center;}
+  #shortcuts-overlay.show{display:flex;}
+  .shortcuts-panel{background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius-lg);padding:30px 34px;width:420px;max-width:90vw;}
+  .shortcuts-panel h2{font-family:var(--font-display);margin:0 0 18px;font-size:19px;}
+  .sc-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-soft);color:var(--text-muted);font-size:13.5px;}
+  .sc-row kbd{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-family:var(--font-mono);color:var(--text-primary);font-size:12px;}
+
+  @media (max-width:900px){
+    .slide-inner{padding:80px 22px 70px;}
+    .cover-grid,.mc-options,.format-row,.recap-grid,.ak-cols{grid-template-columns:1fr;}
+    #hint{display:none;}
+  }
+</style>
+</head>
+<body>
+<div id="progress-track"><div id="progress-fill"></div></div>
+<div id="app">
+  <div class="stage">
+    <div class="slide-panel" id="panelA"></div>
+    <div class="slide-panel" id="panelB"></div>
+  </div>
+</div>
+<div id="counter">1 / 28</div>
+<div id="hint">click / <kbd>←</kbd><kbd>→</kbd> to navigate · <kbd>?</kbd> for shortcuts</div>
+
+<div id="shortcuts-overlay">
+  <div class="shortcuts-panel">
+    <h2>Keyboard &amp; Mouse Shortcuts</h2>
+    <div class="sc-row"><span>Next slide</span><kbd>→ / Space / Click</kbd></div>
+    <div class="sc-row"><span>Previous slide</span><kbd>←</kbd></div>
+    <div class="sc-row"><span>First slide</span><kbd>Home</kbd></div>
+    <div class="sc-row"><span>Last slide</span><kbd>End</kbd></div>
+    <div class="sc-row"><span>Mouse side button (back)</span><kbd>Previous</kbd></div>
+    <div class="sc-row"><span>Mouse side button (fwd)</span><kbd>Next</kbd></div>
+    <div class="sc-row"><span>Show this panel</span><kbd>?</kbd></div>
+    <div class="sc-row" style="border-bottom:none;"><span>Close this panel</span><kbd>Esc</kbd></div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================= SYNTAX HIGHLIGHTER ============================= */
+var KEYWORDS = ["SELECT","FROM","WHERE","INSERT","INTO","VALUES","UPDATE","SET","DELETE","CREATE","TABLE","DATABASE",
+  "ALTER","ADD","DROP","COLUMN","MODIFY","TRUNCATE","PRIMARY","KEY","FOREIGN","REFERENCES","NOT","NULL","UNIQUE",
+  "DEFAULT","CHECK","AUTO_INCREMENT","GRANT","REVOKE","DENY","ON","TO","FROM","ALL","PRIVILEGES","JOIN","INNER",
+  "LEFT","RIGHT","OUTER","LIKE","BETWEEN","AND","OR","AS","ORDER","BY","ASC","DESC","LIMIT","CONCAT","SHOW",
+  "GRANTS","FOR","USE","DESCRIBE","EXIT","if","else","function","return","echo","die","new","true","false",
+  "public","private","class","require","include"];
+var FUNCS = ["mysqli_connect","mysqli_query","mysqli_fetch_assoc","mysqli_num_rows","mysqli_affected_rows",
+  "mysqli_error","mysqli_connect_error","mysqli_close","file_get_contents","explode","trim","empty","PDO",
+  "setAttribute","prepare","execute"];
+function escapeHtml(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function highlight(code){
+  var out = "";
+  var i = 0, n = code.length;
+  var kwSet = {}; KEYWORDS.forEach(function(k){kwSet[k.toUpperCase()]=true;});
+  var fnSet = {}; FUNCS.forEach(function(f){fnSet[f]=true;});
+  while(i < n){
+    var ch = code[i];
+    // line comment -- or //
+    if((ch==="-" && code[i+1]==="-") || (ch==="/" && code[i+1]==="/")){
+      var j = code.indexOf("\n", i);
+      if(j===-1) j = n;
+      out += '<span class="tok-com">'+escapeHtml(code.slice(i,j))+'</span>';
+      i = j; continue;
+    }
+    // block comment
+    if(ch==="/" && code[i+1]==="*"){
+      var j2 = code.indexOf("*/", i+2);
+      j2 = j2===-1 ? n : j2+2;
+      out += '<span class="tok-com">'+escapeHtml(code.slice(i,j2))+'</span>';
+      i = j2; continue;
+    }
+    // strings
+    if(ch==="'" || ch==='"'){
+      var quote = ch, j3 = i+1;
+      while(j3<n && code[j3]!==quote){ if(code[j3]==="\\") j3++; j3++; }
+      j3 = Math.min(j3+1, n);
+      out += '<span class="tok-str">'+escapeHtml(code.slice(i,j3))+'</span>';
+      i = j3; continue;
+    }
+    // php variable
+    if(ch==="$"){
+      var j4=i+1; while(j4<n && /[A-Za-z0-9_]/.test(code[j4])) j4++;
+      out += '<span class="tok-var">'+escapeHtml(code.slice(i,j4))+'</span>';
+      i=j4; continue;
+    }
+    // number
+    if(/[0-9]/.test(ch)){
+      var j5=i; while(j5<n && /[0-9.]/.test(code[j5])) j5++;
+      out += '<span class="tok-num">'+escapeHtml(code.slice(i,j5))+'</span>';
+      i=j5; continue;
+    }
+    // word (keyword / function / identifier)
+    if(/[A-Za-z_]/.test(ch)){
+      var j6=i; while(j6<n && /[A-Za-z0-9_]/.test(code[j6])) j6++;
+      var word = code.slice(i,j6);
+      var upper = word.toUpperCase();
+      if(kwSet[upper]){
+        out += '<span class="tok-kw">'+escapeHtml(word)+'</span>';
+      } else if(fnSet[word] || code[j6]==="("){
+        out += '<span class="tok-fn">'+escapeHtml(word)+'</span>';
+      } else {
+        out += escapeHtml(word);
+      }
+      i=j6; continue;
+    }
+    // punctuation
+    if(/[(){}\[\];,.=<>!+\-*\/]/.test(ch)){
+      out += '<span class="tok-punc">'+escapeHtml(ch)+'</span>';
+      i++; continue;
+    }
+    out += escapeHtml(ch);
+    i++;
+  }
+  return out;
+}
+function codeBlock(code, lang){
+  lang = lang || "sql";
+  var id = "cb"+Math.random().toString(36).slice(2,9);
+  return '<div class="codeblock">'+
+    '<div class="code-head"><span class="code-lang">'+lang+'</span>'+
+    '<button class="copy-btn" data-code-id="'+id+'" onclick="window.__copyCode(this)">Copy</button></div>'+
+    '<pre><code id="'+id+'" data-raw="'+encodeURIComponent(code)+'">'+highlight(code)+'</code></pre></div>';
+}
+window.__copyCode = function(btn){
+  var id = btn.getAttribute('data-code-id');
+  var el = document.getElementById(id);
+  var raw = decodeURIComponent(el.getAttribute('data-raw'));
+  var done = function(){
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(function(){ btn.textContent='Copy'; btn.classList.remove('copied'); }, 1400);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(raw).then(done).catch(function(){
+      fallbackCopy(raw); done();
+    });
+  } else {
+    fallbackCopy(raw); done();
+  }
+};
+function fallbackCopy(text){
+  var ta = document.createElement('textarea');
+  ta.value = text; document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); }catch(e){}
+  document.body.removeChild(ta);
+}
+
+/* ============================= SLIDE DATA ============================= */
+var GTO = [
+  { q:"SELECT * FROM CUST WHERE Branch LIKE '%up%';", lang:"sql",
+    ask:"Using the CUST reference table — which row(s) does this query return?", ref:true },
+  { q:"UPDATE CUST SET Branch = 'Dagupan City' WHERE CustID = 142;", lang:"sql",
+    ask:"Using the CUST reference table — what does CustID 142's row look like after this statement runs?", ref:true },
+  { q:"DELETE FROM CUST WHERE Branch LIKE 'A%A';", lang:"sql",
+    ask:"Using the CUST reference table — which row does this statement delete?", ref:true },
+  { q:"SELECT CustID, CONCAT(FName, ' ', LName) AS FullName, Balance\nFROM CUST\nWHERE Balance BETWEEN 5000 AND 8000;", lang:"sql",
+    ask:"Using the CUST reference table — which record(s) appear in the result?", ref:true },
+  { q:"$conn = mysqli_connect(\"localhost\", \"root\", \"wrongpass\", \"mydb\");\nif (!$conn) {\n    die(\"Connection failed: \" . mysqli_connect_error());\n}\necho \"Connected!\";", lang:"php",
+    ask:"The password supplied is incorrect. What does the browser display?" },
+  { q:"$sql = \"DELETE FROM books WHERE id=1\";\nmysqli_query($conn, $sql);\nif (mysqli_affected_rows($conn) > 0) {\n    echo \"Record deleted successfully\";\n} else {\n    echo \"Error deleting record: \" . mysqli_error($conn);\n}", lang:"php",
+    ask:"The book with id=1 was already deleted in an earlier request. What prints this time?" },
+  { q:"GRANT SELECT, INSERT ON employees TO 'user1'@'localhost';\nDENY DELETE ON employees TO 'user1'@'localhost';", lang:"sql",
+    ask:"After these two statements, can user1 run SELECT, INSERT, and DELETE on employees?" },
+  { q:"ALTER TABLE CUSTOMERS ADD Phone VARCHAR(20);\nALTER TABLE CUSTOMERS DROP COLUMN Phone;", lang:"sql",
+    ask:"After both statements execute in sequence, what does the CUSTOMERS table structure look like?" },
+  { q:"INSERT INTO CUSTOMERS (FirstName, LastName, Email)\nVALUES ('Juan', 'Dela Cruz', 'juan@email.com');\n\nINSERT INTO ORDERS (OrderDate, Amount, CustomerID)\nVALUES ('2026-07-13', 149.99, 1);\n\nSELECT C.FirstName, C.LastName, O.OrderDate, O.Amount\nFROM CUSTOMERS C\nJOIN ORDERS O ON C.CustomerID = O.CustomerID;", lang:"sql",
+    ask:"Assuming Juan gets CustomerID 1, what row(s) does the final SELECT return?" },
+  { q:"TRUNCATE TABLE ORDERS;\nSELECT * FROM ORDERS;", lang:"sql",
+    ask:"What does the SELECT return, and does the ORDERS table still exist afterward?" }
+];
+
+var IDS = [
+  { text:"The <span class=\"blank\">••••••</span> command removes one or more records from the database, but leaves the table structure intact." },
+  { text:"This SQL sub-language — made up of INSERT, UPDATE, and DELETE — deals with manipulating data already stored in a table: <span class=\"blank\">••••••</span>" },
+  { text:"The <span class=\"blank\">••••••</span> command explicitly forbids a privilege to a user, overriding any GRANT that would otherwise allow it." },
+  { text:"In procedural PHP, you open a connection to a MySQL server using the <span class=\"blank\">••••••</span> function." },
+  { text:"This constraint links a column to the primary key of another table, enforcing that every value must already exist there: <span class=\"blank\">••••••</span>" }
+];
+
+var MCS = [
+  { q:"What does DDL stand for?", opts:["Data Definition Language","Data Deletion Language","Data Duplication Language","Database Design Language"] },
+  { q:"Which command removes all rows from a table while keeping its structure, and generally cannot be rolled back like a normal DELETE?", opts:["DELETE","DROP","TRUNCATE","REVOKE"] },
+  { q:"Which clause is essential in UPDATE and DELETE statements to avoid accidentally affecting every row in a table?", opts:["SELECT","WHERE","FROM","GROUP BY"] },
+  { q:"In WAMP, what does a solid green tray icon indicate?", opts:["A service has crashed","A port conflict on 80 or 443","All services (Apache & MySQL) are running normally","WAMP failed to install"] },
+  { q:"Which PHP (mysqli) function retrieves one result row as an associative array?", opts:["mysqli_connect()","mysqli_fetch_assoc()","mysqli_query()","mysqli_error()"] },
+  { q:"Which DCL command takes precedence over a GRANT for the same privilege?", opts:["REVOKE","DENY","TRUNCATE","COMMIT"] },
+  { q:"Which constraint requires a column's value to already exist as a primary key value in another table?", opts:["UNIQUE","CHECK","FOREIGN KEY","DEFAULT"] },
+  { q:"Which JOIN type returns only the rows that have matching values in both tables?", opts:["LEFT JOIN","RIGHT JOIN","FULL OUTER JOIN","INNER JOIN"] },
+  { q:"Which command-line utility is commonly used to create a full backup of a MySQL database from the terminal?", opts:["mysqlimport","mysqldump","mysqlbackup","mysqlrestore"] },
+  { q:"Which PHP data-access method is recommended for security because it supports prepared statements with named parameters?", opts:["mysqli_connect() with string concatenation","PDO (PHP Data Objects)","file_get_contents()","mysqli_close()"] }
+];
+
+var CUST_TABLE = {
+  headers:["CustID","LName","FName","Branch","Balance","CreditLimit"],
+  rows:[
+    ["150","Soriano","Ken","<span class=\"empty-cell\">—</span>","8221.00","7500.00"],
+    ["156","Martinez","Rose","Anda","5643.00","6500.00"],
+    ["142","Tiu","Christof","Dagupan","13078.56","20000.00"],
+    ["167","Jugo","<span class=\"empty-cell\">—</span>","Lingayen","<span class=\"empty-cell\">NULL</span>","20000.00"]
+  ]
+};
+
+var slides = [];
+
+/* 0 — WELCOME */
+slides.push({ type:"welcome" });
+
+/* 1-10 — MULTIPLE CHOICE (one per slide, shown first) */
+for(var m=0; m<10; m++){
+  slides.push({ type:"mc", n:m+1, data:MCS[m] });
+}
+
+/* 11-15 — IDENTIFICATION (one per slide) */
+for(var d=0; d<5; d++){
+  slides.push({ type:"id", n:d+1, data:IDS[d] });
+}
+
+/* 16 — REFERENCE TABLE (basis for the Guess the Output items) */
+slides.push({ type:"reftable" });
+
+/* 17-25 — GUESS THE OUTPUT (10 questions across 9 slides, last slide holds 2) */
+for(var g=0; g<8; g++){
+  slides.push({ type:"gto", items:[ {n:g+1, data:GTO[g]} ] });
+}
+slides.push({ type:"gto", items:[ {n:9, data:GTO[8]}, {n:10, data:GTO[9]} ] });
+
+/* 26 — RECAP */
+slides.push({ type:"recap" });
+
+/* 27 — ANSWER KEY */
+slides.push({ type:"answerkey" });
+
+/* 28 — CLOSING */
+slides.push({ type:"closing" });
+
+/* ============================= RENDERERS ============================= */
+function renderWelcome(){
+  return '<div class="slide-inner"><div class="hero">'+
+    '<div class="hero-badge">SUMMATIVE ASSESSMENT · 25 ITEMS</div>'+
+    '<h1 class="hero-title">MySQL, WAMP &amp; PHP<br/><span style="color:var(--accent)">Database Management</span></h1>'+
+    '<p class="hero-sub">A review-and-test set covering everything from local environment setup through DDL, DML, DCL, JOINs, CRUD in PHP, and backup &amp; recovery. Answer each item on paper or in your head — the full answer key is waiting on the second-to-last slide.</p>'+
+    '<div class="cover-grid">'+
+      '<div class="cover-card"><div class="n">10</div><div class="l">Multiple Choice</div></div>'+
+      '<div class="cover-card"><div class="n">5</div><div class="l">Identification</div></div>'+
+      '<div class="cover-card"><div class="n">10</div><div class="l">Guess the Output</div></div>'+
+      '<div class="cover-card"><div class="n">'+slides.length+'</div><div class="l">Total Slides</div></div>'+
+    '</div>'+
+    '<div class="format-row">'+
+      '<div class="format-card"><div class="num">01</div><div class="lbl">Multiple Choice</div><div class="desc">Pick the single best answer from four options — no answers shown until the key.</div></div>'+
+      '<div class="format-card"><div class="num">02</div><div class="lbl">Identification</div><div class="desc">Fill in the missing keyword or command based on its definition.</div></div>'+
+      '<div class="format-card"><div class="num">03</div><div class="lbl">Guess the Output</div><div class="desc">Read a SQL or PHP snippet — with a reference table provided — and predict exactly what it does.</div></div>'+
+    '</div>'+
+    '<div class="tip">Covers: WAMP setup · SQL terminal basics · DDL (CREATE/ALTER/DROP) · DML (INSERT/UPDATE/DELETE) · JOINs · DCL (GRANT/REVOKE/DENY) · CRUD in PHP · Backup &amp; Recovery.</div>'+
+  '</div></div>';
+}
+
+function miniRefTable(){
+  var head = '<tr>'+CUST_TABLE.headers.map(function(h){return '<th>'+h+'</th>';}).join('')+'</tr>';
+  var body = CUST_TABLE.rows.map(function(r){
+    return '<tr>'+r.map(function(c){return '<td>'+c+'</td>';}).join('')+'</tr>';
+  }).join('');
+  return '<div class="mini-ref"><div class="mini-ref-label">CUST — reference table</div>'+
+    '<table class="ref-table small"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>';
+}
+
+function renderGto(items){
+  var cards = items.map(function(it){
+    return '<div class="gto-card">'+
+      '<div class="qhead"><span class="qnum">GTO '+it.n+' / 10</span></div>'+
+      (it.data.ref ? miniRefTable() : '')+
+      codeBlock(it.data.q, it.data.lang)+
+      '<div class="ask">'+escapeHtml(it.data.ask)+'</div>'+
+    '</div>';
+  }).join('');
+  return '<div class="slide-inner"><div class="eyebrow">Activity · Guess the Output</div>'+
+    '<h1 class="title">What Will This <span class="accent">Actually</span> Do?</h1>'+
+    '<div class="gto-grid" style="grid-template-columns:repeat('+items.length+',minmax(0,1fr));">'+cards+'</div>'+
+  '</div>';
+}
+
+function renderRefTable(){
+  var head = '<tr>'+CUST_TABLE.headers.map(function(h){return '<th>'+h+'</th>';}).join('')+'</tr>';
+  var body = CUST_TABLE.rows.map(function(r){
+    return '<tr>'+r.map(function(c){return '<td>'+c+'</td>';}).join('')+'</tr>';
+  }).join('');
+  return '<div class="slide-inner"><div class="eyebrow">Reference · Lending Company</div>'+
+    '<h1 class="title">The <span class="accent2">CUST</span> Table</h1>'+
+    '<p style="max-width:760px;">The next four "Guess the Output" questions all run against this table. CustID is the primary key. Keep this table in mind (it repeats on each relevant slide) as you work through the queries.</p>'+
+    '<table class="ref-table"><thead>'+head+'</thead><tbody>'+body+'</tbody></table>'+
+    '<div class="tip">"—" means an empty string was stored (not the same as NULL). Notice CustID 167 has a NULL Balance.</div>'+
+  '</div>';
+}
+
+function renderId(n, data){
+  return '<div class="slide-inner"><div class="eyebrow">Activity · Identification</div>'+
+    '<h1 class="title">Name the <span class="accent2">Term</span> or Command</h1>'+
+    '<div class="idlist"><div class="id-row"><div class="qnum" style="text-align:center;">ID '+n+'</div>'+
+    '<div class="qtext">'+data.text+'</div></div></div>'+
+    '<div class="ask" style="margin-top:22px;">Write the exact keyword or function name that completes the statement.</div>'+
+  '</div>';
+}
+
+function renderMc(n, data){
+  var letters = ["A","B","C","D"];
+  var opts = data.opts.map(function(o,idx){
+    return '<div class="mc-opt"><span class="mc-letter">'+letters[idx]+'</span><span class="opt-text">'+escapeHtml(o)+'</span></div>';
+  }).join('');
+  return '<div class="slide-inner"><div class="eyebrow">Activity · Multiple Choice</div>'+
+    '<h1 class="title">Choose the Best Answer</h1>'+
+    '<div class="mc-card"><div class="qhead"><span class="qnum">MC '+n+' / 10</span></div>'+
+    '<div class="qtext" style="font-size:18px;">'+escapeHtml(data.q)+'</div>'+
+    '<div class="mc-options">'+opts+'</div></div>'+
+  '</div>';
+}
+
+function renderRecap(){
+  return '<div class="slide-inner"><div class="eyebrow">Before You Check Your Work</div>'+
+    '<h1 class="title">Quick <span class="accent">Recap</span></h1>'+
+    '<div class="recap-grid">'+
+      '<div class="recap-card"><h3>Structure vs. Data vs. Access</h3><ul>'+
+        '<li><b>DDL</b> (CREATE, ALTER, DROP, TRUNCATE) shapes the containers.</li>'+
+        '<li><b>DML</b> (INSERT, UPDATE, DELETE) fills, changes, and empties them.</li>'+
+        '<li><b>DCL</b> (GRANT, REVOKE, DENY) controls who is allowed to touch them.</li>'+
+      '</ul></div>'+
+      '<div class="recap-card"><h3>The WHERE Clause is Not Optional</h3><ul>'+
+        '<li>UPDATE and DELETE without WHERE affect <b>every</b> row in the table.</li>'+
+        '<li>DENY always overrides a GRANT for the same privilege.</li>'+
+        '<li>TRUNCATE empties a table but keeps its structure; DROP removes both.</li>'+
+      '</ul></div>'+
+      '<div class="recap-card"><h3>PHP + MySQL (mysqli)</h3><ul>'+
+        '<li><code class="inline">mysqli_connect()</code> opens the connection.</li>'+
+        '<li><code class="inline">mysqli_query()</code> runs the SQL; <code class="inline">mysqli_fetch_assoc()</code> reads rows back.</li>'+
+        '<li><code class="inline">mysqli_affected_rows()</code> confirms whether a change actually happened.</li>'+
+      '</ul></div>'+
+      '<div class="recap-card"><h3>Joining &amp; Protecting Data</h3><ul>'+
+        '<li>INNER JOIN returns only rows that match in both tables.</li>'+
+        '<li>Foreign keys keep child rows (like ORDERS) tied to a valid parent.</li>'+
+        '<li><code class="inline">mysqldump</code> from the terminal is the fastest way to back up a database.</li>'+
+      '</ul></div>'+
+    '</div>'+
+  '</div>';
+}
+
+function renderAnswerKey(){
+  var gtoAns = [
+    "Only the Christof Tiu row (Branch = 'Dagupan') — 'Dagupan' contains \"up\"; 'Lingayen' does not.",
+    "CustID 142's Branch changes to 'Dagupan City'; MySQL reports 1 row affected.",
+    "The row with Branch = 'Anda' is deleted ('A...a' matches the pattern 'A%A').",
+    "Only Rose Martinez (156, 5643.00) — 8221 and 13078.56 fall outside the range; NULL never matches BETWEEN.",
+    "\"Connection failed: \" plus the MySQL error text — die() stops the script, so \"Connected!\" never prints.",
+    "\"Error deleting record: \" followed by an empty/no-op message — the query succeeds but 0 rows are affected.",
+    "Yes to SELECT, Yes to INSERT, No to DELETE — DENY overrides any grant, even future ones.",
+    "Identical to the original table — the column was added, then removed; no net structural change.",
+    "One row: Juan | Dela Cruz | 2026-07-13 | 149.99 — the only matching customer/order pair.",
+    "SELECT returns 0 rows (empty result); the ORDERS table itself still exists, just emptied."
+  ];
+  var idAns = [
+    "DELETE","DML (Data Manipulation Language)","DENY","mysqli_connect()","FOREIGN KEY"
+  ];
+  var mcAns = ["A — Data Definition Language","C — TRUNCATE","B — WHERE","C — All services running normally",
+    "B — mysqli_fetch_assoc()","B — DENY","C — FOREIGN KEY","D — INNER JOIN","B — mysqldump","B — PDO"];
+
+  function list(arr, prefix){
+    return arr.map(function(a,i){
+      var ans = typeof a === "string" ? a : a.ans;
+      var exp = typeof a === "string" ? "" : ('<span class="ak-exp">'+a.explain+'</span>');
+      return '<div class="ak-item"><span class="ak-num">'+prefix+(i+1)+'</span><div><span class="ak-ans">'+ans+'</span>'+exp+'</div></div>';
+    }).join('');
+  }
+  var gtoList = gtoAns.map(function(a,i){
+    return '<div class="ak-item ak-full"><span class="ak-num">GTO'+(i+1)+'</span><div><span class="ak-exp">'+a+'</span></div></div>';
+  }).join('');
+
+  return '<div class="slide-inner"><div class="eyebrow">Answer Key</div>'+
+    '<h1 class="title">Check Your <span class="accent2">Answers</span></h1>'+
+    '<div class="ak-cols">'+
+      '<div class="ak-section" style="grid-column:1/-1;"><h3>Guess the Output</h3><div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px;">'+gtoList+'</div></div>'+
+      '<div class="ak-section"><h3>Identification</h3>'+list(idAns,"ID")+'</div>'+
+      '<div class="ak-section"><h3>Multiple Choice</h3>'+list(mcAns,"MC")+'</div>'+
+    '</div>'+
+  '</div>';
+}
+
+function renderClosing(){
+  return '<div class="slide-inner"><div class="closing-wrap">'+
+    '<div class="closing-emoji">🎉</div>'+
+    '<div class="closing-title">Nice work — you made it through!</div>'+
+    '<div class="closing-sub">25 items down. If a few tripped you up, go back to the answer key and re-run those queries in your own MySQL terminal — that\'s the fastest way it sticks.</div>'+
+    '<div class="closing-stats">'+
+      '<div class="closing-stat"><div class="n">25</div><div class="l">Items Reviewed</div></div>'+
+      '<div class="closing-stat"><div class="n">5</div><div class="l">Topics Covered</div></div>'+
+      '<div class="closing-stat"><div class="n">100%</div><div class="l">Effort Given</div></div>'+
+    '</div>'+
+  '</div></div>';
+}
+
+function renderSlide(slide){
+  switch(slide.type){
+    case "welcome": return renderWelcome();
+    case "reftable": return renderRefTable();
+    case "gto": return renderGto(slide.items);
+    case "id": return renderId(slide.n, slide.data);
+    case "mc": return renderMc(slide.n, slide.data);
+    case "recap": return renderRecap();
+    case "answerkey": return renderAnswerKey();
+    case "closing": return renderClosing();
+    default: return '<div class="slide-inner"></div>';
+  }
+}
+
+/* ============================= ENGINE ============================= */
+var current = 0;
+var total = slides.length;
+var panelA = document.getElementById('panelA');
+var panelB = document.getElementById('panelB');
+var activePanel = panelA, idlePanel = panelB;
+var isAnimating = false;
+
+function updateChrome(){
+  document.getElementById('counter').textContent = (current+1)+' / '+total;
+  document.getElementById('progress-fill').style.width = (((current+1)/total)*100)+'%';
+}
+
+function goTo(index, direction){
+  if(index < 0 || index >= total || index === current || isAnimating) return;
+  isAnimating = true;
+  direction = direction || (index > current ? 1 : -1);
+  idlePanel.innerHTML = renderSlide(slides[index]);
+  idlePanel.scrollTop = 0;
+  idlePanel.classList.remove('from-left','from-right');
+  idlePanel.classList.add(direction > 0 ? 'from-right' : 'from-left');
+  void idlePanel.offsetWidth;
+  activePanel.classList.remove('active');
+  idlePanel.classList.add('active');
+  var tmp = activePanel; activePanel = idlePanel; idlePanel = tmp;
+  current = index;
+  updateChrome();
+  setTimeout(function(){ isAnimating = false; }, 380);
+}
+
+function next(){ goTo(current+1, 1); }
+function prev(){ goTo(current-1, -1); }
+
+/* init */
+panelA.innerHTML = renderSlide(slides[0]);
+panelA.classList.add('active');
+updateChrome();
+
+/* click anywhere to advance (except interactive elements) */
+document.addEventListener('click', function(e){
+  if(e.button !== 0) return;
+  if(e.target.closest('button, a, input, textarea, select, .copy-btn, #shortcuts-overlay')) return;
+  next();
+});
+
+/* keyboard */
+document.addEventListener('keydown', function(e){
+  if(e.key === '?' ){
+    document.getElementById('shortcuts-overlay').classList.add('show');
+    return;
+  }
+  if(e.key === 'Escape'){
+    document.getElementById('shortcuts-overlay').classList.remove('show');
+    return;
+  }
+  if(e.key === 'ArrowRight' || e.key === ' '){ e.preventDefault(); next(); }
+  else if(e.key === 'ArrowLeft'){ e.preventDefault(); prev(); }
+  else if(e.key === 'Home'){ e.preventDefault(); goTo(0,-1); }
+  else if(e.key === 'End'){ e.preventDefault(); goTo(total-1,1); }
+});
+
+document.getElementById('shortcuts-overlay').addEventListener('click', function(e){
+  if(e.target === this) this.classList.remove('show');
+});
+
+/* mouse side buttons (back = prev, forward = next) */
+var lastSideButtonTime = 0;
+function handleSideButton(e){
+  if(e.button === 3 || e.button === 4){
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    var now = Date.now();
+    if(now - lastSideButtonTime < 250) return;
+    lastSideButtonTime = now;
+    if(e.button === 3) prev(); else next();
+    return false;
+  }
+}
+document.addEventListener('mousedown', handleSideButton, true);
+document.addEventListener('auxclick', function(e){
+  if(e.button === 3 || e.button === 4){ e.preventDefault(); e.stopImmediatePropagation(); }
+}, true);
+
+/* swipe gestures */
+var touchStartX = 0, touchStartY = 0;
+document.addEventListener('touchstart', function(e){
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, {passive:true});
+document.addEventListener('touchend', function(e){
+  var dx = e.changedTouches[0].clientX - touchStartX;
+  var dy = e.changedTouches[0].clientY - touchStartY;
+  if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)*1.5){
+    if(dx < 0) next(); else prev();
+  }
+}, {passive:true});
+
+})();
+</script>
+</body>
+</html>

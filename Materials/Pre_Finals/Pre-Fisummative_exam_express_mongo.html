@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Summative Exam: Express, Sessions &amp; MongoDB</title>
+<style>
+:root{--bg:#0b1220;--bg2:#131c31;--bg3:#1b2742;--tx:#e8eefc;--mu:#a9b8d8;--g:#4DB33D;--a:#ffb020;--r:#ff5d73;--b:#4cc9f0;--bd:#2a3860;--code:#0a0f1c}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:20px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;overflow:hidden}
+#prog{position:fixed;top:0;left:0;height:4px;width:0;background:linear-gradient(90deg,var(--g),var(--a));transition:width 350ms;z-index:50}
+#ctr{position:fixed;right:18px;bottom:10px;font-size:20px;color:var(--mu);z-index:50;font-weight:700}
+#hint{position:fixed;left:18px;bottom:10px;font-size:20px;color:var(--mu);z-index:50}
+.slide{position:absolute;inset:0;padding:24px 4vw 52px;display:flex;flex-direction:column;opacity:0;visibility:hidden;transform:translateX(var(--from,40px));transition:opacity 350ms,transform 350ms,visibility 350ms;min-width:0}
+.slide.on{opacity:1;visibility:visible;transform:none}
+@media(prefers-reduced-motion:reduce){.slide{transition:none;transform:none}}
+.eb{font-size:19px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--g);margin:0 0 4px}
+h1{font-size:clamp(32px,4.2vw,54px);line-height:1.15;margin:0 0 14px}
+.body{flex:1;min-height:0;overflow:auto;padding-bottom:6px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.grid>.card:last-child:nth-child(odd){grid-column:1/-1;justify-self:center;width:calc(50% - 8px)}
+.fill{height:100%;grid-template-rows:minmax(0,1fr)}
+.card{background:var(--bg2);border:1px solid var(--bd);border-left:4px solid var(--g);border-radius:12px;padding:14px 18px;min-width:0;min-height:0;overflow:auto}
+.card.a{border-left-color:var(--a)}.card.b{border-left-color:var(--b)}.card.r{border-left-color:var(--r)}
+.q{font-weight:700;margin:0 0 8px}.q i{font-style:normal;color:var(--a);margin-right:6px}
+.opt{display:flex;gap:10px;padding:3px 0}.opt b{color:var(--g);min-width:22px}
+.joke{color:var(--mu);font-style:italic}
+code,pre{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:20px}
+code.i{background:var(--bg3);color:var(--g);padding:1px 6px;border-radius:4px}
+.cc{display:flex;flex-direction:column;padding:0;overflow:hidden}
+.ch{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 14px;background:var(--bg3);flex-shrink:0;font-weight:700}
+.cb{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column}
+pre{margin:0;padding:10px 14px;background:var(--code);flex-shrink:0;overflow:auto;line-height:1.55}
+.cb .joke,.cb .ans{padding:6px 14px 0}
+.ans{font-weight:700;color:var(--a)}
+.cp{font:700 19px system-ui;color:var(--tx);background:var(--bg3);border:0;border-radius:10px;padding:5px 14px;cursor:pointer;box-shadow:4px 4px 8px #05080f,-3px -3px 7px #22315a;transition:box-shadow .15s}
+.cp.ok{color:var(--g);box-shadow:inset 3px 3px 6px #05080f,inset -3px -3px 6px #22315a}
+.k{color:#ff79c6}.s{color:#9be28a}.c{color:#7384ad}.n{color:#ffb86c}
+.hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:24px;align-items:center;height:100%}
+.hero svg,.fin svg{width:100%;height:clamp(180px,38vh,360px)}
+.tag{display:inline-block;border:1px solid var(--g);color:var(--g);border-radius:99px;padding:3px 14px;margin:4px 6px 4px 0;font-weight:700}
+.ak{display:flex;gap:8px;margin:0 0 8px}.ak b{color:var(--g);min-width:40px}
+.ak span{color:var(--mu)}
+#ov{position:fixed;inset:0;background:#000c;display:none;align-items:center;justify-content:center;z-index:99}
+#ov.on{display:flex}#ov div{background:var(--bg2);border:1px solid var(--bd);border-radius:14px;padding:22px 30px;max-width:92vw}
+kbd{background:var(--bg3);border:1px solid var(--bd);border-radius:6px;padding:1px 8px;font-size:19px}
+blockquote{margin:0 0 12px;font-size:1.25em;color:var(--a)}
+@media(max-width:760px){.grid,.hero{grid-template-columns:minmax(0,1fr)}.grid>.card:last-child:nth-child(odd){width:100%}.fill{height:auto}}
+</style></head><body>
+<div id="prog"></div><div id="hint">Press <kbd>?</kbd> for shortcuts</div><div id="ctr"></div>
+<div id="stage"></div>
+<div id="ov"><div><h1>Shortcuts</h1><p><kbd>→</kbd> / right-click / Mouse4: next<br><kbd>←</kbd> / Mouse3: previous<br><kbd>Home</kbd> / <kbd>End</kbd>: first / last<br><kbd>?</kbd>: toggle this panel<br>Swipe on mobile. Left-click stays free for copying.</p></div></div>
+<script>
+var esc=function(t){return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")};
+function hl(t){return esc(t).replace(/(\/\/.*)|('[^'\n]*'|"[^"\n]*")|\b(const|let|function|return|new)\b|\b(\d+)\b/g,function(m,c,s,k,n){return c?'<span class="c">'+c+'</span>':s?'<span class="s">'+s+'</span>':k?'<span class="k">'+k+'</span>':'<span class="n">'+n+'</span>'})}
+var MCQ=[
+["Express.js is best described as...",["A database that dislikes SQL","A web framework for Node.js: routing + middleware","A brand of very strong espresso","A browser extension for dark mode"],1,"It is not coffee. We checked."],
+["Which HTTP method + Express function CREATES a new record?",["app.get()","app.delete()","app.use()","app.post()"],3,"GET is for window shopping, POST is for buying."],
+["What does next() do inside middleware?",["Passes control to the next middleware or route","Restarts the server","Deletes the request","Opens the next exam page"],0,"Forget it and the request hangs forever. Like your group project."],
+["You put app.use(express.json()) AFTER your POST route. What is req.body?",["Your JSON, perfectly parsed","An empty string with feelings","undefined","The meaning of life"],2,"Order matters. Tragically."],
+["HTTP is 'stateless'. This means...",["It refuses to cross state lines","The server forgets you after each request","It only works in one country","It has no status codes"],1,"Sessions exist so the server stops acting like you are a stranger."],
+["Which route lets you read req.params.id?",["app.get('/users?id')","app.get('/users/id')","app.get('/users/{id}')","app.get('/users/:id')"],3,"The colon is a tiny but powerful dot-dot."],
+["Which method stringifies an object AND sets Content-Type: application/json?",["res.json()","res.render()","res.redirect()","res.sulk()"],0,"res.sulk() is not a real method. Yet."],
+["In MongoDB, data is stored as...",["Rows in tables","Spreadsheet cells","Documents (JSON-like)","Sticky notes"],2,"JavaScript objects feel right at home."],
+["Which Node.js driver method inserts ONE document?",["addOneMaybe()","insertOne()","push()","SET ?"],1,"SET ? is the MySQL cousin. Different family reunion."],
+["Which status code means 'Created'?",["404","500","200","201"],3,"404 means your confidence was not found."]];
+var ID=[
+["A function that sits between the incoming request and the final route handler, and can call next().","Middleware's cousin does the actual work; this one just stands in the hallway and judges."],
+["The package used in class for cookie-based login sessions.","Its name literally tells you what it is. Cheat code."],
+["The object holding query-string values, so /search?q=express gives q = 'express'.","Not params. Params are the polite dynamic URL parts."],
+["The class from the MongoDB driver used to connect Node.js to the database.","It is a client. For Mongo. Say it fast."],
+["The HTTP method (and Express function name) used to remove a record by ID.","The method nobody wants applied to their code."],
+["The HTTP method (and Express function name) used to REPLACE an entire resource.","Not PATCH, not POST. Three letters, all capitals."]];
+var G=[["function showType() {\n  console.log(typeof null);\n}\nshowType();", "JavaScript's oldest prank."], ["function double(list) {\n  return list.map(n => n * 2);\n}\nconsole.log(double([1, 2, 3]));", "Double trouble."], ["function readName(text) {\n  const user = JSON.parse(text);\n  return user.name;\n}\nconsole.log(readName('{\"name\":\"Zed\"}'));", "This is basically express.json()."], ["function reply(data) {\n  return JSON.stringify(data);\n}\nconsole.log(reply({ ok: true, n: 1 }));", "And this is basically res.json()."], ["function getBody(req) {\n  return req.body;\n}\nconsole.log(getBody({}));", "When express.json() shows up late."], ["function nextId(params) {\n  return params.id + 1;\n}\nconsole.log(nextId({ id: '42' }));", "Params arrive as strings. Always."], ["function searchUrl(q) {\n  return '/search?q=' + q;\n}\nconsole.log(searchUrl('express'));", "Query strings: the URL's baggage."], ["function runStack(stack) {\n  const req = { log: [] };\n  let i = 0;\n  function next() {\n    const fn = stack[i++];\n    if (fn) fn(req, next);\n  }\n  next();\n  return req.log.join(',');\n}\nfunction a(req, next) { req.log.push('A'); next(); }\nfunction b(req, next) { req.log.push('B'); next(); }\nfunction c(req, next) { req.log.push('C'); }\nconsole.log(runStack([a, b, c]));", "A tiny homemade Express engine. Middleware, but polite."], ["function runStack(stack) {\n  const req = { log: [] };\n  let i = 0;\n  function next() {\n    const fn = stack[i++];\n    if (fn) fn(req, next);\n  }\n  next();\n  return req.log;\n}\nfunction logger(req, next) { req.log.push('logger'); next(); }\nfunction auth(req, next) { req.log.push('auth'); }\nfunction route(req, next) { req.log.push('route'); }\nconsole.log(runStack([logger, auth, route]));", "Somebody called auth, and auth forgot next()..."], ["function demo() {\n  const session = {};\n  function login(user, pass) {\n    if (pass === 'secret') {\n      session.user = user;\n      return true;\n    }\n    return false;\n  }\n  console.log(login('Orvyn', 'wrong'));\n  console.log(login('Orvyn', 'secret'));\n  console.log(session);\n}\ndemo();", "Sessions: the server finally remembers Orvyn."], ["function calc() {\n  return 1 + '1' - 1;\n}\nconsole.log(calc());", "Math, but JavaScript is mad at you."], ["function crud() {\n  const users = [];\n  users.push({ id: 1, name: 'Quillon' });\n  users.push({ id: 2, name: 'Orvyn' });\n  users.push({ id: 3, name: 'Zed' });\n  const found = users.find(u => u.id === 2);\n  found.name = 'Orvyn II';\n  users.splice(0, 1);\n  console.log(users.length, users[0].name);\n}\ncrud();", "insert, find, update, delete: all four letters of CRUD."], ["function birthday(doc) {\n  Object.assign(doc, { age: 21 });\n  return doc;\n}\nconsole.log(birthday({ name: 'Quillon', age: 20 }));", "updateOne with a birthday."], ["function removeSecond(docs) {\n  docs.splice(1, 1);\n  return docs;\n}\nconsole.log(removeSecond(['a', 'b', 'c']));", "deleteOne, array edition."], ["function handle(url) {\n  if (url.startsWith('/users/')) {\n    return 'User ' + url.split('/')[2];\n  }\n  if (url === '/about') return 'About';\n  return 'Not Found';\n}\nconsole.log(handle('/users/7'));\nconsole.log(handle('/about'));\nconsole.log(handle('/nope'));", "A router with a tiny attitude."]];
+var GA=["object  (a famous JS bug)", "[ 2, 4, 6 ]", "Zed  (JSON.parse builds the object)", "{\"ok\":true,\"n\":1}  (a string)", "undefined  (nothing parsed it yet)", "421  (string concatenation, not math)", "/search?q=express", "A,B,C  (every middleware called next())", "[ 'logger', 'auth' ]  (auth never called next(), so route never ran)", "false, true, then { user: 'Orvyn' }  (three lines)", "10  ('1'+'1' = '11', then 11 - 1)", "2 Orvyn II  (found object was edited, then first user removed)", "{ name: 'Quillon', age: 21 }", "[ 'a', 'c' ]", "User 7, About, Not Found  (three lines)"];
+var MA=["B: framework for routing and middleware.","D: POST creates (app.post).","A: next() hands control onward.","C: undefined; the parser must come BEFORE routes.","B: stateless = no memory between requests.","D: the colon makes a dynamic segment.","A: res.json() stringifies and sets the header.","C: documents, JSON-like.","B: insertOne() from the Node driver.","D: 201 Created."];
+var IA=["Middleware","express-session","req.query","MongoClient","DELETE (app.delete)","PUT (app.put)"];
+var IE=["Runs between request and route.","Cookie-based sessions.","Query string values.","Connects Node to MongoDB.","Removes a record by ID.","Replaces a whole resource."];
+var L="ABCD",sl=[],codes=[];
+function S(eb,t,b,x){sl.push('<section class="slide'+(x||'')+'"><p class="eb">'+eb+'</p><h1>'+t+'</h1><div class="body">'+b+'</div></section>')}
+var hero='<svg viewBox="0 0 400 300" role="img"><title>Exam paper with a leaf, a server and a sweating graduation cap</title><rect x="70" y="40" width="190" height="230" rx="10" fill="#131c31" stroke="#4DB33D" stroke-width="4"/><path d="M95 90h130M95 120h100M95 150h120M95 180h80" stroke="#a9b8d8" stroke-width="6" stroke-linecap="round"/><circle cx="220" cy="220" r="26" fill="none" stroke="#ff5d73" stroke-width="5"/><path d="M208 220l9 9 16-18" stroke="#ff5d73" stroke-width="5" fill="none"/><path d="M300 70c-40 20-50 80-10 120 30-30 40-90 10-120z" fill="#4DB33D"/><path d="M300 90v120" stroke="#0b1220" stroke-width="4"/><path d="M285 20l60 22-60 22-60-22z" fill="#ffb020"/><path d="M310 270c10-14 20-4 10 10-6 8-18 0-10-10z" fill="#4cc9f0"/></svg>';
+S("Summative exam · M15 to M23","Express, Sessions &amp; MongoDB: The Final Boss",'<div class="hero"><div><p>31 questions. 0 mercy. Maybe 1 snack break.</p><span class="tag">Express.js</span><span class="tag">Middleware</span><span class="tag">Sessions</span><span class="tag">MongoDB</span><p class="joke">Bring a pen, a brain, and a stable internet connection to your emotions.</p></div>'+hero+'</div>');
+S("Before you panic","Exam Rules (2x2 edition)",'<div class="grid"><div class="card"><p class="q">Part I · 10 MCQ</p>Pick A, B, C or D. Do not pick E. There is no E.</div><div class="card a"><p class="q">Part II · 6 Identification</p>Write the term. Spelling counts, vibes do not.</div><div class="card b"><p class="q">Part III · 15 Guess the Output</p>What does the code print? The computer is not lying; you might be.</div><div class="card r"><p class="q">Golden rule</p>Answer key is at the end. Peeking early is how bugs are born.</div></div>');
+S("Quick recap","Last Look Before the Storm",'<div class="grid"><div class="card"><p class="q">Express</p>Routes: <code class="i">app.get/post/put/delete</code>. Read data with <code class="i">req.params</code>, <code class="i">req.query</code>, <code class="i">req.body</code>.</div><div class="card a"><p class="q">REST + JSON</p><code class="i">express.json()</code> parses incoming bodies. <code class="i">res.json()</code> stringifies outgoing ones. 201 = Created.</div><div class="card b"><p class="q">Middleware &amp; sessions</p>Middleware runs in order and must call <code class="i">next()</code>. <code class="i">express-session</code> fixes stateless HTTP.</div><div class="card r"><p class="q">MongoDB</p>Documents, <code class="i">MongoClient</code>, <code class="i">insertOne()</code>, <code class="i">find()</code>, <code class="i">updateOne()</code>, <code class="i">deleteOne()</code>.</div></div>');
+function mq(i){var q=MCQ[i];return '<div class="card"><p class="q"><i>'+(i+1)+'.</i>'+q[0]+'</p>'+q[1].map(function(o,j){return '<div class="opt"><b>'+L[j]+'.</b><span>'+o+'</span></div>'}).join('')+'<p class="joke">'+q[3]+'</p></div>'}
+[[0,4],[4,8],[8,10]].forEach(function(r,p){var h='';for(var i=r[0];i<r[1];i++)h+=mq(i);S("Part I · Multiple choice ("+(p+1)+"/3)","Pick the Least Wrong Answer",'<div class="grid">'+h+'</div>')});
+function iq(i){return '<div class="card a"><p class="q"><i>'+(i+11)+'.</i>'+ID[i][0]+'</p><p class="joke">'+ID[i][1]+'</p><p class="ans">Answer: ____________</p></div>'}
+S("Part II · Identification (1/2)","Name That Concept",'<div class="grid">'+[0,1,2,3].map(iq).join('')+'</div>');
+S("Part II · Identification (2/2)","Name That Concept: Finale",'<div class="grid">'+[4,5].map(iq).join('')+'</div>');
+function gq(i){codes.push(G[i][0]);return '<div class="card cc b"><div class="ch"><span>Q'+(i+16)+'. What prints?</span><button class="cp" data-i="'+(codes.length-1)+'">Copy</button></div><div class="cb"><pre>'+hl(G[i][0])+'</pre><div class="joke">'+G[i][1]+'</div><div class="ans">Output: ____________</div></div></div>'}
+[[0,2],[2,4],[4,6],[6,8],[8,10],[10,12],[12,14],[14,15]].forEach(function(r,p){var h='';for(var i=r[0];i<r[1];i++)h+=gq(i);S("Part III · Guess the output ("+(p+1)+"/8)","Run It In Your Head",'<div class="grid fill">'+h+'</div>')});
+function ak(k,v,e){return '<div class="ak"><b>'+k+'</b><div>'+v+(e?'<br><span>'+e+'</span>':'')+'</div></div>'}
+S("Answer key · Part I","MCQ Answers (No Crying)",'<div class="grid"><div>'+MA.slice(0,5).map(function(a,i){return ak(i+1+'.',a)}).join('')+'</div><div>'+MA.slice(5).map(function(a,i){return ak(i+6+'.',a)}).join('')+'</div></div>');
+var A2=IA.map(function(a,i){return ak(i+11+'.',a,IE[i])}).concat(GA.slice(0,4).map(function(a,i){return ak(i+17+'.',a)}));
+S("Answer key · Part II &amp; III","Identification + Outputs 17 to 20",'<div class="grid"><div>'+A2.slice(0,5).join('')+'</div><div>'+A2.slice(5).join('')+'</div></div>');
+var A3=GA.slice(4).map(function(a,i){return ak(i+21+'.',a)});
+S("Answer key · Part III","Outputs 21 to 31",'<div class="grid"><div>'+A3.slice(0,6).join('')+'</div><div>'+A3.slice(6).join('')+'</div></div>');
+S("Exam complete","You Survived. Probably.",'<div class="fin hero"><div><blockquote>&ldquo;Debugging is like being the detective in a crime movie where you are also the murderer.&rdquo;</blockquote><p>Go touch grass, then touch <code class="i">npm install</code>. Thanks for taking the exam, and may your next() always be called.</p></div><svg viewBox="0 0 400 260" role="img"><title>Celebration with confetti and a gold star</title><path d="M200 30l30 62 68 10-49 48 12 68-61-32-61 32 12-68-49-48 68-10z" fill="#ffb020"/><circle cx="60" cy="50" r="8" fill="#4DB33D"/><circle cx="340" cy="60" r="8" fill="#ff5d73"/><rect x="40" y="190" width="14" height="14" fill="#4cc9f0" transform="rotate(20 47 197)"/><rect x="340" y="190" width="14" height="14" fill="#4DB33D" transform="rotate(-25 347 197)"/><circle cx="110" cy="130" r="6" fill="#ffb020"/><circle cx="300" cy="140" r="6" fill="#4cc9f0"/></svg></div>',' fin');
+var st=document.getElementById("stage");st.innerHTML=sl.join("");
+var els=st.children,N=els.length,cur=0;
+function show(n,d){if(n<0||n>=N||n===cur&&els[n].classList.contains("on"))return;var o=els[cur],w=els[n];d=d||(n>cur?1:-1);
+o.style.setProperty("--from",d>0?"-40px":"40px");w.style.transition="none";w.style.setProperty("--from",d>0?"40px":"-40px");void w.offsetWidth;w.style.transition="";
+o.classList.remove("on");w.classList.add("on");cur=n;ui()}
+function ui(){document.getElementById("prog").style.width=((cur+1)/N*100)+"%";document.getElementById("ctr").textContent=(cur+1)+" / "+N}
+function nx(){show(Math.min(cur+1,N-1),1)}function pv(){show(Math.max(cur-1,0),-1)}
+els[0].classList.add("on");ui();
+document.addEventListener("keydown",function(e){var k=e.key;if(k==="ArrowRight")nx();else if(k==="ArrowLeft")pv();else if(k==="Home")show(0,-1);else if(k==="End")show(N-1,1);else if(k==="?")document.getElementById("ov").classList.toggle("on");else if(k==="Escape")document.getElementById("ov").classList.remove("on")});
+document.addEventListener("mousedown",function(e){if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation();e.button===3?nx():pv()}},true);
+["mouseup","auxclick"].forEach(function(t){document.addEventListener(t,function(e){if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation()}},true)});
+document.addEventListener("contextmenu",function(e){e.preventDefault();nx()});
+history.pushState(null,"",location.href);window.addEventListener("popstate",function(){history.pushState(null,"",location.href)});
+var tx=0;document.addEventListener("touchstart",function(e){tx=e.touches[0].clientX},{passive:true});
+document.addEventListener("touchend",function(e){var d=e.changedTouches[0].clientX-tx;if(Math.abs(d)>50)d<0?nx():pv()},{passive:true});
+document.addEventListener("click",function(e){var b=e.target.closest(".cp");if(!b)return;var t=codes[+b.dataset.i];
+var done=function(){b.textContent="Copied!";b.classList.add("ok");setTimeout(function(){b.textContent="Copy";b.classList.remove("ok")},1400)};
+if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(done,done);else{var a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();try{document.execCommand("copy")}catch(x){}a.remove();done()}});
+</script></body></html>
