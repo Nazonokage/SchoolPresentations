@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>M4 Risk Identification and Risk Assessment</title>
+<style>
+/* ===== THEME TOKENS: replace these per deck (see references/design-rules.md) ===== */
+:root{
+  color-scheme:light dark;
+  --bg:#f6f5f2; --panel:#ffffff; --panel2:#ecebe6; --tx:#1b1b1f; --mu:#5a5a63;
+  --accent:#2f5fd0; --accent-hover:#234aa6;
+  --ok:#1f7a3d; --bad:#b3261e; --warn:#8a5a00; --line:#c9c7bf;
+  --code-bg:#15151a; --code-tx:#e8e8ee; --code-bar:#23232b;
+  --k:#d8b4fe; --s:#86efac; --n:#fdba74; --f:#7dd3fc; --c:#8b8ba0;
+  --font-display:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+  --font-body:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,Consolas,Menlo,monospace;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#101114; --panel:#1a1c21; --panel2:#23262d; --tx:#eceef2; --mu:#a9aebb;
+    --accent:#7aa2ff; --accent-hover:#5c86ec;
+    --ok:#5fd48a; --bad:#ff8c84; --warn:#f0c15a; --line:#343842;
+  }
+}
+/* ===== BASE (usually unchanged) ===== */
+*{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg)}
+@supports not (scrollbar-color:auto){
+  ::-webkit-scrollbar{width:14px;height:14px}
+  ::-webkit-scrollbar-track{background:var(--bg);border:2px solid var(--line)}
+  ::-webkit-scrollbar-thumb{background:var(--accent);border:3px solid var(--bg);border-radius:8px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--accent-hover)}
+  ::-webkit-scrollbar-corner{background:var(--bg)}
+}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:18px/1.6 var(--font-body);overflow:hidden}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#bar{position:fixed;top:0;left:0;height:4px;width:0;background:var(--accent);z-index:9;transition:width 350ms var(--ease)}
+#ctr{position:fixed;right:18px;bottom:12px;font-size:16px;color:var(--mu);z-index:9}
+.s{position:absolute;inset:0;padding:36px 7vw 52px;overflow:auto;opacity:0;visibility:hidden;transform:translateX(36px);
+  transition:opacity 350ms var(--ease),transform 350ms var(--ease),visibility 0s linear 350ms;scrollbar-gutter:stable}
+.s.on{opacity:1;visibility:visible;transform:none;transition-delay:0s}
+.s.prev{transform:translateX(-36px)}
+@media (prefers-reduced-motion:reduce){.s,.s.prev{transform:none}#bar{transition:none}.spin{animation:none!important}}
+.eb{font-size:17px;font-weight:600;color:var(--accent);margin:0 0 2px}
+h1,h2{font-family:var(--font-display);margin:.1em 0 .5em;line-height:1.15}
+h1{font-size:clamp(34px,5vw,54px)}h2{font-size:clamp(28px,3.4vw,40px)}
+h3{margin:0 0 .3em;font-size:20px;font-family:var(--font-display)}
+p{margin:.3em 0}ul,ol{margin:.3em 0;padding-left:1.2em}li{margin:.25em 0}
+.g2,.g3{display:grid;gap:18px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g2>*,.g3>*{min-width:0}.mt{margin-top:18px}
+@media (max-width:800px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.c{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 18px;min-width:0}
+.c.pend{border-color:var(--warn)}
+code,.k{font-family:var(--font-mono);font-size:16px;background:var(--panel2);padding:1px 6px;border-radius:5px}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}.mu{color:var(--mu)}
+table{border-collapse:collapse;width:100%}td,th{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}th{background:var(--panel2)}
+.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:24px;align-items:center;min-height:68vh}
+@media (max-width:800px){.hero{grid-template-columns:minmax(0,1fr)}}
+.opts{display:block;color:var(--mu)}
+.q2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 20px}
+.q2>.c:last-child:nth-child(odd){grid-column:1/-1;justify-self:center;width:calc(50% - 10px)}
+@media (max-width:800px){.q2{grid-template-columns:minmax(0,1fr)}.q2>.c:last-child:nth-child(odd){width:auto}}
+/* SVG: author viewBox ~480 wide, font-size >=17; use these classes so diagrams follow the theme */
+svg{display:block;margin:auto;width:100%;height:auto;max-height:clamp(220px,40vh,340px)}
+.sv-box{fill:var(--panel);stroke:var(--line);stroke-width:2}.sv-hl{fill:var(--panel2);stroke:var(--accent);stroke-width:2}
+.sv-ok{fill:var(--panel);stroke:var(--ok);stroke-width:2}.sv-bad{fill:var(--panel);stroke:var(--bad);stroke-width:2}
+.sv-tx{fill:var(--tx);font-size:17px}.sv-mu{fill:var(--mu);font-size:17px}.sv-line{stroke:var(--accent);stroke-width:2;fill:none}
+.svwrap{overflow-x:auto;max-width:100%;scrollbar-gutter:stable}
+/* Buttons: tactile press */
+.btn{font:600 16px var(--font-body);color:var(--tx);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 14px;
+  cursor:pointer;box-shadow:0 4px 0 var(--line);transform:translateY(0);transition:transform 120ms var(--ease),box-shadow 120ms var(--ease)}
+.btn:active{transform:translateY(4px);box-shadow:0 0 0 var(--line)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}.btn.done{color:var(--ok);transform:translateY(4px);box-shadow:inset 0 3px 6px var(--line)}
+@media (hover:hover) and (pointer:fine){.btn:not([disabled]):hover{border-color:var(--accent)}}
+/* Code cards: <div class="code" data-lang="js|ts|tsx|py|sh|json|none" data-name="file"><pre>escaped code</pre></div> */
+.code{display:flex;flex-direction:column;background:var(--code-bg);color:var(--code-tx);border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:0}
+.code header{flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 14px;background:var(--code-bar);font-size:16px;color:#c9c9d6}
+.code pre{flex:1;overflow:auto;min-height:0;margin:0;padding:14px;font:16px/1.55 var(--font-mono);scrollbar-gutter:stable}
+.code .btn{color:#1b1b1f;background:#ecebe6;border-color:#8b8ba0;box-shadow:0 4px 0 #8b8ba0}
+.tk{color:var(--k)}.ts{color:var(--s)}.tn{color:var(--n)}.tf{color:var(--f)}.tc{color:var(--c)}
+.row{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:18px;height:min(540px,62vh);align-items:stretch}
+.row>*{height:100%;min-height:0;overflow:auto}.row>.code{overflow:hidden}
+@media (max-width:800px){.row{grid-template-columns:minmax(0,1fr);height:auto}.row>*{height:auto}}
+/* Predict-then-trace stepper (optional demo): <div class="stepper"><ol><li>…</li></ol></div> */
+.stepper li{color:var(--mu)}.stepper li.on{color:var(--tx);font-weight:600}.stepper-bar{display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap}
+#help{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;z-index:20}
+#help.on{display:grid}#help div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px 30px;max-width:min(520px,90vw)}
+/* ===== DECK-SPECIFIC CSS ===== */
+:root{--bg:#f4f3ee;--panel:#fff;--panel2:#e7efed;--tx:#1a1f1e;--mu:#505a58;--accent:#0b6b63;--accent-hover:#08504a;--line:#c5ccc8}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1413;--panel:#161d1c;--panel2:#1f2a28;--tx:#e8eeec;--mu:#a3b0ad;--accent:#4fd1c2;--accent-hover:#7be0d4;--line:#31403d}}
+table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--accent)}
+.lst{margin:6px 0 0;padding-left:1.2em}.lst li{margin:4px 0}.big{font-size:20px}
+.btn.sel{outline:3px solid var(--accent)}
+
+</style>
+</head>
+<body>
+<div id="bar"></div><div id="ctr" aria-live="off"></div>
+<div id="help" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"><div><h3>Shortcuts</h3>
+<p>→ · Space · PageDown · Right-click · Mouse5: next<br>← · PageUp · Mouse4: previous<br>Home / End: first / last<br>Ctrl + / − / 0 or Ctrl + scroll: text size<br>?: this panel · Esc: close · Swipe on touch screens</p></div></div>
+<section class="s"><div class="hero"><div><div class="eb">Information Assurance and Security 1 · Module 4</div><h2 style="font-size:40px">Risk identification and risk assessment</h2><p class="big">Find what can damage an asset, then measure how likely and how severe it is.</p></div><svg viewBox="0 0 480 260" role="img"><title>A threat exploits a vulnerability and causes a risk</title><rect class="sv-box" x="120" y="10" width="240" height="60" rx="8"/><text class="sv-tx" x="240.0" y="36.0" text-anchor="middle">Threat</text><text class="sv-mu" x="240.0" y="60.0" text-anchor="middle">entity or event</text><rect class="sv-box" x="120" y="100" width="240" height="60" rx="8"/><text class="sv-tx" x="240.0" y="126.0" text-anchor="middle">Vulnerability</text><text class="sv-mu" x="240.0" y="150.0" text-anchor="middle">weakness in security</text><rect class="sv-hl" x="120" y="190" width="240" height="60" rx="8"/><text class="sv-tx" x="240.0" y="216.0" text-anchor="middle">Risk</text><text class="sv-mu" x="240.0" y="240.0" text-anchor="middle">potential loss</text><path class="sv-line" d="M240 70v28M240 160v28"/></svg></div></section>
+<section class="s"><div class="eb">Preview and review</div><h2>Risk or threat?</h2><div class="g2 mt"><div class="c"><b>Risk</b><div>The potential loss, damage or destruction of assets, caused by a successful threat.</div></div><div class="c"><b>Threat</b><div>The entity or event that deals with the potential loss, damage or destruction of assets, usually by exploiting a vulnerability or weakness in security.</div></div></div><div class="g2 mt"><div class="c"><b>Super typhoon</b><div>A <b>threat</b>: the external event causing potential damage.</div></div><div class="c"><b>Damage to the computer lab</b><div>A <b>risk</b>: the potential outcome or loss resulting from the typhoon.</div></div></div><p class="mu mt">Pro tip: the lines blur in casual talk. Professionally, a threat exploits a vulnerability to create a risk.</p></section>
+<section class="s"><div class="eb">Two approaches</div><h2>How we secure assets in IAS</h2><div class="g2 mt"><div class="c"><b>1. Risk identification and risk assessment</b><div>Focus on the potential negative outcomes first, then identify what could cause them. <b>This module.</b></div></div><div class="c"><b>2. Threat identification and risk assessment</b><div>Focus on the threats first, then assess the risks associated with them.</div></div></div><p class="big mt"><b>Risk identification</b> is the process of finding out what can damage an organization.</p></section>
+<section class="s"><div class="eb">Risk identification</div><h2>What can happen to a lab computer?</h2><div class="g2"><svg viewBox="0 0 480 280" role="img"><title>A computer lab asset with five risks around it</title><rect class="sv-hl" x="150" y="110" width="180" height="60" rx="8"/><text class="sv-tx" x="240.0" y="146.0" text-anchor="middle">Lab computer</text><rect class="sv-box" x="10" y="10" width="200" height="50" rx="8"/><text class="sv-tx" x="110.0" y="41.0" text-anchor="middle">Hacked</text><rect class="sv-box" x="270" y="10" width="200" height="50" rx="8"/><text class="sv-tx" x="370.0" y="41.0" text-anchor="middle">Destroyed</text><rect class="sv-box" x="10" y="220" width="200" height="50" rx="8"/><text class="sv-tx" x="110.0" y="251.0" text-anchor="middle">Virus infected</text><rect class="sv-box" x="270" y="220" width="200" height="50" rx="8"/><text class="sv-tx" x="370.0" y="251.0" text-anchor="middle">Wet</text><text class="sv-tx" x="240" y="205" text-anchor="middle">Burning</text></svg><div class="c"><b>Possible risks to this asset</b><div><ul class="lst"><li>Being hacked (cyber risk)</li><li>Physically destroyed (physical risk)</li><li>Virus infected (malware risk)</li><li>Getting wet (environmental risk)</li><li>Burning (environmental/fire risk)</li></ul></div></div></div></section>
+<section class="s"><div class="eb">Risk measurement</div><h2>Two factors to prioritize a response</h2><div class="g2 mt"><div class="c"><b>Likelihood</b><div>How probable is it that the risk will occur?</div></div><div class="c"><b>Severity (impact)</b><div>How much damage will it cause if it happens?</div></div></div><p class="mu mt">Risk measurement is another term for assessing severity and likelihood. This module works best as a hands-on activity session.</p></section>
+<section class="s"><div class="eb">Try it</div><h2>Score a risk (likelihood × severity)</h2><div class="g2 mt"><div class="c"><b>Likelihood (1 = very low, 5 = very high)</b><div id="L" style="display:flex;gap:10px;flex-wrap:wrap;margin:8px 0"></div><b>Severity (1 = very low, 5 = very high)</b><div id="V" style="display:flex;gap:10px;flex-wrap:wrap;margin:8px 0"></div><button class="btn" id="rs" type="button" disabled>Reset</button></div><div class="c"><b>Result</b><p class="big" id="out" aria-live="polite">Pick a likelihood and a severity.</p><p class="mu">Example from the project: data breach via SQL injection, likelihood 4, severity 5, score 20.</p></div></div>
+<script>(function(){var l=0,v=0,L=document.getElementById('L'),V=document.getElementById('V'),o=document.getElementById('out'),rs=document.getElementById('rs');
+function mk(box,set){for(var n=1;n<=5;n++)(function(n){var b=document.createElement('button');b.className='btn';b.type='button';b.textContent=n;b.setAttribute('aria-label','Level '+n);b.onclick=function(){set(n);[].forEach.call(box.children,function(c){c.classList.toggle('sel',c===b)});up()};box.appendChild(b)})(n)}
+function up(){rs.disabled=!(l||v);if(l&&v){o.className='ok big';o.textContent='Risk score = '+l+' × '+v+' = '+l*v}else{o.className='big';o.textContent='Pick a likelihood and a severity.'}}
+mk(L,function(n){l=n});mk(V,function(n){v=n});
+rs.onclick=function(){l=v=0;[].forEach.call(document.querySelectorAll('#L .sel,#V .sel'),function(c){c.classList.remove('sel')});up()}})();</script></section>
+<section class="s"><div class="eb">Analogy</div><h2>The umbrella</h2><div class="g2 mt"><div class="c"><b>Threat</b><div>Dark clouds and thunder: the external event.</div></div><div class="c"><b>Vulnerability</b><div>You have no umbrella: the weakness.</div></div><div class="c"><b>Risk</b><div>You get soaked and ruin your laptop: the potential loss.</div></div><div class="c"><b>Risk measurement</b><div>A 90% chance of rain (likelihood) and an expensive laptop (severity) make the risk very high, so you stay inside.</div></div></div></section>
+<section class="s"><div class="eb">Use case</div><h2>E-commerce store</h2><div class="g2 mt"><div class="c"><b>Risk identification</b><div>The customer database could be breached, taken offline by a DDoS attack, or accidentally deleted.</div></div><div class="c"><b>Risk measurement</b><div>Likelihood of a breach: High, due to recent phishing attempts. Severity: Critical, because it would cost millions in fines and lose customer trust. This justifies spending on better firewalls and backups.</div></div></div></section>
+<section class="s"><div class="eb">Course project</div><h2>Risk assessment matrix</h2><div class="g2 mt"><div class="c"><b>Guidelines</b><div><ul class="lst"><li>Group of 3–5 members</li><li>Use your Module 2 organization</li><li>Identify at least 5 risks for its assets</li><li>Scale likelihood and severity from 1 to 5</li><li>Risk score = likelihood × severity</li><li>Sample title: Risk Assessment Matrix for a University Student Portal</li><li>Mandatory: the analytical backbone of your final defense</li></ul></div></div><div class="c"><b>Deliverable</b><div><ol class="lst"><li>Create a table: Asset, Risk, Likelihood (1-5), Severity (1-5), Risk Score, Priority.</li><li>Populate it. Example: Student Portal Database, SQL injection breach, likelihood 4, severity 5, score 20.</li><li>Rank the risks from highest to lowest.</li><li>For your top 2 risks, write a short mitigation paragraph (for example, parameterized queries and Web Application Firewalls).</li></ol></div></div></div></section>
+<section class="s"><div class="eb">Course project</div><h2>Example entry as JSON</h2><div class="code" data-lang="json" data-name="risk-entry.json"><pre>{
+  "asset": "Customer Database",
+  "risk": "Unauthorized Access",
+  "likelihood": 4,
+  "severity": 5,
+  "risk_score": 20,
+  "priority": "High",
+  "recommendation": "Implement Multi-Factor Authentication (MFA) and role-based access control."
+}</pre></div></section>
+<section class="s"><div class="eb">Questions answered</div><h2>Frequently asked</h2><div class="g2 mt"><div class="c"><b>Can likelihood and severity change?</b><div>Yes. A risk can even disappear, for example when vulnerable software is retired or patched. New threats can make a low risk suddenly severe.</div></div><div class="c"><b>Which risks come first?</b><div>The highest combination of likelihood and severity.</div></div><div class="c"><b>Risk assessment vs threat assessment?</b><div>Risk assessment focuses on potential outcomes and vulnerabilities; threat assessment on the actors or events that might exploit them. Both are valid.</div></div><div class="c"><b>Low likelihood and low severity?</b><div>Do not ignore it. You might accept it: the cost of mitigating outweighs the damage. Document it and monitor it.</div></div></div></section>
+<section class="s"><div class="eb">Key quotes</div><h2>Definitions worth remembering</h2><div class="g2 mt"><div class="c"><b>Risk</b><div>The potential loss, damage or destruction of assets.</div></div><div class="c"><b>Risk identification</b><div>The process of finding out what can damage an organization.</div></div><div class="c"><b>Risk measurement</b><div>The risk assessment of severity and likelihood.</div></div><div class="c"><b>Threat</b><div>The entity or event that exploits a vulnerability to cause harm.</div></div></div></section>
+<section class="s"><div class="eb">Recap</div><h2>Key takeaways</h2><ul class="lst big"><li>Risk is the potential for loss; a threat exploits a vulnerability to cause it.</li><li>Risk identification discovers what could go wrong with assets.</li><li>Risk measurement evaluates likelihood and severity.</li><li>Risks are dynamic: likelihood and severity change as the environment, technology and threats evolve.</li></ul></section>
+<section class="s"><div class="eb">Activity 1</div><h2>Identification</h2><div class="g2 mt"><ol class="lst"><li>_____ refers to the potential loss, damage or destruction of assets.</li><li>_____ is the process of finding out what can damage an organization’s assets.</li><li>_____ is the term used for the risk assessment of severity and likelihood.</li></ol><ol class="lst" start="4"><li>A _____ is the entity or event that exploits a vulnerability to cause harm.</li><li>_____ evaluates how probable it is that a risk will occur, while _____ evaluates how much damage it will cause.</li></ol></div></section>
+<section class="s"><div class="eb">Activity 2</div><h2>Short answer</h2><ul class="lst big"><li>Why is it important to measure both the likelihood and the severity of a risk?</li><li>Explain how a “threat” differs from a “risk” using a real-world IT example.</li><li>If a company identifies a risk of “Server Room Flooding,” what potential threats could cause it?</li></ul></section>
+<section class="s"><div class="eb">Answer key</div><h2>Activity 1</h2><div class="g2 mt"><ol class="lst"><li><b>Risk</b>: potential loss or damage.</li><li><b>Risk identification</b>: finding what can damage assets.</li><li><b>Risk measurement</b>: severity and likelihood assessment.</li></ol><ol class="lst" start="4"><li><b>Threat</b>: the entity or event that exploits a vulnerability.</li><li><b>Likelihood</b>, then <b>severity</b> (or impact).</li></ol></div></section>
+<section class="s"><div class="eb">Answer key</div><h2>Activity 2</h2><ul class="lst"><li><b>1.</b> One factor alone is incomplete. A severe but very unlikely risk may not need immediate action; a low-severity risk that happens daily can add up. Measuring both prioritizes limited resources.</li><li><b>2.</b> A threat is the source of harm (a hacker group running a phishing campaign). A risk is the potential damage (stealing credentials and accessing payroll). The threat is the actor; the risk is the outcome.</li><li><b>3.</b> Burst pipes, natural disasters (hurricane, heavy rain) or a malfunctioning fire sprinkler system.</li></ul></section>
+<section class="s"><div class="eb">Wrap-up</div><h2>Well done</h2><div class="g2"><div><p class="big">Next, build your risk assessment matrix with your group.</p><p class="mu">Remember: measure both likelihood and severity.</p></div><svg viewBox="0 0 480 200" role="img"><title>A checkmark inside a circle</title><circle class="sv-ok" cx="240" cy="100" r="80"/><path class="sv-line" style="stroke:var(--ok);stroke-width:8" d="M200 102l30 30 55-62"/></svg></div></section>
+
+<script>
+(function(){
+var S=[].slice.call(document.querySelectorAll('.s')),i=0,z=1,bar=document.getElementById('bar'),ctr=document.getElementById('ctr'),help=document.getElementById('help');
+try{z=parseFloat(localStorage.getItem('deck-zoom'))||1}catch(e){}
+function typing(t){return t&&(/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)||t.isContentEditable)}
+function lab(){ctr.textContent=(i+1)+' / '+S.length+(z!==1?' · '+Math.round(z*100)+'%':'')}
+function show(n){n=Math.max(0,Math.min(S.length-1,n));S.forEach(function(s,k){var on=k===n;s.classList.toggle('on',on);s.classList.toggle('prev',k<n);s.setAttribute('aria-hidden',on?'false':'true');if(on)s.removeAttribute('inert');else s.setAttribute('inert','')});
+S[n].scrollTop=0;i=n;bar.style.width=((n+1)/S.length*100)+'%';lab()}
+function zoom(d){z=d===0?1:Math.max(.7,Math.min(2,Math.round((z+d)*100)/100));S.forEach(function(s){s.style.zoom=z});try{localStorage.setItem('deck-zoom',z)}catch(e){}lab()}
+function nx(){show(i+1)}function pv(){show(i-1)}
+document.addEventListener('keydown',function(e){if(typing(e.target))return;var k=e.key;
+ if(e.ctrlKey||e.metaKey){if(k==='+'||k==='='){e.preventDefault();zoom(.1)}else if(k==='-'){e.preventDefault();zoom(-.1)}else if(k==='0'){e.preventDefault();zoom(0)}return}
+ if(k==='ArrowRight'||k===' '||k==='PageDown'){e.preventDefault();nx()}else if(k==='ArrowLeft'||k==='PageUp'){e.preventDefault();pv()}
+ else if(k==='Home')show(0);else if(k==='End')show(S.length-1);else if(k==='?')help.classList.toggle('on');else if(k==='Escape')help.classList.remove('on')});
+document.addEventListener('contextmenu',function(e){e.preventDefault();nx()});
+['mousedown','mouseup','auxclick'].forEach(function(t){window.addEventListener(t,function(e){
+ if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation();if(t==='mousedown'){if(e.button===4)nx();else pv()}}},true)});
+window.addEventListener('wheel',function(e){if(e.ctrlKey||e.metaKey){e.preventDefault();zoom(e.deltaY<0?.1:-.1)}},{passive:false});
+history.pushState(null,'',location.href);window.addEventListener('popstate',function(){history.pushState(null,'',location.href)});
+var tx=0,ty=0;document.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:true});
+document.addEventListener('touchend',function(e){var dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5){dx<0?nx():pv()}},{passive:true});
+/* syntax highlighting: single pass, per language */
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+var KW={js:'import|from|export|default|function|const|let|var|for|of|in|if|else|return|async|await|new|class|try|catch|finally|throw|type|interface',
+ py:'import|from|def|class|return|if|elif|else|for|while|in|not|and|or|try|except|finally|raise|with|as|lambda|None|True|False'};
+function hl(src,lang){var g=/^(js|ts|tsx|jsx)$/.test(lang)?'js':lang==='py'?'py':null;if(!g)return esc(src);
+ var cm=g==='py'?'#[^\n]*':'\\/\\/[^\n]*|\\/\\*[\\s\\S]*?\\*\\/';
+ var re=new RegExp('('+cm+')|("[^"\\n]*"|\'[^\'\\n]*\')|(\\b(?:'+KW[g]+')\\b)|(\\b\\d+(?:\\.\\d+)?\\b)|(\\b[A-Za-z_]\\w*(?=\\())','g'),o='',l=0,m;
+ while((m=re.exec(src))){o+=esc(src.slice(l,m.index));var c=m[1]?'tc':m[2]?'ts':m[3]?'tk':m[4]?'tn':'tf';o+='<span class="'+c+'">'+esc(m[0])+'</span>';l=re.lastIndex}
+ return o+esc(src.slice(l))}
+document.querySelectorAll('.code').forEach(function(d){var pre=d.querySelector('pre'),src=pre.textContent.replace(/\n+$/,''),h=document.createElement('header'),n=document.createElement('span'),b=document.createElement('button');
+ n.textContent=d.getAttribute('data-name')||'Code';b.className='btn';b.type='button';b.textContent='Copy';b.setAttribute('aria-label','Copy code');h.appendChild(n);h.appendChild(b);d.insertBefore(h,pre);
+ pre.innerHTML=hl(src,d.getAttribute('data-lang')||'none');pre.tabIndex=0;
+ b.addEventListener('click',function(){var done=function(){b.textContent='Copied!';b.classList.add('done');setTimeout(function(){b.textContent='Copy';b.classList.remove('done')},1400)};
+  if(navigator.clipboard)navigator.clipboard.writeText(src).then(done,done);else done()})});
+/* stepper demo */
+document.querySelectorAll('.stepper').forEach(function(st){var items=[].slice.call(st.querySelectorAll('li')),k=-1,bar=document.createElement('div'),bk=document.createElement('button'),fw=document.createElement('button'),sp=document.createElement('span');
+ bar.className='stepper-bar';bk.className=fw.className='btn';bk.type=fw.type='button';bk.textContent='Back';fw.textContent='Next step';sp.setAttribute('aria-live','polite');sp.className='mu';
+ bar.appendChild(bk);bar.appendChild(fw);bar.appendChild(sp);st.appendChild(bar);
+ function r(){items.forEach(function(li,j){li.classList.toggle('on',j<=k)});bk.disabled=k<0;fw.disabled=k>=items.length-1;sp.textContent=k<0?'Predict first, then step through.':'Step '+(k+1)+' of '+items.length+(k===items.length-1?' (done)':'')}
+ bk.addEventListener('click',function(){if(k>=0){k--;r()}});fw.addEventListener('click',function(){if(k<items.length-1){k++;r()}});r()});
+/* narrow screens: wide diagrams keep full-size text and scroll inside their own box */
+function fitSvgs(){var narrow=innerWidth<=800;document.querySelectorAll('.s svg').forEach(function(v){var vb=(v.getAttribute('viewBox')||'').split(/[ ,]+/),w=parseFloat(vb[2])||0;
+ if(narrow&&w>=300){if(!v.parentNode.classList.contains('svwrap')){var wr=document.createElement('div');wr.className='svwrap';v.parentNode.insertBefore(wr,v);wr.appendChild(v)}v.style.minWidth=w+'px';v.style.maxHeight='none'}
+ else{v.style.minWidth='';v.style.maxHeight=''}})}
+var rt;addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(fitSvgs,120)});fitSvgs();
+S.forEach(function(s){s.style.zoom=z});show(0)})();
+</script>
+</body>
+</html>

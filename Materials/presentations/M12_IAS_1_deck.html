@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>M12 Authentication</title>
+<style>
+/* ===== THEME TOKENS: replace these per deck (see references/design-rules.md) ===== */
+:root{
+  color-scheme:light dark;
+  --bg:#f6f5f2; --panel:#ffffff; --panel2:#ecebe6; --tx:#1b1b1f; --mu:#5a5a63;
+  --accent:#2f5fd0; --accent-hover:#234aa6;
+  --ok:#1f7a3d; --bad:#b3261e; --warn:#8a5a00; --line:#c9c7bf;
+  --code-bg:#15151a; --code-tx:#e8e8ee; --code-bar:#23232b;
+  --k:#d8b4fe; --s:#86efac; --n:#fdba74; --f:#7dd3fc; --c:#8b8ba0;
+  --font-display:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+  --font-body:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,Consolas,Menlo,monospace;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#101114; --panel:#1a1c21; --panel2:#23262d; --tx:#eceef2; --mu:#a9aebb;
+    --accent:#7aa2ff; --accent-hover:#5c86ec;
+    --ok:#5fd48a; --bad:#ff8c84; --warn:#f0c15a; --line:#343842;
+  }
+}
+/* ===== BASE (usually unchanged) ===== */
+*{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg)}
+@supports not (scrollbar-color:auto){
+  ::-webkit-scrollbar{width:14px;height:14px}
+  ::-webkit-scrollbar-track{background:var(--bg);border:2px solid var(--line)}
+  ::-webkit-scrollbar-thumb{background:var(--accent);border:3px solid var(--bg);border-radius:8px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--accent-hover)}
+  ::-webkit-scrollbar-corner{background:var(--bg)}
+}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:18px/1.6 var(--font-body);overflow:hidden}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#bar{position:fixed;top:0;left:0;height:4px;width:0;background:var(--accent);z-index:9;transition:width 350ms var(--ease)}
+#ctr{position:fixed;right:18px;bottom:12px;font-size:16px;color:var(--mu);z-index:9}
+.s{position:absolute;inset:0;padding:36px 7vw 52px;overflow:auto;opacity:0;visibility:hidden;transform:translateX(36px);
+  transition:opacity 350ms var(--ease),transform 350ms var(--ease),visibility 0s linear 350ms;scrollbar-gutter:stable}
+.s.on{opacity:1;visibility:visible;transform:none;transition-delay:0s}
+.s.prev{transform:translateX(-36px)}
+@media (prefers-reduced-motion:reduce){.s,.s.prev{transform:none}#bar{transition:none}.spin{animation:none!important}}
+.eb{font-size:17px;font-weight:600;color:var(--accent);margin:0 0 2px}
+h1,h2{font-family:var(--font-display);margin:.1em 0 .5em;line-height:1.15}
+h1{font-size:clamp(34px,5vw,54px)}h2{font-size:clamp(28px,3.4vw,40px)}
+h3{margin:0 0 .3em;font-size:20px;font-family:var(--font-display)}
+p{margin:.3em 0}ul,ol{margin:.3em 0;padding-left:1.2em}li{margin:.25em 0}
+.g2,.g3{display:grid;gap:18px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g2>*,.g3>*{min-width:0}.mt{margin-top:18px}
+@media (max-width:800px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.c{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 18px;min-width:0}
+.c.pend{border-color:var(--warn)}
+code,.k{font-family:var(--font-mono);font-size:16px;background:var(--panel2);padding:1px 6px;border-radius:5px}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}.mu{color:var(--mu)}
+table{border-collapse:collapse;width:100%}td,th{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}th{background:var(--panel2)}
+.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:24px;align-items:center;min-height:68vh}
+@media (max-width:800px){.hero{grid-template-columns:minmax(0,1fr)}}
+.opts{display:block;color:var(--mu)}
+.q2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 20px}
+.q2>.c:last-child:nth-child(odd){grid-column:1/-1;justify-self:center;width:calc(50% - 10px)}
+@media (max-width:800px){.q2{grid-template-columns:minmax(0,1fr)}.q2>.c:last-child:nth-child(odd){width:auto}}
+/* SVG: author viewBox ~480 wide, font-size >=17; use these classes so diagrams follow the theme */
+svg{display:block;margin:auto;width:100%;height:auto;max-height:clamp(220px,40vh,340px)}
+.sv-box{fill:var(--panel);stroke:var(--line);stroke-width:2}.sv-hl{fill:var(--panel2);stroke:var(--accent);stroke-width:2}
+.sv-ok{fill:var(--panel);stroke:var(--ok);stroke-width:2}.sv-bad{fill:var(--panel);stroke:var(--bad);stroke-width:2}
+.sv-tx{fill:var(--tx);font-size:17px}.sv-mu{fill:var(--mu);font-size:17px}.sv-line{stroke:var(--accent);stroke-width:2;fill:none}
+.svwrap{overflow-x:auto;max-width:100%;scrollbar-gutter:stable}
+/* Buttons: tactile press */
+.btn{font:600 16px var(--font-body);color:var(--tx);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 14px;
+  cursor:pointer;box-shadow:0 4px 0 var(--line);transform:translateY(0);transition:transform 120ms var(--ease),box-shadow 120ms var(--ease)}
+.btn:active{transform:translateY(4px);box-shadow:0 0 0 var(--line)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}.btn.done{color:var(--ok);transform:translateY(4px);box-shadow:inset 0 3px 6px var(--line)}
+@media (hover:hover) and (pointer:fine){.btn:not([disabled]):hover{border-color:var(--accent)}}
+/* Code cards: <div class="code" data-lang="js|ts|tsx|py|sh|json|none" data-name="file"><pre>escaped code</pre></div> */
+.code{display:flex;flex-direction:column;background:var(--code-bg);color:var(--code-tx);border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:0}
+.code header{flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 14px;background:var(--code-bar);font-size:16px;color:#c9c9d6}
+.code pre{flex:1;overflow:auto;min-height:0;margin:0;padding:14px;font:16px/1.55 var(--font-mono);scrollbar-gutter:stable}
+.code .btn{color:#1b1b1f;background:#ecebe6;border-color:#8b8ba0;box-shadow:0 4px 0 #8b8ba0}
+.tk{color:var(--k)}.ts{color:var(--s)}.tn{color:var(--n)}.tf{color:var(--f)}.tc{color:var(--c)}
+.row{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:18px;height:min(540px,62vh);align-items:stretch}
+.row>*{height:100%;min-height:0;overflow:auto}.row>.code{overflow:hidden}
+@media (max-width:800px){.row{grid-template-columns:minmax(0,1fr);height:auto}.row>*{height:auto}}
+/* Predict-then-trace stepper (optional demo): <div class="stepper"><ol><li>…</li></ol></div> */
+.stepper li{color:var(--mu)}.stepper li.on{color:var(--tx);font-weight:600}.stepper-bar{display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap}
+#help{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;z-index:20}
+#help.on{display:grid}#help div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px 30px;max-width:min(520px,90vw)}
+/* ===== DECK-SPECIFIC CSS ===== */
+:root{--bg:#f4f3ee;--panel:#fff;--panel2:#e7efed;--tx:#1a1f1e;--mu:#505a58;--accent:#0b6b63;--accent-hover:#08504a;--line:#c5ccc8}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1413;--panel:#161d1c;--panel2:#1f2a28;--tx:#e8eeec;--mu:#a3b0ad;--accent:#4fd1c2;--accent-hover:#7be0d4;--line:#31403d}}
+table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--accent)}
+.lst{margin:6px 0 0;padding-left:1.2em}.lst li{margin:4px 0}.big{font-size:20px}
+.btn.sel{outline:3px solid var(--accent)}
+
+</style>
+</head>
+<body>
+<div id="bar"></div><div id="ctr" aria-live="off"></div>
+<div id="help" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"><div><h3>Shortcuts</h3>
+<p>→ · Space · PageDown · Right-click · Mouse5: next<br>← · PageUp · Mouse4: previous<br>Home / End: first / last<br>Ctrl + / − / 0 or Ctrl + scroll: text size<br>?: this panel · Esc: close · Swipe on touch screens</p></div></div>
+<section class="s"><div class="hero"><div><div class="eb">Information Assurance and Security · Module 12</div><h2 style="font-size:40px">Authentication: proving you are who you say you are</h2><p class="big">Identity first, then access, then a report on every invalid attempt.</p></div><svg viewBox="0 0 480 200" role="img"><title>A user proves identity, then gains access</title><rect class="sv-hl" x="10" y="60" width="130" height="70" rx="8"/><text class="sv-tx" x="75.0" y="101.0" text-anchor="middle">Prove identity</text><rect class="sv-box" x="175" y="60" width="130" height="70" rx="8"/><text class="sv-tx" x="240.0" y="101.0" text-anchor="middle">Check</text><rect class="sv-ok" x="340" y="60" width="130" height="70" rx="8"/><text class="sv-tx" x="405.0" y="101.0" text-anchor="middle">Access</text><path class="sv-line" d="M140 95h33M305 95h33"/></svg></div></section>
+<section class="s"><div class="eb">Preview and review</div><h2>Authentication vs authorization</h2><div class="g2 mt"><div class="c"><b>The memo analogy</b><div>The Dean announces no class today, by memo. We know the Dean is <b>authorized</b> to share that. But how do we know the memo really came from the Dean? We check the signature. That signature is the <b>authentication</b>: it proves the identity of the sender.</div></div><div class="c"><b>Learning targets</b><div><ul class="lst"><li>Describe the authentication process.</li><li>Discuss the importance of authentication.</li><li>Determine what causes authentication issues.</li></ul></div></div></div></section>
+<section class="s"><div class="eb">What is authentication?</div><h2>Proving the right person is accessing</h2><div class="g2 mt"><div class="c"><b>Definition</b><div>The process of proving that the person trying to access a document, system or resource is the correct, authorized person.</div></div><div class="c"><b>It can be done by</b><div><ul class="lst"><li>Providing a password to access an account</li><li>Providing a PIN or code</li><li>Using biometric data (fingerprint, facial recognition)</li></ul></div></div></div><p class="mu mt">Pro tip: your smartphone is only authorized for you or people you trust. To let others in, you authenticate them with your password or biometric access.</p></section>
+<section class="s"><div class="eb">The authentication process</div><h2>Three key steps</h2><svg viewBox="0 0 480 120" role="img"><title>Grant access rights, allow authorized access, report invalid entries</title><rect class="sv-box" x="5" y="25" width="145" height="70" rx="8"/><text class="sv-tx" x="77.5" y="66.0" text-anchor="middle">1 Grant</text><rect class="sv-box" x="168" y="25" width="145" height="70" rx="8"/><text class="sv-tx" x="240.5" y="66.0" text-anchor="middle">2 Allow</text><rect class="sv-hl" x="331" y="25" width="145" height="70" rx="8"/><text class="sv-tx" x="403.5" y="66.0" text-anchor="middle">3 Report</text><path class="sv-line" d="M150 60h16M313 60h16"/></svg><div class="g3 mt"><div class="c"><b>1. Granting access rights</b><div>Give authorized users the authentication code or rights by creating accounts or issuing access codes.</div></div><div class="c"><b>2. Allowing authorized access</b><div>Validate the access rights given and allow access to what is authorized.</div></div><div class="c"><b>3. Reporting invalid entries</b><div><b>User:</b> notified by email or notification (“Someone tried to log into your Facebook account”). <b>Admin:</b> also notified; many invalid attempts could be a DoS attack, and officers must stop it immediately.</div></div></div></section>
+<section class="s"><div class="eb">Why it matters</div><h2>Importance and better passwords</h2><div class="g2 mt"><div class="c"><b>Importance</b><div>To <b>prove</b> that the one accessing something is truly the authorized user. Without it, anyone could impersonate a user, reach sensitive data or act without authorization.</div></div><div class="c"><b>Better password practices</b><div>Passwords often need a capital letter, a symbol, a number and a few letters. With these categories, computers take years to crack or guess it. It also helps if it cannot be found in the dictionary.</div></div></div></section>
+<section class="s"><div class="eb">Two-factor authentication</div><h2>One authentication is good; two is better</h2><div class="g2 mt"><div class="c"><b>How it works</b><div>Log in with your password (factor 1). The system sends a one-time password (OTP) to your registered phone (factor 2). Enter it to gain access. Facebook does this when you log in from a different device.</div></div><div class="c"><b>If authentication fails</b><div>Losing an account you cannot recover is a real loss. Have recovery processes: a trusted family member or significant other, a secret email address, a physical notebook with your basic password, or security questions.</div></div></div><div style="overflow-x:auto"><table><tr><th>Type</th><th>Required</th><th>Security level</th></tr><tr><td><b>Single-factor</b></td><td>Password only</td><td>Low (vulnerable to phishing and guessing)</td></tr><tr><td><b>Two-factor (2FA)</b></td><td>Password + OTP, hardware key or biometrics</td><td>High (needs a second physical or biometric check)</td></tr></table></div></section>
+<section class="s"><div class="eb">Try it</div><h2>Authentication or authorization?</h2><div class="g2 mt"><div class="c"><b>Situation</b><p class="big" id="sc"></p><div id="ch" style="display:flex;gap:12px;flex-wrap:wrap"></div><p id="st" aria-live="polite" class="mu"></p><button class="btn" id="nx" type="button" disabled>Next</button></div><div class="c"><b>Remember</b><ul class="lst"><li>Authentication verifies who you are</li><li>Authorization determines what you can do</li><li>2FA adds a second check</li></ul></div></div><script>(function(){var D=[["The bouncer checks your ID against the guest list", "Authentication", "it proves you are the person on the list."], ["You are on the VIP guest list, so you have the right to enter", "Authorization", "it grants the right to enter."], ["The Dean\u2019s signature on a memo", "Authentication", "the signature proves the sender\u2019s identity."], ["Deciding whether you can enter the VIP lounge or just the main hall", "Authorization", "it decides what you can do."]],O=["Authentication", "Authorization"].slice(),i=0,done=false,ch=document.getElementById('ch'),st=document.getElementById('st'),nx=document.getElementById('nx');
+function show(){done=false;nx.disabled=true;st.className='mu';st.textContent='Choose one.';document.getElementById('sc').textContent=D[i][0];ch.innerHTML='';O.forEach(function(n){var b=document.createElement('button');b.className='btn';b.type='button';b.textContent=n;b.onclick=function(){if(done)return;if(n===D[i][1]){done=true;st.className='ok';st.textContent='Correct: '+D[i][2];b.classList.add('sel');nx.disabled=false}else{st.className='bad';st.textContent='Not that one. Try again.'}};ch.appendChild(b)})}
+nx.onclick=function(){i=(i+1)%D.length;show()};show()})();</script></section>
+<section class="s"><div class="eb">Analogy and use case</div><h2>VIP club and online banking</h2><div class="g2 mt"><div class="c"><b>VIP club</b><div><b>Authorization:</b> you are on the guest list. <b>Authentication:</b> the bouncer checks your ID. <b>2FA:</b> the bouncer also asks for a secret password texted to your phone when you RSVP’d.</div></div><div class="c"><b>Online banking</b><div>1. Username and password. 2. From a new location, the bank asks for an OTP sent to your phone (2FA). 3. After 5 wrong passwords the bank locks the account and emails an alert (admin and user reporting), preventing a brute-force attack.</div></div></div></section>
+<section class="s"><div class="eb">Course project</div><h2>Authentication recommendations</h2><div class="g2 mt"><div class="c"><b>Solo steps</b><div><ul class="lst"><li>Review the current setup: passwords? signed memos? email system?</li><li>Draft a short section for the “Security Policies” chapter</li><li><b>Password policy</b> (for example, minimum 12 characters, symbols, rotate every 90 days)</li><li><b>2FA:</b> where to require it (email, financial systems)</li><li><b>Memo authentication:</b> every memo signed by its writer</li><li><b>Recovery plan</b> for forgotten passwords</li></ul></div></div><div class="c"><b>Example: small clinic</b><div><b>Passwords:</b> minimum 10 characters with a number and a symbol; change every 60 days. <b>2FA:</b> mandatory for staff email and the Electronic Health Records system. <b>Physical:</b> patient files signed out with an authenticated staff ID badge. <b>Recovery:</b> contact the IT admin and answer two pre-set security questions.</div></div></div></section>
+<section class="s"><div class="eb">Questions answered</div><h2>Frequently asked</h2><div class="g2 mt"><div class="c"><b>Why 2FA?</b><div>Even if a hacker steals your password, they cannot get in without the second factor.</div></div><div class="c"><b>A strong password?</b><div>Upper and lower case, numbers and symbols. Avoid dictionary words, personal information like birthdays, and reuse. A password manager can help.</div></div><div class="c"><b>Authentication vs authorization?</b><div>Authentication verifies who you are; authorization determines what you can do.</div></div><div class="c"><b>Why report invalid attempts?</b><div>Repeated failures can signal a DoS or brute-force attempt. Reporting lets teams stop it before the system is compromised.</div></div></div></section>
+<section class="s"><div class="eb">Key quotes</div><h2>Definitions worth remembering</h2><div class="g2 mt"><div class="c"><b>Authentication</b><div>The process of proving identity.</div></div><div class="c"><b>Authorization</b><div>The process of granting rights and permissions.</div></div><div class="c"><b>Reporting</b><div>A robust process reports invalid attempts to both users and admins.</div></div><div class="c"><b>Recovery</b><div>Always have an account recovery plan in place.</div></div></div></section>
+<section class="s"><div class="eb">Recap</div><h2>Key takeaways</h2><ul class="lst big"><li>Authentication proves identity; authorization grants rights.</li><li>The process: grant access, allow valid access, report invalid attempts.</li><li>Strong passwords and 2FA drastically improve security.</li><li>Always have an account recovery plan.</li></ul></section>
+<section class="s"><div class="eb">Activity 1</div><h2>Short essay</h2><ul class="lst big"><li>Why do we need 2-factor authentication?</li></ul></section>
+<section class="s"><div class="eb">Activity 2</div><h2>Identification</h2><ul class="lst big"><li>The process of proving that the one trying to access a system is the correct authorized person.</li><li>The process of granting rights and permissions to access specific resources.</li><li>A security method that requires two different forms of verification to access an account.</li><li>A type of attack where multiple invalid authentication attempts are made to overwhelm a system.</li></ul></section>
+<section class="s"><div class="eb">Activity 3</div><h2>Multiple choice</h2><div class="q2 mt"><div class="c"><b>5. After an invalid entry is detected, what happens?</b><span class="opts">A. The user is automatically granted access · B. The system shuts down permanently · C. Reporting goes to the user and the admin to investigate · D. The password is changed automatically</span></div><div class="c"><b>6. What makes a password stronger against hackers?</b><span class="opts">A. A dictionary word · B. Your birthday · C. Capitals, symbols, numbers and lowercase letters · D. The same password for all accounts</span></div><div class="c"><b>7. What is the primary goal of authentication?</b><span class="opts">A. To look professional · B. To prove the identity of the person accessing the system · C. To assign tasks · D. To store user data</span></div></div></section>
+<section class="s"><div class="eb">Answer key</div><h2>Activities 1 to 3</h2><div class="g2 mt"><ul class="lst"><li><b>Essay.</b> 2FA adds a second layer beyond the password. If a password is compromised by phishing or a breach, the attacker still needs the second factor (such as an OTP), preventing unauthorized access.</li><li><b>1.</b> Authentication · <b>2.</b> Authorization · <b>3.</b> Two-factor authentication (2FA) · <b>4.</b> Denial-of-service (DoS) attack</li></ul><ol class="lst" start="5"><li><b>C</b>: step 3 reports to both user and admin.</li><li><b>C</b>: complexity and length make passwords harder to crack.</li><li><b>B</b>: authentication is about proving identity.</li></ol></div></section>
+<section class="s"><div class="eb">Wrap-up</div><h2>Well done</h2><div class="g2"><div><p class="big">Next, add authentication recommendations to your Security Policies chapter.</p><p class="mu">Remember: prove identity, then report every invalid attempt.</p></div><svg viewBox="0 0 480 200" role="img"><title>A checkmark inside a circle</title><circle class="sv-ok" cx="240" cy="100" r="80"/><path class="sv-line" style="stroke:var(--ok);stroke-width:8" d="M200 102l30 30 55-62"/></svg></div></section>
+
+<script>
+(function(){
+var S=[].slice.call(document.querySelectorAll('.s')),i=0,z=1,bar=document.getElementById('bar'),ctr=document.getElementById('ctr'),help=document.getElementById('help');
+try{z=parseFloat(localStorage.getItem('deck-zoom'))||1}catch(e){}
+function typing(t){return t&&(/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)||t.isContentEditable)}
+function lab(){ctr.textContent=(i+1)+' / '+S.length+(z!==1?' · '+Math.round(z*100)+'%':'')}
+function show(n){n=Math.max(0,Math.min(S.length-1,n));S.forEach(function(s,k){var on=k===n;s.classList.toggle('on',on);s.classList.toggle('prev',k<n);s.setAttribute('aria-hidden',on?'false':'true');if(on)s.removeAttribute('inert');else s.setAttribute('inert','')});
+S[n].scrollTop=0;i=n;bar.style.width=((n+1)/S.length*100)+'%';lab()}
+function zoom(d){z=d===0?1:Math.max(.7,Math.min(2,Math.round((z+d)*100)/100));S.forEach(function(s){s.style.zoom=z});try{localStorage.setItem('deck-zoom',z)}catch(e){}lab()}
+function nx(){show(i+1)}function pv(){show(i-1)}
+document.addEventListener('keydown',function(e){if(typing(e.target))return;var k=e.key;
+ if(e.ctrlKey||e.metaKey){if(k==='+'||k==='='){e.preventDefault();zoom(.1)}else if(k==='-'){e.preventDefault();zoom(-.1)}else if(k==='0'){e.preventDefault();zoom(0)}return}
+ if(k==='ArrowRight'||k===' '||k==='PageDown'){e.preventDefault();nx()}else if(k==='ArrowLeft'||k==='PageUp'){e.preventDefault();pv()}
+ else if(k==='Home')show(0);else if(k==='End')show(S.length-1);else if(k==='?')help.classList.toggle('on');else if(k==='Escape')help.classList.remove('on')});
+document.addEventListener('contextmenu',function(e){e.preventDefault();nx()});
+['mousedown','mouseup','auxclick'].forEach(function(t){window.addEventListener(t,function(e){
+ if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation();if(t==='mousedown'){if(e.button===4)nx();else pv()}}},true)});
+window.addEventListener('wheel',function(e){if(e.ctrlKey||e.metaKey){e.preventDefault();zoom(e.deltaY<0?.1:-.1)}},{passive:false});
+history.pushState(null,'',location.href);window.addEventListener('popstate',function(){history.pushState(null,'',location.href)});
+var tx=0,ty=0;document.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:true});
+document.addEventListener('touchend',function(e){var dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5){dx<0?nx():pv()}},{passive:true});
+/* syntax highlighting: single pass, per language */
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+var KW={js:'import|from|export|default|function|const|let|var|for|of|in|if|else|return|async|await|new|class|try|catch|finally|throw|type|interface',
+ py:'import|from|def|class|return|if|elif|else|for|while|in|not|and|or|try|except|finally|raise|with|as|lambda|None|True|False'};
+function hl(src,lang){var g=/^(js|ts|tsx|jsx)$/.test(lang)?'js':lang==='py'?'py':null;if(!g)return esc(src);
+ var cm=g==='py'?'#[^\n]*':'\\/\\/[^\n]*|\\/\\*[\\s\\S]*?\\*\\/';
+ var re=new RegExp('('+cm+')|("[^"\\n]*"|\'[^\'\\n]*\')|(\\b(?:'+KW[g]+')\\b)|(\\b\\d+(?:\\.\\d+)?\\b)|(\\b[A-Za-z_]\\w*(?=\\())','g'),o='',l=0,m;
+ while((m=re.exec(src))){o+=esc(src.slice(l,m.index));var c=m[1]?'tc':m[2]?'ts':m[3]?'tk':m[4]?'tn':'tf';o+='<span class="'+c+'">'+esc(m[0])+'</span>';l=re.lastIndex}
+ return o+esc(src.slice(l))}
+document.querySelectorAll('.code').forEach(function(d){var pre=d.querySelector('pre'),src=pre.textContent.replace(/\n+$/,''),h=document.createElement('header'),n=document.createElement('span'),b=document.createElement('button');
+ n.textContent=d.getAttribute('data-name')||'Code';b.className='btn';b.type='button';b.textContent='Copy';b.setAttribute('aria-label','Copy code');h.appendChild(n);h.appendChild(b);d.insertBefore(h,pre);
+ pre.innerHTML=hl(src,d.getAttribute('data-lang')||'none');pre.tabIndex=0;
+ b.addEventListener('click',function(){var done=function(){b.textContent='Copied!';b.classList.add('done');setTimeout(function(){b.textContent='Copy';b.classList.remove('done')},1400)};
+  if(navigator.clipboard)navigator.clipboard.writeText(src).then(done,done);else done()})});
+/* stepper demo */
+document.querySelectorAll('.stepper').forEach(function(st){var items=[].slice.call(st.querySelectorAll('li')),k=-1,bar=document.createElement('div'),bk=document.createElement('button'),fw=document.createElement('button'),sp=document.createElement('span');
+ bar.className='stepper-bar';bk.className=fw.className='btn';bk.type=fw.type='button';bk.textContent='Back';fw.textContent='Next step';sp.setAttribute('aria-live','polite');sp.className='mu';
+ bar.appendChild(bk);bar.appendChild(fw);bar.appendChild(sp);st.appendChild(bar);
+ function r(){items.forEach(function(li,j){li.classList.toggle('on',j<=k)});bk.disabled=k<0;fw.disabled=k>=items.length-1;sp.textContent=k<0?'Predict first, then step through.':'Step '+(k+1)+' of '+items.length+(k===items.length-1?' (done)':'')}
+ bk.addEventListener('click',function(){if(k>=0){k--;r()}});fw.addEventListener('click',function(){if(k<items.length-1){k++;r()}});r()});
+/* narrow screens: wide diagrams keep full-size text and scroll inside their own box */
+function fitSvgs(){var narrow=innerWidth<=800;document.querySelectorAll('.s svg').forEach(function(v){var vb=(v.getAttribute('viewBox')||'').split(/[ ,]+/),w=parseFloat(vb[2])||0;
+ if(narrow&&w>=300){if(!v.parentNode.classList.contains('svwrap')){var wr=document.createElement('div');wr.className='svwrap';v.parentNode.insertBefore(wr,v);wr.appendChild(v)}v.style.minWidth=w+'px';v.style.maxHeight='none'}
+ else{v.style.minWidth='';v.style.maxHeight=''}})}
+var rt;addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(fitSvgs,120)});fitSvgs();
+S.forEach(function(s){s.style.zoom=z});show(0)})();
+</script>
+</body>
+</html>

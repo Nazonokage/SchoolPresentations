@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>M2 Introduction to IAS</title>
+<style>
+/* ===== THEME TOKENS: replace these per deck (see references/design-rules.md) ===== */
+:root{
+  color-scheme:light dark;
+  --bg:#f6f5f2; --panel:#ffffff; --panel2:#ecebe6; --tx:#1b1b1f; --mu:#5a5a63;
+  --accent:#2f5fd0; --accent-hover:#234aa6;
+  --ok:#1f7a3d; --bad:#b3261e; --warn:#8a5a00; --line:#c9c7bf;
+  --code-bg:#15151a; --code-tx:#e8e8ee; --code-bar:#23232b;
+  --k:#d8b4fe; --s:#86efac; --n:#fdba74; --f:#7dd3fc; --c:#8b8ba0;
+  --font-display:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+  --font-body:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,Consolas,Menlo,monospace;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#101114; --panel:#1a1c21; --panel2:#23262d; --tx:#eceef2; --mu:#a9aebb;
+    --accent:#7aa2ff; --accent-hover:#5c86ec;
+    --ok:#5fd48a; --bad:#ff8c84; --warn:#f0c15a; --line:#343842;
+  }
+}
+/* ===== BASE (usually unchanged) ===== */
+*{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg)}
+@supports not (scrollbar-color:auto){
+  ::-webkit-scrollbar{width:14px;height:14px}
+  ::-webkit-scrollbar-track{background:var(--bg);border:2px solid var(--line)}
+  ::-webkit-scrollbar-thumb{background:var(--accent);border:3px solid var(--bg);border-radius:8px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--accent-hover)}
+  ::-webkit-scrollbar-corner{background:var(--bg)}
+}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:18px/1.6 var(--font-body);overflow:hidden}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#bar{position:fixed;top:0;left:0;height:4px;width:0;background:var(--accent);z-index:9;transition:width 350ms var(--ease)}
+#ctr{position:fixed;right:18px;bottom:12px;font-size:16px;color:var(--mu);z-index:9}
+.s{position:absolute;inset:0;padding:36px 7vw 52px;overflow:auto;opacity:0;visibility:hidden;transform:translateX(36px);
+  transition:opacity 350ms var(--ease),transform 350ms var(--ease),visibility 0s linear 350ms;scrollbar-gutter:stable}
+.s.on{opacity:1;visibility:visible;transform:none;transition-delay:0s}
+.s.prev{transform:translateX(-36px)}
+@media (prefers-reduced-motion:reduce){.s,.s.prev{transform:none}#bar{transition:none}.spin{animation:none!important}}
+.eb{font-size:17px;font-weight:600;color:var(--accent);margin:0 0 2px}
+h1,h2{font-family:var(--font-display);margin:.1em 0 .5em;line-height:1.15}
+h1{font-size:clamp(34px,5vw,54px)}h2{font-size:clamp(28px,3.4vw,40px)}
+h3{margin:0 0 .3em;font-size:20px;font-family:var(--font-display)}
+p{margin:.3em 0}ul,ol{margin:.3em 0;padding-left:1.2em}li{margin:.25em 0}
+.g2,.g3{display:grid;gap:18px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g2>*,.g3>*{min-width:0}.mt{margin-top:18px}
+@media (max-width:800px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.c{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 18px;min-width:0}
+.c.pend{border-color:var(--warn)}
+code,.k{font-family:var(--font-mono);font-size:16px;background:var(--panel2);padding:1px 6px;border-radius:5px}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}.mu{color:var(--mu)}
+table{border-collapse:collapse;width:100%}td,th{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}th{background:var(--panel2)}
+.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:24px;align-items:center;min-height:68vh}
+@media (max-width:800px){.hero{grid-template-columns:minmax(0,1fr)}}
+.opts{display:block;color:var(--mu)}
+.q2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 20px}
+.q2>.c:last-child:nth-child(odd){grid-column:1/-1;justify-self:center;width:calc(50% - 10px)}
+@media (max-width:800px){.q2{grid-template-columns:minmax(0,1fr)}.q2>.c:last-child:nth-child(odd){width:auto}}
+/* SVG: author viewBox ~480 wide, font-size >=17; use these classes so diagrams follow the theme */
+svg{display:block;margin:auto;width:100%;height:auto;max-height:clamp(220px,40vh,340px)}
+.sv-box{fill:var(--panel);stroke:var(--line);stroke-width:2}.sv-hl{fill:var(--panel2);stroke:var(--accent);stroke-width:2}
+.sv-ok{fill:var(--panel);stroke:var(--ok);stroke-width:2}.sv-bad{fill:var(--panel);stroke:var(--bad);stroke-width:2}
+.sv-tx{fill:var(--tx);font-size:17px}.sv-mu{fill:var(--mu);font-size:17px}.sv-line{stroke:var(--accent);stroke-width:2;fill:none}
+.svwrap{overflow-x:auto;max-width:100%;scrollbar-gutter:stable}
+/* Buttons: tactile press */
+.btn{font:600 16px var(--font-body);color:var(--tx);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 14px;
+  cursor:pointer;box-shadow:0 4px 0 var(--line);transform:translateY(0);transition:transform 120ms var(--ease),box-shadow 120ms var(--ease)}
+.btn:active{transform:translateY(4px);box-shadow:0 0 0 var(--line)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}.btn.done{color:var(--ok);transform:translateY(4px);box-shadow:inset 0 3px 6px var(--line)}
+@media (hover:hover) and (pointer:fine){.btn:not([disabled]):hover{border-color:var(--accent)}}
+/* Code cards: <div class="code" data-lang="js|ts|tsx|py|sh|json|none" data-name="file"><pre>escaped code</pre></div> */
+.code{display:flex;flex-direction:column;background:var(--code-bg);color:var(--code-tx);border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:0}
+.code header{flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 14px;background:var(--code-bar);font-size:16px;color:#c9c9d6}
+.code pre{flex:1;overflow:auto;min-height:0;margin:0;padding:14px;font:16px/1.55 var(--font-mono);scrollbar-gutter:stable}
+.code .btn{color:#1b1b1f;background:#ecebe6;border-color:#8b8ba0;box-shadow:0 4px 0 #8b8ba0}
+.tk{color:var(--k)}.ts{color:var(--s)}.tn{color:var(--n)}.tf{color:var(--f)}.tc{color:var(--c)}
+.row{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:18px;height:min(540px,62vh);align-items:stretch}
+.row>*{height:100%;min-height:0;overflow:auto}.row>.code{overflow:hidden}
+@media (max-width:800px){.row{grid-template-columns:minmax(0,1fr);height:auto}.row>*{height:auto}}
+/* Predict-then-trace stepper (optional demo): <div class="stepper"><ol><li>…</li></ol></div> */
+.stepper li{color:var(--mu)}.stepper li.on{color:var(--tx);font-weight:600}.stepper-bar{display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap}
+#help{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;z-index:20}
+#help.on{display:grid}#help div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px 30px;max-width:min(520px,90vw)}
+/* ===== DECK-SPECIFIC CSS ===== */
+:root{--bg:#f4f3ee;--panel:#fff;--panel2:#e7efed;--tx:#1a1f1e;--mu:#505a58;--accent:#0b6b63;--accent-hover:#08504a;--line:#c5ccc8}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1413;--panel:#161d1c;--panel2:#1f2a28;--tx:#e8eeec;--mu:#a3b0ad;--accent:#4fd1c2;--accent-hover:#7be0d4;--line:#31403d}}
+table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--accent)}
+.lst{margin:6px 0 0;padding-left:1.2em}.lst li{margin:4px 0}.big{font-size:20px}
+.btn.sel{outline:3px solid var(--accent)}
+
+</style>
+</head>
+<body>
+<div id="bar"></div><div id="ctr" aria-live="off"></div>
+<div id="help" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"><div><h3>Shortcuts</h3>
+<p>→ · Space · PageDown · Right-click · Mouse5: next<br>← · PageUp · Mouse4: previous<br>Home / End: first / last<br>Ctrl + / − / 0 or Ctrl + scroll: text size<br>?: this panel · Esc: close · Swipe on touch screens</p></div></div>
+<section class="s"><div class="hero"><div><div class="eb">Information Assurance and Security 1 · Module 2</div><h2 style="font-size:40px">Introduction to Information Assurance and Security</h2><p class="big">Technology is woven into daily life. Your job is to secure it so routines stay undisturbed.</p></div><svg viewBox="0 0 480 260" role="img"><title>Nested layers: computer security inside information security inside information assurance</title><rect class="sv-box" x="20" y="10" width="440" height="240" rx="8"/><text class="sv-tx" x="240.0" y="136.0" text-anchor="middle"></text><text class="sv-tx" x="240" y="36" text-anchor="middle">Information assurance</text><rect class="sv-hl" x="60" y="56" width="360" height="170" rx="8"/><text class="sv-tx" x="240.0" y="147.0" text-anchor="middle"></text><text class="sv-tx" x="240" y="82" text-anchor="middle">Information security</text><rect class="sv-box" x="110" y="100" width="260" height="90" rx="8"/><text class="sv-tx" x="240.0" y="151.0" text-anchor="middle">Computer security</text></svg></div></section>
+<section class="s"><div class="eb">Learning targets</div><h2>By the end of this module you can</h2><ul class="lst big"><li>Describe information assurance and security, and threats.</li><li>Identify different kinds of security threats.</li><li>Discuss the importance of knowing security threats.</li><li>Discuss the preliminaries about the project for the subject.</li></ul><p class="mu mt">Constant emergence of cyber vulnerabilities demands robust countermeasures.</p></section>
+<section class="s"><div class="eb">Core concept</div><h2>What is information assurance?</h2><div class="g2 mt"><div class="c"><b>Definition</b><div>The set of measures intended to protect and defend information and information systems by ensuring their <b>availability, integrity, authentication, confidentiality and non-repudiation</b>.</div></div><div class="c"><b>It is the practice of</b><div><ul class="lst"><li>Assuring information.</li><li>Managing risks related to the use, processing, storage and transmission of information or data.</li><li>Protecting the systems and processes used for those purposes.</li></ul></div></div></div></section>
+<section class="s"><div class="eb">Why it matters</div><h2>From computer security to information assurance</h2><div class="g2"><svg viewBox="0 0 480 260" role="img"><title>Three steps: computer security, information security, information assurance</title><rect class="sv-box" x="10" y="10" width="460" height="60" rx="8"/><text class="sv-tx" x="240.0" y="36.0" text-anchor="middle">Computer security</text><text class="sv-mu" x="240.0" y="60.0" text-anchor="middle">stand-alone systems</text><rect class="sv-box" x="10" y="100" width="460" height="60" rx="8"/><text class="sv-tx" x="240.0" y="126.0" text-anchor="middle">Information security</text><text class="sv-mu" x="240.0" y="150.0" text-anchor="middle">expanded “information protection”</text><rect class="sv-hl" x="10" y="190" width="460" height="60" rx="8"/><text class="sv-tx" x="240.0" y="216.0" text-anchor="middle">Information assurance</text><text class="sv-mu" x="240.0" y="240.0" text-anchor="middle">transmission, processing, storage</text><path class="sv-line" d="M240 70v28M240 160v28"/></svg><div><div class="c"><b>Computer security</b><div>Focused on stand-alone computers. It could not safeguard data during processing, storing or transmission across systems.</div></div><div class="mt"><div class="c"><b>Information security</b><div>Expanded the mission of “information protection.”</div></div></div><div class="mt"><div class="c"><b>Information assurance</b><div>Safeguards information in intricate or scattered networks and uses dynamic protection that can identify assaults and enable a defense.</div></div></div></div></div><p class="mu mt">Pro tip: IA covers privacy, regulatory compliance, audits, business continuity and disaster recovery. It is a superset of information security.</p></section>
+<section class="s"><div class="eb">The IA process</div><h2>Six steps to total risk</h2><div class="stepper"><ol><li><b>1. Enumeration and classification:</b> identify and classify the information assets to protect.</li><li><b>2. Risk assessment:</b> perform a risk assessment for those assets.</li><li><b>3. Vulnerability identification:</b> find vulnerabilities and the threats able to exploit them.</li><li><b>4. Probability assessment:</b> how likely is a threat to exploit a vulnerability?</li><li><b>5. Impact assessment:</b> usually measured as cost to the stakeholders.</li><li><b>6. Total risk:</b> the sum of the products of each threat’s impact and probability.</li></ol></div></section>
+<section class="s"><div class="eb">Five pillars</div><h2>Cornerstones of confidence and integrity</h2><div style="overflow-x:auto"><table><tr><th>Pillar</th><th>Definition</th><th>Focus</th></tr><tr><td><b>Integrity</b></td><td>Protecting against improper information modification or damage.</td><td>Non-repudiation and authenticity</td></tr><tr><td><b>Confidentiality</b></td><td>Preserving authorized restrictions on access and disclosure.</td><td>Personal privacy, proprietary information</td></tr><tr><td><b>Availability</b></td><td>Timely and reliable access to and use of information.</td><td>System uptime and reliability</td></tr><tr><td><b>Authentication</b></td><td>Verifying the identity of a user, process or device.</td><td>Access control, identity verification</td></tr><tr><td><b>Non-repudiation</b></td><td>A party cannot deny the authenticity of their signature or message.</td><td>Proof of origin and delivery</td></tr></table></div></section>
+<section class="s"><div class="eb">Strategy and comparison</div><h2>Information assurance strategy and InfoSec</h2><div class="g2 mt"><div class="c"><b>Multi-layered IA strategy</b><div><ol class="lst"><li>Cyber security awareness and education.</li><li>Strong cryptography.</li><li>Good security-enabled commercial information technology.</li><li>An enabling global Security Management Infrastructure.</li><li>A civil defense infrastructure with attack sensing, warning capability and a coordinated response mechanism.</li></ol></div></div><div class="c"><b>Information security (InfoSec)</b><div>Defending information from unauthorized access, use, disclosure, disruption, modification, perusal, inspection, recording or destruction. Two major aspects: <b>IT security (computer security)</b>, applied to technology; and <b>information assurance</b>, ensuring data is not lost when critical issues arise, such as natural disasters, server malfunction or physical theft.</div></div></div></section>
+<section class="s"><div class="eb">Understanding threats</div><h2>What is a threat?</h2><div class="g2 mt"><div class="c"><b>Definition</b><div>A malicious act that aims to corrupt or steal data, or disrupt an organization’s systems or the entire organization.</div></div><div class="c"><b>Why it matters</b><div>Threats range from insider threats to advanced persistent threats. If the internal security team is not informed and prepared, these risks could bring the organization to its knees.</div></div></div></section>
+<section class="s"><div class="eb">Top 10 threats (2022 landscape)</div><h2>Threats 1 to 3</h2><div class="g3 mt"><div class="c"><b>1. Social engineering</b><div>Focuses on interpersonal interactions; persuades people to disregard security norms to gain illegal access. 85% of all data breaches involve human interaction (Verizon DBIR).</div></div><div class="c"><b>2. Third-party exposure</b><div>Damages alleged by clients or third parties for which the firm may be liable. A 2021 breach at contractor Socialarks leaked data from over 214 million Facebook, Instagram and LinkedIn accounts.</div></div><div class="c"><b>3. Configuration mistakes</b><div>Even very effective systems almost always have an installation or configuration flaw. Rapid7 found vulnerable misconfigurations in 80% of external penetration tests, 96% with inside access.</div></div></div></section>
+<section class="s"><div class="eb">Top 10 threats</div><h2>Threats 4 to 6</h2><div class="g3 mt"><div class="c"><b>4. Poor cyber hygiene</b><div>Routines such as avoiding open WiFi and using a VPN or MFA. Nearly 60% of organizations rely on human memory for passwords, 42% use sticky notes, 54% of IT professionals do not require MFA.</div></div><div class="c"><b>5. Cloud vulnerabilities</b><div>Up 150% over the past five years (IBM). Over 90% of the 29,000 breaches in Verizon’s DBIR were due to web app breaches.</div></div><div class="c"><b>6. Mobile device vulnerabilities</b><div>COVID-19 raised mobile use, remote work and BYOD policies. 46% of companies had an incident involving a malicious mobile app downloaded by an employee (Check Point).</div></div></div></section>
+<section class="s"><div class="eb">Top 10 threats</div><h2>Threats 7 and 8</h2><div class="g2 mt"><div class="c"><b>7. Internet of Things (IoT)</b><div>Interrelated computing devices, machines, objects, animals or people with unique identifiers that transfer data over a network without human-to-human or human-to-computer interaction. Over 1.5 billion breaches occurred between January and June of 2021.</div></div><div class="c"><b>8. Ransomware</b><div>A subset of malware that locks data using encryption and demands payment before unlocking. 66% of companies suffered significant revenue loss and 29% were forced to remove jobs (Cybereason).</div></div></div></section>
+<section class="s"><div class="eb">Top 10 threats</div><h2>Threats 9 and 10</h2><div class="g2 mt"><div class="c"><b>9. Poor data management</b><div>Consumer-generated data doubles every four years, but more than half is never used or evaluated. In 2018, Aetna was ordered to pay $17 million after mailing sensitive health information in the wrong type of envelope.</div></div><div class="c"><b>10. Inadequate post-attack procedures</b><div>Flaws must be fixed right away. 80% of victims that paid the ransom quickly came under another attack. 60% of cyber attacks could have been avoided if a patch had been issued (Cybereason).</div></div></div></section>
+<section class="s"><div class="eb">Analogy</div><h2>The smart home</h2><div class="g2 mt"><div class="c"><b>Pillars at home</b><div><ul class="lst"><li><b>Availability:</b> electricity and internet stay on.</li><li><b>Integrity:</b> no one breaks your doors or messes with smart locks.</li><li><b>Confidentiality:</b> curtains drawn so outsiders cannot see in.</li><li><b>Authentication:</b> fingerprint or keycode unlocks the door.</li><li><b>Non-repudiation:</b> camera footage proves who entered and left.</li></ul></div></div><div class="c"><b>Social engineering</b><div>A burglar pretends to be a delivery driver and tricks you into opening the door. That exploits human trust rather than breaking the lock.</div></div></div></section>
+<section class="s"><div class="eb">Real-world use cases</div><h2>Healthcare and e-commerce</h2><div class="g2 mt"><div class="c"><b>Healthcare</b><div>A hospital protects patient records (confidentiality) while doctors reach life-saving data instantly (availability). A ransomware attack exploits poor post-attack procedures and causes massive disruption.</div></div><div class="c"><b>E-commerce</b><div>An online store safeguards credit card data with strong cryptography and PCI DSS compliance. A third-party exposure risks reputational damage and regulatory fines.</div></div></div></section>
+<section class="s"><div class="eb">Course project</div><h2>Application of information security in a business</h2><div class="g2 mt"><div class="c"><b>Guidelines</b><div><ul class="lst"><li>Group of 3–5 members</li><li>Updated every lesson or module</li><li>Identify threats and assets; assess likelihood and impact; give recommendations</li><li>Sample title: Application of Information Security in School Management</li><li>Pre-defense: second half of the term. Final defense: end of term, convincing the panel (your teacher).</li></ul></div></div><div class="c"><b>Deliverable for Module 2</b><div><ol class="lst"><li>Form your group (3–5 members).</li><li>Choose a business you know.</li><li>Draft an asset inventory of 3–5 critical information assets.</li><li>From the Top 10, pick the 3 threats most likely to affect it and justify your answer.</li></ol></div></div></div></section>
+<section class="s"><div class="eb">Key quotes</div><h2>Definitions worth remembering</h2><div class="g2 mt"><div class="c"><b>Information assurance</b><div>Measures that protect and defend information and systems by ensuring availability, integrity, authentication, confidentiality and non-repudiation.</div></div><div class="c"><b>Threat</b><div>A malicious act to corrupt or steal data or disrupt an organization.</div></div><div class="c"><b>Confidentiality</b><div>Preserving authorized restrictions on access and disclosure.</div></div><div class="c"><b>Availability</b><div>Timely and reliable access to and use of information.</div></div></div></section>
+<section class="s"><div class="eb">Recap</div><h2>Key takeaways</h2><ul class="lst big"><li>IA goes beyond securing data: risk management, business continuity and disaster recovery.</li><li>The five pillars: availability, integrity, authentication, confidentiality, non-repudiation.</li><li>The IA process is a cyclical risk model from asset enumeration to total risk.</li><li>Human error (social engineering, poor cyber hygiene) sits behind most breaches (85%).</li><li>Threats evolve: patch promptly and build security awareness.</li></ul></section>
+<section class="s"><div class="eb">Activity 1</div><h2>Identification</h2><div class="g2 mt"><ol class="lst"><li>_____ covers protecting against improper information modification or damage, and includes ensuring non-repudiation and authenticity.</li><li>_____ is considered malicious acts, to corrupt or steal data or disrupt an organization’s systems or the entire organization.</li><li>_____ is to preserve authorized restrictions on access and disclosure, including protecting personal privacy and proprietary information.</li></ol><ol class="lst" start="4"><li>_____ is the set of measures intended to protect and defend information and information systems by ensuring their availability, integrity, authentication, confidentiality and non-repudiation.</li><li>_____ is to ensure timely and reliable access to and use of information.</li></ol></div></section>
+<section class="s"><div class="eb">Activity 2</div><h2>Check for understanding</h2><ul class="lst big"><li>In any organization, why do we need IAS?</li><li>Explain social engineering and give an example based on your understanding or experience.</li></ul></section>
+<section class="s"><div class="eb">Answer key</div><h2>Activity 1</h2><div class="g2 mt"><ol class="lst"><li><b>Integrity</b>: protects against improper modification.</li><li><b>Threat</b>: a malicious act against data or systems.</li><li><b>Confidentiality</b>: restricts access and disclosure.</li></ol><ol class="lst" start="4"><li><b>Information assurance</b>: the full set of protective measures across the five pillars.</li><li><b>Availability</b>: timely, reliable access.</li></ol></div></section>
+<section class="s"><div class="eb">Answer key</div><h2>Activity 2</h2><ul class="lst"><li><b>1.</b> Discuss reliance on technology, protecting data from unauthorized access, business continuity (availability), and managing evolving vulnerabilities to prevent financial loss, reputational damage and disruption.</li><li><b>2.</b> A non-technical attack that uses human interaction and psychological manipulation to make people break security protocols. Examples: phishing emails, pretexting (posing as IT support to get a password), baiting (leaving an infected USB drive in a parking lot).</li></ul></section>
+<section class="s"><div class="eb">Wrap-up</div><h2>Well done</h2><div class="g2"><div><p class="big">Next, draft your asset inventory and pick your top 3 threats.</p><p class="mu">Remember: people are the first line of defense.</p></div><svg viewBox="0 0 480 200" role="img"><title>A checkmark inside a circle</title><circle class="sv-ok" cx="240" cy="100" r="80"/><path class="sv-line" style="stroke:var(--ok);stroke-width:8" d="M200 102l30 30 55-62"/></svg></div></section>
+
+<script>
+(function(){
+var S=[].slice.call(document.querySelectorAll('.s')),i=0,z=1,bar=document.getElementById('bar'),ctr=document.getElementById('ctr'),help=document.getElementById('help');
+try{z=parseFloat(localStorage.getItem('deck-zoom'))||1}catch(e){}
+function typing(t){return t&&(/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)||t.isContentEditable)}
+function lab(){ctr.textContent=(i+1)+' / '+S.length+(z!==1?' · '+Math.round(z*100)+'%':'')}
+function show(n){n=Math.max(0,Math.min(S.length-1,n));S.forEach(function(s,k){var on=k===n;s.classList.toggle('on',on);s.classList.toggle('prev',k<n);s.setAttribute('aria-hidden',on?'false':'true');if(on)s.removeAttribute('inert');else s.setAttribute('inert','')});
+S[n].scrollTop=0;i=n;bar.style.width=((n+1)/S.length*100)+'%';lab()}
+function zoom(d){z=d===0?1:Math.max(.7,Math.min(2,Math.round((z+d)*100)/100));S.forEach(function(s){s.style.zoom=z});try{localStorage.setItem('deck-zoom',z)}catch(e){}lab()}
+function nx(){show(i+1)}function pv(){show(i-1)}
+document.addEventListener('keydown',function(e){if(typing(e.target))return;var k=e.key;
+ if(e.ctrlKey||e.metaKey){if(k==='+'||k==='='){e.preventDefault();zoom(.1)}else if(k==='-'){e.preventDefault();zoom(-.1)}else if(k==='0'){e.preventDefault();zoom(0)}return}
+ if(k==='ArrowRight'||k===' '||k==='PageDown'){e.preventDefault();nx()}else if(k==='ArrowLeft'||k==='PageUp'){e.preventDefault();pv()}
+ else if(k==='Home')show(0);else if(k==='End')show(S.length-1);else if(k==='?')help.classList.toggle('on');else if(k==='Escape')help.classList.remove('on')});
+document.addEventListener('contextmenu',function(e){e.preventDefault();nx()});
+['mousedown','mouseup','auxclick'].forEach(function(t){window.addEventListener(t,function(e){
+ if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation();if(t==='mousedown'){if(e.button===4)nx();else pv()}}},true)});
+window.addEventListener('wheel',function(e){if(e.ctrlKey||e.metaKey){e.preventDefault();zoom(e.deltaY<0?.1:-.1)}},{passive:false});
+history.pushState(null,'',location.href);window.addEventListener('popstate',function(){history.pushState(null,'',location.href)});
+var tx=0,ty=0;document.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:true});
+document.addEventListener('touchend',function(e){var dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5){dx<0?nx():pv()}},{passive:true});
+/* syntax highlighting: single pass, per language */
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+var KW={js:'import|from|export|default|function|const|let|var|for|of|in|if|else|return|async|await|new|class|try|catch|finally|throw|type|interface',
+ py:'import|from|def|class|return|if|elif|else|for|while|in|not|and|or|try|except|finally|raise|with|as|lambda|None|True|False'};
+function hl(src,lang){var g=/^(js|ts|tsx|jsx)$/.test(lang)?'js':lang==='py'?'py':null;if(!g)return esc(src);
+ var cm=g==='py'?'#[^\n]*':'\\/\\/[^\n]*|\\/\\*[\\s\\S]*?\\*\\/';
+ var re=new RegExp('('+cm+')|("[^"\\n]*"|\'[^\'\\n]*\')|(\\b(?:'+KW[g]+')\\b)|(\\b\\d+(?:\\.\\d+)?\\b)|(\\b[A-Za-z_]\\w*(?=\\())','g'),o='',l=0,m;
+ while((m=re.exec(src))){o+=esc(src.slice(l,m.index));var c=m[1]?'tc':m[2]?'ts':m[3]?'tk':m[4]?'tn':'tf';o+='<span class="'+c+'">'+esc(m[0])+'</span>';l=re.lastIndex}
+ return o+esc(src.slice(l))}
+document.querySelectorAll('.code').forEach(function(d){var pre=d.querySelector('pre'),src=pre.textContent.replace(/\n+$/,''),h=document.createElement('header'),n=document.createElement('span'),b=document.createElement('button');
+ n.textContent=d.getAttribute('data-name')||'Code';b.className='btn';b.type='button';b.textContent='Copy';b.setAttribute('aria-label','Copy code');h.appendChild(n);h.appendChild(b);d.insertBefore(h,pre);
+ pre.innerHTML=hl(src,d.getAttribute('data-lang')||'none');pre.tabIndex=0;
+ b.addEventListener('click',function(){var done=function(){b.textContent='Copied!';b.classList.add('done');setTimeout(function(){b.textContent='Copy';b.classList.remove('done')},1400)};
+  if(navigator.clipboard)navigator.clipboard.writeText(src).then(done,done);else done()})});
+/* stepper demo */
+document.querySelectorAll('.stepper').forEach(function(st){var items=[].slice.call(st.querySelectorAll('li')),k=-1,bar=document.createElement('div'),bk=document.createElement('button'),fw=document.createElement('button'),sp=document.createElement('span');
+ bar.className='stepper-bar';bk.className=fw.className='btn';bk.type=fw.type='button';bk.textContent='Back';fw.textContent='Next step';sp.setAttribute('aria-live','polite');sp.className='mu';
+ bar.appendChild(bk);bar.appendChild(fw);bar.appendChild(sp);st.appendChild(bar);
+ function r(){items.forEach(function(li,j){li.classList.toggle('on',j<=k)});bk.disabled=k<0;fw.disabled=k>=items.length-1;sp.textContent=k<0?'Predict first, then step through.':'Step '+(k+1)+' of '+items.length+(k===items.length-1?' (done)':'')}
+ bk.addEventListener('click',function(){if(k>=0){k--;r()}});fw.addEventListener('click',function(){if(k<items.length-1){k++;r()}});r()});
+/* narrow screens: wide diagrams keep full-size text and scroll inside their own box */
+function fitSvgs(){var narrow=innerWidth<=800;document.querySelectorAll('.s svg').forEach(function(v){var vb=(v.getAttribute('viewBox')||'').split(/[ ,]+/),w=parseFloat(vb[2])||0;
+ if(narrow&&w>=300){if(!v.parentNode.classList.contains('svwrap')){var wr=document.createElement('div');wr.className='svwrap';v.parentNode.insertBefore(wr,v);wr.appendChild(v)}v.style.minWidth=w+'px';v.style.maxHeight='none'}
+ else{v.style.minWidth='';v.style.maxHeight=''}})}
+var rt;addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(fitSvgs,120)});fitSvgs();
+S.forEach(function(s){s.style.zoom=z});show(0)})();
+</script>
+</body>
+</html>

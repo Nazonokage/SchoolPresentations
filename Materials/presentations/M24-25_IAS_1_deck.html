@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>M24-25 Final Project Update</title>
+<style>
+/* ===== THEME TOKENS: replace these per deck (see references/design-rules.md) ===== */
+:root{
+  color-scheme:light dark;
+  --bg:#f6f5f2; --panel:#ffffff; --panel2:#ecebe6; --tx:#1b1b1f; --mu:#5a5a63;
+  --accent:#2f5fd0; --accent-hover:#234aa6;
+  --ok:#1f7a3d; --bad:#b3261e; --warn:#8a5a00; --line:#c9c7bf;
+  --code-bg:#15151a; --code-tx:#e8e8ee; --code-bar:#23232b;
+  --k:#d8b4fe; --s:#86efac; --n:#fdba74; --f:#7dd3fc; --c:#8b8ba0;
+  --font-display:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+  --font-body:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,Consolas,Menlo,monospace;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#101114; --panel:#1a1c21; --panel2:#23262d; --tx:#eceef2; --mu:#a9aebb;
+    --accent:#7aa2ff; --accent-hover:#5c86ec;
+    --ok:#5fd48a; --bad:#ff8c84; --warn:#f0c15a; --line:#343842;
+  }
+}
+/* ===== BASE (usually unchanged) ===== */
+*{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg)}
+@supports not (scrollbar-color:auto){
+  ::-webkit-scrollbar{width:14px;height:14px}
+  ::-webkit-scrollbar-track{background:var(--bg);border:2px solid var(--line)}
+  ::-webkit-scrollbar-thumb{background:var(--accent);border:3px solid var(--bg);border-radius:8px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--accent-hover)}
+  ::-webkit-scrollbar-corner{background:var(--bg)}
+}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:18px/1.6 var(--font-body);overflow:hidden}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#bar{position:fixed;top:0;left:0;height:4px;width:0;background:var(--accent);z-index:9;transition:width 350ms var(--ease)}
+#ctr{position:fixed;right:18px;bottom:12px;font-size:16px;color:var(--mu);z-index:9}
+.s{position:absolute;inset:0;padding:36px 7vw 52px;overflow:auto;opacity:0;visibility:hidden;transform:translateX(36px);
+  transition:opacity 350ms var(--ease),transform 350ms var(--ease),visibility 0s linear 350ms;scrollbar-gutter:stable}
+.s.on{opacity:1;visibility:visible;transform:none;transition-delay:0s}
+.s.prev{transform:translateX(-36px)}
+@media (prefers-reduced-motion:reduce){.s,.s.prev{transform:none}#bar{transition:none}.spin{animation:none!important}}
+.eb{font-size:17px;font-weight:600;color:var(--accent);margin:0 0 2px}
+h1,h2{font-family:var(--font-display);margin:.1em 0 .5em;line-height:1.15}
+h1{font-size:clamp(34px,5vw,54px)}h2{font-size:clamp(28px,3.4vw,40px)}
+h3{margin:0 0 .3em;font-size:20px;font-family:var(--font-display)}
+p{margin:.3em 0}ul,ol{margin:.3em 0;padding-left:1.2em}li{margin:.25em 0}
+.g2,.g3{display:grid;gap:18px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g2>*,.g3>*{min-width:0}.mt{margin-top:18px}
+@media (max-width:800px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.c{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 18px;min-width:0}
+.c.pend{border-color:var(--warn)}
+code,.k{font-family:var(--font-mono);font-size:16px;background:var(--panel2);padding:1px 6px;border-radius:5px}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}.mu{color:var(--mu)}
+table{border-collapse:collapse;width:100%}td,th{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}th{background:var(--panel2)}
+.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:24px;align-items:center;min-height:68vh}
+@media (max-width:800px){.hero{grid-template-columns:minmax(0,1fr)}}
+.opts{display:block;color:var(--mu)}
+.q2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 20px}
+.q2>.c:last-child:nth-child(odd){grid-column:1/-1;justify-self:center;width:calc(50% - 10px)}
+@media (max-width:800px){.q2{grid-template-columns:minmax(0,1fr)}.q2>.c:last-child:nth-child(odd){width:auto}}
+/* SVG: author viewBox ~480 wide, font-size >=17; use these classes so diagrams follow the theme */
+svg{display:block;margin:auto;width:100%;height:auto;max-height:clamp(220px,40vh,340px)}
+.sv-box{fill:var(--panel);stroke:var(--line);stroke-width:2}.sv-hl{fill:var(--panel2);stroke:var(--accent);stroke-width:2}
+.sv-ok{fill:var(--panel);stroke:var(--ok);stroke-width:2}.sv-bad{fill:var(--panel);stroke:var(--bad);stroke-width:2}
+.sv-tx{fill:var(--tx);font-size:17px}.sv-mu{fill:var(--mu);font-size:17px}.sv-line{stroke:var(--accent);stroke-width:2;fill:none}
+.svwrap{overflow-x:auto;max-width:100%;scrollbar-gutter:stable}
+/* Buttons: tactile press */
+.btn{font:600 16px var(--font-body);color:var(--tx);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 14px;
+  cursor:pointer;box-shadow:0 4px 0 var(--line);transform:translateY(0);transition:transform 120ms var(--ease),box-shadow 120ms var(--ease)}
+.btn:active{transform:translateY(4px);box-shadow:0 0 0 var(--line)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}.btn.done{color:var(--ok);transform:translateY(4px);box-shadow:inset 0 3px 6px var(--line)}
+@media (hover:hover) and (pointer:fine){.btn:not([disabled]):hover{border-color:var(--accent)}}
+/* Code cards: <div class="code" data-lang="js|ts|tsx|py|sh|json|none" data-name="file"><pre>escaped code</pre></div> */
+.code{display:flex;flex-direction:column;background:var(--code-bg);color:var(--code-tx);border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:0}
+.code header{flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 14px;background:var(--code-bar);font-size:16px;color:#c9c9d6}
+.code pre{flex:1;overflow:auto;min-height:0;margin:0;padding:14px;font:16px/1.55 var(--font-mono);scrollbar-gutter:stable}
+.code .btn{color:#1b1b1f;background:#ecebe6;border-color:#8b8ba0;box-shadow:0 4px 0 #8b8ba0}
+.tk{color:var(--k)}.ts{color:var(--s)}.tn{color:var(--n)}.tf{color:var(--f)}.tc{color:var(--c)}
+.row{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:18px;height:min(540px,62vh);align-items:stretch}
+.row>*{height:100%;min-height:0;overflow:auto}.row>.code{overflow:hidden}
+@media (max-width:800px){.row{grid-template-columns:minmax(0,1fr);height:auto}.row>*{height:auto}}
+/* Predict-then-trace stepper (optional demo): <div class="stepper"><ol><li>…</li></ol></div> */
+.stepper li{color:var(--mu)}.stepper li.on{color:var(--tx);font-weight:600}.stepper-bar{display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap}
+#help{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;z-index:20}
+#help.on{display:grid}#help div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px 30px;max-width:min(520px,90vw)}
+/* ===== DECK-SPECIFIC CSS ===== */
+:root{--bg:#f4f3ee;--panel:#fff;--panel2:#e7efed;--tx:#1a1f1e;--mu:#505a58;--accent:#0b6b63;--accent-hover:#08504a;--line:#c5ccc8}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1413;--panel:#161d1c;--panel2:#1f2a28;--tx:#e8eeec;--mu:#a3b0ad;--accent:#4fd1c2;--accent-hover:#7be0d4;--line:#31403d}}
+table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--accent)}
+.lst{margin:6px 0 0;padding-left:1.2em}.lst li{margin:4px 0}.big{font-size:20px}
+.btn.sel{outline:3px solid var(--accent)}
+
+</style>
+</head>
+<body>
+<div id="bar"></div><div id="ctr" aria-live="off"></div>
+<div id="help" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"><div><h3>Shortcuts</h3>
+<p>→ · Space · PageDown · Right-click · Mouse5: next<br>← · PageUp · Mouse4: previous<br>Home / End: first / last<br>Ctrl + / − / 0 or Ctrl + scroll: text size<br>?: this panel · Esc: close · Swipe on touch screens</p></div></div>
+<section class="s"><div class="hero"><div><div class="eb">Information Assurance and Security · Module 24-25</div><h2 style="font-size:40px">Final project update and defense preparation</h2><p class="big">A workshop: no new theory, just your polished report and presentation.</p></div><svg viewBox="0 0 480 240" role="img"><title>Report and presentation feeding the defense</title><rect class="sv-box" x="10" y="20" width="200" height="60" rx="8"/><text class="sv-tx" x="110.0" y="56.0" text-anchor="middle">Final report</text><rect class="sv-box" x="10" y="130" width="200" height="60" rx="8"/><text class="sv-tx" x="110.0" y="166.0" text-anchor="middle">Presentation</text><path class="sv-line" d="M215 50l50 40M215 160l50-40"/><rect class="sv-hl" x="270" y="75" width="200" height="70" rx="8"/><text class="sv-tx" x="370.0" y="116.0" text-anchor="middle">Defense</text></svg></div></section>
+<section class="s"><div class="eb">Preview</div><h2>The final stretch</h2><div class="g2 mt"><div class="c"><b>This module</b><div>A dedicated project workshop. Synthesize risk identification, the RMF, security policies, user access controls and external services into one report and presentation.</div></div><div class="c"><b>Solo version</b><div>You are the sole independent security consultant, presenting your audit to the “executives” (your instructor).</div></div></div></section>
+<section class="s"><div class="eb">Completion guidelines 1</div><h2>RMF steps 3 and 4</h2><div class="g2 mt"><div class="c"><b>Step 3: Recommendations</b><div>A chapter titled “Recommendations.” Give a detailed recommendation for every risk identified earlier, structured with Module 18.</div></div><div class="c"><b>Step 4: Recommended Assessment</b><div>A subsection of Recommendations titled “Recommended Assessment.” Recommend assessment for every recommendation, risk and control, and state the <b>3 assessment questions</b> for future assessors.</div></div></div></section>
+<section class="s"><div class="eb">Completion guidelines 2</div><h2>Steps 5 and 6, and enrichment</h2><div class="g3 mt"><div class="c"><b>Step 5: Conclusion</b><div>A “Conclusion” chapter on the authorization step: the organization is free to apply your recommendations, but executives or owners must note the action. Stress the importance of an IAS document.</div></div><div class="c"><b>Step 6: Monitoring</b><div>In the Conclusion, a paragraph on why someone should monitor risks and controls, whether or not recommendations were accepted.</div></div><div class="c"><b>Enrichment</b><div>Add risks and benefits from the Fortuitous Events module. Recommendations include specific software, tools and external services (law enforcement, emergency services, legal entities).</div></div></div></section>
+<section class="s"><div class="eb">Formatting</div><h2>Follow strictly</h2><div class="g3 mt"><div class="c"><b>Margins</b><div>Narrow (0.5 inches on all sides)</div></div><div class="c"><b>Line spacing</b><div>1.5</div></div><div class="c"><b>Font</b><div>Calibri, size 11</div></div></div></section>
+<section class="s"><div class="eb">Document structure</div><h2>Chapters I to V</h2><div style="overflow-x:auto"><table><tr><th>Chapter</th><th>Contents</th></tr><tr><td><b>I. Introduction</b></td><td>A. About the organization (employees, operations, industry) · B. Why you chose it · C. About the team members (your role as sole consultant)</td></tr><tr><td><b>II. Purpose of the project</b></td><td>Beyond a course requirement: improve security posture, prevent data loss</td></tr><tr><td><b>III. Identified risks</b></td><td>A. The RMF and how you used it · B. The risk matrix suited to the organization</td></tr><tr><td><b>IV. Recommendations</b></td><td>A. Security recommendations · B. Security policies (1. recommended authorization, 2. user access controls) · C. Recommended assessment (the 3 questions)</td></tr><tr><td><b>V. Conclusion</b></td><td>A. Authorization: the project needs executive or owner authorization · B. Monitoring: still recommend someone monitor risks</td></tr></table></div></section>
+<section class="s"><div class="eb">Presentation</div><h2>Finalize and practice</h2><div class="g2 mt"><div class="c"><b>Slide sections</b><div><ul class="lst"><li>I. Introduction: members (yourself), summary of the organization</li><li>II. Risk Management Framework: risk matrix</li><li>III. Recommendations: security recommendations, security policies</li><li>IV. Q and A</li></ul></div></div><div class="c"><b>Goal of the defense</b><div>Show the teacher or panelist that the project follows security standards, and convince them the organization will benefit from it.</div></div></div></section>
+<section class="s"><div class="eb">Analogy and use case</div><h2>Final pitch to the board</h2><div class="g2 mt"><div class="c"><b>Final pitch</b><div>After weeks auditing, you walk into the boardroom with your report and slide deck. Show the problems, and confidently articulate the solutions and the business value.</div></div><div class="c"><b>Consultant’s deliverable</b><div>The introduction sets scope; the RMF and matrix prove due diligence; recommendations and policies are actionable; the conclusion is your sign-off: the decision, and the liability, rests with executives.</div></div></div></section>
+<section class="s"><div class="eb">Course project</div><h2>Four parts of the submission</h2><div class="g2 mt"><div class="c"><b>Parts 1 and 2</b><div><ul class="lst"><li><b>Assembly:</b> one document with chapters I to V, correctly labeled</li><li><b>Formatting check:</b> Calibri 11, 1.5 spacing, narrow margins (0.5 inches)</li></ul></div></div><div class="c"><b>Parts 3 and 4</b><div><ul class="lst"><li><b>Presentation:</b> the 4 sections; practice, and be able to explain your matrix and policies within the time limit</li><li><b>Reflection:</b> Notable Changes, and Concerns about the defense with how you will prepare</li></ul></div></div></div></section>
+<section class="s"><div class="eb">Questions answered</div><h2>Frequently asked</h2><div class="g2 mt"><div class="c"><b>Not ready to defend?</b><div>The two-day window gives time. Defend if ready; otherwise polish and practice.</div></div><div class="c"><b>Many risks in Recommendations?</b><div>Use subheadings or a table: control (type and function) and why it mitigates the risk.</div></div><div class="c"><b>Why monitoring if they reject recommendations?</b><div>Monitoring is continuous; even if they accept a risk, they must know if it materializes.</div></div><div class="c"><b>A question you cannot answer?</b><div>Be honest: say you will look into it, or reason from the frameworks. Knowing your limits is professional.</div></div><div class="c"><b>How detailed is “About the organization”?</b><div>Enough context for the risks: employees, what they sell, how they handle data.</div></div></div></section>
+<section class="s"><div class="eb">Key quotes</div><h2>Lines worth remembering</h2><div class="g2 mt"><div class="c"><b>Workshop</b><div>A synthesis workshop; no new concepts.</div></div><div class="c"><b>Five chapters</b><div>Introduction, Purpose, Identified Risks, Recommendations, Conclusion.</div></div><div class="c"><b>Defense</b><div>Convince the panel that the organization will benefit.</div></div><div class="c"><b>Monitoring</b><div>Not optional for business continuity.</div></div></div></section>
+<section class="s"><div class="eb">Recap</div><h2>Key takeaways</h2><ul class="lst big"><li>Compile everything into five chapters.</li><li>Follow the formatting rules strictly.</li><li>Present concisely and convincingly.</li><li>Be honest in the Q and A.</li></ul></section>
+<section class="s"><div class="eb">Activity</div><h2>Final submission self-assessment</h2><div class="g2 mt" id="ck"><label class="c" style="display:flex;gap:12px;align-items:flex-start;cursor:pointer"><input type="checkbox" data-w="1" style="flex:none;width:20px;height:20px;margin-top:3px;accent-color:var(--accent)"><span>Formatting: narrow margins, 1.5 spacing, Calibri 11</span></label><label class="c" style="display:flex;gap:12px;align-items:flex-start;cursor:pointer"><input type="checkbox" data-w="1" style="flex:none;width:20px;height:20px;margin-top:3px;accent-color:var(--accent)"><span>Chapter I: about the organization, why chosen, team members</span></label><label class="c" style="display:flex;gap:12px;align-items:flex-start;cursor:pointer"><input type="checkbox" data-w="1" style="flex:none;width:20px;height:20px;margin-top:3px;accent-color:var(--accent)"><span>Chapter II: purpose of the project</span></label><label class="c" style="display:flex;gap:12px;align-items:flex-start;cursor:pointer"><input type="checkbox" data-w="1" style="flex:none;width:20px;height:20px;margin-top:3px;accent-color:var(--accent)"><span>Chapter III: RMF description and risk matrix</span></label><label class="c" style="display:flex;gap:12px;align-items:flex-start;cursor:pointer"><input type="checkbox" data-w="1" style="flex:none;width:20px;height:20px;margin-top:3px;accent-color:var(--accent)"><span>Chapter IV (A): recommendations for every risk</span></label><label class="c" style="display:flex;gap:12px;align-items:flex-start;cursor:pointer"><input type="checkbox" data-w="1" style="flex:none;width:20px;height:20px;margin-top:3px;accent-color:var(--accent)"><span>Chapter IV (B): policies with recommended authorization and UAC</span></label><label class="c" style="display:flex;gap:12px;align-items:flex-start;cursor:pointer"><input type="checkbox" data-w="1" style="flex:none;width:20px;height:20px;margin-top:3px;accent-color:var(--accent)"><span>Chapter IV (C): recommended assessment with the 3 questions</span></label><label class="c" style="display:flex;gap:12px;align-items:flex-start;cursor:pointer"><input type="checkbox" data-w="1" style="flex:none;width:20px;height:20px;margin-top:3px;accent-color:var(--accent)"><span>Chapter V (A): authorization and importance of the IAS document</span></label><label class="c" style="display:flex;gap:12px;align-items:flex-start;cursor:pointer"><input type="checkbox" data-w="1" style="flex:none;width:20px;height:20px;margin-top:3px;accent-color:var(--accent)"><span>Chapter V (B): importance of monitoring</span></label><label class="c" style="display:flex;gap:12px;align-items:flex-start;cursor:pointer"><input type="checkbox" data-w="1" style="flex:none;width:20px;height:20px;margin-top:3px;accent-color:var(--accent)"><span>Presentation: finalized and practiced</span></label><label class="c" style="display:flex;gap:12px;align-items:flex-start;cursor:pointer"><input type="checkbox" data-w="1" style="flex:none;width:20px;height:20px;margin-top:3px;accent-color:var(--accent)"><span>Additional: fortuitous events, tools and external services</span></label></div><p class="mt big" id="ckst" aria-live="polite">0 of 11 complete.</p><button class="btn" id="ckr" type="button" disabled>Reset</button><script>(function(){var T=11,b=[].slice.call(document.querySelectorAll("#ck input")),s=document.getElementById("ckst"),r=document.getElementById("ckr");function up(){var n=0,k=0;b.forEach(function(x){if(x.checked){n+=+x.dataset.w;k++}});var all=k===b.length;s.textContent=n+" of "+T+" complete."+(all?" Everything checked: ready to submit.":"");s.className=all?"mt big ok":"mt big";r.disabled=k===0}b.forEach(function(x){x.addEventListener("change",up)});r.onclick=function(){b.forEach(function(x){x.checked=false});up()}})();</script></section>
+<section class="s"><div class="eb">Wrap-up</div><h2>Good luck</h2><div class="g2"><div><p class="big">Your defense is about convincing the panel that the organization will benefit.</p><p class="mu">Remember: lead with business value, not technical detail.</p></div><svg viewBox="0 0 480 200" role="img"><title>A checkmark inside a circle</title><circle class="sv-ok" cx="240" cy="100" r="80"/><path class="sv-line" style="stroke:var(--ok);stroke-width:8" d="M200 102l30 30 55-62"/></svg></div></section>
+
+<script>
+(function(){
+var S=[].slice.call(document.querySelectorAll('.s')),i=0,z=1,bar=document.getElementById('bar'),ctr=document.getElementById('ctr'),help=document.getElementById('help');
+try{z=parseFloat(localStorage.getItem('deck-zoom'))||1}catch(e){}
+function typing(t){return t&&(/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)||t.isContentEditable)}
+function lab(){ctr.textContent=(i+1)+' / '+S.length+(z!==1?' · '+Math.round(z*100)+'%':'')}
+function show(n){n=Math.max(0,Math.min(S.length-1,n));S.forEach(function(s,k){var on=k===n;s.classList.toggle('on',on);s.classList.toggle('prev',k<n);s.setAttribute('aria-hidden',on?'false':'true');if(on)s.removeAttribute('inert');else s.setAttribute('inert','')});
+S[n].scrollTop=0;i=n;bar.style.width=((n+1)/S.length*100)+'%';lab()}
+function zoom(d){z=d===0?1:Math.max(.7,Math.min(2,Math.round((z+d)*100)/100));S.forEach(function(s){s.style.zoom=z});try{localStorage.setItem('deck-zoom',z)}catch(e){}lab()}
+function nx(){show(i+1)}function pv(){show(i-1)}
+document.addEventListener('keydown',function(e){if(typing(e.target))return;var k=e.key;
+ if(e.ctrlKey||e.metaKey){if(k==='+'||k==='='){e.preventDefault();zoom(.1)}else if(k==='-'){e.preventDefault();zoom(-.1)}else if(k==='0'){e.preventDefault();zoom(0)}return}
+ if(k==='ArrowRight'||k===' '||k==='PageDown'){e.preventDefault();nx()}else if(k==='ArrowLeft'||k==='PageUp'){e.preventDefault();pv()}
+ else if(k==='Home')show(0);else if(k==='End')show(S.length-1);else if(k==='?')help.classList.toggle('on');else if(k==='Escape')help.classList.remove('on')});
+document.addEventListener('contextmenu',function(e){e.preventDefault();nx()});
+['mousedown','mouseup','auxclick'].forEach(function(t){window.addEventListener(t,function(e){
+ if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation();if(t==='mousedown'){if(e.button===4)nx();else pv()}}},true)});
+window.addEventListener('wheel',function(e){if(e.ctrlKey||e.metaKey){e.preventDefault();zoom(e.deltaY<0?.1:-.1)}},{passive:false});
+history.pushState(null,'',location.href);window.addEventListener('popstate',function(){history.pushState(null,'',location.href)});
+var tx=0,ty=0;document.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:true});
+document.addEventListener('touchend',function(e){var dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5){dx<0?nx():pv()}},{passive:true});
+/* syntax highlighting: single pass, per language */
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+var KW={js:'import|from|export|default|function|const|let|var|for|of|in|if|else|return|async|await|new|class|try|catch|finally|throw|type|interface',
+ py:'import|from|def|class|return|if|elif|else|for|while|in|not|and|or|try|except|finally|raise|with|as|lambda|None|True|False'};
+function hl(src,lang){var g=/^(js|ts|tsx|jsx)$/.test(lang)?'js':lang==='py'?'py':null;if(!g)return esc(src);
+ var cm=g==='py'?'#[^\n]*':'\\/\\/[^\n]*|\\/\\*[\\s\\S]*?\\*\\/';
+ var re=new RegExp('('+cm+')|("[^"\\n]*"|\'[^\'\\n]*\')|(\\b(?:'+KW[g]+')\\b)|(\\b\\d+(?:\\.\\d+)?\\b)|(\\b[A-Za-z_]\\w*(?=\\())','g'),o='',l=0,m;
+ while((m=re.exec(src))){o+=esc(src.slice(l,m.index));var c=m[1]?'tc':m[2]?'ts':m[3]?'tk':m[4]?'tn':'tf';o+='<span class="'+c+'">'+esc(m[0])+'</span>';l=re.lastIndex}
+ return o+esc(src.slice(l))}
+document.querySelectorAll('.code').forEach(function(d){var pre=d.querySelector('pre'),src=pre.textContent.replace(/\n+$/,''),h=document.createElement('header'),n=document.createElement('span'),b=document.createElement('button');
+ n.textContent=d.getAttribute('data-name')||'Code';b.className='btn';b.type='button';b.textContent='Copy';b.setAttribute('aria-label','Copy code');h.appendChild(n);h.appendChild(b);d.insertBefore(h,pre);
+ pre.innerHTML=hl(src,d.getAttribute('data-lang')||'none');pre.tabIndex=0;
+ b.addEventListener('click',function(){var done=function(){b.textContent='Copied!';b.classList.add('done');setTimeout(function(){b.textContent='Copy';b.classList.remove('done')},1400)};
+  if(navigator.clipboard)navigator.clipboard.writeText(src).then(done,done);else done()})});
+/* stepper demo */
+document.querySelectorAll('.stepper').forEach(function(st){var items=[].slice.call(st.querySelectorAll('li')),k=-1,bar=document.createElement('div'),bk=document.createElement('button'),fw=document.createElement('button'),sp=document.createElement('span');
+ bar.className='stepper-bar';bk.className=fw.className='btn';bk.type=fw.type='button';bk.textContent='Back';fw.textContent='Next step';sp.setAttribute('aria-live','polite');sp.className='mu';
+ bar.appendChild(bk);bar.appendChild(fw);bar.appendChild(sp);st.appendChild(bar);
+ function r(){items.forEach(function(li,j){li.classList.toggle('on',j<=k)});bk.disabled=k<0;fw.disabled=k>=items.length-1;sp.textContent=k<0?'Predict first, then step through.':'Step '+(k+1)+' of '+items.length+(k===items.length-1?' (done)':'')}
+ bk.addEventListener('click',function(){if(k>=0){k--;r()}});fw.addEventListener('click',function(){if(k<items.length-1){k++;r()}});r()});
+/* narrow screens: wide diagrams keep full-size text and scroll inside their own box */
+function fitSvgs(){var narrow=innerWidth<=800;document.querySelectorAll('.s svg').forEach(function(v){var vb=(v.getAttribute('viewBox')||'').split(/[ ,]+/),w=parseFloat(vb[2])||0;
+ if(narrow&&w>=300){if(!v.parentNode.classList.contains('svwrap')){var wr=document.createElement('div');wr.className='svwrap';v.parentNode.insertBefore(wr,v);wr.appendChild(v)}v.style.minWidth=w+'px';v.style.maxHeight='none'}
+ else{v.style.minWidth='';v.style.maxHeight=''}})}
+var rt;addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(fitSvgs,120)});fitSvgs();
+S.forEach(function(s){s.style.zoom=z});show(0)})();
+</script>
+</body>
+</html>

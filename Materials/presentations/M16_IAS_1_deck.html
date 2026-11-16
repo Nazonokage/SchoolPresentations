@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>M16 Cryptography, Passwords and Authenticators</title>
+<style>
+/* ===== THEME TOKENS: replace these per deck (see references/design-rules.md) ===== */
+:root{
+  color-scheme:light dark;
+  --bg:#f6f5f2; --panel:#ffffff; --panel2:#ecebe6; --tx:#1b1b1f; --mu:#5a5a63;
+  --accent:#2f5fd0; --accent-hover:#234aa6;
+  --ok:#1f7a3d; --bad:#b3261e; --warn:#8a5a00; --line:#c9c7bf;
+  --code-bg:#15151a; --code-tx:#e8e8ee; --code-bar:#23232b;
+  --k:#d8b4fe; --s:#86efac; --n:#fdba74; --f:#7dd3fc; --c:#8b8ba0;
+  --font-display:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+  --font-body:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,Consolas,Menlo,monospace;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#101114; --panel:#1a1c21; --panel2:#23262d; --tx:#eceef2; --mu:#a9aebb;
+    --accent:#7aa2ff; --accent-hover:#5c86ec;
+    --ok:#5fd48a; --bad:#ff8c84; --warn:#f0c15a; --line:#343842;
+  }
+}
+/* ===== BASE (usually unchanged) ===== */
+*{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg)}
+@supports not (scrollbar-color:auto){
+  ::-webkit-scrollbar{width:14px;height:14px}
+  ::-webkit-scrollbar-track{background:var(--bg);border:2px solid var(--line)}
+  ::-webkit-scrollbar-thumb{background:var(--accent);border:3px solid var(--bg);border-radius:8px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--accent-hover)}
+  ::-webkit-scrollbar-corner{background:var(--bg)}
+}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:18px/1.6 var(--font-body);overflow:hidden}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#bar{position:fixed;top:0;left:0;height:4px;width:0;background:var(--accent);z-index:9;transition:width 350ms var(--ease)}
+#ctr{position:fixed;right:18px;bottom:12px;font-size:16px;color:var(--mu);z-index:9}
+.s{position:absolute;inset:0;padding:36px 7vw 52px;overflow:auto;opacity:0;visibility:hidden;transform:translateX(36px);
+  transition:opacity 350ms var(--ease),transform 350ms var(--ease),visibility 0s linear 350ms;scrollbar-gutter:stable}
+.s.on{opacity:1;visibility:visible;transform:none;transition-delay:0s}
+.s.prev{transform:translateX(-36px)}
+@media (prefers-reduced-motion:reduce){.s,.s.prev{transform:none}#bar{transition:none}.spin{animation:none!important}}
+.eb{font-size:17px;font-weight:600;color:var(--accent);margin:0 0 2px}
+h1,h2{font-family:var(--font-display);margin:.1em 0 .5em;line-height:1.15}
+h1{font-size:clamp(34px,5vw,54px)}h2{font-size:clamp(28px,3.4vw,40px)}
+h3{margin:0 0 .3em;font-size:20px;font-family:var(--font-display)}
+p{margin:.3em 0}ul,ol{margin:.3em 0;padding-left:1.2em}li{margin:.25em 0}
+.g2,.g3{display:grid;gap:18px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g2>*,.g3>*{min-width:0}.mt{margin-top:18px}
+@media (max-width:800px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.c{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 18px;min-width:0}
+.c.pend{border-color:var(--warn)}
+code,.k{font-family:var(--font-mono);font-size:16px;background:var(--panel2);padding:1px 6px;border-radius:5px}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}.mu{color:var(--mu)}
+table{border-collapse:collapse;width:100%}td,th{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}th{background:var(--panel2)}
+.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:24px;align-items:center;min-height:68vh}
+@media (max-width:800px){.hero{grid-template-columns:minmax(0,1fr)}}
+.opts{display:block;color:var(--mu)}
+.q2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 20px}
+.q2>.c:last-child:nth-child(odd){grid-column:1/-1;justify-self:center;width:calc(50% - 10px)}
+@media (max-width:800px){.q2{grid-template-columns:minmax(0,1fr)}.q2>.c:last-child:nth-child(odd){width:auto}}
+/* SVG: author viewBox ~480 wide, font-size >=17; use these classes so diagrams follow the theme */
+svg{display:block;margin:auto;width:100%;height:auto;max-height:clamp(220px,40vh,340px)}
+.sv-box{fill:var(--panel);stroke:var(--line);stroke-width:2}.sv-hl{fill:var(--panel2);stroke:var(--accent);stroke-width:2}
+.sv-ok{fill:var(--panel);stroke:var(--ok);stroke-width:2}.sv-bad{fill:var(--panel);stroke:var(--bad);stroke-width:2}
+.sv-tx{fill:var(--tx);font-size:17px}.sv-mu{fill:var(--mu);font-size:17px}.sv-line{stroke:var(--accent);stroke-width:2;fill:none}
+.svwrap{overflow-x:auto;max-width:100%;scrollbar-gutter:stable}
+/* Buttons: tactile press */
+.btn{font:600 16px var(--font-body);color:var(--tx);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 14px;
+  cursor:pointer;box-shadow:0 4px 0 var(--line);transform:translateY(0);transition:transform 120ms var(--ease),box-shadow 120ms var(--ease)}
+.btn:active{transform:translateY(4px);box-shadow:0 0 0 var(--line)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}.btn.done{color:var(--ok);transform:translateY(4px);box-shadow:inset 0 3px 6px var(--line)}
+@media (hover:hover) and (pointer:fine){.btn:not([disabled]):hover{border-color:var(--accent)}}
+/* Code cards: <div class="code" data-lang="js|ts|tsx|py|sh|json|none" data-name="file"><pre>escaped code</pre></div> */
+.code{display:flex;flex-direction:column;background:var(--code-bg);color:var(--code-tx);border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:0}
+.code header{flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 14px;background:var(--code-bar);font-size:16px;color:#c9c9d6}
+.code pre{flex:1;overflow:auto;min-height:0;margin:0;padding:14px;font:16px/1.55 var(--font-mono);scrollbar-gutter:stable}
+.code .btn{color:#1b1b1f;background:#ecebe6;border-color:#8b8ba0;box-shadow:0 4px 0 #8b8ba0}
+.tk{color:var(--k)}.ts{color:var(--s)}.tn{color:var(--n)}.tf{color:var(--f)}.tc{color:var(--c)}
+.row{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:18px;height:min(540px,62vh);align-items:stretch}
+.row>*{height:100%;min-height:0;overflow:auto}.row>.code{overflow:hidden}
+@media (max-width:800px){.row{grid-template-columns:minmax(0,1fr);height:auto}.row>*{height:auto}}
+/* Predict-then-trace stepper (optional demo): <div class="stepper"><ol><li>…</li></ol></div> */
+.stepper li{color:var(--mu)}.stepper li.on{color:var(--tx);font-weight:600}.stepper-bar{display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap}
+#help{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;z-index:20}
+#help.on{display:grid}#help div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px 30px;max-width:min(520px,90vw)}
+/* ===== DECK-SPECIFIC CSS ===== */
+:root{--bg:#f4f3ee;--panel:#fff;--panel2:#e7efed;--tx:#1a1f1e;--mu:#505a58;--accent:#0b6b63;--accent-hover:#08504a;--line:#c5ccc8}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1413;--panel:#161d1c;--panel2:#1f2a28;--tx:#e8eeec;--mu:#a3b0ad;--accent:#4fd1c2;--accent-hover:#7be0d4;--line:#31403d}}
+table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--accent)}
+.lst{margin:6px 0 0;padding-left:1.2em}.lst li{margin:4px 0}.big{font-size:20px}
+.btn.sel{outline:3px solid var(--accent)}
+
+</style>
+</head>
+<body>
+<div id="bar"></div><div id="ctr" aria-live="off"></div>
+<div id="help" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"><div><h3>Shortcuts</h3>
+<p>→ · Space · PageDown · Right-click · Mouse5: next<br>← · PageUp · Mouse4: previous<br>Home / End: first / last<br>Ctrl + / − / 0 or Ctrl + scroll: text size<br>?: this panel · Esc: close · Swipe on touch screens</p></div></div>
+<section class="s"><div class="hero"><div><div class="eb">Information Assurance and Security · Module 16</div><h2 style="font-size:40px">Cryptography, passwords and authenticators</h2><p class="big">Hands-on: all you need is a browser and an internet connection.</p></div><svg viewBox="0 0 480 200" role="img"><title>Plaintext is encrypted to ciphertext and decrypted back</title><rect class="sv-box" x="5" y="60" width="130" height="70" rx="8"/><text class="sv-tx" x="70.0" y="101.0" text-anchor="middle">Plaintext</text><rect class="sv-hl" x="175" y="60" width="130" height="70" rx="8"/><text class="sv-tx" x="240.0" y="101.0" text-anchor="middle">Ciphertext</text><rect class="sv-box" x="345" y="60" width="130" height="70" rx="8"/><text class="sv-tx" x="410.0" y="101.0" text-anchor="middle">Plaintext</text><path class="sv-line" d="M135 85h38M305 85h38M135 110h38"/><text class="sv-mu" x="155" y="50" text-anchor="middle">encrypt</text><text class="sv-mu" x="325" y="50" text-anchor="middle">decrypt</text></svg></div></section>
+<section class="s"><div class="eb">Preview</div><h2>Thinking about cryptography</h2><div class="g2 mt"><div class="c"><b>Today</b><div>Thinking “passwords” is not far off. We explore encryption, decryption and hashing, and how they apply to creating and storing secure passwords.</div></div><div class="c"><b>Learning targets</b><div><ul class="lst"><li>Discuss the importance of cryptography and the characters you use in passwords.</li><li>Apply basic encryption and decryption in codes and through the internet.</li></ul></div></div></div></section>
+<section class="s"><div class="eb">Core concepts</div><h2>Cryptography, encryption, decryption</h2><div class="g3 mt"><div class="c"><b>Cryptography</b><div>The science of secure communication techniques. Only the authorized, authenticated sender and intended receiver can view a message: masking information so only they understand it.</div></div><div class="c"><b>Encryption</b><div>Converting an original message (plaintext) into a form unreadable to unauthorized people (ciphertext). Without the tools to convert it back, it cannot be read.</div></div><div class="c"><b>Decryption</b><div>The reverse: converting ciphertext back into plaintext so it can be readily understood.</div></div></div></section>
+<section class="s"><div class="eb">Hashing</div><h2>Changing an input into a hash sum</h2><div class="g3 mt"><div class="c"><b>Fixed output size</b><div>Whatever the number of input characters, the hash sum is always the same size.</div></div><div class="c"><b>One-way</b><div>A person cannot mathematically translate a hash back to the input. A computer can verify whether a guessed input matches.</div></div><div class="c"><b>Deterministic</b><div>The same input always produces exactly the same hash.</div></div></div><div style="overflow-x:auto"><table><tr><th>Input</th><th>Hash sum (truncated)</th></tr><tr><td>Fox</td><td><code>DFCD3454 BBEA788A…</code></td></tr><tr><td>The red fox runs across the ice</td><td><code>52ED879E 70F71D92…</code></td></tr><tr><td>The red fox walks across the ice</td><td><code>46042841 935C7FB0…</code></td></tr></table></div></section>
+<section class="s"><div class="eb">Try it</div><h2>Hash something in your browser</h2><div class="g2 mt"><div class="c"><label for="hi"><b>Text to hash</b></label><input id="hi" type="text" autocomplete="off" style="display:block;width:100%;box-sizing:border-box;margin:8px 0;padding:10px;font:inherit;font-size:18px;background:var(--bg);color:var(--tx);border:1px solid var(--line);border-radius:8px"><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" type="button" data-t="Fox">Fox</button><button class="btn" type="button" data-t="The red fox runs across the ice">…runs…</button><button class="btn" type="button" data-t="The red fox walks across the ice">…walks…</button><button class="btn" id="hc" type="button" disabled>Clear</button></div></div><div class="c"><b>SHA-1 hash</b><p id="ho" aria-live="polite" class="big" style="word-break:break-all;font-family:var(--font-mono)">Type something to hash it.</p><p class="mu" id="hn">Computed in your browser. The first digits match the table above, which is SHA-1 (the source does not name the function).</p></div></div>
+<script>(function(){var i=document.getElementById('hi'),o=document.getElementById('ho'),n=document.getElementById('hn'),c=document.getElementById('hc');
+function hex(b){return Array.prototype.map.call(new Uint8Array(b),function(x){return ('0'+x.toString(16)).slice(-2)}).join('')}
+function up(){c.disabled=!i.value;if(!i.value){o.className='big';o.textContent='Type something to hash it.';return}
+if(!window.crypto||!crypto.subtle){o.className='big bad';o.textContent='Hashing is not available in this browser.';return}
+crypto.subtle.digest('SHA-1',new TextEncoder().encode(i.value)).then(function(d){var h=hex(d);o.className='big ok';o.textContent=h;n.textContent=h.length+' hex digits (160 bits), whatever the input length. Same input, same hash.'})}
+i.addEventListener('input',up);c.onclick=function(){i.value='';up();i.focus()};
+[].forEach.call(document.querySelectorAll('[data-t]'),function(b){b.onclick=function(){i.value=b.getAttribute('data-t');up()}})})();</script></section>
+<section class="s"><div class="eb">Technologies</div><h2>Common cryptographic technologies</h2><div style="overflow-x:auto"><table><tr><th>Technology</th><th>Full name</th><th>Output size</th><th>Status</th></tr><tr><td><b>MD5</b></td><td>Message Digest 5</td><td>128-bit hash value</td><td>Outdated; vulnerable to collision attacks.</td></tr><tr><td><b>SHA-1</b></td><td>Secure Hash Algorithm 1</td><td>160-bit (20-byte) hash, a 40-digit hexadecimal</td><td>Flawed and easily hacked, but still occasionally used.</td></tr><tr><td><b>AES / RSA</b></td><td>Advanced Encryption Standard / Rivest-Shamir-Adleman</td><td>Varies</td><td>Modern, advanced technologies.</td></tr></table></div><p class="mu mt">A cryptographic hash function applies cryptography in hashing. Below: MD5 in PHP and C#.</p></section>
+<section class="s"><div class="eb">Code example</div><h2>MD5 in PHP</h2><div class="row"><div class="code" data-lang="none" data-name="md5.php"><pre>&lt;?php
+// PHP Example
+$str = "Hello World";
+echo md5($str);
+?&gt;</pre></div><div class="c"><b>What it does</b><div>Stores <code>Hello World</code> in a variable and prints its MD5 hash.</div></div></div></section>
+<section class="s"><div class="eb">Code example</div><h2>MD5 in C#</h2><div class="row"><div class="code" data-lang="none" data-name="Program.cs"><pre>using System;
+using System.Security.Cryptography;
+using System.Text;
+
+public class Program
+{
+    public static string CreateMD5(string input)
+    {
+        // Use input string to calculate MD5 hash
+        using (MD5 md5 = MD5.Create())
+        {
+            byte[] inputBytes =
+                Encoding.ASCII.GetBytes(input);
+            byte[] hashBytes =
+                md5.ComputeHash(inputBytes);
+            // .NET 5+
+            return Convert.ToHexString(hashBytes);
+        }
+    }
+
+    public static void Main()
+    {
+        Console.WriteLine(CreateMD5("Hello World"));
+    }
+}</pre></div><div class="c"><b>What it does</b><div>Converts the input to bytes, computes the MD5 hash and returns it as hexadecimal. <code>Main</code> prints the hash of <code>Hello World</code>.</div></div></div></section>
+<section class="s"><div class="eb">The reality</div><h2>The endless race and password strength</h2><div class="g2 mt"><div class="c"><b>The “sad reality”</b><div>Hashing slows transmitted information because data must be encrypted and decrypted; with modern technology the slowdown is negligible. The bigger issue is the <b>endless race</b>: as technology improves, hackers exploit weaknesses in outdated algorithms like MD5 and SHA-1.</div></div><div class="c"><b>Password strength</b><div>Uppercase, lowercase, number, symbol and 8+ characters. Online MD5 “decryption” tools rely on databases of previously cracked hashes, so complex, unique passwords are not found (rainbow tables).</div></div></div></section>
+<section class="s"><div class="eb">Analogy and use case</div><h2>Lockbox, fingerprint, password storage</h2><div class="g2 mt"><div class="c"><b>Lockbox and fingerprint</b><div><b>Encryption</b> is a letter in a strong locked box: anyone can carry it, only the key holder opens it (decryption). <b>Hashing</b> is a fingerprint of the letter: you cannot rebuild the letter, but you can compare fingerprints.</div></div><div class="c"><b>Password storage</b><div>A site should never store plain-text passwords. It hashes yours (like SHA-256) and stores the hash. At login it hashes what you typed and compares. If the database is breached, hackers get hashes, not passwords.</div></div></div></section>
+<section class="s"><div class="eb">Lab: hands-on</div><h2>Parts 1 and 2: hash and decrypt</h2><div class="g2 mt"><div class="c"><b>Part 1: get MD5 and SHA-1 of each sentence</b><div><ol class="lst"><li>The right man in the wrong place can make all the difference in the world</li><li>Praise the sun</li><li>Do a barrel roll</li><li>I am the swarm</li><li>The cake is a lie</li></ol>Use an online hash generator such as md5hashgenerator.com.</div></div><div class="c"><b>Part 2: decrypt these MD5 hashes</b><div><code>1036ba3c4ed2c021e8f5e2641c8a23e3</code><br><code>45ea37a8b034ece4d08639d18d913ad0</code><br><code>bb3ccd5881d651448ded1dac904054ac</code><br><code>e150616b3c0801e894e0cc6274f84a3e</code><br><code>e0d9d3862dfb270de65719d43749df5e</code><br>Use an online tool such as md5online.org/md5-decrypt.html.</div></div></div></section>
+<section class="s"><div class="eb">Lab: hands-on</div><h2>Part 3: the “cannot be decrypted” scenario</h2><div class="g2 mt"><div class="c"><b>Steps</b><div><ul class="lst"><li>Hash the string <code>PaSsWord123?!</code> with the generator and record its MD5.</li><li>Try to decrypt that MD5 with the decryption tool.</li><li>Write what happened.</li><li>Explain why.</li></ul></div></div><div class="c"><b>Document it</b><div>Record your findings in your project folder. Solo version of a group activity.</div></div></div></section>
+<section class="s"><div class="eb">Questions answered</div><h2>Frequently asked</h2><div class="g2 mt"><div class="c"><b>Why are MD5 and SHA-1 still used?</b><div>They are fast and cheap, and legacy systems rely on them. New systems should use stronger algorithms like SHA-256 or bcrypt.</div></div><div class="c"><b>Can a hash be reversed?</b><div>No. You can only guess the input and hash the guess to compare.</div></div><div class="c"><b>Encryption vs hashing?</b><div>Encryption is two-way (decrypt with a key) and used to transmit data securely. Hashing is one-way and used to verify integrity and store passwords.</div></div><div class="c"><b>Why a symbol and a number?</b><div>They enlarge the search space, defending against dictionary and brute-force attacks.</div></div></div></section>
+<section class="s"><div class="eb">Key quotes</div><h2>Definitions worth remembering</h2><div class="g2 mt"><div class="c"><b>Cryptography</b><div>Masking information so only the sender and receiver understand it.</div></div><div class="c"><b>Encryption and decryption</b><div>Plaintext to ciphertext, and back.</div></div><div class="c"><b>Hashing</b><div>A one-way function with fixed-size output.</div></div><div class="c"><b>Strong password</b><div>Uppercase, lowercase, number, symbol and 8+ characters.</div></div></div></section>
+<section class="s"><div class="eb">Recap</div><h2>Key takeaways</h2><ul class="lst big"><li>Cryptography secures communication by masking information.</li><li>Encryption converts plaintext to ciphertext; decryption reverses it.</li><li>Hashing is one-way with fixed-size output.</li><li>MD5 and SHA-1 are outdated; AES and RSA are modern.</li><li>Strong passwords resist brute-force and dictionary attacks.</li></ul></section>
+<section class="s"><div class="eb">Activity 1</div><h2>Short essay</h2><ul class="lst big"><li>When do we apply hashing and cryptography? And why do we need to apply it?</li><li>What is the sad part of the improvement of our technologies?</li></ul></section>
+<section class="s"><div class="eb">Activity 2</div><h2>Multiple choice</h2><div class="q2 mt"><div class="c"><b>3. What converts an original message into a form unreadable to unauthorized individuals?</b><span class="opts">A. Decryption · B. Hashing · C. Encryption · D. Authentication</span></div><div class="c"><b>4. Which technology produces a 128-bit hash value?</b><span class="opts">A. SHA-1 · B. MD5 · C. AES · D. RSA</span></div><div class="c"><b>5. A key characteristic of a hash sum is…</b><span class="opts">A. It can be easily decrypted · B. Its size changes with input length · C. Its size is the same regardless of input length · D. It only works for numbers</span></div><div class="c"><b>6. Why is PaSsWord123?! hard to decrypt with an online MD5 tool?</b><span class="opts">A. MD5 is two-way · B. The tool uses a database of known hashes and this string is not in it · C. Symbols are not allowed in MD5 · D. The internet cannot process complex hashes</span></div></div></section>
+<section class="s"><div class="eb">Answer key</div><h2>Activities 1 and 2</h2><div class="g2 mt"><ul class="lst"><li><b>1.</b> Apply cryptography when sending sensitive data over insecure networks like the internet, for confidentiality. Apply hashing when storing passwords or verifying file integrity, so data can be verified without storing the plaintext.</li><li><b>2.</b> The endless race: as encryption gets stronger, hackers gain better processing power and tools. Securing data also always adds some overhead.</li></ul><ol class="lst" start="3"><li><b>C</b>: plaintext becomes ciphertext.</li><li><b>B</b>: MD5 gives 128 bits.</li><li><b>C</b>: fixed-size output.</li><li><b>B</b>: tools use pre-computed databases of known hashes.</li></ol></div></section>
+<section class="s"><div class="eb">Answer key</div><h2>Lab check values (computed, not from the source)</h2><div style="overflow-x:auto"><table><tr><th>Text</th><th>MD5</th><th>SHA-1</th></tr><tr><td>The right man in the wrong place…</td><td><code>92cd684a61d8bdaa1c738732f83c00c9</code></td><td><code>d8ca7bc814a5b7ae89a4b7208e725135cd766743</code></td></tr><tr><td>Praise the sun</td><td><code>efd2b2d0dbcb690435ad3cdf2abdbc2e</code></td><td><code>a90716656ca74290a5101f07f4a4baab2bfcd588</code></td></tr><tr><td>Do a barrel roll</td><td><code>eeffc5fba84959c6cd780614670d6a38</code></td><td><code>dcfeed64c2e40aa993b438891b0181cc02068e9b</code></td></tr><tr><td>I am the swarm</td><td><code>d14291bdc19f4c07cdc0e6ce5ef29cc8</code></td><td><code>eb64f4544f0943790d0a4d46cd983dfe0c4b48e7</code></td></tr><tr><td>The cake is a lie</td><td><code>180dca210094772b0626b73a99eb049d</code></td><td><code>a6e49758f934c653daa66e25bc6d7998d25cb78d</code></td></tr><tr><td>PaSsWord123?!</td><td><code>694191faec91a3562432ff2305de3a47</code></td><td><code>1cc8d15ae24197a6be8ebb786f4feabf939b9baf</code></td></tr></table></div><p class="mu mt">Computed locally on UTF-8 text with no trailing newline. The source gives no lab answers. Part 2 has no key.</p></section>
+<section class="s"><div class="eb">Wrap-up</div><h2>Well done</h2><div class="g2"><div><p class="big">Next, document your lab findings in your project folder.</p><p class="mu">Remember: encrypt to hide, hash to verify.</p></div><svg viewBox="0 0 480 200" role="img"><title>A checkmark inside a circle</title><circle class="sv-ok" cx="240" cy="100" r="80"/><path class="sv-line" style="stroke:var(--ok);stroke-width:8" d="M200 102l30 30 55-62"/></svg></div></section>
+
+<script>
+(function(){
+var S=[].slice.call(document.querySelectorAll('.s')),i=0,z=1,bar=document.getElementById('bar'),ctr=document.getElementById('ctr'),help=document.getElementById('help');
+try{z=parseFloat(localStorage.getItem('deck-zoom'))||1}catch(e){}
+function typing(t){return t&&(/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)||t.isContentEditable)}
+function lab(){ctr.textContent=(i+1)+' / '+S.length+(z!==1?' · '+Math.round(z*100)+'%':'')}
+function show(n){n=Math.max(0,Math.min(S.length-1,n));S.forEach(function(s,k){var on=k===n;s.classList.toggle('on',on);s.classList.toggle('prev',k<n);s.setAttribute('aria-hidden',on?'false':'true');if(on)s.removeAttribute('inert');else s.setAttribute('inert','')});
+S[n].scrollTop=0;i=n;bar.style.width=((n+1)/S.length*100)+'%';lab()}
+function zoom(d){z=d===0?1:Math.max(.7,Math.min(2,Math.round((z+d)*100)/100));S.forEach(function(s){s.style.zoom=z});try{localStorage.setItem('deck-zoom',z)}catch(e){}lab()}
+function nx(){show(i+1)}function pv(){show(i-1)}
+document.addEventListener('keydown',function(e){if(typing(e.target))return;var k=e.key;
+ if(e.ctrlKey||e.metaKey){if(k==='+'||k==='='){e.preventDefault();zoom(.1)}else if(k==='-'){e.preventDefault();zoom(-.1)}else if(k==='0'){e.preventDefault();zoom(0)}return}
+ if(k==='ArrowRight'||k===' '||k==='PageDown'){e.preventDefault();nx()}else if(k==='ArrowLeft'||k==='PageUp'){e.preventDefault();pv()}
+ else if(k==='Home')show(0);else if(k==='End')show(S.length-1);else if(k==='?')help.classList.toggle('on');else if(k==='Escape')help.classList.remove('on')});
+document.addEventListener('contextmenu',function(e){e.preventDefault();nx()});
+['mousedown','mouseup','auxclick'].forEach(function(t){window.addEventListener(t,function(e){
+ if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation();if(t==='mousedown'){if(e.button===4)nx();else pv()}}},true)});
+window.addEventListener('wheel',function(e){if(e.ctrlKey||e.metaKey){e.preventDefault();zoom(e.deltaY<0?.1:-.1)}},{passive:false});
+history.pushState(null,'',location.href);window.addEventListener('popstate',function(){history.pushState(null,'',location.href)});
+var tx=0,ty=0;document.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:true});
+document.addEventListener('touchend',function(e){var dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5){dx<0?nx():pv()}},{passive:true});
+/* syntax highlighting: single pass, per language */
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+var KW={js:'import|from|export|default|function|const|let|var|for|of|in|if|else|return|async|await|new|class|try|catch|finally|throw|type|interface',
+ py:'import|from|def|class|return|if|elif|else|for|while|in|not|and|or|try|except|finally|raise|with|as|lambda|None|True|False'};
+function hl(src,lang){var g=/^(js|ts|tsx|jsx)$/.test(lang)?'js':lang==='py'?'py':null;if(!g)return esc(src);
+ var cm=g==='py'?'#[^\n]*':'\\/\\/[^\n]*|\\/\\*[\\s\\S]*?\\*\\/';
+ var re=new RegExp('('+cm+')|("[^"\\n]*"|\'[^\'\\n]*\')|(\\b(?:'+KW[g]+')\\b)|(\\b\\d+(?:\\.\\d+)?\\b)|(\\b[A-Za-z_]\\w*(?=\\())','g'),o='',l=0,m;
+ while((m=re.exec(src))){o+=esc(src.slice(l,m.index));var c=m[1]?'tc':m[2]?'ts':m[3]?'tk':m[4]?'tn':'tf';o+='<span class="'+c+'">'+esc(m[0])+'</span>';l=re.lastIndex}
+ return o+esc(src.slice(l))}
+document.querySelectorAll('.code').forEach(function(d){var pre=d.querySelector('pre'),src=pre.textContent.replace(/\n+$/,''),h=document.createElement('header'),n=document.createElement('span'),b=document.createElement('button');
+ n.textContent=d.getAttribute('data-name')||'Code';b.className='btn';b.type='button';b.textContent='Copy';b.setAttribute('aria-label','Copy code');h.appendChild(n);h.appendChild(b);d.insertBefore(h,pre);
+ pre.innerHTML=hl(src,d.getAttribute('data-lang')||'none');pre.tabIndex=0;
+ b.addEventListener('click',function(){var done=function(){b.textContent='Copied!';b.classList.add('done');setTimeout(function(){b.textContent='Copy';b.classList.remove('done')},1400)};
+  if(navigator.clipboard)navigator.clipboard.writeText(src).then(done,done);else done()})});
+/* stepper demo */
+document.querySelectorAll('.stepper').forEach(function(st){var items=[].slice.call(st.querySelectorAll('li')),k=-1,bar=document.createElement('div'),bk=document.createElement('button'),fw=document.createElement('button'),sp=document.createElement('span');
+ bar.className='stepper-bar';bk.className=fw.className='btn';bk.type=fw.type='button';bk.textContent='Back';fw.textContent='Next step';sp.setAttribute('aria-live','polite');sp.className='mu';
+ bar.appendChild(bk);bar.appendChild(fw);bar.appendChild(sp);st.appendChild(bar);
+ function r(){items.forEach(function(li,j){li.classList.toggle('on',j<=k)});bk.disabled=k<0;fw.disabled=k>=items.length-1;sp.textContent=k<0?'Predict first, then step through.':'Step '+(k+1)+' of '+items.length+(k===items.length-1?' (done)':'')}
+ bk.addEventListener('click',function(){if(k>=0){k--;r()}});fw.addEventListener('click',function(){if(k<items.length-1){k++;r()}});r()});
+/* narrow screens: wide diagrams keep full-size text and scroll inside their own box */
+function fitSvgs(){var narrow=innerWidth<=800;document.querySelectorAll('.s svg').forEach(function(v){var vb=(v.getAttribute('viewBox')||'').split(/[ ,]+/),w=parseFloat(vb[2])||0;
+ if(narrow&&w>=300){if(!v.parentNode.classList.contains('svwrap')){var wr=document.createElement('div');wr.className='svwrap';v.parentNode.insertBefore(wr,v);wr.appendChild(v)}v.style.minWidth=w+'px';v.style.maxHeight='none'}
+ else{v.style.minWidth='';v.style.maxHeight=''}})}
+var rt;addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(fitSvgs,120)});fitSvgs();
+S.forEach(function(s){s.style.zoom=z});show(0)})();
+</script>
+</body>
+</html>

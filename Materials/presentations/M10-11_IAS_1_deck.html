@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>M10-11 Security Policies and UAC</title>
+<style>
+/* ===== THEME TOKENS: replace these per deck (see references/design-rules.md) ===== */
+:root{
+  color-scheme:light dark;
+  --bg:#f6f5f2; --panel:#ffffff; --panel2:#ecebe6; --tx:#1b1b1f; --mu:#5a5a63;
+  --accent:#2f5fd0; --accent-hover:#234aa6;
+  --ok:#1f7a3d; --bad:#b3261e; --warn:#8a5a00; --line:#c9c7bf;
+  --code-bg:#15151a; --code-tx:#e8e8ee; --code-bar:#23232b;
+  --k:#d8b4fe; --s:#86efac; --n:#fdba74; --f:#7dd3fc; --c:#8b8ba0;
+  --font-display:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+  --font-body:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,Consolas,Menlo,monospace;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#101114; --panel:#1a1c21; --panel2:#23262d; --tx:#eceef2; --mu:#a9aebb;
+    --accent:#7aa2ff; --accent-hover:#5c86ec;
+    --ok:#5fd48a; --bad:#ff8c84; --warn:#f0c15a; --line:#343842;
+  }
+}
+/* ===== BASE (usually unchanged) ===== */
+*{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg)}
+@supports not (scrollbar-color:auto){
+  ::-webkit-scrollbar{width:14px;height:14px}
+  ::-webkit-scrollbar-track{background:var(--bg);border:2px solid var(--line)}
+  ::-webkit-scrollbar-thumb{background:var(--accent);border:3px solid var(--bg);border-radius:8px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--accent-hover)}
+  ::-webkit-scrollbar-corner{background:var(--bg)}
+}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:18px/1.6 var(--font-body);overflow:hidden}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#bar{position:fixed;top:0;left:0;height:4px;width:0;background:var(--accent);z-index:9;transition:width 350ms var(--ease)}
+#ctr{position:fixed;right:18px;bottom:12px;font-size:16px;color:var(--mu);z-index:9}
+.s{position:absolute;inset:0;padding:36px 7vw 52px;overflow:auto;opacity:0;visibility:hidden;transform:translateX(36px);
+  transition:opacity 350ms var(--ease),transform 350ms var(--ease),visibility 0s linear 350ms;scrollbar-gutter:stable}
+.s.on{opacity:1;visibility:visible;transform:none;transition-delay:0s}
+.s.prev{transform:translateX(-36px)}
+@media (prefers-reduced-motion:reduce){.s,.s.prev{transform:none}#bar{transition:none}.spin{animation:none!important}}
+.eb{font-size:17px;font-weight:600;color:var(--accent);margin:0 0 2px}
+h1,h2{font-family:var(--font-display);margin:.1em 0 .5em;line-height:1.15}
+h1{font-size:clamp(34px,5vw,54px)}h2{font-size:clamp(28px,3.4vw,40px)}
+h3{margin:0 0 .3em;font-size:20px;font-family:var(--font-display)}
+p{margin:.3em 0}ul,ol{margin:.3em 0;padding-left:1.2em}li{margin:.25em 0}
+.g2,.g3{display:grid;gap:18px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g2>*,.g3>*{min-width:0}.mt{margin-top:18px}
+@media (max-width:800px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.c{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 18px;min-width:0}
+.c.pend{border-color:var(--warn)}
+code,.k{font-family:var(--font-mono);font-size:16px;background:var(--panel2);padding:1px 6px;border-radius:5px}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}.mu{color:var(--mu)}
+table{border-collapse:collapse;width:100%}td,th{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}th{background:var(--panel2)}
+.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:24px;align-items:center;min-height:68vh}
+@media (max-width:800px){.hero{grid-template-columns:minmax(0,1fr)}}
+.opts{display:block;color:var(--mu)}
+.q2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 20px}
+.q2>.c:last-child:nth-child(odd){grid-column:1/-1;justify-self:center;width:calc(50% - 10px)}
+@media (max-width:800px){.q2{grid-template-columns:minmax(0,1fr)}.q2>.c:last-child:nth-child(odd){width:auto}}
+/* SVG: author viewBox ~480 wide, font-size >=17; use these classes so diagrams follow the theme */
+svg{display:block;margin:auto;width:100%;height:auto;max-height:clamp(220px,40vh,340px)}
+.sv-box{fill:var(--panel);stroke:var(--line);stroke-width:2}.sv-hl{fill:var(--panel2);stroke:var(--accent);stroke-width:2}
+.sv-ok{fill:var(--panel);stroke:var(--ok);stroke-width:2}.sv-bad{fill:var(--panel);stroke:var(--bad);stroke-width:2}
+.sv-tx{fill:var(--tx);font-size:17px}.sv-mu{fill:var(--mu);font-size:17px}.sv-line{stroke:var(--accent);stroke-width:2;fill:none}
+.svwrap{overflow-x:auto;max-width:100%;scrollbar-gutter:stable}
+/* Buttons: tactile press */
+.btn{font:600 16px var(--font-body);color:var(--tx);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 14px;
+  cursor:pointer;box-shadow:0 4px 0 var(--line);transform:translateY(0);transition:transform 120ms var(--ease),box-shadow 120ms var(--ease)}
+.btn:active{transform:translateY(4px);box-shadow:0 0 0 var(--line)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}.btn.done{color:var(--ok);transform:translateY(4px);box-shadow:inset 0 3px 6px var(--line)}
+@media (hover:hover) and (pointer:fine){.btn:not([disabled]):hover{border-color:var(--accent)}}
+/* Code cards: <div class="code" data-lang="js|ts|tsx|py|sh|json|none" data-name="file"><pre>escaped code</pre></div> */
+.code{display:flex;flex-direction:column;background:var(--code-bg);color:var(--code-tx);border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:0}
+.code header{flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 14px;background:var(--code-bar);font-size:16px;color:#c9c9d6}
+.code pre{flex:1;overflow:auto;min-height:0;margin:0;padding:14px;font:16px/1.55 var(--font-mono);scrollbar-gutter:stable}
+.code .btn{color:#1b1b1f;background:#ecebe6;border-color:#8b8ba0;box-shadow:0 4px 0 #8b8ba0}
+.tk{color:var(--k)}.ts{color:var(--s)}.tn{color:var(--n)}.tf{color:var(--f)}.tc{color:var(--c)}
+.row{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:18px;height:min(540px,62vh);align-items:stretch}
+.row>*{height:100%;min-height:0;overflow:auto}.row>.code{overflow:hidden}
+@media (max-width:800px){.row{grid-template-columns:minmax(0,1fr);height:auto}.row>*{height:auto}}
+/* Predict-then-trace stepper (optional demo): <div class="stepper"><ol><li>…</li></ol></div> */
+.stepper li{color:var(--mu)}.stepper li.on{color:var(--tx);font-weight:600}.stepper-bar{display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap}
+#help{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;z-index:20}
+#help.on{display:grid}#help div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px 30px;max-width:min(520px,90vw)}
+/* ===== DECK-SPECIFIC CSS ===== */
+:root{--bg:#f4f3ee;--panel:#fff;--panel2:#e7efed;--tx:#1a1f1e;--mu:#505a58;--accent:#0b6b63;--accent-hover:#08504a;--line:#c5ccc8}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1413;--panel:#161d1c;--panel2:#1f2a28;--tx:#e8eeec;--mu:#a3b0ad;--accent:#4fd1c2;--accent-hover:#7be0d4;--line:#31403d}}
+table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--accent)}
+.lst{margin:6px 0 0;padding-left:1.2em}.lst li{margin:4px 0}.big{font-size:20px}
+.btn.sel{outline:3px solid var(--accent)}
+
+</style>
+</head>
+<body>
+<div id="bar"></div><div id="ctr" aria-live="off"></div>
+<div id="help" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"><div><h3>Shortcuts</h3>
+<p>→ · Space · PageDown · Right-click · Mouse5: next<br>← · PageUp · Mouse4: previous<br>Home / End: first / last<br>Ctrl + / − / 0 or Ctrl + scroll: text size<br>?: this panel · Esc: close · Swipe on touch screens</p></div></div>
+<section class="s"><div class="hero"><div><div class="eb">Information Assurance and Security · Module 10-11</div><h2 style="font-size:40px">Security policies and user access controls</h2><p class="big">Codify security expectations in policies and limit access by role.</p></div><svg viewBox="0 0 480 260" role="img"><title>Four access levels stacked from customer to admin</title><rect class="sv-hl" x="60" y="10" width="360" height="50" rx="8"/><text class="sv-tx" x="240.0" y="41.0" text-anchor="middle">Level 4 · Creator or admin</text><rect class="sv-box" x="60" y="75" width="360" height="50" rx="8"/><text class="sv-tx" x="240.0" y="106.0" text-anchor="middle">Level 3 · High employee</text><rect class="sv-box" x="60" y="140" width="360" height="50" rx="8"/><text class="sv-tx" x="240.0" y="171.0" text-anchor="middle">Level 2 · Employee</text><rect class="sv-box" x="60" y="205" width="360" height="50" rx="8"/><text class="sv-tx" x="240.0" y="236.0" text-anchor="middle">Level 1 · Customer</text></svg></div></section>
+<section class="s"><div class="eb">Learning targets</div><h2>By the end you can</h2><ul class="lst big"><li>Discuss common security policies within an organization.</li><li>Formulate reasonable security policies.</li><li>Discuss the different kinds of user access controls in organizations.</li><li>Differentiate kinds of user access controls.</li><li>Formulate user access controls for your project.</li></ul></section>
+<section class="s"><div class="eb">Security policy</div><h2>Simple rules are policies</h2><div class="g2 mt"><div class="c"><b>Definition</b><div>A document containing rules and regulations within an organization. It protects the organization’s physical and IT assets, its employees and its customers.</div></div><div class="c"><b>Two everyday examples</b><div><b>Log out after using the work computer:</b> no traces remain, and no one else can access your data. <b>Wear your ID:</b> guards and staff can tell who belongs; people without IDs are treated as suspicious.</div></div></div><p class="mu mt">Pro tip: policies look ordinary and easy to follow. That is their beauty: simple, actionable and effective.</p></section>
+<section class="s"><div class="eb">In-depth policies</div><h2>What a formal policy document holds</h2><div class="g2 mt"><div class="c"><b>Process</b><div>Created by security officers, read by every employee and <b>approved by executives</b>, like the Authorization step in the RMF.</div></div><div class="c"><b>Contents</b><div><ul class="lst"><li>Objectives/purpose</li><li>Scope</li><li>The policy itself</li><li>Technical guidelines</li><li>Reporting guidelines/requirements</li></ul></div></div></div><p class="mu mt">In this course, write simple, straightforward policies anyone can follow.</p></section>
+<section class="s"><div class="eb">Policies by industry</div><h2>Policies vary with the business</h2><div class="g2 mt"><div class="c"><b>General / offices</b><div>No loitering. No personal accounts on work computers. Clean, clear desk. No food or drinks. Handle documents carefully. Always make backups. Keep documents secure and important drawers locked. No unauthorized visitors. No smoking.</div></div><div class="c"><b>Restaurants</b><div>Clean, clear kitchen table. Always clean the bathroom. Always someone at the cash register and someone to greet customers. Accessible fire extinguisher. No smoking. Always wear a hairnet or chef’s hat.</div></div><div class="c"><b>Factory / laboratory</b><div>Wear safety equipment. Accessible fire extinguisher. Inform others or executives when using equipment. Turn off computers and air conditioners after use. Clear workstation. Be accompanied by one or more persons.</div></div><div class="c"><b>Developer / coder</b><div>Secure your accounts. Write clean code. Document code clearly. Never delete, only archive. Always make backups.</div></div></div></section>
+<section class="s"><div class="eb">User access control</div><h2>Limiting what users can do</h2><p class="big">UAC is the practice of limiting how users can change, delete, update, create or view things in a document or any part of the system. It reduces or prevents damage and unauthorized alterations.</p><div style="overflow-x:auto"><table><tr><th>Level</th><th>Title</th><th>Permissions</th></tr><tr><td><b>4</b></td><td>Creator / admin (highest)</td><td>Create, input, edit, comment, view and modify the whole system; add other users to levels.</td></tr><tr><td><b>3</b></td><td>High employee</td><td>Depends on rights given: usually input, edit, comment, view, sometimes add users.</td></tr><tr><td><b>2</b></td><td>Employee</td><td>Edit, comment and view.</td></tr><tr><td><b>1</b></td><td>Customer (lowest)</td><td>View, and sometimes comment.</td></tr></table></div><p class="mu mt">Levels differ by organization: a small business may need 3, a large enterprise 5 or more.</p></section>
+<section class="s"><div class="eb">UAC example</div><h2>Fast food menu pricing display</h2><div class="g2 mt"><div class="c"><b>Level 4 · Owners</b><div>Create menus to display and provide basic pricing.</div></div><div class="c"><b>Level 3 · Managers</b><div>Modify the displayed menu and the pricing.</div></div><div class="c"><b>Level 2 · Employees or staff</b><div>Modify the displayed menu depending on item availability.</div></div><div class="c"><b>Level 1 · Customers</b><div>View the menu and its pricing.</div></div></div></section>
+<section class="s"><div class="eb">Try it</div><h2>Which level can do this?</h2><div class="g2 mt"><div class="c"><b>Menu pricing display</b><p class="big" id="sc"></p><div id="ch" style="display:flex;gap:12px;flex-wrap:wrap"></div><p id="st" aria-live="polite" class="mu"></p><button class="btn" id="nx" type="button" disabled>Next</button></div><div class="c"><b>Remember</b><ul class="lst"><li>Level 4 is highest, level 1 lowest</li><li>Assign the lowest level a job needs</li><li>Grant more case by case</li></ul></div></div><script>(function(){var D=[["Create menus to be displayed and provide basic pricing", "Level 4", "owners create menus and basic pricing."], ["Modify the displayed menu and modify the pricing", "Level 3", "managers can change menu and pricing."], ["Modify the displayed menu depending on item availability", "Level 2", "staff update availability only."], ["View the menu and its pricing", "Level 1", "customers can view only."]],O=["Level 4", "Level 3", "Level 2", "Level 1"].slice(),i=0,done=false,ch=document.getElementById('ch'),st=document.getElementById('st'),nx=document.getElementById('nx');
+function show(){done=false;nx.disabled=true;st.className='mu';st.textContent='Choose one.';document.getElementById('sc').textContent=D[i][0];ch.innerHTML='';O.forEach(function(n){var b=document.createElement('button');b.className='btn';b.type='button';b.textContent=n;b.onclick=function(){if(done)return;if(n===D[i][1]){done=true;st.className='ok';st.textContent='Correct: '+D[i][2];b.classList.add('sel');nx.disabled=false}else{st.className='bad';st.textContent='Not that one. Try again.'}};ch.appendChild(b)})}
+nx.onclick=function(){i=(i+1)%D.length;show()};show()})();</script></section>
+<section class="s"><div class="eb">Analogy and use case</div><h2>Hotel keycards and the grades portal</h2><div class="g2 mt"><div class="c"><b>Hotel keycards</b><div><b>L4 general manager:</b> master key to every room, maintenance and accounting. <b>L3 housekeeping supervisor:</b> guest rooms and supply closet, not accounting. <b>L2 housekeeper:</b> guest rooms to clean. <b>L1 guest:</b> own room and the lobby.</div></div><div class="c"><b>University grades portal</b><div><b>L4 system admin:</b> new semesters, enroll students, database structure. <b>L3 registrar or dean:</b> view all grades, approve changes, reports. <b>L2 teacher:</b> input and edit grades only for assigned subjects. <b>L1 student:</b> view only their own grades.</div></div></div></section>
+<section class="s"><div class="eb">Course project</div><h2>Part 1: security policies</h2><div class="g2 mt"><div class="c"><b>Instructions</b><div><ul class="lst"><li>Solo project; use a different hypothetical business (small retail store, dental clinic, freelance graphic designer)</li><li>New chapter titled “Security Policies”</li><li>List 8 policies and explain each one’s purpose</li></ul></div></div><div class="c"><b>Example: small retail store</b><div><b>Policy 1:</b> log out of the POS system when stepping away. <i>Purpose:</i> prevents unauthorized transactions and protects payment data.<br><b>Policy 2:</b> keep the server room door locked. <i>Purpose:</i> prevents physical tampering with network infrastructure.</div></div></div></section>
+<section class="s"><div class="eb">Course project</div><h2>Part 2: user access control</h2><div class="g2 mt"><div class="c"><b>Instructions</b><div><ul class="lst"><li>Add a “User Access Control” subsection</li><li>Tell the organization there must be UAC in every aspect of its system and documentation</li><li>Give sample levels and draft yours in a table</li></ul></div></div><div style="overflow-x:auto"><table><tr><th>Level</th><th>Role</th><th>Permissions</th></tr><tr><td>4</td><td><i>Business owner</i></td><td><i>Full access to systems, financials, employee records</i></td></tr><tr><td>3</td><td><i>Store manager</i></td><td><i>Edit inventory, view sales reports, manage schedules</i></td></tr><tr><td>2</td><td><i>Cashier</i></td><td><i>Process sales, view availability, cannot edit pricing</i></td></tr><tr><td>1</td><td><i>Customer</i></td><td><i>View products and prices only</i></td></tr></table></div></div></section>
+<section class="s"><div class="eb">Questions answered</div><h2>Frequently asked</h2><div class="g2 mt"><div class="c"><b>Are all policies simple?</b><div>No. Some, such as software development standards or encryption protocols, need specialized knowledge. The most effective policies for general staff are often the simplest.</div></div><div class="c"><b>Why have UAC?</b><div>To prevent accidental or malicious damage by limiting who can edit, delete or view sensitive information.</div></div><div class="c"><b>Which level to assign?</b><div>Follow the principle of least privilege: the lowest level needed for the job.</div></div><div class="c"><b>Do policies change?</b><div>Yes. Review and update them for new threats, technology and organizational changes.</div></div></div></section>
+<section class="s"><div class="eb">Key quotes</div><h2>Definitions worth remembering</h2><div class="g2 mt"><div class="c"><b>Security policy</b><div>A document containing rules and regulations within an organization.</div></div><div class="c"><b>User access control</b><div>Limiting how users can change, delete, update, create or view parts of a system.</div></div><div class="c"><b>Least privilege</b><div>Assign the lowest level of access necessary to do the job.</div></div><div class="c"><b>Approval</b><div>Executives approve formal security policies.</div></div></div></section>
+<section class="s"><div class="eb">Recap</div><h2>Key takeaways</h2><ul class="lst big"><li>Security policies are formal rules that protect assets, approved by executives.</li><li>Policies vary by industry but aim at a safe, secure environment.</li><li>UAC restricts users by role, from level 1 (view) to level 4 (admin).</li><li>UAC applies to every aspect of the organization’s system and documentation.</li></ul></section>
+<section class="s"><div class="eb">Activity 1</div><h2>Essay</h2><ul class="lst big"><li>What is the importance of user access controls?</li><li>Why are most general security policies easily understood?</li></ul></section>
+<section class="s"><div class="eb">Activity 2</div><h2>Identification: which UAC level?</h2><ul class="lst big"><li>Can view, and sometimes comment.</li><li>Can edit, comment and view.</li><li>Can create, input, edit, comment, view and modify the whole system, and add other users.</li><li>Can input, edit, comment, view, and sometimes add other users depending on access rights.</li></ul></section>
+<section class="s"><div class="eb">Activity 3</div><h2>Multiple choice</h2><div class="q2 mt"><div class="c"><b>5. What is the primary purpose of a security policy?</b><span class="opts">A. To look professional · B. To protect physical and IT assets, employees and customers · C. To give IT more power · D. To comply with government regulations only</span></div><div class="c"><b>6. Who approves a formal security policy?</b><span class="opts">A. IT security officers · B. Employees · C. Executives or business owners · D. Customers</span></div><div class="c"><b>7. Which is a developer/coder security policy?</b><span class="opts">A. Always wear a hairnet · B. Never delete code, only archive it · C. Keep a clean kitchen table · D. No loitering in the hallways</span></div></div></section>
+<section class="s"><div class="eb">Answer key</div><h2>Activities 1 and 2</h2><div class="g2 mt"><ul class="lst"><li><b>Essay 1.</b> UAC limits user actions to prevent accidental or malicious damage, unauthorized changes and breaches, and gives users only the access they need.</li><li><b>Essay 2.</b> They are meant for everyone regardless of technical background and focus on simple actions, such as locking a drawer or logging out, that matter when followed consistently.</li></ul><ol class="lst"><li><b>Level 1</b> (customer)</li><li><b>Level 2</b> (employee)</li><li><b>Level 4</b> (admin or creator)</li><li><b>Level 3</b> (high employee)</li></ol></div></section>
+<section class="s"><div class="eb">Answer key</div><h2>Activity 3</h2><ul class="lst"><li><b>5. B:</b> the core objective is protecting assets and people.</li><li><b>6. C:</b> like the RMF authorization step, executives approve policies.</li><li><b>7. B:</b> archiving preserves code history so mistakes can be reverted.</li></ul></section>
+<section class="s"><div class="eb">Wrap-up</div><h2>Well done</h2><div class="g2"><div><p class="big">Next, add your Security Policies chapter and UAC table to your project.</p><p class="mu">Remember: simple policies, least privilege.</p></div><svg viewBox="0 0 480 200" role="img"><title>A checkmark inside a circle</title><circle class="sv-ok" cx="240" cy="100" r="80"/><path class="sv-line" style="stroke:var(--ok);stroke-width:8" d="M200 102l30 30 55-62"/></svg></div></section>
+
+<script>
+(function(){
+var S=[].slice.call(document.querySelectorAll('.s')),i=0,z=1,bar=document.getElementById('bar'),ctr=document.getElementById('ctr'),help=document.getElementById('help');
+try{z=parseFloat(localStorage.getItem('deck-zoom'))||1}catch(e){}
+function typing(t){return t&&(/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)||t.isContentEditable)}
+function lab(){ctr.textContent=(i+1)+' / '+S.length+(z!==1?' · '+Math.round(z*100)+'%':'')}
+function show(n){n=Math.max(0,Math.min(S.length-1,n));S.forEach(function(s,k){var on=k===n;s.classList.toggle('on',on);s.classList.toggle('prev',k<n);s.setAttribute('aria-hidden',on?'false':'true');if(on)s.removeAttribute('inert');else s.setAttribute('inert','')});
+S[n].scrollTop=0;i=n;bar.style.width=((n+1)/S.length*100)+'%';lab()}
+function zoom(d){z=d===0?1:Math.max(.7,Math.min(2,Math.round((z+d)*100)/100));S.forEach(function(s){s.style.zoom=z});try{localStorage.setItem('deck-zoom',z)}catch(e){}lab()}
+function nx(){show(i+1)}function pv(){show(i-1)}
+document.addEventListener('keydown',function(e){if(typing(e.target))return;var k=e.key;
+ if(e.ctrlKey||e.metaKey){if(k==='+'||k==='='){e.preventDefault();zoom(.1)}else if(k==='-'){e.preventDefault();zoom(-.1)}else if(k==='0'){e.preventDefault();zoom(0)}return}
+ if(k==='ArrowRight'||k===' '||k==='PageDown'){e.preventDefault();nx()}else if(k==='ArrowLeft'||k==='PageUp'){e.preventDefault();pv()}
+ else if(k==='Home')show(0);else if(k==='End')show(S.length-1);else if(k==='?')help.classList.toggle('on');else if(k==='Escape')help.classList.remove('on')});
+document.addEventListener('contextmenu',function(e){e.preventDefault();nx()});
+['mousedown','mouseup','auxclick'].forEach(function(t){window.addEventListener(t,function(e){
+ if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation();if(t==='mousedown'){if(e.button===4)nx();else pv()}}},true)});
+window.addEventListener('wheel',function(e){if(e.ctrlKey||e.metaKey){e.preventDefault();zoom(e.deltaY<0?.1:-.1)}},{passive:false});
+history.pushState(null,'',location.href);window.addEventListener('popstate',function(){history.pushState(null,'',location.href)});
+var tx=0,ty=0;document.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:true});
+document.addEventListener('touchend',function(e){var dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5){dx<0?nx():pv()}},{passive:true});
+/* syntax highlighting: single pass, per language */
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+var KW={js:'import|from|export|default|function|const|let|var|for|of|in|if|else|return|async|await|new|class|try|catch|finally|throw|type|interface',
+ py:'import|from|def|class|return|if|elif|else|for|while|in|not|and|or|try|except|finally|raise|with|as|lambda|None|True|False'};
+function hl(src,lang){var g=/^(js|ts|tsx|jsx)$/.test(lang)?'js':lang==='py'?'py':null;if(!g)return esc(src);
+ var cm=g==='py'?'#[^\n]*':'\\/\\/[^\n]*|\\/\\*[\\s\\S]*?\\*\\/';
+ var re=new RegExp('('+cm+')|("[^"\\n]*"|\'[^\'\\n]*\')|(\\b(?:'+KW[g]+')\\b)|(\\b\\d+(?:\\.\\d+)?\\b)|(\\b[A-Za-z_]\\w*(?=\\())','g'),o='',l=0,m;
+ while((m=re.exec(src))){o+=esc(src.slice(l,m.index));var c=m[1]?'tc':m[2]?'ts':m[3]?'tk':m[4]?'tn':'tf';o+='<span class="'+c+'">'+esc(m[0])+'</span>';l=re.lastIndex}
+ return o+esc(src.slice(l))}
+document.querySelectorAll('.code').forEach(function(d){var pre=d.querySelector('pre'),src=pre.textContent.replace(/\n+$/,''),h=document.createElement('header'),n=document.createElement('span'),b=document.createElement('button');
+ n.textContent=d.getAttribute('data-name')||'Code';b.className='btn';b.type='button';b.textContent='Copy';b.setAttribute('aria-label','Copy code');h.appendChild(n);h.appendChild(b);d.insertBefore(h,pre);
+ pre.innerHTML=hl(src,d.getAttribute('data-lang')||'none');pre.tabIndex=0;
+ b.addEventListener('click',function(){var done=function(){b.textContent='Copied!';b.classList.add('done');setTimeout(function(){b.textContent='Copy';b.classList.remove('done')},1400)};
+  if(navigator.clipboard)navigator.clipboard.writeText(src).then(done,done);else done()})});
+/* stepper demo */
+document.querySelectorAll('.stepper').forEach(function(st){var items=[].slice.call(st.querySelectorAll('li')),k=-1,bar=document.createElement('div'),bk=document.createElement('button'),fw=document.createElement('button'),sp=document.createElement('span');
+ bar.className='stepper-bar';bk.className=fw.className='btn';bk.type=fw.type='button';bk.textContent='Back';fw.textContent='Next step';sp.setAttribute('aria-live','polite');sp.className='mu';
+ bar.appendChild(bk);bar.appendChild(fw);bar.appendChild(sp);st.appendChild(bar);
+ function r(){items.forEach(function(li,j){li.classList.toggle('on',j<=k)});bk.disabled=k<0;fw.disabled=k>=items.length-1;sp.textContent=k<0?'Predict first, then step through.':'Step '+(k+1)+' of '+items.length+(k===items.length-1?' (done)':'')}
+ bk.addEventListener('click',function(){if(k>=0){k--;r()}});fw.addEventListener('click',function(){if(k<items.length-1){k++;r()}});r()});
+/* narrow screens: wide diagrams keep full-size text and scroll inside their own box */
+function fitSvgs(){var narrow=innerWidth<=800;document.querySelectorAll('.s svg').forEach(function(v){var vb=(v.getAttribute('viewBox')||'').split(/[ ,]+/),w=parseFloat(vb[2])||0;
+ if(narrow&&w>=300){if(!v.parentNode.classList.contains('svwrap')){var wr=document.createElement('div');wr.className='svwrap';v.parentNode.insertBefore(wr,v);wr.appendChild(v)}v.style.minWidth=w+'px';v.style.maxHeight='none'}
+ else{v.style.minWidth='';v.style.maxHeight=''}})}
+var rt;addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(fitSvgs,120)});fitSvgs();
+S.forEach(function(s){s.style.zoom=z});show(0)})();
+</script>
+</body>
+</html>
