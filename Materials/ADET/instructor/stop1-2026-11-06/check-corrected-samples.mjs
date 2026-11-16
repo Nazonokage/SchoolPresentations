@@ -1,0 +1,12 @@
+import fs from 'node:fs';import path from 'node:path';import{fileURLToPath}from'node:url';import{spawn,spawnSync}from'node:child_process';
+const here=path.dirname(fileURLToPath(import.meta.url)),cwd=path.resolve(here,'../../offline-lab/starter');const results=[];const starterSource=fs.readFileSync(path.join(cwd,'App.tsx'),'utf8');
+for(let n=1;n<=3;n++){
+ const sample=fs.readFileSync(path.join(here,'reviewed-opening',`M0${n}_sample1.tsx`),'utf8');fs.writeFileSync(path.join(cwd,'App.tsx'),sample);
+ const check=spawnSync(process.execPath,['node_modules/typescript/bin/tsc','--noEmit'],{cwd,encoding:'utf8'});fs.writeFileSync(path.join(here,`M0${n}-typecheck.log`),(check.stdout||'')+(check.stderr||''));
+ const port=8190+n;let log='';const child=spawn(process.execPath,['node_modules/expo/bin/cli','start','--offline','--port',String(port)],{cwd,env:{...process.env,CI:'1'},windowsHide:true});child.stdout.on('data',b=>log+=b);child.stderr.on('data',b=>log+=b);
+ let bundle=false,error='';try{let ready=false;for(let i=0;i<50;i++){try{const r=await fetch(`http://127.0.0.1:${port}/status`);if(r.ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,1000));}if(!ready)throw Error('Metro startup timed out');const r=await fetch(`http://127.0.0.1:${port}/index.bundle?platform=android&dev=true&minify=false`,{signal:AbortSignal.timeout(120000)});const body=await r.text();bundle=r.ok&&body.includes(n===1?'Hello, ADET!':n===2?'Timer mounted':'Enter both username and password.');if(!bundle)error=body.slice(0,1000);}catch(e){error=String(e)}finally{spawnSync('taskkill',['/PID',String(child.pid),'/T','/F'],{windowsHide:true});fs.writeFileSync(path.join(here,`M0${n}-metro.log`),log);}
+ results.push({module:n,typecheckExit:check.status,androidBundle:bundle,error,deviceRun:false});console.log(results.at(-1));
+}
+const manifest=JSON.parse(fs.readFileSync(path.join(cwd,'package.json'),'utf8'));fs.writeFileSync(path.join(here,'validation.json'),JSON.stringify({node:process.version,manifest,results,scope:'Fresh blank-typescript project; local Metro and Android bundle checks. No device UI execution.'},null,2));
+
+fs.writeFileSync(path.join(cwd,'App.tsx'),starterSource);

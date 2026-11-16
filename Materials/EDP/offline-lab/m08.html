@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Reactive campus search</title>
+<body>
+<h1>Reactive campus search</h1>
+<label for="search">Campus search (try library or error)</label>
+<input id="search" autocomplete="off">
+<p id="result" aria-live="polite">Type a search term.</p>
+<button id="stop" type="button">Stop search</button>
+<script src="/vendor/rxjs.umd.min.js"></script>
+<script>
+const { fromEvent, timer, of } = rxjs;
+const { map, debounceTime, distinctUntilChanged, switchMap, catchError, finalize } = rxjs.operators;
+const input = document.getElementById('search');
+const result = document.getElementById('result');
+const stop = document.getElementById('stop');
+const subscription = fromEvent(input, 'input').pipe(
+  map(() => input.value.trim().toLowerCase()),
+  debounceTime(150),
+  distinctUntilChanged(),
+  switchMap(term => timer(100).pipe(
+    map(() => {
+      if (term === 'error') throw new Error('Search unavailable');
+      return term ? 'Results: ' + term.toUpperCase() : 'Type a search term.';
+    }),
+    catchError(error => of('Handled: ' + error.message))
+  )),
+  finalize(() => { result.textContent = 'Search stopped.'; })
+).subscribe(text => { result.textContent = text; });
+stop.addEventListener('click', () => {
+  subscription.unsubscribe();
+  input.disabled = true;
+  stop.disabled = true;
+}, { once: true });
+window.addEventListener('pagehide', () => subscription.unsubscribe(), { once: true });
+</script>
+</body></html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>EDP Order Board</title>
+<body>
+<h1>Canteen order board</h1>
+<button id="hello" type="button">Say hello</button>
+<p id="message" aria-live="polite">Waiting for your click.</p>
+<form id="orderForm">
+  <label for="food">Food name</label>
+  <input id="food" maxlength="40" required>
+  <button>Add order</button>
+</form>
+<ul id="orders"></ul>
+<button id="stop" type="button">Stop listeners</button>
+<script>
+const hello = document.getElementById('hello');
+const message = document.getElementById('message');
+const form = document.getElementById('orderForm');
+const food = document.getElementById('food');
+const orders = document.getElementById('orders');
+const stop = document.getElementById('stop');
+const controller = new AbortController();
+const options = { signal: controller.signal };
+let count = 0;
+hello.addEventListener('click', () => {
+  message.textContent = 'Hello, coder!';
+}, options);
+form.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const title = food.value.trim();
+  if (!title) { message.textContent = 'Enter a food name.'; return; }
+  const row = document.createElement('li');
+  row.dataset.id = String(++count);
+  row.append(document.createTextNode(title + ' '));
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = 'Collected';
+  button.dataset.action = 'collect';
+  row.append(button);
+  orders.append(row);
+  food.value = '';
+  orders.dispatchEvent(new CustomEvent('order-added', { detail: { id: count } }));
+}, options);
+orders.addEventListener('click', (event) => {
+  if (!(event.target instanceof Element)) return;
+  const button = event.target.closest('button[data-action="collect"]');
+  if (!button || !orders.contains(button)) return;
+  button.closest('li').remove();
+  message.textContent = 'Order collected.';
+}, options);
+orders.addEventListener('order-added', (event) => {
+  message.textContent = 'Added order ' + event.detail.id;
+}, options);
+stop.addEventListener('click', () => {
+  controller.abort();
+  hello.disabled = true;
+  form.querySelector('button').disabled = true;
+  for (const button of orders.querySelectorAll('button')) button.disabled = true;
+  stop.disabled = true;
+  message.textContent = 'Listeners stopped. Reload to restart.';
+}, { once: true });
+</script>
+</body></html>

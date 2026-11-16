@@ -1,0 +1,9 @@
+# Preparing ADET presentation visuals
+
+Use the concept diagram and the illustrative phone screen embedded in each student module. The first shows the data flow. The second is an original teaching illustration of a possible result. Use a real device capture for evidence of successful execution. Each local SVG has accessible text and a description.
+
+For a title or toolkit slide, use the saved React, TypeScript, FastAPI, MySQL and MongoDB logos. [Sources and verification](image-sources.json) · [Devicon license](assets/LICENSE.txt). The images identify their respective technologies. Each file was fetched from the pinned Devicon v2.17.0 CDN path and parsed as SVG. Original course diagrams, mock screens and the audio tone were created for this pack.
+
+**HTML conversion prompt.** Convert one attached ADET module into a self-contained HTML presentation. Start with its campus problem. Reveal one step per concept slide, follow with a copyable checkpoint, real or clearly labeled illustrative output, and the module’s independent modification. Preserve its quiz or coding activity and keep the key in the instructor edition. Use a light phone-screen panel beside a dark code panel. Use the Blueprint sample for diagrams and the Multi-Platform JS sample for technology imagery. Embed local SVGs with unique IDs and alternative text.
+
+Use body text around 24–32px for projection and at least 16px for captions, code, controls and labels. Use fluid rem-based clamp sizes and A−, Reset and A+ controls that adjust a root scale from 1 to 1.6. Reflow code panels to one column on narrow screens and let long content scroll. At 160% scale, test a long error message, a ten-item quiz and a full code example. Split dense slides when labels would shrink. For interactive examples of navigation, code escaping and readable panels consult the [EDP presentation prompt](../../EDP/visuals/PRESENTATION_PROMPT.md).

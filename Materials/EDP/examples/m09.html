@@ -1,0 +1,23 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Live announcements</title>
+<body><h1>Live announcements</h1><p id="status" aria-live="polite">Connecting</p>
+<ul id="messages"></ul><button id="stop">Disconnect</button>
+<script>
+const status = document.getElementById('status');
+const list = document.getElementById('messages');
+const source = new EventSource('/events');
+source.addEventListener('open', () => { status.textContent = 'Connected'; });
+source.addEventListener('error', () => { status.textContent = 'Connection interrupted; retrying'; });
+source.addEventListener('announcement', event => {
+  try {
+    const message = JSON.parse(event.data);
+    if (typeof message.text !== 'string') throw new Error('Invalid message');
+    const li = document.createElement('li');
+    li.textContent = message.text;
+    list.append(li);
+    if (list.children.length > 20) list.firstElementChild.remove();
+  } catch { status.textContent = 'Rejected invalid announcement'; }
+});
+function close() { source.close(); status.textContent = 'Disconnected'; }
+document.getElementById('stop').addEventListener('click', close);
+window.addEventListener('pagehide', close, { once: true });
+</script></body></html>

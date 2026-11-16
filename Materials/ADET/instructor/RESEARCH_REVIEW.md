@@ -1,0 +1,11 @@
+# Source decisions for the authored lessons
+
+The three supplied research reports remain in the research folder. The normalized 23-topic inventory combines into the approved 20 lessons. Report 2 ends at chapter 13. Missing chapters were not assumed to contain verified material.
+
+The old Android/Java material supplies classroom context. Students now work in the Expo/React Native toolchain. The published npm blank TypeScript template metadata identified Expo ~58.0.23, React 19.3.0 and React Native 0.88.1 in this authoring run. SDK-matched packages and resolved versions are recorded in the mobile lockfile. Check the student device's Expo Go runtime before delivery. [Expo project setup](https://docs.expo.dev/get-started/create-a-project/)
+
+The SQL option now uses Python FastAPI with SQLAlchemy and a MySQL/MariaDB driver. The Mongo option uses Express and the official Node driver. Keep teaching material about Supabase, GraphQL, cloud services and PHP in comparisons or historical research. [FastAPI databases](https://fastapi.tiangolo.com/tutorial/sql-databases/) · [MongoDB driver](https://www.mongodb.com/docs/drivers/node/current/crud/)
+
+For M12–15 use permission-aware camera capture, local notifications, OS handoffs and expo-audio. Use BackgroundTask for the conceptual deferrable-work comparison. Keep the limitation on precise scheduling and distinguish local and remote notification paths. [Picker](https://docs.expo.dev/versions/latest/sdk/imagepicker/) · [Notifications](https://docs.expo.dev/versions/latest/sdk/notifications/) · [BackgroundTask](https://docs.expo.dev/versions/latest/sdk/background-task/) · [Audio](https://docs.expo.dev/versions/latest/sdk/audio/)
+
+The research proposed store publication, monetization, third-party sign-in and AI. These involve external accounts, policies, private credentials or provider configuration. Teach the architecture and limits during class, with the rule-based server helper as the M16 checkpoint. Production integration and store-policy checks belong to an explicitly chosen project extension. [Expo server routes](https://docs.expo.dev/router/web/api-routes/) · [Compatible runtime updates](https://docs.expo.dev/eas-update/runtime-versions/)
