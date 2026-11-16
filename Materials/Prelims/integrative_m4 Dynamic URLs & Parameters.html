@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 4 — Dynamic URLs & Parameters</title>
+    <style>
+        :root {
+            --bg: #0a0e14;
+            --panel: #131a29;
+            --panel-2: #0d1220;
+            --line: #22304a;
+            --ink: #e8edf7;
+            --ink-dim: #adc0e6;
+            --ink-faint: #4a5d80;
+            --cyan: #5ee1d8;
+            --amber: #f2b84b;
+            --green: #6ee79a;
+            --blue: #7aa7ff;
+            --orange: #f2924b;
+            --red: #f2645b;
+            --purple: #b58cf2;
+            --mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            --disp: 'Space Grotesk', 'Segoe UI', Helvetica, Arial, sans-serif;
+            --body: 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif;
+            --font-base: 15px;
+            --font-title-min: 25px;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: var(--body);
+            overflow: hidden;
+            font-size: var(--font-base);
+        }
+        body {
+            background:
+                radial-gradient(circle at 15% 10%, rgba(94, 225, 216, 0.06), transparent 40%),
+                radial-gradient(circle at 85% 90%, rgba(122, 167, 255, 0.07), transparent 45%),
+                var(--bg);
+        }
+
+        #progress-track {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.06);
+            z-index: 1000;
+        }
+        #progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--cyan), var(--blue));
+            transition: width .35s ease;
+        }
+        #counter {
+            position: fixed;
+            bottom: 18px;
+            right: 24px;
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--ink-dim);
+            letter-spacing: 0.05em;
+            z-index: 1000;
+            background: rgba(10, 14, 20, 0.6);
+            padding: 5px 12px;
+            border: 1px solid var(--line);
+            border-radius: 20px;
+        }
+        #hint {
+            position: fixed;
+            bottom: 18px;
+            left: 24px;
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--ink-faint);
+            letter-spacing: 0.04em;
+            z-index: 1000;
+            opacity: 0.7;
+        }
+        .eyebrow-tag {
+            position: fixed;
+            top: 22px;
+            right: 24px;
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--cyan);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            text-align: right;
+            z-index: 1000;
+            opacity: 0.85;
+        }
+
+        #deck {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            cursor: pointer;
+        }
+        .slide {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 58px 90px 66px 90px;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(24px);
+            transition: opacity .35s ease, transform .35s ease;
+            overflow-y: auto;
+        }
+        .slide.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(0);
+            z-index: 5;
+        }
+        .slide.prev {
+            transform: translateX(-24px);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .slide {
+                transition: none;
+                transform: none;
+            }
+        }
+
+        .eyebrow {
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--amber);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .eyebrow::before {
+            content: '';
+            width: 22px;
+            height: 1px;
+            background: var(--amber);
+            display: inline-block;
+        }
+        .eyebrow.blue {
+            color: var(--blue);
+        }
+        .eyebrow.blue::before {
+            background: var(--blue);
+        }
+
+        h1.title {
+            font-family: var(--disp);
+            font-weight: 700;
+            font-size: clamp(var(--font-title-min), 3.6vw, 46px);
+            line-height: 1.1;
+            margin: 0 0 8px 0;
+            color: var(--ink);
+            max-width: 22ch;
+            flex-shrink: 0;
+        }
+        h1.title.smaller {
+            font-size: clamp(var(--font-title-min), 3.2vw, 40px);
+        }
+        .subtitle {
+            font-size: calc(var(--font-base) + 0.5px);
+            color: var(--ink-dim);
+            max-width: 66ch;
+            margin-bottom: 6px;
+            flex-shrink: 0;
+        }
+        .content-area {
+            margin-top: 18px;
+            min-width: 0;
+        }
+
+        .slide.top-align {
+            justify-content: flex-start;
+            padding-top: 34px;
+        }
+
+        .content-area.tight .exercise {
+            margin-bottom: 12px;
+        }
+        .content-area.tight .exercise-head {
+            margin-bottom: 6px;
+        }
+        .content-area.tight .exercise-desc {
+            font-size: var(--font-base);
+            margin: 5px 0 8px 0;
+            line-height: 1.45;
+        }
+        .content-area.tight pre.code-block {
+            padding: 10px 14px;
+        }
+        .content-area.tight pre.code-block code {
+            font-size: var(--font-base);
+            line-height: 1.5;
+        }
+        .content-area.tight .exercise-title {
+            font-size: var(--font-base);
+        }
+
+        .card {
+            background: linear-gradient(180deg, var(--panel), var(--panel-2));
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 18px 20px;
+            min-width: 0;
+        }
+        .grid {
+            display: grid;
+            gap: 16px;
+            min-width: 0;
+        }
+        .g2 {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        }
+        .g3 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .g4 {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+        .g5 {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+        }
+
+        code,
+        .mono {
+            font-family: var(--mono);
+        }
+
+        ul.clean {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        ul.clean li {
+            margin-bottom: 9px;
+            padding-left: 20px;
+            position: relative;
+            font-size: var(--font-base);
+            line-height: 1.55;
+            color: var(--ink);
+        }
+        ul.clean li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: var(--cyan);
+        }
+
+        .pill {
+            display: inline-block;
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            padding: 3px 12px;
+            border-radius: 20px;
+            border: 1px solid currentColor;
+            letter-spacing: 0.04em;
+        }
+
+        /* terminal block */
+        .term {
+            background: #080b12;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+            position: relative;
+        }
+        .term-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 14px;
+            background: #0d1420;
+            border-bottom: 1px solid var(--line);
+        }
+        .dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+        }
+        .term-label {
+            margin-left: 8px;
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--ink-dim);
+            letter-spacing: 0.05em;
+        }
+        .term-body {
+            padding: 16px 18px;
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            line-height: 1.8;
+            color: var(--ink);
+            white-space: pre-wrap;
+        }
+        .term-body .prompt {
+            color: var(--green);
+        }
+        .term-body .cmd {
+            color: var(--ink);
+        }
+        .term-body .flag {
+            color: var(--amber);
+        }
+        .term-body .comment {
+            color: var(--ink-dim);
+        }
+        .term-body .out {
+            color: var(--ink-dim);
+        }
+        .term-body .hl {
+            color: var(--cyan);
+        }
+
+        /* file tree cards */
+        .file-card {
+            border-radius: 12px;
+            padding: 15px 16px;
+            border: 1px solid var(--line);
+            background: var(--panel);
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            min-width: 0;
+        }
+        .file-name {
+            font-family: var(--mono);
+            font-weight: 700;
+            font-size: var(--font-base);
+            color: var(--cyan);
+        }
+        .file-role {
+            font-size: var(--font-base);
+            color: var(--ink-dim);
+            line-height: 1.5;
+        }
+        .file-tag {
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--ink-faint);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        .file-card.core {
+            border-left: 3px solid var(--amber);
+        }
+        .file-card.aux {
+            border-left: 3px solid var(--line);
+            opacity: 0.85;
+        }
+
+        .arrow-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin: 16px 0;
+            flex-wrap: wrap;
+        }
+        .flow-node {
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            padding: 9px 18px;
+            border-radius: 8px;
+            border: 1px solid var(--line);
+            background: var(--panel);
+            color: var(--ink);
+            text-align: center;
+            white-space: nowrap;
+        }
+        .flow-arrow {
+            font-size: 20px;
+            color: var(--ink-dim);
+        }
+
+        /* recap strip */
+        .recap-strip {
+            display: flex;
+            gap: 14px;
+            margin-top: 18px;
+            flex-wrap: wrap;
+        }
+        .recap-chip {
+            flex: 1;
+            min-width: 140px;
+            padding: 14px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            background: var(--panel-2);
+        }
+        .recap-chip .num {
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--ink-faint);
+        }
+        .recap-chip .label {
+            font-size: var(--font-base);
+            color: var(--ink);
+            margin-top: 4px;
+            font-weight: 600;
+        }
+        .recap-chip .sub {
+            font-size: var(--font-base);
+            color: var(--ink-dim);
+            margin-top: 2px;
+        }
+
+        /* quotes */
+        .quote-card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-left: 3px solid var(--cyan);
+            border-radius: 10px;
+            padding: 16px 18px;
+            margin-bottom: 12px;
+        }
+        .quote-text {
+            font-size: var(--font-base);
+            line-height: 1.6;
+            color: var(--ink);
+            font-style: italic;
+        }
+        .quote-src {
+            margin-top: 7px;
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--ink-dim);
+        }
+
+        /* analogy / real-life callouts */
+        .analogy-card {
+            background: linear-gradient(180deg, rgba(181, 140, 242, 0.10), rgba(181, 140, 242, 0.03));
+            border: 1px solid rgba(181, 140, 242, 0.35);
+            border-left: 3px solid var(--purple);
+            border-radius: 10px;
+            padding: 14px 18px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            min-width: 0;
+        }
+        .analogy-card .icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            line-height: 1.3;
+        }
+        .analogy-card .body {
+            min-width: 0;
+        }
+        .analogy-card .label {
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--purple);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            font-weight: 700;
+        }
+        .analogy-card .text {
+            font-size: var(--font-base);
+            color: var(--ink);
+            line-height: 1.55;
+        }
+        .analogy-card.tight {
+            padding: 10px 14px;
+            margin-top: 8px;
+        }
+
+        .usecase-card {
+            background: linear-gradient(180deg, rgba(110, 231, 154, 0.09), rgba(110, 231, 154, 0.02));
+            border: 1px solid rgba(110, 231, 154, 0.30);
+            border-left: 3px solid var(--green);
+            border-radius: 10px;
+            padding: 14px 18px;
+            min-width: 0;
+        }
+        .usecase-card .label {
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--green);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            font-weight: 700;
+        }
+        .usecase-card .text {
+            font-size: var(--font-base);
+            color: var(--ink);
+            line-height: 1.55;
+        }
+
+        .step-card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 14px 16px;
+            min-width: 0;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .step-card .step-num {
+            font-family: var(--mono);
+            font-weight: 700;
+            font-size: var(--font-base);
+            color: var(--bg);
+            background: var(--cyan);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .step-card .step-body {
+            min-width: 0;
+        }
+        .step-card .step-title {
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--cyan);
+            margin-bottom: 3px;
+        }
+        .step-card .step-text {
+            font-size: var(--font-base);
+            color: var(--ink-dim);
+            line-height: 1.5;
+        }
+
+        /* code exercise blocks */
+        .exercise {
+            margin-bottom: 18px;
+        }
+        .exercise-head {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .exercise-num {
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--bg);
+            background: var(--cyan);
+            border-radius: 5px;
+            padding: 2px 10px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .exercise-title {
+            font-size: var(--font-base);
+            font-weight: 600;
+            color: var(--ink);
+        }
+        .exercise-desc {
+            font-size: var(--font-base);
+            color: var(--ink-dim);
+            margin: 6px 0 10px 0;
+            line-height: 1.55;
+        }
+        pre.code-block {
+            margin: 0;
+            background: #080b12;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 14px 18px;
+            overflow-x: auto;
+            position: relative;
+        }
+        pre.code-block code {
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            line-height: 1.7;
+            color: var(--ink);
+            white-space: pre;
+        }
+        .tok-kw {
+            color: var(--amber);
+        }
+        .tok-str {
+            color: var(--green);
+        }
+        .tok-com {
+            color: var(--ink-dim);
+            font-style: italic;
+        }
+        .tok-num {
+            color: var(--purple);
+        }
+        .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            padding: 4px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--line);
+            background: var(--panel);
+            color: var(--ink-dim);
+            cursor: pointer;
+            z-index: 2;
+            line-height: 1.4;
+        }
+        .copy-btn:hover {
+            color: var(--cyan);
+            border-color: var(--cyan);
+        }
+        .copy-btn.copied {
+            color: var(--green);
+            border-color: var(--green);
+        }
+
+        /* MC / activities */
+        .q-block {
+            margin-bottom: 16px;
+        }
+        .q-title {
+            font-weight: 600;
+            font-size: var(--font-base);
+            margin-bottom: 7px;
+            color: var(--ink);
+        }
+        .opts {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+        .opts.one-col {
+            grid-template-columns: minmax(0, 1fr);
+        }
+        .content-area.combined-check .q-block {
+            margin-bottom: 10px;
+        }
+        .content-area.combined-check .q-title {
+            margin-bottom: 5px;
+        }
+        .content-area.combined-check .opt {
+            padding: 6px 12px;
+        }
+        .content-area.combined-check .check-subhead {
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--ink-dim);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin: 4px 0 10px 0;
+            padding-top: 10px;
+            border-top: 1px solid var(--line);
+        }
+        .content-area.combined-check .check-subhead.first {
+            padding-top: 0;
+            border-top: none;
+        }
+        .content-area.combined-check .id-item {
+            padding: 7px 0;
+        }
+        .opt {
+            font-size: var(--font-base);
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--line);
+            background: var(--panel-2);
+            color: var(--ink-dim);
+            line-height: 1.4;
+        }
+        .opt b {
+            color: var(--cyan);
+            margin-right: 6px;
+        }
+
+        .id-item {
+            display: flex;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px dashed var(--line);
+            font-size: var(--font-base);
+            line-height: 1.5;
+        }
+        .id-item .num {
+            font-family: var(--mono);
+            color: var(--amber);
+            flex-shrink: 0;
+        }
+
+        .ans-item {
+            padding: 10px 0;
+            border-bottom: 1px solid var(--line);
+            font-size: var(--font-base);
+            line-height: 1.5;
+        }
+        .ans-item b {
+            color: var(--green);
+        }
+        .ans-item .expl {
+            color: var(--ink-dim);
+            font-size: var(--font-base);
+            margin-top: 3px;
+        }
+        .ans-block-title {
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--ink-dim);
+            margin-bottom: 10px;
+            letter-spacing: 0.08em;
+        }
+
+        #kb-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 7, 12, 0.75);
+            backdrop-filter: blur(4px);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        #kb-modal.show {
+            display: flex;
+        }
+        .kb-panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 28px 32px;
+            min-width: 340px;
+        }
+        .kb-panel h3 {
+            margin: 0 0 16px 0;
+            font-family: var(--disp);
+            font-size: clamp(25px, 2.2vw, 32px);
+        }
+        .kb-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: var(--font-base);
+            color: var(--ink-dim);
+            border-bottom: 1px solid var(--line);
+            line-height: 1.5;
+        }
+        .kb-row span.key {
+            font-family: var(--mono);
+            color: var(--cyan);
+            background: #080b12;
+            padding: 2px 10px;
+            border-radius: 5px;
+            border: 1px solid var(--line);
+        }
+
+        ::selection {
+            background: rgba(94, 225, 216, 0.3);
+        }
+
+        /* responsive tweaks for tighter screens */
+        @media (max-width: 820px) {
+            .slide {
+                padding: 40px 32px 50px 32px;
+            }
+            .g2,
+            .g3,
+            .g4,
+            .g5 {
+                grid-template-columns: 1fr;
+            }
+            .opts {
+                grid-template-columns: 1fr;
+            }
+            .recap-strip {
+                flex-direction: column;
+            }
+            .arrow-flow {
+                flex-wrap: wrap;
+            }
+            .flow-node {
+                white-space: normal;
+            }
+            .kb-panel {
+                min-width: 0;
+                width: 90%;
+                margin: 0 16px;
+                padding: 24px 20px;
+            }
+        }
+        @media (max-width: 480px) {
+            .slide {
+                padding: 30px 18px 40px 18px;
+            }
+            #counter {
+                bottom: 10px;
+                right: 14px;
+                font-size: 13px;
+                padding: 4px 10px;
+            }
+            #hint {
+                display: none;
+            }
+            .eyebrow-tag {
+                top: 14px;
+                right: 16px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="progress-track"><div id="progress-bar"></div></div>
+    <div class="eyebrow-tag">CS50W · Django Lecture 3</div>
+    <div id="counter">1 / 18</div>
+    <div id="hint">← → navigate · ? for shortcuts</div>
+
+    <div id="deck">
+
+        <!-- SLIDE 1: TITLE -->
+        <section class="slide">
+            <div class="eyebrow">Phase 4 · Dynamic URLs &amp; Parameters</div>
+            <h1 class="title">Making One Route Answer for Infinite Names</h1>
+            <p class="subtitle">So far every route in <span class="mono" style="color:var(--cyan);">urls.py</span> has been hardcoded — one path, one view. Now we let the URL itself carry data in, so a single route can greet Brian, David, Harry, or anyone at all.</p>
+            <div class="arrow-flow" style="margin-top:30px;">
+                <div class="flow-node">🧱 hardcoded paths</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node" style="border-color:var(--cyan); color:var(--cyan);">🔤 path converters</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node">🐍 python logic on the value</div>
+            </div>
+        </section>
+
+        <!-- SLIDE 2: RECAP BRIDGE -->
+        <section class="slide">
+            <div class="eyebrow blue">Recap · Where We Left Off</div>
+            <h1 class="title smaller">Quick Rewind: Phase 3</h1>
+            <div class="content-area">
+                <div class="card">
+                    <p style="font-size:var(--font-base); color:var(--ink-dim); margin:0 0 14px 0;">By the end of Phase 3, you had apps and views talking to each other through two layers of routing:</p>
+                    <div class="arrow-flow" style="margin:0 0 14px 0;">
+                        <div class="flow-node">Project <span class="mono" style="color:var(--amber);">urls.py</span></div>
+                        <div class="flow-arrow">→</div>
+                        <div class="flow-node">App <span class="mono" style="color:var(--amber);">urls.py</span></div>
+                        <div class="flow-arrow">→</div>
+                        <div class="flow-node">View function <span style="color:var(--green);">(HttpResponse)</span></div>
+                    </div>
+                    <div class="recap-strip">
+                        <div class="recap-chip"><div class="num">CREATE</div><div class="label">startapp</div><div class="sub">scaffolds an app</div></div>
+                        <div class="recap-chip"><div class="num">REGISTER</div><div class="label">INSTALLED_APPS</div><div class="sub">settings.py</div></div>
+                        <div class="recap-chip"><div class="num">ROUTE</div><div class="label">path()</div><div class="sub">maps URL → view</div></div>
+                    </div>
+                </div>
+                <p style="margin-top:16px; font-size:var(--font-base); color:var(--ink-dim);">Every route we wrote was <b style="color:var(--ink);">fixed</b> — <span class="mono">/hello/brian</span> and <span class="mono">/hello/david</span> each needed their own path and their own function. That doesn't scale. Phase 4 fixes exactly that.</p>
+            </div>
+        </section>
+
+        <!-- SLIDE 3: The Problem -->
+        <section class="slide">
+            <div class="eyebrow">The Problem · Before Path Converters</div>
+            <h1 class="title smaller">One Name, One Route, One Function</h1>
+            <div class="content-area grid g2">
+                <div class="card">
+                    <ul class="clean">
+                        <li>To say hello to <b style="color:var(--ink);">Brian</b> and <b style="color:var(--ink);">David</b>, you'd write a separate view for each, and a separate path for each.</li>
+                        <li>Now add <b style="color:var(--ink);">Harry</b>, <b style="color:var(--ink);">Ron</b>, <b style="color:var(--ink);">Hermione</b> — and every new name means another function <i>and</i> another route.</li>
+                        <li>That's not a web app, that's a wall of copy-pasted code that grows forever.</li>
+                    </ul>
+                </div>
+                <div class="term">
+                    <div class="term-head"><div class="dot" style="background:#f2645b;"></div><div class="dot" style="background:#f2b84b;"></div><div class="dot" style="background:#6ee79a;"></div><span class="term-label">urls.py — the tedious way</span></div>
+                    <div class="term-body"><span class="out">path("hello/brian/", views.brian)
+path("hello/david/", views.david)
+path("hello/harry/", views.harry)
+# ...and it never ends</span></div>
+                </div>
+            </div>
+            <div class="analogy-card" style="margin-top:16px;">
+                <span class="icon">📇</span>
+                <div class="body">
+                    <div class="label">Real-life analogy</div>
+                    <div class="text">It's like printing a separate business card for every single visitor by name instead of one template that just fills in whoever walks through the door.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 4: Path Converters concept -->
+        <section class="slide">
+            <div class="eyebrow">Step 1 · The Fix</div>
+            <h1 class="title smaller">Path Converters: Placeholders in the URL</h1>
+            <div class="content-area grid g2">
+                <div class="card">
+                    <ul class="clean">
+                        <li>Django lets you write a route with a <b style="color:var(--cyan);">placeholder</b> instead of a literal string, using angle brackets: <code class="mono" style="color:var(--amber);">&lt;str:name&gt;</code>.</li>
+                        <li><span class="mono">str</span> is the <b style="color:var(--ink);">converter type</b> — it tells Django "match any string here."</li>
+                        <li><span class="mono">name</span> is the <b style="color:var(--ink);">variable name</b> — whatever gets matched is captured and handed to your view under that name.</li>
+                        <li>One route now matches <span class="mono">/hello/brian</span>, <span class="mono">/hello/harry</span>, <span class="mono">/hello/hermione</span> — literally any string after <span class="mono">/hello/</span>.</li>
+                    </ul>
+                </div>
+                <div class="term">
+                    <div class="term-head"><div class="dot" style="background:#f2645b;"></div><div class="dot" style="background:#f2b84b;"></div><div class="dot" style="background:#6ee79a;"></div><span class="term-label">urls.py</span></div>
+                    <div class="term-body"><span class="out">path("hello/&lt;str:name&gt;", views.greet, name="greet")</span></div>
+                </div>
+            </div>
+            <div class="analogy-card" style="margin-top:16px;">
+                <span class="icon">🎫</span>
+                <div class="body">
+                    <div class="label">Real-life analogy</div>
+                    <div class="text">Like a raffle ticket template with a blank line for "NAME" — one printed design handles every attendee, because the blank gets filled in per person instead of reprinting the whole ticket.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 5: The view function receives the parameter -->
+        <section class="slide top-align">
+            <div class="eyebrow">Step 2 · Read The Code · Part 1</div>
+            <h1 class="title smaller">The View Now Accepts a Parameter</h1>
+            <p class="subtitle">Whatever the path converter captures gets passed straight into your view function as an argument.</p>
+            <div class="content-area tight">
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">views.py</span><span class="exercise-title">One function replaces every per-name function</span></div>
+                    <pre class="code-block"><code data-lang="python">def greet(request, name):
+    return HttpResponse(f"Hello, {name}!")</code></pre>
+                </div>
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">urls.py</span><span class="exercise-title">The captured value's name must match the view's parameter name</span></div>
+                    <pre class="code-block"><code data-lang="python">from django.urls import path
+from . import views
+
+urlpatterns = [
+    path("", views.index, name="index"),
+    path("&lt;str:name&gt;", views.greet, name="greet"),
+]</code></pre>
+                </div>
+
+                <div class="analogy-card tight">
+                    <span class="icon">📦</span>
+                    <div class="body">
+                        <div class="label">Real-life analogy</div>
+                        <div class="text">The URL is a delivery box labeled <span class="mono" style="color:var(--purple);">name</span>. The view function is the person unpacking it — it just needs a parameter with the matching label to receive what's inside.</div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SLIDE 6: f-strings -->
+        <section class="slide">
+            <div class="eyebrow">Step 3 · Python Refresher</div>
+            <h1 class="title smaller">Formatted Strings: Plugging Variables Into Text</h1>
+            <div class="content-area grid g2">
+                <div class="card">
+                    <ul class="clean">
+                        <li>The <span class="mono" style="color:var(--cyan);">f</span> before a string turns it into an <b style="color:var(--ink);">f-string</b> — Python substitutes anything inside <span class="mono">{ }</span> with its actual value.</li>
+                        <li>This isn't Django-specific — it's plain Python, which is exactly why Django can hand you the request and just let you write normal code.</li>
+                        <li>Without the <span class="mono">f</span>, Python would print the literal text <span class="mono">"Hello, {name}!"</span> — braces and all.</li>
+                    </ul>
+                </div>
+                <div class="term">
+                    <div class="term-head"><div class="dot" style="background:#f2645b;"></div><div class="dot" style="background:#f2b84b;"></div><div class="dot" style="background:#6ee79a;"></div><span class="term-label">PYTHON SHELL</span></div>
+                    <div class="term-body"><span class="prompt">&gt;&gt;&gt;</span> <span class="cmd">name</span> = <span class="hl">"harry"</span>
+<span class="out">&gt;&gt;&gt; f"Hello, {name}!"
+'Hello, harry!'</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 7: Arbitrary python logic - capitalize -->
+        <section class="slide">
+            <div class="eyebrow">Step 4 · Beyond Just Substitution</div>
+            <h1 class="title smaller">Any Python Logic Can Run on the Way Out</h1>
+            <div class="content-area grid g2">
+                <div>
+                    <div class="term">
+                        <div class="term-head"><div class="dot" style="background:#f2645b;"></div><div class="dot" style="background:#f2b84b;"></div><div class="dot" style="background:#6ee79a;"></div><span class="term-label">views.py</span></div>
+                        <div class="term-body"><span class="cmd">def</span> greet(request, name):
+<span class="out">    return HttpResponse(f"Hello, {name.capitalize()}!")</span></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <ul class="clean">
+                        <li>Every Python string has built-in methods — <code class="mono" style="color:var(--amber);">.capitalize()</code> is just one of them.</li>
+                        <li>If it's valid Python, Django will happily run it before the response goes out — there's no special "Django way" to transform data.</li>
+                        <li>So <span class="mono">/hello/hermione</span> now renders <b style="color:var(--green);">"Hello, Hermione!"</b> with a capital H, automatically.</li>
+                    </ul>
+                    <div class="analogy-card tight">
+                        <span class="icon">🎛️</span>
+                        <div class="body">
+                            <div class="label">Real-life analogy</div>
+                            <div class="text">The URL hands the view raw ingredients; Python is the kitchen. Nothing stops the view from cooking that ingredient — capitalizing, trimming, reversing — before plating the response.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 8: Sample use case -->
+        <section class="slide top-align">
+            <div class="eyebrow">Sample Use Case</div>
+            <h1 class="title smaller">Building a Parameterized Profile Route</h1>
+            <div class="content-area tight">
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">Scenario</span><span class="exercise-title">A mini "user profile" page, one route for every user</span></div>
+                    <div class="exercise-desc">Imagine a site where <span class="mono">/profile/&lt;str:username&gt;</span> should work for any registered username, without writing a new view per user — exactly the pattern real sites like Twitter/X use for <span class="mono">twitter.com/&lt;username&gt;</span>.</div>
+                    <pre class="code-block"><code data-lang="python"># urls.py
+path("profile/&lt;str:username&gt;", views.profile, name="profile")
+
+# views.py
+def profile(request, username):
+    return HttpResponse(f"Welcome to {username.capitalize()}'s profile!")</code></pre>
+                </div>
+                <div class="usecase-card" style="margin-top:14px;">
+                    <div class="label">Why this matters</div>
+                    <div class="text">One route, one view, and infinite valid usernames — this is the exact mechanism that lets large-scale sites avoid writing millions of individual routes.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 9: Recap -->
+        <section class="slide">
+            <div class="eyebrow blue">Recap · Phase 4</div>
+            <h1 class="title smaller">Everything We Just Covered</h1>
+            <div class="content-area">
+                <div class="arrow-flow" style="margin-top:6px;">
+                    <div class="flow-node">&lt;str:name&gt; in urls.py</div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-node">view(request, name)</div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-node">Python logic → HttpResponse</div>
+                </div>
+                <div class="recap-strip" style="margin-top:22px;">
+                    <div class="recap-chip"><div class="num">SYNTAX</div><div class="label">&lt;str:name&gt;</div><div class="sub">path converter</div></div>
+                    <div class="recap-chip"><div class="num">RULE</div><div class="label">name matches</div><div class="sub">URL var = view param</div></div>
+                    <div class="recap-chip"><div class="num">PYTHON</div><div class="label">f-strings</div><div class="sub">substitute values</div></div>
+                    <div class="recap-chip"><div class="num">PYTHON</div><div class="label">.capitalize()</div><div class="sub">transform on the way out</div></div>
+                </div>
+                <p style="margin-top:20px; font-size:var(--font-base); color:var(--ink-dim); max-width:70ch;">One parameterized route now covers infinite valid inputs. The URL supplies raw data, the view receives it as a normal argument, and plain Python decides what to do with it before the response is sent.</p>
+            </div>
+        </section>
+
+        <!-- SLIDE 10: Key Quotes -->
+        <section class="slide">
+            <div class="eyebrow">Reference</div>
+            <h1 class="title smaller">Key Quotes</h1>
+            <div class="content-area">
+                <div class="quote-card">
+                    <div class="quote-text">"It turns out that what I can do is create URL patterns that have placeholders, in effect, things that allow me to parameterize the path via certain path converters."</div>
+                    <div class="quote-src">— on why path converters exist</div>
+                </div>
+                <div class="quote-card">
+                    <div class="quote-text">"This route here... is saying this route could be any string that we're going to give a variable name of name to."</div>
+                    <div class="quote-src">— on how &lt;str:name&gt; matches</div>
+                </div>
+                <div class="quote-card">
+                    <div class="quote-text">"If I can do it in Python, then Django allows me to incorporate it into the response that I'm giving back."</div>
+                    <div class="quote-src">— on running arbitrary Python logic in a view</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 11: Multiple Choice (compact, fits one page) -->
+        <section class="slide top-align">
+            <div class="eyebrow">Check Your Understanding · Part 1</div>
+            <h1 class="title smaller">Multiple Choice</h1>
+            <div class="content-area combined-check grid g2">
+
+                <div class="check-col">
+                    <div class="q-block">
+                        <div class="q-title">1. Which path pattern lets a route match any string as "name"?</div>
+                        <div class="opts">
+                            <div class="opt"><b>A</b>path("hello/name")</div>
+                            <div class="opt"><b>B</b>path("hello/&lt;str:name&gt;")</div>
+                            <div class="opt"><b>C</b>path("hello/{name}")</div>
+                            <div class="opt"><b>D</b>path("hello/*name")</div>
+                        </div>
+                    </div>
+                    <div class="q-block">
+                        <div class="q-title">2. In <span class="mono">def greet(request, name):</span>, where does "name" come from?</div>
+                        <div class="opts">
+                            <div class="opt"><b>A</b>A global variable</div>
+                            <div class="opt"><b>B</b>settings.py</div>
+                            <div class="opt"><b>C</b>The URL path converter</div>
+                            <div class="opt"><b>D</b>A hardcoded default</div>
+                        </div>
+                    </div>
+                    <div class="q-block">
+                        <div class="q-title">3. What does the <span class="mono">f</span> before a string do in Python?</div>
+                        <div class="opts">
+                            <div class="opt"><b>A</b>Marks a file path</div>
+                            <div class="opt"><b>B</b>Formats numbers only</div>
+                            <div class="opt"><b>C</b>Enables substitution inside {}</div>
+                            <div class="opt"><b>D</b>Forces lowercase</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="check-col">
+                    <div class="q-block">
+                        <div class="q-title">4. Which method capitalizes the first letter of a string?</div>
+                        <div class="opts">
+                            <div class="opt"><b>A</b>.upper()</div>
+                            <div class="opt"><b>B</b>.capitalize()</div>
+                            <div class="opt"><b>C</b>.title_case()</div>
+                            <div class="opt"><b>D</b>.first()</div>
+                        </div>
+                    </div>
+                    <div class="q-block">
+                        <div class="q-title">5. Why is one parameterized route better than many hardcoded ones?</div>
+                        <div class="opts">
+                            <div class="opt"><b>A</b>Django requires it</div>
+                            <div class="opt"><b>B</b>It runs faster</div>
+                            <div class="opt"><b>C</b>Scales to infinite inputs</div>
+                            <div class="opt"><b>D</b>Removes need for views.py</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SLIDE 12: Identification -->
+        <section class="slide top-align">
+            <div class="eyebrow">Check Your Understanding · Part 2</div>
+            <h1 class="title smaller">Identification</h1>
+            <div class="content-area combined-check">
+                <div class="id-item"><span class="num">06</span><span>The syntax used inside a route to capture an arbitrary string as a variable.</span></div>
+                <div class="id-item"><span class="num">07</span><span>The requirement linking the captured URL variable name to the view function's parameter name.</span></div>
+                <div class="id-item"><span class="num">08</span><span>The Python prefix that enables substituting variables directly into a string.</span></div>
+                <div class="id-item"><span class="num">09</span><span>The string method used to make the first letter of a name uppercase.</span></div>
+                <div class="id-item"><span class="num">10</span><span>The real-world site example given for a URL parameterized by a username.</span></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 13: Guess the Output -->
+        <section class="slide top-align">
+            <div class="eyebrow">Check Your Understanding · Part 3 · Hands-On (1/2)</div>
+            <h1 class="title smaller">Guess the Output</h1>
+            <p class="subtitle">Read the route and view carefully, then predict exactly what the browser will show.</p>
+            <div class="content-area tight">
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">11</span><span class="exercise-title">What does visiting <code class="mono">/hello/ron</code> display?</span></div>
+                    <pre class="code-block"><code data-lang="python"># urls.py
+path("hello/&lt;str:name&gt;", views.greet, name="greet")
+
+# views.py
+def greet(request, name):
+    return HttpResponse(f"Hello, {name.capitalize()}!")</code></pre>
+                </div>
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">12</span><span class="exercise-title">What does visiting <code class="mono">/shout/great</code> display?</span></div>
+                    <pre class="code-block"><code data-lang="python"># urls.py
+path("shout/&lt;str:word&gt;", views.shout, name="shout")
+
+# views.py
+def shout(request, word):
+    return HttpResponse(f"{word.upper()}!!!")</code></pre>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SLIDE 14: Fill in the Code (combined, one page) -->
+        <section class="slide top-align">
+            <div class="eyebrow">Check Your Understanding · Part 3 · Hands-On (2/2)</div>
+            <h1 class="title smaller">Fill in the Code</h1>
+            <p class="subtitle">Each snippet is missing one small piece. Fill in the blank so the code does what the description says.</p>
+            <div class="content-area tight">
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">13</span><span class="exercise-title">Match any string named "name" in the route</span></div>
+                    <pre class="code-block"><code data-lang="python">path("hello/<span style="border-bottom:2px dashed var(--amber); color:var(--amber); padding:0 4px;">____________</span>", views.greet, name="greet")</code></pre>
+                </div>
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">14</span><span class="exercise-title">Accept the captured URL value in the view</span></div>
+                    <pre class="code-block"><code data-lang="python">def greet(request, <span style="border-bottom:2px dashed var(--amber); color:var(--amber); padding:0 4px;">____________</span>):
+    return HttpResponse(f"Hello, {name}!")</code></pre>
+                </div>
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">15</span><span class="exercise-title">Capitalize the name inside the greeting</span></div>
+                    <pre class="code-block"><code data-lang="python">return HttpResponse(f"Hello, <span style="border-bottom:2px dashed var(--amber); color:var(--amber); padding:0 4px;">____________</span>!")</code></pre>
+                </div>
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">16</span><span class="exercise-title">Reverse a string called <span class="mono">word</span> using slicing</span></div>
+                    <pre class="code-block"><code data-lang="python">reversed_word = <span style="border-bottom:2px dashed var(--amber); color:var(--amber); padding:0 4px;">____________</span></code></pre>
+                </div>
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">17</span><span class="exercise-title">Uppercase <span class="mono">word</span> inside an f-string, with an exclamation mark</span></div>
+                    <pre class="code-block"><code data-lang="python">return HttpResponse(f"<span style="border-bottom:2px dashed var(--amber); color:var(--amber); padding:0 4px;">____________</span>")</code></pre>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SLIDE 15: Answers - Multiple Choice -->
+        <section class="slide top-align">
+            <div class="eyebrow">Answer Key · Part 1 · Multiple Choice</div>
+            <h1 class="title smaller">Multiple Choice — Answers</h1>
+            <div class="content-area combined-check grid g2">
+
+                <div class="check-col">
+                    <div class="ans-item"><b>1. B</b> — <span class="mono">path("hello/&lt;str:name&gt;")</span>
+                        <div class="expl">Angle brackets are Django's path-converter syntax. <span class="mono">A</span> is a literal (non-dynamic) path, <span class="mono">C</span> is template-string syntax from another framework, and <span class="mono">D</span> isn't valid Django syntax at all.</div>
+                    </div>
+                    <div class="ans-item"><b>2. C</b> — The URL path converter
+                        <div class="expl">Django calls the view with whatever the path converter captured, passed in as an argument whose name must match. It isn't a global, a settings value, or a hardcoded default.</div>
+                    </div>
+                    <div class="ans-item"><b>3. C</b> — Enables substitution inside <span class="mono">{}</span>
+                        <div class="expl">The <span class="mono">f</span> prefix makes Python evaluate whatever is inside <span class="mono">{ }</span> and insert the result. It works on any expression, not just numbers or file paths, and it doesn't force any case change on its own.</div>
+                    </div>
+                </div>
+
+                <div class="check-col">
+                    <div class="ans-item"><b>4. B</b> — <span class="mono">.capitalize()</span>
+                        <div class="expl"><span class="mono">.capitalize()</span> upper-cases only the first letter and lower-cases the rest. <span class="mono">.upper()</span> would capitalize every letter, and <span class="mono">.title_case()</span> / <span class="mono">.first()</span> aren't real string methods.</div>
+                    </div>
+                    <div class="ans-item"><b>5. C</b> — Scales to infinite inputs
+                        <div class="expl">One parameterized route replaces an ever-growing wall of hardcoded ones — the whole point of the lesson. Django doesn't force this pattern, it isn't primarily about speed, and views.py is still required either way.</div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SLIDE 16: Answers - Identification -->
+        <section class="slide top-align">
+            <div class="eyebrow">Answer Key · Part 2 · Identification</div>
+            <h1 class="title smaller">Identification — Answers</h1>
+            <div class="content-area tight">
+
+                <div class="ans-item"><b>6.</b> Path converter syntax — <span class="mono">&lt;type:name&gt;</span> (e.g. <span class="mono">&lt;str:name&gt;</span>)
+                    <div class="expl">The angle brackets tell Django "this segment is dynamic"; the part before the colon is the converter type, the part after is the variable name.</div>
+                </div>
+                <div class="ans-item"><b>7.</b> Parameter-name matching
+                    <div class="expl">Whatever name is used inside <span class="mono">&lt;str:name&gt;</span> in <span class="mono">urls.py</span> must be spelled identically as the view function's parameter — Django passes the captured value by that name.</div>
+                </div>
+                <div class="ans-item"><b>8.</b> The <span class="mono">f</span> prefix (f-strings)
+                    <div class="expl">Placing <span class="mono">f</span> before a string literal turns on <span class="mono">{ }</span> substitution, letting Python variables be embedded directly in the text.</div>
+                </div>
+                <div class="ans-item"><b>9.</b> <span class="mono">.capitalize()</span>
+                    <div class="expl">A built-in Python string method that upper-cases the first character and lower-cases the rest — used here to make captured names look presentable.</div>
+                </div>
+                <div class="ans-item"><b>10.</b> Twitter/X profile URLs — <span class="mono">twitter.com/&lt;username&gt;</span>
+                    <div class="expl">The lecture's real-world example of one dynamic route serving infinite valid values, exactly like the <span class="mono">/profile/&lt;str:username&gt;</span> pattern built in this deck.</div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SLIDE 17: Answers - Guess the Output -->
+        <section class="slide top-align">
+            <div class="eyebrow">Answer Key · Part 3 · Guess the Output</div>
+            <h1 class="title smaller">Guess the Output — Answers</h1>
+            <div class="content-area tight">
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">11</span><span class="exercise-title">Answer: <span class="mono" style="color:var(--green);">Hello, Ron!</span></span></div>
+                    <div class="exercise-desc"><span class="mono">name</span> captures <span class="mono">"ron"</span>, then <span class="mono">.capitalize()</span> upper-cases just the first letter before it's substituted into the f-string.</div>
+                </div>
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">12</span><span class="exercise-title">Answer: <span class="mono" style="color:var(--green);">GREAT!!!</span></span></div>
+                    <div class="exercise-desc"><span class="mono">word</span> captures <span class="mono">"great"</span>, <span class="mono">.upper()</span> converts the whole string to uppercase, then the f-string appends three exclamation marks.</div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SLIDE 18: Answers - Fill in the Code (combined, one page) -->
+        <section class="slide top-align">
+            <div class="eyebrow">Answer Key · Part 4 · Fill in the Code</div>
+            <h1 class="title smaller">Fill in the Code — Answers</h1>
+            <div class="content-area tight">
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">13</span><span class="exercise-title">Answer: <span class="mono" style="color:var(--green);">&lt;str:name&gt;</span></span></div>
+                    <div class="exercise-desc">Angle brackets mark it as a converter; <span class="mono">str</span> says "match any string," <span class="mono">name</span> is the variable it's captured under.</div>
+                </div>
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">14</span><span class="exercise-title">Answer: <span class="mono" style="color:var(--green);">name</span></span></div>
+                    <div class="exercise-desc">The view's parameter must exactly match the variable name used inside <span class="mono">&lt;str:name&gt;</span> in urls.py.</div>
+                </div>
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">15</span><span class="exercise-title">Answer: <span class="mono" style="color:var(--green);">{name.capitalize()}</span></span></div>
+                    <div class="exercise-desc">The curly braces embed the expression's result directly into the string; <span class="mono">.capitalize()</span> runs first, then the result gets inserted.</div>
+                </div>
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">16</span><span class="exercise-title">Answer: <span class="mono" style="color:var(--green);">word[::-1]</span></span></div>
+                    <div class="exercise-desc">Slicing with a step of <span class="mono">-1</span> walks the string backwards from end to start, producing a reversed copy with no loop needed.</div>
+                </div>
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">17</span><span class="exercise-title">Answer: <span class="mono" style="color:var(--green);">{word.upper()}!!!</span></span></div>
+                    <div class="exercise-desc"><span class="mono">.upper()</span> converts the whole captured word to uppercase before it's substituted, and the exclamation marks are just literal text in the f-string.</div>
+                </div>
+
+            </div>
+        </section>
+
+    </div>
+
+    <div id="kb-modal">
+        <div class="kb-panel">
+            <h3>Keyboard Shortcuts</h3>
+            <div class="kb-row"><span>Next slide</span><span class="key">→</span></div>
+            <div class="kb-row"><span>Previous slide</span><span class="key">←</span></div>
+            <div class="kb-row"><span>First slide</span><span class="key">Home</span></div>
+            <div class="kb-row"><span>Last slide</span><span class="key">End</span></div>
+            <div class="kb-row"><span>Toggle this panel</span><span class="key">?</span></div>
+            <div class="kb-row" style="border-bottom:none;"><span>Advance</span><span class="key">Click</span></div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            var slides = document.querySelectorAll('.slide');
+            var total = slides.length;
+            var current = 0;
+
+            function render() {
+                slides.forEach(function(s, i) {
+                    s.classList.remove('active', 'prev');
+                    if (i === current) s.classList.add('active');
+                    else if (i < current) s.classList.add('prev');
+                });
+                document.getElementById('counter').textContent = (current + 1) + ' / ' + total;
+                document.getElementById('progress-bar').style.width = (((current + 1) / total) * 100) + '%';
+            }
+
+            function goTo(i) {
+                if (i < 0) i = 0;
+                if (i >= total) i = total - 1;
+                current = i;
+                render();
+            }
+
+            function next() { goTo(current + 1); }
+
+            function prev() { goTo(current - 1); }
+
+            document.getElementById('deck').addEventListener('click', function(e) {
+                if (e.target.closest('.copy-btn') || e.target.closest('a') || e.target.closest('button')) return;
+                next();
+            });
+
+            document.addEventListener('keydown', function(e) {
+                var modal = document.getElementById('kb-modal');
+                if (e.key === '?') { modal.classList.toggle('show'); return; }
+                if (modal.classList.contains('show')) { if (e.key === 'Escape') modal.classList.remove('show'); return; }
+                if (e.key === 'ArrowRight') { next(); } else if (e.key === 'ArrowLeft') { prev(); } else if (e.key ===
+                    'Home') { goTo(0); } else if (e.key === 'End') { goTo(total - 1); }
+            });
+            document.getElementById('kb-modal').addEventListener('click', function(e) {
+                if (e.target.id === 'kb-modal') e.target.classList.remove('show');
+            });
+
+            var touchStartX = 0;
+            document.getElementById('deck').addEventListener('touchstart', function(e) {
+                touchStartX = e.changedTouches[0].screenX;
+            }, { passive: true });
+            document.getElementById('deck').addEventListener('touchend', function(e) {
+                var dx = e.changedTouches[0].screenX - touchStartX;
+                if (Math.abs(dx) > 50) { dx < 0 ? next() : prev(); }
+            }, { passive: true });
+
+            /* ---- single-pass syntax tokenizer ---- */
+            function escapeHtml(s) {
+                return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
+
+            function highlight(code) {
+                var pattern =
+                    /(#.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|\b(def|import|from|return|if|elif|else|in|for|True|False|None|class|as|with|pass|print|is|not|and|or)\b|\b(\d+)\b/gm;
+                var result = '';
+                var last = 0;
+                var m;
+                while ((m = pattern.exec(code)) !== null) {
+                    result += escapeHtml(code.slice(last, m.index));
+                    if (m[1]) result += '<span class="tok-com">' + escapeHtml(m[1]) + '</span>';
+                    else if (m[2]) result += '<span class="tok-str">' + escapeHtml(m[2]) + '</span>';
+                    else if (m[3]) result += '<span class="tok-kw">' + escapeHtml(m[3]) + '</span>';
+                    else if (m[4]) result += '<span class="tok-num">' + escapeHtml(m[4]) + '</span>';
+                    last = m.index + m[0].length;
+                }
+                result += escapeHtml(code.slice(last));
+                return result;
+            }
+            document.querySelectorAll('pre.code-block code[data-lang]').forEach(function(el) {
+                var raw = el.textContent;
+                el.dataset.raw = raw;
+                el.innerHTML = highlight(raw);
+            });
+
+            /* ---- copy buttons ---- */
+            document.querySelectorAll('.copy-btn').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var codeEl = btn.parentElement.querySelector('code');
+                    var text = codeEl ? (codeEl.dataset.raw || codeEl.textContent) : '';
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text).catch(function() {});
+                    }
+                    btn.textContent = 'Copied!';
+                    btn.classList.add('copied');
+                    setTimeout(function() { btn.textContent = 'Copy';
+                        btn.classList.remove('copied'); }, 1400);
+                });
+            });
+
+            render();
+        })();
+    </script>
+
+</body>
+</html>

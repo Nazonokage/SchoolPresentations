@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Django: From Zero to Web App</title>
+    <style>
+        /* ----- reset & base ----- */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --surface2: #1c2333;
+            --border: #30363d;
+            --text: #e6edf3;
+            --text2: #8b949e;
+            --accent: #58a6ff;
+            --accent2: #f0883e;
+            --green: #3fb950;
+            --red: #f85149;
+            --yellow: #d29922;
+            --purple: #bc8cff;
+            --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+            --slide-dur: 380ms;
+        }
+        html,
+        body {
+            height: 100%;
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            overflow: hidden;
+        }
+        /* ----- slide container ----- */
+        .slideshow {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .slide-track {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        .slide {
+            position: absolute;
+            inset: 0;
+            padding: 48px 56px 80px 56px;
+            overflow-y: auto;
+            opacity: 0;
+            visibility: hidden;
+            transform: scale(0.97) translateY(12px);
+            transition: opacity var(--slide-dur) ease, transform var(--slide-dur) ease, visibility 0s var(--slide-dur);
+            will-change: transform, opacity;
+            display: flex;
+            flex-direction: column;
+        }
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            transform: scale(1) translateY(0);
+            transition: opacity var(--slide-dur) ease, transform var(--slide-dur) ease, visibility 0s 0s;
+            z-index: 10;
+        }
+        /* reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            .slide {
+                transition: opacity 0.2s ease, visibility 0s 0.2s;
+                transform: none;
+            }
+            .slide.active {
+                transition: opacity 0.2s ease, visibility 0s 0s;
+                transform: none;
+            }
+        }
+
+        /* ----- scrollbar ----- */
+        .slide::-webkit-scrollbar {
+            width: 5px;
+        }
+        .slide::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .slide::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        /* ----- tab bar (decorative) ----- */
+        .tab-bar {
+            display: flex;
+            gap: 2px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 4px 12px 0 12px;
+            flex-shrink: 0;
+            min-height: 36px;
+            align-items: flex-end;
+            margin: -48px -56px 20px -56px;
+            padding-left: 56px;
+            padding-right: 56px;
+        }
+        .tab {
+            font-size: 12px;
+            font-family: var(--mono);
+            color: var(--text2);
+            padding: 6px 14px 8px 14px;
+            border-radius: 6px 6px 0 0;
+            background: transparent;
+            border: none;
+            cursor: default;
+            letter-spacing: 0.3px;
+            position: relative;
+        }
+        .tab.active-tab {
+            color: var(--text);
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-bottom-color: var(--bg);
+        }
+        .tab.active-tab::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 2px;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        /* ----- slide content ----- */
+        .eyebrow {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 4px;
+            flex-shrink: 0;
+        }
+        .title {
+            font-size: clamp(28px, 4vw, 48px);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 20px;
+            line-height: 1.15;
+            flex-shrink: 0;
+        }
+        .title .accent {
+            color: var(--accent2);
+        }
+        .body {
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .body p,
+        .body li {
+            font-size: 16px;
+            line-height: 1.65;
+            color: var(--text2);
+        }
+        .body strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+        .body a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+        .body a:hover {
+            text-decoration: underline;
+        }
+
+        /* ----- grid / columns ----- */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 20px;
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+        .grid-2 .card,
+        .grid-3 .card,
+        .grid-4 .card {
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-height: 60px;
+        }
+        .card .label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text2);
+            font-weight: 600;
+        }
+        .card .label .accent {
+            color: var(--accent);
+        }
+        .card .head {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .card .desc {
+            font-size: 14px;
+            line-height: 1.55;
+            color: var(--text2);
+        }
+        .card .desc code {
+            font-family: var(--mono);
+            font-size: 13px;
+            background: var(--bg);
+            padding: 1px 6px;
+            border-radius: 4px;
+            color: var(--accent2);
+        }
+        .card .emoji-big {
+            font-size: 28px;
+            line-height: 1;
+        }
+
+        /* ----- code blocks ----- */
+        .code-block {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px 18px;
+            font-family: var(--mono);
+            font-size: 14px;
+            line-height: 1.7;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            color: var(--text);
+            flex-shrink: 0;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+        .code-block .kw {
+            color: var(--purple);
+        }
+        .code-block .str {
+            color: var(--yellow);
+        }
+        .code-block .cmt {
+            color: var(--text2);
+            font-style: italic;
+        }
+        .code-block .fn {
+            color: var(--accent2);
+        }
+        .code-block .num {
+            color: var(--green);
+        }
+        .code-block .dec {
+            color: var(--accent2);
+        }
+        .code-block .builtin {
+            color: var(--accent);
+        }
+        .code-block .op {
+            color: var(--red);
+        }
+
+        .code-block .tag {
+            color: var(--red);
+        }
+        .code-block .attr {
+            color: var(--yellow);
+        }
+        .code-block .val {
+            color: var(--green);
+        }
+
+        /* ----- table styles ----- */
+        .table-wrap {
+            overflow-x: auto;
+            flex-shrink: 0;
+        }
+        .table-wrap table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            background: var(--surface);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .table-wrap th,
+        .table-wrap td {
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        .table-wrap th {
+            background: var(--surface2);
+            color: var(--text);
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .table-wrap td {
+            color: var(--text2);
+        }
+        .table-wrap td code {
+            font-family: var(--mono);
+            font-size: 12px;
+            background: var(--bg);
+            padding: 1px 6px;
+            border-radius: 4px;
+            color: var(--accent2);
+        }
+        .table-wrap tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* ----- quiz cards ----- */
+        .quiz-q {
+            background: var(--surface);
+            border-left: 3px solid var(--accent);
+            border-radius: 0 10px 10px 0;
+            padding: 14px 18px;
+            margin-bottom: 10px;
+        }
+        .quiz-q .qnum {
+            font-weight: 700;
+            color: var(--accent);
+            font-size: 14px;
+        }
+        .quiz-q .qtext {
+            font-size: 15px;
+            color: var(--text);
+            margin-top: 2px;
+        }
+        .quiz-a {
+            background: var(--surface);
+            border-left: 3px solid var(--green);
+            border-radius: 0 10px 10px 0;
+            padding: 14px 18px;
+            margin-bottom: 10px;
+        }
+        .quiz-a .anum {
+            font-weight: 700;
+            color: var(--green);
+            font-size: 14px;
+        }
+        .quiz-a .atext {
+            font-size: 15px;
+            color: var(--text);
+            margin-top: 2px;
+        }
+        .quiz-a .atext code {
+            font-family: var(--mono);
+            font-size: 13px;
+            background: var(--bg);
+            padding: 1px 6px;
+            border-radius: 4px;
+            color: var(--accent2);
+        }
+
+        /* ----- navigation ----- */
+        .nav-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 8px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 100;
+            backdrop-filter: blur(8px);
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .nav-bar .counter {
+            font-size: 13px;
+            color: var(--text2);
+            font-family: var(--mono);
+            letter-spacing: 0.3px;
+            flex-shrink: 0;
+        }
+        .nav-bar .progress-wrap {
+            flex: 1 1 200px;
+            min-width: 80px;
+            height: 3px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .nav-bar .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        .nav-bar .nav-btns {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .nav-bar .nav-btns button {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text2);
+            font-size: 16px;
+            padding: 4px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: var(--font);
+            transition: background 0.2s, color 0.2s;
+            line-height: 1.6;
+        }
+        .nav-bar .nav-btns button:hover {
+            background: var(--surface2);
+            color: var(--text);
+        }
+        .nav-bar .nav-btns button:active {
+            transform: scale(0.95);
+        }
+
+        /* ----- responsive ----- */
+        @media (max-width: 820px) {
+            .slide {
+                padding: 28px 20px 72px 20px;
+            }
+            .tab-bar {
+                margin: -28px -20px 16px -20px;
+                padding-left: 20px;
+                padding-right: 20px;
+            }
+            .grid-2,
+            .grid-3,
+            .grid-4 {
+                grid-template-columns: 1fr;
+            }
+            .title {
+                font-size: clamp(24px, 6vw, 34px);
+            }
+            .nav-bar {
+                padding: 6px 14px;
+            }
+            .nav-bar .counter {
+                font-size: 11px;
+            }
+            .code-block {
+                font-size: 12px;
+                padding: 12px 14px;
+                max-height: 200px;
+            }
+            .card .head {
+                font-size: 15px;
+            }
+            .table-wrap table {
+                font-size: 12px;
+            }
+            .table-wrap th,
+            .table-wrap td {
+                padding: 6px 10px;
+            }
+        }
+        @media (max-width: 480px) {
+            .slide {
+                padding: 16px 12px 64px 12px;
+            }
+            .tab-bar {
+                margin: -16px -12px 12px -12px;
+                padding-left: 12px;
+                padding-right: 12px;
+                min-height: 30px;
+            }
+            .tab {
+                font-size: 10px;
+                padding: 4px 10px 6px 10px;
+            }
+            .title {
+                font-size: 20px;
+                margin-bottom: 12px;
+            }
+            .body p,
+            .body li {
+                font-size: 14px;
+            }
+            .card {
+                padding: 12px 14px;
+            }
+            .card .desc {
+                font-size: 13px;
+            }
+            .quiz-q,
+            .quiz-a {
+                padding: 10px 12px;
+            }
+            .quiz-q .qtext,
+            .quiz-a .atext {
+                font-size: 13px;
+            }
+            .nav-bar .nav-btns button {
+                font-size: 13px;
+                padding: 2px 10px;
+            }
+            .code-block {
+                font-size: 11px;
+                padding: 10px 12px;
+                max-height: 150px;
+            }
+        }
+
+        /* utility */
+        .mt-auto {
+            margin-top: auto;
+        }
+        .flex-1 {
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+        .gap-sm {
+            gap: 8px;
+        }
+        .gap-md {
+            gap: 14px;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .text-mono {
+            font-family: var(--mono);
+        }
+        .text-sm {
+            font-size: 14px;
+        }
+        .text-xs {
+            font-size: 12px;
+        }
+        .mt-8 {
+            margin-top: 8px;
+        }
+        .mb-8 {
+            margin-bottom: 8px;
+        }
+        .w-full {
+            width: 100%;
+        }
+        .overflow-hidden {
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="slideshow" role="main" aria-label="Django presentation">
+
+        <div class="slide-track" id="track">
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 1: TITLE -->
+            <!-- ============================================================ -->
+            <div class="slide active" data-index="0">
+                <div class="tab-bar"><span class="tab active-tab">django_intro.py</span></div>
+                <div class="eyebrow">✦ complete guide</div>
+                <div class="title">Django: <span class="accent">From Zero</span> to Web App</div>
+                <div class="body" style="justify-content:center;gap:8px;flex:1;">
+                    <p style="font-size:20px;color:var(--text);font-weight:300;">
+                        Build a Register &amp; Login Web App with Django + MySQL
+                    </p>
+                    <p style="font-size:15px;color:var(--text2);max-width:640px;">
+                        The web framework for perfectionists with deadlines.<br />
+                        <span style="font-family:var(--mono);color:var(--accent2);">MVT · Modular · Batteries included</span>
+                    </p>
+                    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:20px;justify-content:center;">
+                        <span style="font-size:13px;color:var(--text2);background:var(--surface);padding:4px 16px;border-radius:20px;border:1px solid var(--border);">← → navigate</span>
+                        <span style="font-size:13px;color:var(--text2);background:var(--surface);padding:4px 16px;border-radius:20px;border:1px solid var(--border);">keyboard only</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 2: What is Django? -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="1">
+                <div class="tab-bar"><span class="tab">django_intro.py</span><span class="tab active-tab">what_is_django.py</span></div>
+                <div class="eyebrow">foundation</div>
+                <div class="title">What is Django?</div>
+                <div class="body">
+                    <p><strong>High-level Python web framework</strong> enabling rapid development of secure, maintainable websites. Created in 2003 for <em>tight deadlines</em> and <em>high traffic</em>.</p>
+                    <div class="grid-2" style="flex:1 1 auto;min-height:0;">
+                        <div class="card">
+                            <div class="label"><span class="accent">✦</span> philosophy</div>
+                            <div class="head">"Perfectionists with deadlines"</div>
+                            <div class="desc">Django provides everything you need out of the box — no reinventing the wheel.</div>
+                        </div>
+                        <div class="card">
+                            <div class="label"><span class="accent">⚡</span> battery included</div>
+                            <div class="head">ORM · Admin · Auth · Routing</div>
+                            <div class="desc">Built-in ORM, auto-generated admin, user auth, URL routing, template engine, forms, security, caching, i18n.</div>
+                        </div>
+                        <div class="card">
+                            <div class="label"><span class="accent">🏢</span> used by</div>
+                            <div class="head">Instagram · Pinterest · Mozilla</div>
+                            <div class="desc">Spotify backend tooling, The Washington Post, Disqus, and thousands more.</div>
+                        </div>
+                        <div class="card">
+                            <div class="label"><span class="accent">🧩</span> modular</div>
+                            <div class="head">Project + Apps</div>
+                            <div class="desc">Build reusable, plug-and-play components. One project, many apps.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 3: Why Django? (raw scripting → framework) -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="2">
+                <div class="tab-bar"><span class="tab">django_intro.py</span><span class="tab active-tab">why_django.py</span></div>
+                <div class="eyebrow">from raw scripting to architecture</div>
+                <div class="title">Why Django?</div>
+                <div class="body">
+                    <div class="grid-2" style="flex:1 1 auto;min-height:0;">
+                        <div class="card" style="border-left-color:var(--red);border-left-width:3px;">
+                            <div class="label"><span style="color:var(--red);">✗</span> raw scripting</div>
+                            <div class="head" style="font-size:15px;">Everything crammed into one file</div>
+                            <div class="code-block" style="max-height:180px;font-size:13px;flex-shrink:0;">
+                                <span class="kw">def</span> <span class="fn">handle_request</span>(path):
+                                    <span class="kw">if</span> path == <span class="str">"/"</span>:
+                                        <span class="kw">return</span> <span class="str">"&lt;h1&gt;Welcome&lt;/h1&gt;"</span>
+                                    <span class="kw">elif</span> path == <span class="str">"/about"</span>:
+                                        <span class="kw">return</span> <span class="str">"&lt;h1&gt;About&lt;/h1&gt;"</span>
+                                    <span class="cmt"># ... grows into unmanageable spaghetti</span>
+                            </div>
+                            <div class="desc" style="font-size:13px;color:var(--red);">No structure. No separation of concerns. Unmaintainable.</div>
+                        </div>
+                        <div class="card" style="border-left-color:var(--green);border-left-width:3px;">
+                            <div class="label"><span style="color:var(--green);">✓</span> django framework</div>
+                            <div class="head" style="font-size:15px;">Structured, maintainable, scalable</div>
+                            <div style="display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--text2);">
+                                <div><span style="color:var(--accent);">Model</span> — Data &amp; structure</div>
+                                <div><span style="color:var(--accent2);">View</span> — Logic &amp; processing</div>
+                                <div><span style="color:var(--green);">Template</span> — Presentation</div>
+                                <div><span style="color:var(--purple);">URL</span> — Routing</div>
+                            </div>
+                            <div class="desc" style="font-size:13px;color:var(--green);">Separation of concerns → readable, testable, team-friendly.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 4: MVT Architecture overview -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="3">
+                <div class="tab-bar"><span class="tab">django_intro.py</span><span class="tab active-tab">mvt.py</span></div>
+                <div class="eyebrow">architectural pattern</div>
+                <div class="title">MVT: Model · View · Template</div>
+                <div class="body">
+                    <p>Django's MVT pattern separates <strong>data</strong>, <strong>logic</strong>, and <strong>presentation</strong>.</p>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>Layer</th><th>Responsibility</th><th>Analogy</th></tr></thead>
+                            <tbody>
+                                <tr><td><code style="color:var(--accent);">Model</code></td><td>Data &amp; database structure</td><td>Blueprint of plumbing / wiring</td></tr>
+                                <tr><td><code style="color:var(--accent2);">View</code></td><td>Logic — decides <em>what</em> data to show</td><td>Construction manager</td></tr>
+                                <tr><td><code style="color:var(--green);">Template</code></td><td>Presentation — <em>how</em> it looks (HTML)</td><td>Interior design</td></tr>
+                                <tr><td><code style="color:var(--purple);">URL Dispatcher</code></td><td>Routes requests to views</td><td>Lobby receptionist</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:4px;">
+                        <span style="font-size:13px;color:var(--text2);background:var(--surface);padding:4px 14px;border-radius:16px;border:1px solid var(--border);">🏢 Apartment complex analogy</span>
+                        <span style="font-size:13px;color:var(--text2);background:var(--surface);padding:4px 14px;border-radius:16px;border:1px solid var(--border);">Project = complex · App = unit</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 5: Model -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="4">
+                <div class="tab-bar"><span class="tab">django_intro.py</span><span class="tab active-tab">models.py</span></div>
+                <div class="eyebrow">mvt — model</div>
+                <div class="title">Model: The Data Blueprint</div>
+                <div class="body">
+                    <p>Python classes that map to database tables. Defines <strong>fields</strong>, <strong>relationships</strong>, and <strong>validation</strong>.</p>
+                    <div class="code-block">
+                        <span class="kw">from</span> django.db <span class="kw">import</span> models
+
+                        <span class="kw">class</span> <span class="fn">User</span>(models.Model):
+                            username = models.CharField(max_length=100)
+                            email = models.EmailField(unique=<span class="kw">True</span>)
+                            date_joined = models.DateTimeField(auto_now_add=<span class="kw">True</span>)
+
+                            <span class="kw">def</span> <span class="fn">__str__</span>(<span class="kw">self</span>):
+                                <span class="kw">return</span> <span class="kw">self</span>.username
+                    </div>
+                    <div class="grid-3" style="flex-shrink:0;">
+                        <div class="card"><div class="label">purpose</div><div class="desc">Define data structure &amp; relationships</div></div>
+                        <div class="card"><div class="label">orm</div><div class="desc">Query data with Python, not SQL</div></div>
+                        <div class="card"><div class="label">migrations</div><div class="desc">Auto-generated schema changes</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 6: View -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="5">
+                <div class="tab-bar"><span class="tab">django_intro.py</span><span class="tab active-tab">views.py</span></div>
+                <div class="eyebrow">mvt — view</div>
+                <div class="title">View: The Logic Handler</div>
+                <div class="body">
+                    <p>Processes requests, queries the database, and returns <strong>HTTP responses</strong>.</p>
+                    <div class="code-block">
+                        <span class="kw">from</span> django.shortcuts <span class="kw">import</span> render
+                        <span class="kw">from</span> django.http <span class="kw">import</span> HttpResponse
+                        <span class="kw">from</span> .models <span class="kw">import</span> User
+
+                        <span class="kw">def</span> <span class="fn">profile</span>(request, user_id):
+                            user = User.objects.get(id=user_id)
+                            <span class="kw">return</span> render(request, <span class="str">'profile.html'</span>, {<span class="str">'user'</span>: user})
+                    </div>
+                    <div class="grid-3" style="flex-shrink:0;">
+                        <div class="card"><div class="label">receives</div><div class="desc">HTTP request + URL params</div></div>
+                        <div class="card"><div class="label">processes</div><div class="desc">Business logic, DB queries, forms</div></div>
+                        <div class="card"><div class="label">returns</div><div class="desc">HTML, JSON, redirect, etc.</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 7: Template -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="6">
+                <div class="tab-bar"><span class="tab">django_intro.py</span><span class="tab active-tab">template.html</span></div>
+                <div class="eyebrow">mvt — template</div>
+                <div class="title">Template: The Presentation Layer</div>
+                <div class="body">
+                    <p>HTML with <strong>Django Template Language</strong> — variables, tags, filters.</p>
+                    <div class="code-block">
+                        <span class="cmt">&lt;!-- dashboard.html --&gt;</span>
+                        <span class="tag">&lt;h1&gt;</span>Welcome, {{ user.username }}!<span class="tag">&lt;/h1&gt;</span>
+                        <span class="tag">&lt;p&gt;</span>Today is {{ current_date|date:<span class="str">"F j, Y"</span> }}<span class="tag">&lt;/p&gt;</span>
+
+                        <span class="cmt">{% if user.is_authenticated %}</span>
+                            <span class="tag">&lt;a</span> <span class="attr">href</span>=<span class="val">"{% url 'logout' %}"</span><span class="tag">&gt;</span>Logout<span class="tag">&lt;/a&gt;</span>
+                        <span class="cmt">{% else %}</span>
+                            <span class="tag">&lt;a</span> <span class="attr">href</span>=<span class="val">"{% url 'login' %}"</span><span class="tag">&gt;</span>Login<span class="tag">&lt;/a&gt;</span>
+                        <span class="cmt">{% endif %}</span>
+                    </div>
+                    <div class="grid-3" style="flex-shrink:0;">
+                        <div class="card"><div class="label">syntax</div><div class="desc">{{ variable }} · {% tag %} · {# comment #}</div></div>
+                        <div class="card"><div class="label">inheritance</div><div class="desc">{% extends "base.html" %} · {% block content %}</div></div>
+                        <div class="card"><div class="label">filters</div><div class="desc">{{ value|lower }} · {{ list|join:", " }}</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 8: URL Dispatcher -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="7">
+                <div class="tab-bar"><span class="tab">django_intro.py</span><span class="tab active-tab">urls.py</span></div>
+                <div class="eyebrow">mvt — url dispatcher</div>
+                <div class="title">URL Dispatcher: The Receptionist</div>
+                <div class="body">
+                    <p>Maps URL patterns to <strong>views</strong> — the entry point for all requests.</p>
+                    <div class="code-block">
+                        <span class="kw">from</span> django.urls <span class="kw">import</span> path
+                        <span class="kw">from</span> . <span class="kw">import</span> views
+
+                        urlpatterns = [
+                            path(<span class="str">''</span>, views.home, name=<span class="str">'home'</span>),
+                            path(<span class="str">'profile/&lt;int:user_id&gt;/'</span>, views.profile, name=<span class="str">'profile'</span>),
+                            path(<span class="str">'about/'</span>, views.about, name=<span class="str">'about'</span>),
+                        ]
+                    </div>
+                    <div class="grid-3" style="flex-shrink:0;">
+                        <div class="card"><div class="label">route</div><div class="desc">String pattern → view mapping</div></div>
+                        <div class="card"><div class="label">parameters</div><div class="desc">&lt;int:id&gt; · &lt;str:slug&gt; · &lt;uuid:uid&gt;</div></div>
+                        <div class="card"><div class="label">reverse</div><div class="desc">{% url 'name' arg %} · reverse('name')</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 9: Complete Request Flow -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="8">
+                <div class="tab-bar"><span class="tab">django_intro.py</span><span class="tab active-tab">flow.py</span></div>
+                <div class="eyebrow">request flow</div>
+                <div class="title">The Complete Request-Response Flow</div>
+                <div class="body" style="justify-content:center;gap:6px;">
+                    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;font-family:var(--mono);font-size:14px;line-height:2;text-align:center;max-width:560px;margin:0 auto;width:100%;">
+                        <div>🌐 Browser Request</div>
+                        <div style="color:var(--text2);">↓</div>
+                        <div><span style="color:var(--purple);">urls.py</span> — URL Dispatcher <span style="color:var(--text2);">"Which view?"</span></div>
+                        <div style="color:var(--text2);">↓</div>
+                        <div><span style="color:var(--accent2);">views.py</span> — View <span style="color:var(--text2);">"What data?"</span></div>
+                        <div style="color:var(--text2);">↓</div>
+                        <div><span style="color:var(--accent);">models.py</span> — Model <span style="color:var(--text2);">"Fetch from DB"</span></div>
+                        <div style="color:var(--text2);">↓</div>
+                        <div><span style="color:var(--green);">template.html</span> — Template <span style="color:var(--text2);">"Render HTML"</span></div>
+                        <div style="color:var(--text2);">↓</div>
+                        <div>📨 HTTP Response to Browser</div>
+                    </div>
+                    <p style="font-size:13px;color:var(--text2);text-align:center;max-width:560px;margin:0 auto;">Each component has one job — separation of concerns keeps code clean.</p>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 10: Project vs. App overview -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="9">
+                <div class="tab-bar"><span class="tab">django_intro.py</span><span class="tab active-tab">project_vs_app.py</span></div>
+                <div class="eyebrow">modular blueprint</div>
+                <div class="title">Project vs. App</div>
+                <div class="body">
+                    <div class="grid-2" style="flex:1 1 auto;min-height:0;">
+                        <div class="card" style="border-left-color:var(--accent);border-left-width:3px;">
+                            <div class="label"><span class="accent">🏢</span> project</div>
+                            <div class="head">The whole complex</div>
+                            <div class="desc" style="font-size:14px;">Management, shared infrastructure, global settings.<br /><code style="font-family:var(--mono);color:var(--accent2);">django-admin startproject</code></div>
+                            <div style="font-size:13px;color:var(--text2);margin-top:4px;">Contains: settings, root URLs, WSGI/ASGI, manage.py</div>
+                        </div>
+                        <div class="card" style="border-left-color:var(--accent2);border-left-width:3px;">
+                            <div class="label"><span class="accent">🚪</span> app</div>
+                            <div class="head">Individual apartment unit</div>
+                            <div class="desc" style="font-size:14px;">Self-contained, reusable, plug-and-play.<br /><code style="font-family:var(--mono);color:var(--accent2);">python manage.py startapp</code></div>
+                            <div style="font-size:13px;color:var(--text2);margin-top:4px;">Contains: models, views, templates, admin, migrations</div>
+                        </div>
+                    </div>
+                    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 18px;flex-shrink:0;">
+                        <span style="font-size:14px;color:var(--text2);">💡 A single <strong style="color:var(--text);">Project</strong> can contain <strong style="color:var(--text);">many Apps</strong> — that's the "plug-and-play" modularity.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 11: Project structure -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="10">
+                <div class="tab-bar"><span class="tab">django_intro.py</span><span class="tab active-tab">project_tree.py</span></div>
+                <div class="eyebrow">filesystem</div>
+                <div class="title">Project Structure</div>
+                <div class="body">
+                    <div class="grid-2" style="flex:1 1 auto;min-height:0;">
+                        <div class="card">
+                            <div class="label">📁 mysite/</div>
+                            <div class="code-block" style="max-height:260px;font-size:13px;flex:1;">
+                                mysite/
+                                ├── manage.py          <span class="cmt"># CLI remote control</span>
+                                └── mysite/
+                                    ├── __init__.py
+                                    ├── settings.py      <span class="cmt"># Global config</span>
+                                    ├── urls.py          <span class="cmt"># Root routing</span>
+                                    ├── asgi.py          <span class="cmt"># Deployment</span>
+                                    └── wsgi.py          <span class="cmt"># Deployment</span>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="label">📄 key files</div>
+                            <div style="display:flex;flex-direction:column;gap:8px;font-size:14px;color:var(--text2);">
+                                <div><strong style="color:var(--text);">manage.py</strong> — CLI tool: runserver, migrate, shell</div>
+                                <div><strong style="color:var(--text);">settings.py</strong> — DB, apps, security, middleware</div>
+                                <div><strong style="color:var(--text);">urls.py</strong> — Root URL table (receptionist)</div>
+                                <div><strong style="color:var(--text);">wsgi.py / asgi.py</strong> — Entry point for deployment</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 12: App structure -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="11">
+                <div class="tab-bar"><span class="tab">django_intro.py</span><span class="tab active-tab">app_tree.py</span></div>
+                <div class="eyebrow">filesystem</div>
+                <div class="title">App Structure</div>
+                <div class="body">
+                    <div class="grid-2" style="flex:1 1 auto;min-height:0;">
+                        <div class="card">
+                            <div class="label">📁 core/</div>
+                            <div class="code-block" style="max-height:260px;font-size:13px;flex:1;">
+                                core/
+                                ├── migrations/
+                                │   └── __init__.py
+                                ├── __init__.py
+                                ├── admin.py          <span class="cmt"># Admin config</span>
+                                ├── apps.py           <span class="cmt"># App metadata</span>
+                                ├── models.py         <span class="cmt"># Data blueprint</span>
+                                ├── tests.py
+                                └── views.py          <span class="cmt"># Logic</span>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="label">📄 key files</div>
+                            <div style="display:flex;flex-direction:column;gap:8px;font-size:14px;color:var(--text2);">
+                                <div><strong style="color:var(--text);">models.py</strong> — DB tables &amp; relationships</div>
+                                <div><strong style="color:var(--text);">views.py</strong> — Request/response logic</div>
+                                <div><strong style="color:var(--text);">admin.py</strong> — Register models for admin panel</div>
+                                <div><strong style="color:var(--text);">migrations/</strong> — Database change logbook</div>
+                                <div><strong style="color:var(--text);">apps.py</strong> — App's ID card</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 13: Project vs. App comparison -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="12">
+                <div class="tab-bar"><span class="tab">django_intro.py</span><span class="tab active-tab">compare.py</span></div>
+                <div class="eyebrow">comparison</div>
+                <div class="title">Project vs. App: Side by Side</div>
+                <div class="body">
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>Aspect</th><th>Project</th><th>App</th></tr></thead>
+                            <tbody>
+                                <tr><td>Scope</td><td>Entire website / system</td><td>One feature / module</td></tr>
+                                <tr><td>Reusability</td><td>Not reusable as a whole</td><td>Highly reusable across projects</td></tr>
+                                <tr><td>Command</td><td><code>django-admin startproject</code></td><td><code>python manage.py startapp</code></td></tr>
+                                <tr><td>Contains</td><td>Settings, URLs, WSGI/ASGI</td><td>Models, Views, Templates</td></tr>
+                                <tr><td>Analogy</td><td>The whole apartment complex</td><td>One apartment unit</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 16px;flex-shrink:0;">
+                        <span style="font-size:14px;color:var(--text2);">🔌 An app built for one project (e.g. <code style="color:var(--accent2);">blog</code>) can be <strong style="color:var(--text);">unplugged and reused</strong> in another — modular furniture.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 14: Setting Up Environment -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="13">
+                <div class="tab-bar"><span class="tab">django_intro.py</span><span class="tab active-tab">setup.py</span></div>
+                <div class="eyebrow">getting started</div>
+                <div class="title">Set Up Your Development Environment</div>
+                <div class="body">
+                    <div class="code-block" style="max-height:200px;">
+                        <span class="cmt"># 1. Create virtual environment (clean toolbox)</span>
+                        python -m venv venv
+
+                        <span class="cmt"># 2. Activate it</span>
+                        <span class="cmt"># macOS/Linux:</span>
+                        source venv/bin/activate
+                        <span class="cmt"># Windows:</span>
+                        venv\Scripts\activate
+
+                        <span class="cmt"># 3. Install Django</span>
+                        pip install django
+
+                        <span class="cmt"># 4. Verify</span>
+                        python -m django --version
+                    </div>
+                    <div class="grid-3" style="flex-shrink:0;">
+                        <div class="card"><div class="label">🎯 venv</div><div class="desc">Isolate dependencies per project</div></div>
+                        <div class="card"><div class="label">📦 pip install</div><div class="desc">Hire the whole construction crew</div></div>
+                        <div class="card"><div class="label">🚀 runserver</div><div class="desc">python manage.py runserver</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 15: Building Auth App - Overview -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="14">
+                <div class="tab-bar"><span class="tab">auth_app.py</span><span class="tab active-tab">overview.py</span></div>
+                <div class="eyebrow">project: register &amp; login</div>
+                <div class="title">Building a Register &amp; Login Web App</div>
+                <div class="body" style="justify-content:center;gap:10px;">
+                    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 24px;text-align:center;max-width:500px;margin:0 auto;width:100%;">
+                        <div style="font-size:14px;color:var(--text2);">🌐 Browser → <span style="color:var(--text);">localhost:8000</span></div>
+                        <div style="color:var(--text2);font-size:20px;">↓</div>
+                        <div style="font-size:14px;color:var(--text2);">⚙️ <span style="color:var(--text);">Django Dev Server</span> — Views · URLs · Templates · Auth</div>
+                        <div style="color:var(--text2);font-size:20px;">↓</div>
+                        <div style="font-size:14px;color:var(--text2);">🐬 <span style="color:var(--text);">MySQL via WAMP</span> — Users · Sessions</div>
+                    </div>
+                    <p style="font-size:13px;color:var(--text2);text-align:center;">Apache serves nothing — only MySQL from WAMP is used.</p>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;flex-shrink:0;">
+                        <span style="font-size:12px;color:var(--text2);background:var(--surface);padding:2px 12px;border-radius:12px;border:1px solid var(--border);">WAMP green icon</span>
+                        <span style="font-size:12px;color:var(--text2);background:var(--surface);padding:2px 12px;border-radius:12px;border:1px solid var(--border);">django_auth_app</span>
+                        <span style="font-size:12px;color:var(--text2);background:var(--surface);padding:2px 12px;border-radius:12px;border:1px solid var(--border);">mysqlclient</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 16: Part 1 - WAMP & Database -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="15">
+                <div class="tab-bar"><span class="tab">auth_app.py</span><span class="tab active-tab">part1_wamp.py</span></div>
+                <div class="eyebrow">step 1–2</div>
+                <div class="title">Start WAMP &amp; Create the Database</div>
+                <div class="body">
+                    <div class="grid-2" style="flex:1 1 auto;min-height:0;">
+                        <div class="card">
+                            <div class="label">🟢 launch wamp</div>
+                            <div class="head">Start WAMP from Start Menu</div>
+                            <div class="desc">Wait for tray icon to turn <strong style="color:var(--green);">green</strong> — both Apache and MySQL show green checkmarks.</div>
+                            <div style="font-size:13px;color:var(--text2);margin-top:4px;">🔑 WAMP's default MySQL root has <em>no password</em> for local dev.</div>
+                        </div>
+                        <div class="card">
+                            <div class="label">📊 phpmyadmin</div>
+                            <div class="head">Create the database</div>
+                            <div class="desc">Click WAMP tray → phpMyAdmin → <strong>Databases</strong> tab.</div>
+                            <div style="font-family:var(--mono);font-size:14px;color:var(--accent2);background:var(--bg);padding:4px 10px;border-radius:6px;margin-top:4px;">Name: django_auth_app</div>
+                            <div style="font-size:13px;color:var(--text2);">Django will build the tables for you.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 17: Part 2 - Django Project & App -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="16">
+                <div class="tab-bar"><span class="tab">auth_app.py</span><span class="tab active-tab">part2_project.py</span></div>
+                <div class="eyebrow">step 3–6</div>
+                <div class="title">Set Up the Django Project &amp; App</div>
+                <div class="body">
+                    <div class="code-block" style="max-height:180px;">
+                        <span class="cmt"># Create project directory &amp; virtual env</span>
+                        mkdir django_auth_project && <span class="fn">cd</span> django_auth_project
+                        python -m venv venv
+                        venv\Scripts\activate
+
+                        <span class="cmt"># Install packages</span>
+                        pip install django mysqlclient
+
+                        <span class="cmt"># Create project &amp; app</span>
+                        django-admin startproject config .
+                        python manage.py startapp accounts
+                    </div>
+                    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 16px;flex-shrink:0;">
+                        <span style="font-size:14px;color:var(--text2);">📝 Add <code style="color:var(--accent2);">'accounts'</code> to <code style="color:var(--accent);">INSTALLED_APPS</code> in <code style="color:var(--text);">settings.py</code>.</span>
+                    </div>
+                    <div style="font-size:13px;color:var(--red);flex-shrink:0;">⚠️ If mysqlclient fails on Windows: install MySQL Connector C headers first.</div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 18: Part 3 - MySQL Configuration -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="17">
+                <div class="tab-bar"><span class="tab">auth_app.py</span><span class="tab active-tab">part3_settings.py</span></div>
+                <div class="eyebrow">step 7</div>
+                <div class="title">Connect Django to MySQL</div>
+                <div class="body">
+                    <p>Update <code style="color:var(--accent);">DATABASES</code> in <code style="color:var(--text);">settings.py</code>:</p>
+                    <div class="code-block" style="max-height:200px;">
+                        DATABASES = {
+                            <span class="str">'default'</span>: {
+                                <span class="str">'ENGINE'</span>: <span class="str">'django.db.backends.mysql'</span>,
+                                <span class="str">'NAME'</span>: <span class="str">'django_auth_app'</span>,
+                                <span class="str">'USER'</span>: <span class="str">'root'</span>,
+                                <span class="str">'PASSWORD'</span>: <span class="str">''</span>,  <span class="cmt"># blank for local dev</span>
+                                <span class="str">'HOST'</span>: <span class="str">'localhost'</span>,
+                                <span class="str">'PORT'</span>: <span class="str">'3306'</span>,
+                            }
+                        }
+                    </div>
+                    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 16px;flex-shrink:0;">
+                        <span style="font-size:14px;color:var(--text2);">🔑 WAMP default: <code style="color:var(--green);">root</code> with <strong style="color:var(--text);">no password</strong> — leave blank for local development.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 19: Part 4 - Migrations -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="18">
+                <div class="tab-bar"><span class="tab">auth_app.py</span><span class="tab active-tab">part4_migrate.py</span></div>
+                <div class="eyebrow">step 8</div>
+                <div class="title">Run Migrations</div>
+                <div class="body">
+                    <div class="code-block" style="max-height:140px;">
+                        <span class="cmt"># One command builds every auth table</span>
+                        python manage.py migrate
+                    </div>
+                    <p style="font-size:14px;color:var(--text2);">Tables created inside <code style="color:var(--accent2);">django_auth_app</code>:</p>
+                    <div class="grid-4" style="flex-shrink:0;">
+                        <div class="card"><div class="label">auth_user</div><div class="desc" style="font-size:13px;">User accounts</div></div>
+                        <div class="card"><div class="label">auth_group</div><div class="desc" style="font-size:13px;">User groups</div></div>
+                        <div class="card"><div class="label">auth_permission</div><div class="desc" style="font-size:13px;">Permissions</div></div>
+                        <div class="card"><div class="label">django_session</div><div class="desc" style="font-size:13px;">Session data</div></div>
+                    </div>
+                    <div style="font-size:13px;color:var(--text2);flex-shrink:0;">Refresh phpMyAdmin to see the tables appear.</div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 20: Part 5 - Views & URLs -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="19">
+                <div class="tab-bar"><span class="tab">auth_app.py</span><span class="tab active-tab">part5_views.py</span></div>
+                <div class="eyebrow">step 9–10</div>
+                <div class="title">Views &amp; URL Routing</div>
+                <div class="body">
+                    <div class="grid-2" style="flex:1 1 auto;min-height:0;">
+                        <div class="card">
+                            <div class="label">📄 views.py</div>
+                            <div class="code-block" style="max-height:200px;font-size:12px;flex:1;">
+                                <span class="kw">from</span> django.shortcuts <span class="kw">import</span> render, redirect
+                                <span class="kw">from</span> django.contrib.auth.forms <span class="kw">import</span> UserCreationForm
+                                <span class="kw">from</span> django.contrib.auth.decorators <span class="kw">import</span> login_required
+
+                                <span class="kw">def</span> <span class="fn">register_view</span>(request):
+                                    <span class="cmt"># UserCreationForm handles hashing, validation</span>
+                                    <span class="kw">...</span>
+
+                                @<span class="builtin">login_required</span>
+                                <span class="kw">def</span> <span class="fn">dashboard_view</span>(request):
+                                    <span class="kw">return</span> render(request, <span class="str">'accounts/dashboard.html'</span>)
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="label">🔗 urls.py</div>
+                            <div class="code-block" style="max-height:200px;font-size:12px;flex:1;">
+                                <span class="kw">from</span> django.urls <span class="kw">import</span> path
+                                <span class="kw">from</span> django.contrib.auth.views <span class="kw">import</span> LoginView, LogoutView
+                                <span class="kw">from</span> . <span class="kw">import</span> views
+
+                                urlpatterns = [
+                                    path(<span class="str">'register/'</span>, views.register_view, name=<span class="str">'register'</span>),
+                                    path(<span class="str">'login/'</span>, LoginView.as_view(template_name=<span class="str">'accounts/login.html'</span>), name=<span class="str">'login'</span>),
+                                    path(<span class="str">'logout/'</span>, LogoutView.as_view(), name=<span class="str">'logout'</span>),
+                                    path(<span class="str">'dashboard/'</span>, views.dashboard_view, name=<span class="str">'dashboard'</span>),
+                                ]
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 21: Part 6 - Templates -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="20">
+                <div class="tab-bar"><span class="tab">auth_app.py</span><span class="tab active-tab">part6_templates.html</span></div>
+                <div class="eyebrow">step 11</div>
+                <div class="title">Front-End Templates</div>
+                <div class="body">
+                    <p style="font-size:14px;color:var(--text2);">All three templates live under <code style="color:var(--accent2);">accounts/templates/accounts/</code></p>
+                    <div class="grid-3" style="flex:1 1 auto;min-height:0;">
+                        <div class="card">
+                            <div class="label">📝 register.html</div>
+                            <div class="code-block" style="max-height:150px;font-size:12px;flex:1;">
+                                &lt;form <span class="attr">method</span>=<span class="val">"post"</span>&gt;
+                                    {% csrf_token %}
+                                    {{ form.as_p }}
+                                    &lt;button <span class="attr">type</span>=<span class="val">"submit"</span>&gt;Register&lt;/button&gt;
+                                &lt;/form&gt;
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="label">🔐 login.html</div>
+                            <div class="code-block" style="max-height:150px;font-size:12px;flex:1;">
+                                &lt;form <span class="attr">method</span>=<span class="val">"post"</span>&gt;
+                                    {% csrf_token %}
+                                    {{ form.as_p }}
+                                    &lt;button <span class="attr">type</span>=<span class="val">"submit"</span>&gt;Login&lt;/button&gt;
+                                &lt;/form&gt;
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="label">👤 dashboard.html</div>
+                            <div class="code-block" style="max-height:150px;font-size:12px;flex:1;">
+                                &lt;h1&gt;Welcome, {{ user.username }}!&lt;/h1&gt;
+                                &lt;form <span class="attr">method</span>=<span class="val">"post"</span> <span class="attr">action</span>=<span class="val">"{% url 'logout' %}"</span>&gt;
+                                    {% csrf_token %}
+                                    &lt;button <span class="attr">type</span>=<span class="val">"submit"</span>&gt;Logout&lt;/button&gt;
+                                &lt;/form&gt;
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 22: Part 7 - Superuser & Launch -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="21">
+                <div class="tab-bar"><span class="tab">auth_app.py</span><span class="tab active-tab">part7_launch.py</span></div>
+                <div class="eyebrow">step 12–13</div>
+                <div class="title">Superuser &amp; Launch</div>
+                <div class="body">
+                    <div class="code-block" style="max-height:140px;">
+                        <span class="cmt"># Create a superuser (optional)</span>
+                        python manage.py createsuperuser
+
+                        <span class="cmt"># Run the dev server</span>
+                        python manage.py runserver
+                    </div>
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;flex-shrink:0;">
+                        <span style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:14px;color:var(--text2);">🌐 <code style="color:var(--accent);">/register/</code></span>
+                        <span style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:14px;color:var(--text2);">🔐 <code style="color:var(--accent);">/login/</code></span>
+                        <span style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:14px;color:var(--text2);">📊 <code style="color:var(--accent);">/dashboard/</code></span>
+                        <span style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:14px;color:var(--text2);">⚙️ <code style="color:var(--accent);">/admin/</code></span>
+                    </div>
+                    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 16px;flex-shrink:0;">
+                        <span style="font-size:13px;color:var(--text2);">✅ Flow: <strong style="color:var(--text);">register</strong> → <strong style="color:var(--text);">login</strong> → <strong style="color:var(--text);">dashboard</strong> — backed by MySQL via WAMP.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 23: Request-Response Flow (detailed) -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="22">
+                <div class="tab-bar"><span class="tab">auth_app.py</span><span class="tab active-tab">flow_detail.py</span></div>
+                <div class="eyebrow">trace a request</div>
+                <div class="title">Login Request in Action</div>
+                <div class="body" style="justify-content:center;gap:4px;">
+                    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px;font-family:var(--mono);font-size:13px;line-height:1.9;max-width:540px;margin:0 auto;width:100%;">
+                        <div>1. 🌐 Browser POST → <span style="color:var(--accent);">/login/</span></div>
+                        <div style="color:var(--text2);">↓</div>
+                        <div>2. <span style="color:var(--purple);">urls.py</span> → matches <span style="color:var(--accent2);">LoginView</span></div>
+                        <div style="color:var(--text2);">↓</div>
+                        <div>3. <span style="color:var(--accent2);">LoginView</span> validates credentials</div>
+                        <div style="color:var(--text2);">↓</div>
+                        <div>4. ✅ Success → create session → redirect to <span style="color:var(--green);">dashboard</span></div>
+                        <div style="color:var(--text2);">↓</div>
+                        <div>5. <span style="color:var(--accent2);">dashboard_view</span> ( <span style="color:var(--accent);">@login_required</span> )</div>
+                        <div style="color:var(--text2);">↓</div>
+                        <div>6. 🖥️ Template renders → <span style="color:var(--text);">"Welcome, user!"</span></div>
+                    </div>
+                    <p style="font-size:13px;color:var(--text2);text-align:center;">Built-in auth handles hashing, sessions, and permissions.</p>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 24: Cheat Sheet -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="23">
+                <div class="tab-bar"><span class="tab">auth_app.py</span><span class="tab active-tab">cheatsheet.py</span></div>
+                <div class="eyebrow">reference</div>
+                <div class="title">Key Concepts Cheat Sheet</div>
+                <div class="body">
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>Concept</th><th>Analogy</th><th>Purpose</th></tr></thead>
+                            <tbody>
+                                <tr><td>Project</td><td>Apartment complex</td><td>Container for settings &amp; apps</td></tr>
+                                <tr><td>App</td><td>Apartment unit</td><td>Self-contained feature</td></tr>
+                                <tr><td>Model</td><td>Blueprint</td><td>Defines database structure</td></tr>
+                                <tr><td>View</td><td>Staff handler</td><td>Processes requests, returns responses</td></tr>
+                                <tr><td>Template</td><td>Interior design</td><td>Controls how data is displayed</td></tr>
+                                <tr><td>URL Dispatcher</td><td>Receptionist</td><td>Routes requests to views</td></tr>
+                                <tr><td>Virtual Environment</td><td>Personal toolbox</td><td>Isolates dependencies</td></tr>
+                                <tr><td>Migration</td><td>Renovation logbook</td><td>Tracks database schema changes</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 25: Quiz Questions 1-5 -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="24">
+                <div class="tab-bar"><span class="tab">quiz.py</span><span class="tab active-tab">questions_1_5.py</span></div>
+                <div class="eyebrow">quiz — part 1 (1–5)</div>
+                <div class="title">Quiz Questions 1–5</div>
+                <div class="body" style="gap:8px;">
+                    <div class="quiz-q"><span class="qnum">Q1.</span> <span class="qtext">What is Django's architectural pattern called?</span><br /><span style="font-size:13px;color:var(--text2);">A) MVC &nbsp; B) MVT &nbsp; C) MVP &nbsp; D) MVVM</span></div>
+                    <div class="quiz-q"><span class="qnum">Q2.</span> <span class="qtext">What is the difference between a Django Project and a Django App?</span></div>
+                    <div class="quiz-q"><span class="qnum">Q3.</span> <span class="qtext">Which Django component is responsible for routing URLs to views?</span><br /><span style="font-size:13px;color:var(--text2);">A) Model &nbsp; B) Template &nbsp; C) URL Dispatcher &nbsp; D) Middleware</span></div>
+                    <div class="quiz-q"><span class="qnum">Q4.</span> <span class="qtext">What command creates a Django project called "mywebsite" in the current directory?</span><br /><span style="font-size:13px;color:var(--text2);">A) django-admin startapp mywebsite<br />B) django-admin startproject mywebsite<br />C) django-admin startproject mywebsite .<br />D) Both B and C</span></div>
+                    <div class="quiz-q"><span class="qnum">Q5.</span> <span class="qtext">What is the purpose of a virtual environment in Django development?</span></div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 26: Quiz Questions 6-10 -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="25">
+                <div class="tab-bar"><span class="tab">quiz.py</span><span class="tab active-tab">questions_6_10.py</span></div>
+                <div class="eyebrow">quiz — part 2 (6–10)</div>
+                <div class="title">Quiz Questions 6–10</div>
+                <div class="body" style="gap:8px;">
+                    <div class="quiz-q"><span class="qnum">Q6.</span> <span class="qtext">What does the command <code style="color:var(--accent2);">python manage.py migrate</code> do?</span></div>
+                    <div class="quiz-q"><span class="qnum">Q7.</span> <span class="qtext">Which file is used to register an app with a Django project?</span></div>
+                    <div class="quiz-q"><span class="qnum">Q8.</span> <span class="qtext">What are the three layers in Django's MVT pattern and what does each do?</span></div>
+                    <div class="quiz-q"><span class="qnum">Q9.</span> <span class="qtext">What does the <code style="color:var(--accent2);">@login_required</code> decorator do in Django views?</span></div>
+                    <div class="quiz-q"><span class="qnum">Q10.</span> <span class="qtext">What is the difference between <code style="color:var(--accent2);">django-admin startproject</code> and <code style="color:var(--accent2);">python manage.py startapp</code>?</span></div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 27: Quiz Answers 1-5 -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="26">
+                <div class="tab-bar"><span class="tab">quiz.py</span><span class="tab active-tab">answers_1_5.py</span></div>
+                <div class="eyebrow">quiz — answers 1–5</div>
+                <div class="title">Answers 1–5</div>
+                <div class="body" style="gap:8px;">
+                    <div class="quiz-a"><span class="anum">A1.</span> <span class="atext"><strong style="color:var(--green);">B) MVT</strong> — Model-View-Template. Django's pattern separates data, logic, and presentation.</span></div>
+                    <div class="quiz-a"><span class="anum">A2.</span> <span class="atext"><strong style="color:var(--green);">Project</strong> = entire website (settings, URLs, config). <strong style="color:var(--green);">App</strong> = self-contained feature (models, views, templates). Project is the complex, app is one apartment unit.</span></div>
+                    <div class="quiz-a"><span class="anum">A3.</span> <span class="atext"><strong style="color:var(--green);">C) URL Dispatcher</strong> — defined in <code>urls.py</code>, it acts like a receptionist directing requests to views.</span></div>
+                    <div class="quiz-a"><span class="anum">A4.</span> <span class="atext"><strong style="color:var(--green);">C) django-admin startproject mywebsite .</strong> — the dot creates it in the current directory without nesting.</span></div>
+                    <div class="quiz-a"><span class="anum">A5.</span> <span class="atext"><strong style="color:var(--green);">Isolates dependencies</strong> — different projects can use different package versions without conflicts. Like separate toolboxes for each job.</span></div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 28: Quiz Answers 6-10 -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="27">
+                <div class="tab-bar"><span class="tab">quiz.py</span><span class="tab active-tab">answers_6_10.py</span></div>
+                <div class="eyebrow">quiz — answers 6–10</div>
+                <div class="title">Answers 6–10</div>
+                <div class="body" style="gap:8px;">
+                    <div class="quiz-a"><span class="anum">A6.</span> <span class="atext"><strong style="color:var(--green);">Applies database migrations</strong> — creates tables and schema changes from models. It builds tables like <code>auth_user</code> and <code>django_session</code>.</span></div>
+                    <div class="quiz-a"><span class="anum">A7.</span> <span class="atext"><strong style="color:var(--green);">settings.py</strong> — in the <code>INSTALLED_APPS</code> list. This "plugs" the app into the project.</span></div>
+                    <div class="quiz-a"><span class="anum">A8.</span> <span class="atext"><strong style="color:var(--green);">Model</strong> (data structure) · <strong style="color:var(--green);">View</strong> (logic/processing) · <strong style="color:var(--green);">Template</strong> (presentation/HTML).</span></div>
+                    <div class="quiz-a"><span class="anum">A9.</span> <span class="atext"><strong style="color:var(--green);">Restricts access</strong> — only authenticated users can view the decorated view. Unauthenticated users are redirected to the login page.</span></div>
+                    <div class="quiz-a"><span class="anum">A10.</span> <span class="atext"><strong style="color:var(--green);">startproject</strong> creates the whole project (settings, URLs). <strong style="color:var(--green);">startapp</strong> creates a self-contained feature module inside the project.</span></div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SLIDE 29: Next Steps -->
+            <!-- ============================================================ -->
+            <div class="slide" data-index="28">
+                <div class="tab-bar"><span class="tab">django_intro.py</span><span class="tab active-tab">next_steps.py</span></div>
+                <div class="eyebrow">🎯 beyond the basics</div>
+                <div class="title">Next Steps</div>
+                <div class="body" style="justify-content:center;gap:12px;">
+                    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;max-width:640px;margin:0 auto;width:100%;">
+                        <div class="card"><div class="label">📘 week 2</div><div class="head">Models &amp; Migrations</div><div class="desc">Custom models, relationships (ForeignKey, ManyToMany), advanced ORM queries.</div></div>
+                        <div class="card"><div class="label">🔌 rest api</div><div class="head">Django REST Framework</div><div class="desc">Build APIs with serializers, viewsets, and authentication.</div></div>
+                        <div class="card"><div class="label">📝 blog</div><div class="head">Blog System</div><div class="desc">Posts, comments, categories — practice full CRUD with auth.</div></div>
+                        <div class="card"><div class="label">🛒 e‑commerce</div><div class="head">Store &amp; Cart</div><div class="desc">Products, shopping cart, checkout flow — real-world complexity.</div></div>
+                    </div>
+                    <div style="text-align:center;font-size:14px;color:var(--text2);padding-top:4px;border-top:1px solid var(--border);max-width:480px;margin:0 auto;">
+                        <span style="font-family:var(--mono);color:var(--accent);">"The web framework for perfectionists with deadlines."</span>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /slide-track -->
+
+        <!-- navigation bar -->
+        <nav class="nav-bar" aria-label="Slide navigation">
+            <span class="counter" id="slideCounter">1 / 29</span>
+            <div class="progress-wrap" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="nav-btns">
+                <button id="btnHome" aria-label="First slide" title="Home">⟪</button>
+                <button id="btnPrev" aria-label="Previous slide" title="Previous">←</button>
+                <button id="btnNext" aria-label="Next slide" title="Next">→</button>
+                <button id="btnEnd" aria-label="Last slide" title="End">⟫</button>
+            </div>
+        </nav>
+
+    </div><!-- /slideshow -->
+
+    <script>
+        (function() {
+            'use strict';
+
+            const track = document.getElementById('track');
+            const slides = track.querySelectorAll('.slide');
+            const total = slides.length;
+            let current = 0;
+            let isTransitioning = false;
+
+            const counterEl = document.getElementById('slideCounter');
+            const progressFill = document.getElementById('progressFill');
+
+            function updateUI() {
+                counterEl.textContent = (current + 1) + ' / ' + total;
+                const pct = ((current + 1) / total) * 100;
+                progressFill.style.width = pct + '%';
+                document.querySelector('.nav-bar .progress-wrap').setAttribute('aria-valuenow', pct);
+            }
+
+            function goTo(index, dir) {
+                if (isTransitioning) return;
+                if (index < 0) index = 0;
+                if (index >= total) index = total - 1;
+                if (index === current) return;
+
+                const oldEl = slides[current];
+                const newEl = slides[index];
+
+                isTransitioning = true;
+
+                // remove active from old
+                oldEl.classList.remove('active');
+
+                // set new active
+                newEl.classList.add('active');
+
+                // update current
+                current = index;
+                updateUI();
+
+                // scroll new slide to top
+                newEl.scrollTop = 0;
+
+                setTimeout(function() {
+                    isTransitioning = false;
+                }, 420);
+
+                // update tab bar visual: find active tab
+                const tabs = newEl.querySelectorAll('.tab-bar .tab');
+                tabs.forEach(function(t) { t.classList.remove('active-tab'); });
+                const lastTab = tabs.length ? tabs[tabs.length - 1] : null;
+                if (lastTab) lastTab.classList.add('active-tab');
+            }
+
+            // ---- keyboard only (no click-anywhere) ----
+            document.addEventListener('keydown', function(e) {
+                const key = e.key;
+                if (key === 'ArrowRight' || key === 'ArrowDown' || key === ' ' || key === 'PageDown') {
+                    e.preventDefault();
+                    if (current < total - 1) goTo(current + 1, 1);
+                } else if (key === 'ArrowLeft' || key === 'ArrowUp' || key === 'PageUp') {
+                    e.preventDefault();
+                    if (current > 0) goTo(current - 1, -1);
+                } else if (key === 'Home') {
+                    e.preventDefault();
+                    goTo(0, -1);
+                } else if (key === 'End') {
+                    e.preventDefault();
+                    goTo(total - 1, 1);
+                }
+            });
+
+            // ---- nav buttons ----
+            document.getElementById('btnHome').addEventListener('click', function() { goTo(0, -1); });
+            document.getElementById('btnEnd').addEventListener('click', function() { goTo(total - 1, 1); });
+            document.getElementById('btnPrev').addEventListener('click', function() {
+                if (current > 0) goTo(current - 1, -1);
+            });
+            document.getElementById('btnNext').addEventListener('click', function() {
+                if (current < total - 1) goTo(current + 1, 1);
+            });
+
+            // ---- swipe support (touch) ----
+            let touchStartX = 0;
+            let touchStartY = 0;
+            document.addEventListener('touchstart', function(e) {
+                const t = e.touches[0];
+                touchStartX = t.clientX;
+                touchStartY = t.clientY;
+            }, { passive: true });
+            document.addEventListener('touchend', function(e) {
+                const t = e.changedTouches[0];
+                const dx = t.clientX - touchStartX;
+                const dy = t.clientY - touchStartY;
+                if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+                    if (dx < 0 && current < total - 1) goTo(current + 1, 1);
+                    else if (dx > 0 && current > 0) goTo(current - 1, -1);
+                }
+            }, { passive: true });
+
+            // ---- init ----
+            updateUI();
+            const firstTabs = slides[0].querySelectorAll('.tab-bar .tab');
+            firstTabs.forEach(function(t) { t.classList.add('active-tab'); });
+
+            console.log('✅ Django presentation ready — ' + total + ' slides (keyboard only)');
+        })();
+    </script>
+
+</body>
+</html>

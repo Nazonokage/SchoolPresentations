@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Django Templating &amp; Static Files</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --surface:#141a21;
+    --surface-2:#1b222b;
+    --border:#2b333d;
+    --border-soft:#242c36;
+    --text:#e6edf3;
+    --muted:#8b949e;
+    --muted-2:#6e7681;
+    --accent:#58a6ff;
+    --accent-soft:#58a6ff22;
+    --accent-2:#7ee787;
+    --accent-2-soft:#7ee78722;
+    --accent-3:#d29922;
+    --accent-3-soft:#d2992222;
+    --accent-4:#f78166;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--bg); color:var(--text);
+    font-family:var(--sans);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  body.no-motion *{ transition:none !important; animation:none !important; }
+  ::selection{ background:var(--accent-soft); color:var(--text); }
+
+  /* ---------- Chrome ---------- */
+  .chrome-top{
+    position:fixed; top:0; left:0; right:0; height:44px;
+    background:var(--surface); border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:14px; padding:0 18px;
+    z-index:50; font-family:var(--mono); font-size:13px; color:var(--muted);
+  }
+  .win-dots{ display:flex; gap:7px; flex:0 0 auto; }
+  .win-dots span{ width:11px; height:11px; border-radius:50%; display:block; }
+  .win-dots span:nth-child(1){ background:#ff5f57; }
+  .win-dots span:nth-child(2){ background:#febc2e; }
+  .win-dots span:nth-child(3){ background:#28c840; }
+  .file-tab{
+    display:flex; align-items:center; gap:8px;
+    background:var(--surface-2); border:1px solid var(--border-soft);
+    border-bottom:none; padding:6px 14px; border-radius:6px 6px 0 0;
+    color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .file-tab .dot{ width:7px; height:7px; border-radius:50%; background:var(--accent-3); flex:0 0 auto; }
+  .chrome-top .spacer{ flex:1; }
+  .chrome-top .counter{ color:var(--muted); }
+
+  .progress-track{ position:fixed; top:44px; left:0; right:0; height:3px; background:var(--surface-2); z-index:51; }
+  .progress-fill{ height:100%; background:linear-gradient(90deg, var(--accent), var(--accent-2)); width:0%; transition:width .35s ease; }
+
+  .chrome-bottom{
+    position:fixed; bottom:0; left:0; right:0; height:30px;
+    background:var(--accent); color:#04101d;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 16px; font-family:var(--mono); font-size:12px; font-weight:600;
+    z-index:50;
+  }
+  .chrome-bottom .seg{ display:flex; align-items:center; gap:16px; }
+  .chrome-bottom kbd{ background:#04101d22; border-radius:3px; padding:1px 6px; font-family:var(--mono); border:1px solid #04101d33; }
+
+  /* ---------- Slides ---------- */
+  .deck{ position:fixed; inset:44px 0 30px 0; }
+  .slide{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    opacity:0; transform:translateX(36px);
+    transition:opacity .35s ease, transform .35s ease;
+    pointer-events:none; overflow-y:auto;
+  }
+  .slide.active{ opacity:1; transform:translateX(0); pointer-events:auto; }
+  .deck.reverse .slide{ transform:translateX(-36px); }
+  .deck.reverse .slide.active{ transform:translateX(0); }
+
+  .slide-inner{
+    margin:auto; width:100%; max-width:1680px;
+    padding:clamp(20px,3.2vh,48px) clamp(24px,4vw,72px);
+    display:flex; flex-direction:column; min-height:100%;
+    justify-content:center; min-width:0;
+  }
+  .slide.tall .slide-inner{ justify-content:flex-start; }
+
+  .eyebrow{
+    font-family:var(--mono); font-size:14px; color:var(--accent-2);
+    letter-spacing:.03em; margin-bottom:14px; display:flex; align-items:center; gap:8px;
+  }
+  .eyebrow::before{ content:"//"; color:var(--muted-2); }
+
+  h1.title{
+    font-family:var(--mono); font-weight:700;
+    font-size:clamp(28px, 3.4vw, 50px); line-height:1.15; margin:0 0 8px 0;
+    letter-spacing:-0.01em;
+  }
+  h1.title .cursor{ display:inline-block; width:.5ch; background:var(--accent-2); margin-left:4px; animation:blink 1.1s steps(1) infinite; }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  .subtitle{ font-size:clamp(15px,1.3vw,20px); color:var(--muted); margin:0 0 28px 0; max-width:74ch; line-height:1.55; }
+
+  .grid-2{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:28px; min-width:0; }
+  .grid-3{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; min-width:0; }
+  .grid-4{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:18px; min-width:0; }
+
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px 22px; min-width:0; }
+  .card h3{ margin:0 0 10px 0; font-size:17px; font-family:var(--mono); color:var(--accent); }
+  .card p, .card li{ font-size:15px; line-height:1.6; color:var(--text); }
+  .card ul{ margin:0; padding-left:20px; }
+  .card ul li{ margin-bottom:6px; }
+
+  .inline{ background:var(--surface-2); border:1px solid var(--border-soft); border-radius:4px; padding:1px 6px; font-family:var(--mono); font-size:0.92em; color:var(--accent-3); }
+
+  /* ---------- Code blocks ---------- */
+  .code-block{ background:#0a0e13; border:1px solid var(--border); border-radius:10px; overflow:hidden; margin:0; min-width:0; max-height:50vh; display:flex; flex-direction:column; }
+  .code-header{ display:flex; align-items:center; justify-content:space-between; background:var(--surface-2); border-bottom:1px solid var(--border-soft); padding:7px 12px; flex:0 0 auto; }
+  .code-lang{ font-family:var(--mono); font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  .copy-btn{ font-family:var(--mono); font-size:12px; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:4px 10px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:background .15s ease, border-color .15s ease; }
+  .copy-btn:hover{ background:var(--border-soft); border-color:var(--accent); }
+  .copy-btn.copied{ color:var(--accent-2); border-color:var(--accent-2); }
+  .code-scroll{ overflow:auto; padding:14px 16px; }
+  .code-content{ font-family:var(--mono); font-size:15px; line-height:1.65; white-space:pre; color:var(--text); tab-size:2; }
+  .tok-comment{ color:var(--muted-2); font-style:italic; }
+  .tok-string{ color:var(--accent-2); }
+  .tok-keyword{ color:var(--accent); font-weight:600; }
+  .tok-func{ color:var(--accent-3); }
+  .tok-number{ color:var(--accent-4); }
+  .tok-decorator{ color:var(--accent-4); }
+
+  .callouts{ display:flex; flex-direction:column; gap:10px; min-width:0; }
+  .callout{ display:flex; gap:10px; align-items:flex-start; font-size:15px; line-height:1.55; background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); padding:10px 14px; border-radius:6px; min-width:0; }
+  .callout b{ color:var(--accent); font-family:var(--mono); font-size:13px; flex:0 0 auto; }
+
+  .diagram-wrap{ display:flex; justify-content:center; align-items:center; padding:6px 0; }
+  .diagram-wrap svg{ width:100%; height:auto; max-height:34vh; }
+
+  .test-banner{ display:inline-flex; align-items:center; gap:10px; font-family:var(--mono); font-size:13px; color:var(--bg); background:var(--accent-3); padding:5px 12px; border-radius:20px; margin-bottom:18px; font-weight:700; width:fit-content; }
+
+  .q-stack{ display:flex; flex-direction:column; gap:16px; min-width:0; }
+  .mc-q{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px 18px; min-width:0; }
+  .mc-q-head{ display:flex; gap:12px; align-items:flex-start; margin-bottom:10px; }
+  .q-num{ font-family:var(--mono); font-size:13px; color:var(--bg); background:var(--accent-2); border-radius:5px; padding:3px 8px; flex:0 0 auto; font-weight:700; }
+  .q-text{ margin:0; font-size:16.5px; line-height:1.5; }
+  .options{ display:grid; grid-template-columns:1fr 1fr; gap:8px; min-width:0; }
+  .opt{ display:flex; gap:8px; align-items:flex-start; font-size:15px; line-height:1.4; background:var(--surface-2); border:1px solid var(--border-soft); border-radius:7px; padding:8px 10px; min-width:0; }
+  .opt-letter{ font-family:var(--mono); font-weight:700; color:var(--accent); flex:0 0 auto; }
+
+  .scenario-q{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px 18px; min-width:0; }
+  .scenario-q .q-text{ font-size:16px; margin-bottom:10px; }
+  .answer-blank{ font-family:var(--mono); font-size:15px; color:var(--muted); border-top:1px dashed var(--border-soft); padding-top:8px; margin-top:6px; }
+
+  .recap-list{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 28px; }
+  .recap-item{ display:flex; gap:12px; align-items:flex-start; font-size:16px; line-height:1.55; }
+  .recap-item .tick{ color:var(--accent-2); font-weight:700; flex:0 0 auto; }
+
+  .answers-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:26px; min-width:0; }
+  .answers-col h3{ font-family:var(--mono); color:var(--accent); font-size:16px; border-bottom:1px solid var(--border); padding-bottom:8px; margin:0 0 12px 0; }
+  .ans-row{ font-size:15px; line-height:1.6; margin-bottom:9px; }
+  .ans-row b{ color:var(--accent-2); font-family:var(--mono); }
+
+  .modal-overlay{ position:fixed; inset:0; background:#000000aa; z-index:100; display:none; align-items:center; justify-content:center; }
+  .modal-overlay.open{ display:flex; }
+  .modal{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:28px 32px; width:min(560px,90vw); font-size:15px; }
+  .modal h2{ font-family:var(--mono); margin:0 0 18px 0; font-size:20px; color:var(--accent-2); }
+  .modal .row{ display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border-soft); }
+  .modal .row:last-child{ border-bottom:none; }
+  .modal kbd{ font-family:var(--mono); background:var(--surface-2); border:1px solid var(--border-soft); border-radius:5px; padding:2px 9px; }
+  .modal .close-hint{ margin-top:16px; color:var(--muted); font-size:13px; text-align:center; }
+
+  .folder-tree{ font-family:var(--mono); font-size:15px; line-height:1.9; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px 20px; }
+  .folder-tree .fld{ color:var(--accent); }
+  .folder-tree .fl{ color:var(--accent-2); }
+  .folder-tree .cm{ color:var(--muted-2); }
+
+  @media (max-width: 1100px){ .answers-grid{ grid-template-columns:1fr; } }
+  @media (max-width: 900px){
+    .grid-2, .grid-3, .grid-4{ grid-template-columns:1fr; }
+    .recap-list{ grid-template-columns:1fr; }
+    .options{ grid-template-columns:1fr; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition:opacity .01s linear !important; transform:none !important; }
+    .progress-fill{ transition:none !important; }
+    h1.title .cursor{ animation:none !important; opacity:1; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="chrome-top">
+    <div class="win-dots"><span></span><span></span><span></span></div>
+    <div class="file-tab"><span class="dot"></span><span id="tabName">templates_and_static.py</span></div>
+    <div class="spacer"></div>
+    <div class="counter" id="slideCounter">1 / 25</div>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+  <div class="deck" id="deck">
+
+    <!-- 1 : COVER -->
+    <section class="slide active" data-file="templates_and_static.py">
+      <div class="slide-inner">
+        <div class="eyebrow">integrative_programming / phase_05_06</div>
+        <h1 class="title" style="font-size:clamp(34px,4.4vw,62px);">Templating &amp; Static Files<span class="cursor">&nbsp;</span></h1>
+        <p class="subtitle" style="font-size:clamp(17px,1.6vw,23px);">Separating HTML from Python, and getting your CSS &amp; JS to load correctly — the two pieces every Django page depends on.</p>
+        <div class="grid-3" style="margin-top:10px;">
+          <div class="card"><h3>05 · Templates</h3><p>Variables, conditions, loops, and inheritance — no more copy-pasted HTML.</p></div>
+          <div class="card"><h3>06 · Static Files</h3><p>Getting your CSS, JS, and images to actually load, the Django way.</p></div>
+          <div class="card"><h3>Quiz</h3><p>10 items to check what stuck, answer key included.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 : INTO / AGENDA -->
+    <section class="slide" data-file="00_intro.py">
+      <div class="slide-inner">
+        <div class="eyebrow">00_intro.py</div>
+        <h1 class="title">Where We Are, and Where We're Going</h1>
+        <p class="subtitle">So far, every view has returned plain text with <span class="inline">HttpResponse</span>. That doesn't scale to a real webpage.</p>
+        <div class="grid-2">
+          <div class="card">
+            <h3>😩 The Problem</h3>
+            <ul>
+              <li>HTML strings glued together inside Python — ugly and unmaintainable</li>
+              <li>Every page repeats the same header, nav, and footer</li>
+              <li>CSS and images have no clean, official "place to live"</li>
+              <li>Designers and backend devs keep stepping on each other's code</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>✅ What Fixes It</h3>
+            <ul>
+              <li><b style="color:var(--accent-2);">Templates</b> — real <span class="inline">.html</span> files, with just enough logic to stay dynamic</li>
+              <li><b style="color:var(--accent-2);">Template inheritance</b> — write the layout once, reuse it everywhere</li>
+              <li><b style="color:var(--accent-2);">Static files</b> — a dedicated, versioned home for CSS, JS, and images</li>
+              <li>Together: Python handles logic, templates handle presentation</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- THE PROBLEM, IN CODE -->
+    <section class="slide tall" data-file="01_the_problem_in_code.py">
+      <div class="slide-inner">
+        <div class="eyebrow">01_the_problem_in_code.py</div>
+        <h1 class="title">The Problem, in Actual Code</h1>
+        <p class="subtitle">Same page, two ways. One of these does not scale past a single page.</p>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:58vh; border-color:var(--accent-4);">
+            <div class="code-header"><span class="code-lang">😩 the bad way</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeBad" data-lang="python"></pre></div>
+          </div>
+          <div class="code-block" style="max-height:58vh; border-color:var(--accent-2);">
+            <div class="code-header"><span class="code-lang">✅ the django way</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeGood" data-lang="template"></pre></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px;">
+          <h3>What actually changed</h3>
+          <p>The HTML moved out of the Python file and into its own <span class="inline">.html</span> file. The view's only job now is to gather data and hand it to <span class="inline">render()</span> — no string-building, no escaping headaches, no repeated layout on every single view.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 : MAIN LESSON — TEMPLATE FOLDER -->
+    <section class="slide" data-file="02_template_folder.py">
+      <div class="slide-inner">
+        <div class="eyebrow">02_template_folder.py</div>
+        <h1 class="title">Where Templates Live</h1>
+        <p class="subtitle">Convention over configuration: Django already knows where to look.</p>
+        <div class="grid-2">
+          <div class="folder-tree">
+myapp/<br>
+&nbsp;&nbsp;<span class="fld">templates/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="fld">blog/</span><span class="cm"> ← namespaced by app name</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="fl">layout.html</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="fl">post_list.html</span><br>
+&nbsp;&nbsp;views.py<br>
+&nbsp;&nbsp;models.py<br>
+&nbsp;&nbsp;urls.py
+          </div>
+          <div class="card">
+            <h3>Why the extra <span class="inline">blog/</span> folder?</h3>
+            <ul>
+              <li>Two apps can both have a <span class="inline">list.html</span> without colliding</li>
+              <li>Django's loader searches every app's <span class="inline">templates/</span> folder — namespacing keeps things sane</li>
+              <li><span class="inline">render(request, "blog/post_list.html", context)</span> is how a view points at one</li>
+            </ul>
+            <p style="margin-top:10px;">Rule of thumb: template path = <span class="inline">appname/templates/appname/file.html</span>.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 : TEMPLATE SYNTAX -->
+    <section class="slide" data-file="03_template_syntax.py">
+      <div class="slide-inner">
+        <div class="eyebrow">03_template_syntax.py</div>
+        <h1 class="title">Template Syntax — The Four You Need</h1>
+        <div class="grid-2">
+          <div class="card">
+            <h3><span class="inline">{{ variable }}</span></h3>
+            <p>Prints a Python value straight into the HTML. Nothing fancy — just output.</p>
+          </div>
+          <div class="card">
+            <h3><span class="inline">{% if condition %}</span></h3>
+            <p>Runs a conditional check — show this block only if it's true, closed with <span class="inline">{% endif %}</span>.</p>
+          </div>
+          <div class="card">
+            <h3><span class="inline">{% for item in list %}</span></h3>
+            <p>Loops over a list from the view's context, closed with <span class="inline">{% endfor %}</span>.</p>
+          </div>
+          <div class="card">
+            <h3><span class="inline">{% block name %}</span></h3>
+            <p>Marks a section a child template is allowed to override. The foundation of inheritance.</p>
+          </div>
+        </div>
+        <div class="card" style="margin-top:20px;">
+          <h3>Quick logic</h3>
+          <p><span class="inline">{{ }}</span> = "print this." <span class="inline">{% %}</span> = "do this" (a tag/logic block). That's the entire mental model.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 : TEMPLATE INHERITANCE -->
+    <section class="slide" data-file="04_template_inheritance.py">
+      <div class="slide-inner">
+        <div class="eyebrow">04_template_inheritance.py</div>
+        <h1 class="title">Template Inheritance — Write the Layout Once</h1>
+        <div class="diagram-wrap">
+          <svg viewBox="0 0 1000 220" role="img" aria-label="Diagram showing layout.html as a parent template with a content block, and post_list.html extending it and filling that block">
+            <title>Template inheritance: a child template extends a parent layout and fills its block</title>
+            <g font-family="ui-monospace,monospace" font-size="15" fill="#e6edf3">
+              <rect x="20" y="30" width="280" height="160" rx="10" fill="#161b22" stroke="#58a6ff" stroke-width="2"/>
+              <text x="160" y="58" text-anchor="middle" fill="#58a6ff">layout.html (parent)</text>
+              <text x="45" y="90">&lt;nav&gt;...&lt;/nav&gt;</text>
+              <rect x="45" y="105" width="230" height="50" rx="6" fill="#0d1117" stroke="#d29922" stroke-dasharray="4 3"/>
+              <text x="160" y="135" text-anchor="middle" fill="#d29922">{% block content %}</text>
+              <text x="45" y="178">&lt;footer&gt;...&lt;/footer&gt;</text>
+
+              <rect x="440" y="30" width="280" height="160" rx="10" fill="#161b22" stroke="#7ee787" stroke-width="2"/>
+              <text x="580" y="58" text-anchor="middle" fill="#7ee787">post_list.html (child)</text>
+              <text x="465" y="90">{% extends "layout.html" %}</text>
+              <rect x="465" y="105" width="230" height="50" rx="6" fill="#0d1117" stroke="#d29922"/>
+              <text x="580" y="128" text-anchor="middle" fill="#e6edf3" font-size="13">&lt;h1&gt;Blog Posts&lt;/h1&gt;</text>
+              <text x="580" y="146" text-anchor="middle" fill="#e6edf3" font-size="13">{% for post in posts %}...</text>
+
+              <rect x="780" y="60" width="200" height="100" rx="10" fill="#161b22" stroke="#8b949e" stroke-width="2"/>
+              <text x="880" y="95" text-anchor="middle">Final page:</text>
+              <text x="880" y="115" text-anchor="middle" font-size="12">nav + your content</text>
+              <text x="880" y="132" text-anchor="middle" font-size="12">+ footer, combined</text>
+            </g>
+            <line x1="300" y1="110" x2="435" y2="110" stroke="#8b949e" stroke-width="2" marker-end="url(#ai1)"/>
+            <line x1="720" y1="110" x2="775" y2="110" stroke="#8b949e" stroke-width="2" marker-end="url(#ai1)"/>
+            <defs><marker id="ai1" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b949e"/></marker></defs>
+          </svg>
+        </div>
+        <div class="card">
+          <h3>The deal</h3>
+          <p>The parent defines the skeleton (nav, footer, <span class="inline">{% block content %}</span>). Every child <span class="inline">{% extends %}</span> it and only fills in the block — the nav and footer never get retyped.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETUP GUIDE -->
+    <section class="slide tall" data-file="05_setup_guide_part1.py">
+      <div class="slide-inner">
+        <div class="eyebrow">05_setup_guide_part1.py</div>
+        <h1 class="title">Setup Guide, Part 1 — Starting From Scratch</h1>
+        <p class="subtitle">Assume nothing exists yet. This is every step between <span class="inline">startproject</span> and a page that actually loads.</p>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:58vh;">
+            <div class="code-header"><span class="code-lang">terminal + python</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeStart" data-lang="python"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>startapp</b> Scaffolds <span class="inline">views.py</span>, <span class="inline">models.py</span>, <span class="inline">admin.py</span> — but not <span class="inline">urls.py</span>, and not a <span class="inline">templates/</span> or <span class="inline">static/</span> folder. Those are on you.</div>
+            <div class="callout"><b>INSTALLED_APPS</b> Without this line, Django doesn't know your app exists — no templates, no static files, no models.</div>
+            <div class="callout"><b>Project urls.py</b> <span class="inline">include()</span> hands off anything under <span class="inline">/blog/</span> to the app's own <span class="inline">urls.py</span> — this is the two-level routing from Phase 3.</div>
+            <div class="callout"><b>App urls.py</b> A brand-new file you create yourself — it doesn't exist right after <span class="inline">startapp</span>.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETUP GUIDE PART 2 -->
+    <section class="slide tall" data-file="06_setup_guide_part2.py">
+      <div class="slide-inner">
+        <div class="eyebrow">06_setup_guide_part2.py</div>
+        <h1 class="title">Setup Guide, Part 2 — Templates &amp; Static Config</h1>
+        <p class="subtitle">Four quick checks. Skip these and your templates or CSS silently fail to load.</p>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:58vh;">
+            <div class="code-header"><span class="code-lang">terminal + settings.py</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="code0" data-lang="python"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>Step 1</b> Create the namespaced folders first: <span class="inline">mkdir -p</span> for both <span class="inline">templates/&lt;app&gt;/</span> and <span class="inline">static/&lt;app&gt;/</span>.</div>
+            <div class="callout"><b>Step 2</b> Confirm <span class="inline">APP_DIRS: True</span> in <span class="inline">settings.py</span> — it's what makes Django auto-scan every app's <span class="inline">templates/</span> folder. <span class="inline">startproject</span> sets this by default, but it's worth checking.</div>
+            <div class="callout"><b>Step 3</b> Confirm <span class="inline">'django.contrib.staticfiles'</span> is listed in <span class="inline">INSTALLED_APPS</span> — this is what powers <span class="inline">{% load static %}</span>.</div>
+            <div class="callout"><b>Step 4</b> Set <span class="inline">STATIC_URL</span> and (optionally) <span class="inline">STATICFILES_DIRS</span> for any extra shared static folders outside individual apps.</div>
+            <div class="callout"><b>Done</b> Once these four are in place, the code on the next few slides will work exactly as shown.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 : CODE BREAKDOWN — TEMPLATES -->
+    <section class="slide tall" data-file="07_templating_code.py">
+      <div class="slide-inner">
+        <div class="eyebrow">07_templating_code.py</div>
+        <h1 class="title">Code Breakdown — views.py + Templates</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:60vh;">
+            <div class="code-header"><span class="code-lang">python + django template</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="code1" data-lang="python"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>render()</b> Takes the request, a template path, and a context dict — returns the finished HTML response.</div>
+            <div class="callout"><b>context dict</b> The bridge between Python and the template — every key becomes a <span class="inline">{{ variable }}</span> the template can use.</div>
+            <div class="callout"><b>{% extends %}</b> Must be the very first line of the child template — no exceptions.</div>
+            <div class="callout"><b>{% for post in posts %}</b> "posts" here is the exact key from the context dict — names must match.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 : SAMPLE PROJECT — TEMPLATING -->
+    <section class="slide" data-file="08_sample_project_blog.py">
+      <div class="slide-inner">
+        <div class="eyebrow">08_sample_project_blog.py</div>
+        <h1 class="title">Sample Project: A Tiny Blog</h1>
+        <p class="subtitle">The smallest project that actually needs everything we just covered — now with a real second page, linked together.</p>
+        <div class="grid-3">
+          <div class="card"><h3>1. layout.html</h3><p>One shared header, nav, and footer with a <span class="inline">{% block content %}</span> in the middle. <b style="color:var(--accent-2);">Full code next slide.</b></p></div>
+          <div class="card"><h3>2. post_list.html</h3><p>Extends the layout, loops over posts, and links each one to its own page. <b style="color:var(--accent-2);">Full code next slide.</b></p></div>
+          <div class="card"><h3>3. post_detail.html</h3><p>Also extends the layout — same nav/footer, zero duplication, just a different block. <b style="color:var(--accent-2);">Full code next slide.</b></p></div>
+        </div>
+        <div class="card" style="margin-top:20px;">
+          <h3>The payoff</h3>
+          <p>Add a new page to the blog and you only ever write the *middle* of the page. The nav and footer are already done — forever.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SAMPLE PROJECT FILE 1: layout.html -->
+    <section class="slide tall" data-file="08a_layout_html.py">
+      <div class="slide-inner">
+        <div class="eyebrow">08a_layout_html.py · file 1 of 3</div>
+        <h1 class="title" style="font-size:clamp(26px,3vw,40px);">Create: blog/templates/blog/layout.html</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:58vh;">
+            <div class="code-header"><span class="code-lang">html + django template</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="fileLayout" data-lang="template"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>New file</b> This doesn't exist yet — create it inside <span class="inline">blog/templates/blog/</span>.</div>
+            <div class="callout"><b>{% load static %}</b> Goes first, before any <span class="inline">{% static %}</span> call further down.</div>
+            <div class="callout"><b>{% block content %}{% endblock %}</b> The one gap every child page fills in — nav and footer stay fixed around it.</div>
+            <div class="callout"><b>Every other file on this slide's series</b> will <span class="inline">{% extends %}</span> this one — write it once, reuse it forever.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SAMPLE PROJECT FILE 2: post_list.html -->
+    <section class="slide tall" data-file="08b_post_list_html.py">
+      <div class="slide-inner">
+        <div class="eyebrow">08b_post_list_html.py · file 2 of 3</div>
+        <h1 class="title" style="font-size:clamp(26px,3vw,40px);">Create: blog/templates/blog/post_list.html</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:58vh;">
+            <div class="code-header"><span class="code-lang">django template</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="filePostList" data-lang="template"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>New file</b> Also inside <span class="inline">blog/templates/blog/</span>, alongside <span class="inline">layout.html</span>.</div>
+            <div class="callout"><b>{% extends %}</b> Must be the very first line — this is what pulls in the nav and footer for free.</div>
+            <div class="callout"><b>{% url 'post_detail' post.id %}</b> Builds the link from the URL's <span class="inline">name=</span>, not a hardcoded path — survives if the route ever changes.</div>
+            <div class="callout"><b>Needs an update too</b> <span class="inline">views.py</span> and <span class="inline">urls.py</span> both need a <span class="inline">post_detail</span> piece for that link to actually go anywhere — next slide.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SAMPLE PROJECT FILE 3: post_detail.html -->
+    <section class="slide tall" data-file="08c_post_detail_html.py">
+      <div class="slide-inner">
+        <div class="eyebrow">08c_post_detail_html.py · file 3 of 3</div>
+        <h1 class="title" style="font-size:clamp(26px,3vw,40px);">Create: post_detail.html + Wire It Up</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:58vh;">
+            <div class="code-header"><span class="code-lang">views.py + urls.py + template</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="filePostDetail" data-lang="template"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>views.py</b> — change: <span class="inline">POSTS</span> becomes a list of dicts (an id to look up), and a new <span class="inline">post_detail</span> view finds the matching one.</div>
+            <div class="callout"><b>urls.py</b> — change: one new line, <span class="inline">&lt;int:post_id&gt;</span>, routes straight to that view.</div>
+            <div class="callout"><b>post_detail.html</b> — new file, same folder as the other two — extends the same layout, different content block.</div>
+            <div class="callout"><b>{% url 'post_list' %}</b> A "back" link on the detail page, same name-based trick in reverse.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 : STATIC FILES — MAIN LESSON -->
+    <section class="slide" data-file="09_static_files.py">
+      <div class="slide-inner">
+        <div class="eyebrow">09_static_files.py</div>
+        <h1 class="title">Static Files — CSS, JS &amp; Images</h1>
+        <p class="subtitle">"Static" = files Django serves as-is, without running any Python on them.</p>
+        <div class="grid-2">
+          <div class="folder-tree">
+myapp/<br>
+&nbsp;&nbsp;<span class="fld">static/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="fld">blog/</span><span class="cm"> ← namespaced, same idea as templates</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="fl">style.css</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="fl">script.js</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="fl">logo.png</span><br>
+&nbsp;&nbsp;templates/blog/...
+          </div>
+          <div class="card">
+            <h3>Why not just hardcode the path?</h3>
+            <ul>
+              <li>Django can move, version, or serve static files from a CDN in production</li>
+              <li><span class="inline">{% static %}</span> always builds the *correct* URL, wherever files actually live</li>
+              <li>A hardcoded <span class="inline">/static/style.css</span> silently breaks the moment that changes</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 : CODE BREAKDOWN — STATIC -->
+    <section class="slide tall" data-file="10_static_code.py">
+      <div class="slide-inner">
+        <div class="eyebrow">10_static_code.py</div>
+        <h1 class="title">Code Breakdown — Loading Static Files</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:60vh;">
+            <div class="code-header"><span class="code-lang">django template + settings.py</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="code2" data-lang="template"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>{% load static %}</b> Must appear before any <span class="inline">{% static %}</span> call — it "unlocks" the tag for this template.</div>
+            <div class="callout"><b>{% static 'blog/style.css' %}</b> Resolves to the correct URL — never type <span class="inline">/static/...</span> by hand.</div>
+            <div class="callout"><b>STATIC_URL</b> The URL prefix Django serves static files under, e.g. <span class="inline">/static/</span>.</div>
+            <div class="callout"><b>STATICFILES_DIRS</b> Extra folders Django should also search, beyond each app's own <span class="inline">static/</span> folder.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 : SAMPLE PROJECT — STATIC -->
+    <section class="slide" data-file="11_sample_project_static.py">
+      <div class="slide-inner">
+        <div class="eyebrow">11_sample_project_static.py</div>
+        <h1 class="title">Sample Project: Styling the Blog</h1>
+        <p class="subtitle">Same blog, now with an actual look — no inline styles anywhere.</p>
+        <div class="grid-2">
+          <div class="card">
+            <h3>What gets added</h3>
+            <ul>
+              <li><span class="inline">blog/static/blog/style.css</span> — colors, spacing, layout</li>
+              <li><span class="inline">{% load static %}</span> at the top of <span class="inline">layout.html</span></li>
+              <li>One <span class="inline">&lt;link&gt;</span> tag in the <span class="inline">&lt;head&gt;</span>, pointing at <span class="inline">{% static 'blog/style.css' %}</span></li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>What you get for free</h3>
+            <ul>
+              <li>Every page that extends <span class="inline">layout.html</span> is instantly styled</li>
+              <li>Change the CSS file once, every page updates</li>
+              <li>Ready to swap in a CDN URL later without touching a single template</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FULL DEMO -->
+    <section class="slide tall" data-file="12_full_demo.py">
+      <div class="slide-inner">
+        <div class="eyebrow">12_full_demo.py</div>
+        <h1 class="title">Full Demo — Copy This and Try It</h1>
+        <p class="subtitle">Everything from this lecture, in one place: routing, templating, inheritance, and static files, all working together.</p>
+        <div class="code-block" style="max-height:56vh;">
+          <div class="code-header"><span class="code-lang">views.py + urls.py + templates + css</span><button class="copy-btn">Copy</button></div>
+          <div class="code-scroll"><pre class="code-content" data-raw-id="codeFullDemo" data-lang="template"></pre></div>
+        </div>
+        <div class="card" style="margin-top:14px;">
+          <h3>Run it</h3>
+          <p>Drop these five pieces into the <span class="inline">blog</span> app from Setup Guide Part 1, then <span class="inline">python manage.py runserver</span> and visit <span class="inline">/blog/</span>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11 : WHY WE DO THIS -->
+    <section class="slide" data-file="13_why_we_do_this.py">
+      <div class="slide-inner">
+        <div class="eyebrow">13_why_we_do_this.py</div>
+        <h1 class="title">Why We Bother With Any of This</h1>
+        <div class="grid-3">
+          <div class="card"><h3>Separation of concerns</h3><p>Python handles logic and data. Templates handle presentation. Mixing the two turns into spaghetti fast.</p></div>
+          <div class="card"><h3>DRY (Don't Repeat Yourself)</h3><p>Inheritance means your nav and footer exist in exactly one file, not copy-pasted across twenty pages.</p></div>
+          <div class="card"><h3>It scales with a team</h3><p>A designer can edit <span class="inline">style.css</span> and templates without ever touching your Python logic, and vice versa.</p></div>
+        </div>
+        <div class="card" style="margin-top:20px;">
+          <h3>The bigger picture</h3>
+          <p>This is also exactly why frameworks like React exist — same problem (separating structure from logic), different tool. Learn the *reasoning* here, and it transfers everywhere.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 12 : QUIZ INTRO -->
+    <section class="slide" data-file="14_quiz.py">
+      <div class="slide-inner">
+        <div class="eyebrow">14_quiz.py</div>
+        <div class="test-banner">🧪 QUICK QUIZ</div>
+        <h1 class="title">10 Items — Templates &amp; Static Files</h1>
+        <p class="subtitle">Options and questions are shown — answers are on the very last slide.</p>
+        <div class="grid-2">
+          <div class="card"><h3>Part 1</h3><p>5 Multiple Choice questions.</p></div>
+          <div class="card"><h3>Part 2</h3><p>5 Identification — name the tag or concept.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 13 : MC 1-3 -->
+    <section class="slide" data-file="quiz/mc_1.py">
+      <div class="slide-inner">
+        <div class="eyebrow">quiz/mc.py · page 1 of 2</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Multiple Choice (1–3)</h1>
+        <div class="q-stack">
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q1</span><p class="q-text">Which tag inserts a Python variable's value directly into the HTML?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>{% variable %}</div>
+              <div class="opt"><span class="opt-letter">B</span>{{ variable }}</div>
+              <div class="opt"><span class="opt-letter">C</span>{# variable #}</div>
+              <div class="opt"><span class="opt-letter">D</span>[[ variable ]]</div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q2</span><p class="q-text">Which tag lets a child template inherit from a parent layout?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>{% include %}</div>
+              <div class="opt"><span class="opt-letter">B</span>{% extends %}</div>
+              <div class="opt"><span class="opt-letter">C</span>{% inherit %}</div>
+              <div class="opt"><span class="opt-letter">D</span>{% parent %}</div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q3</span><p class="q-text">By convention, where should templates for an app named "blog" live?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>blog/templates/</div>
+              <div class="opt"><span class="opt-letter">B</span>blog/templates/blog/</div>
+              <div class="opt"><span class="opt-letter">C</span>static/blog/</div>
+              <div class="opt"><span class="opt-letter">D</span>blog/static/</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 14 : MC 4-5 -->
+    <section class="slide" data-file="quiz/mc_2.py">
+      <div class="slide-inner">
+        <div class="eyebrow">quiz/mc.py · page 2 of 2</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Multiple Choice (4–5)</h1>
+        <div class="q-stack">
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q4</span><p class="q-text">Which tag must appear before you can use <span class="inline">{% static %}</span> in a template?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>{% load static %}</div>
+              <div class="opt"><span class="opt-letter">B</span>{% import static %}</div>
+              <div class="opt"><span class="opt-letter">C</span>{% use static %}</div>
+              <div class="opt"><span class="opt-letter">D</span>{% static_load %}</div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q5</span><p class="q-text">Which <span class="inline">settings.py</span> variable adds extra folders Django should search for static files?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>STATIC_ROOT</div>
+              <div class="opt"><span class="opt-letter">B</span>STATICFILES_DIRS</div>
+              <div class="opt"><span class="opt-letter">C</span>MEDIA_URL</div>
+              <div class="opt"><span class="opt-letter">D</span>TEMPLATE_DIRS</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 15 : IDENTIFICATION 1-3 -->
+    <section class="slide" data-file="quiz/id_1.py">
+      <div class="slide-inner">
+        <div class="eyebrow">quiz/identification.py · page 1 of 2</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Identification (1–3)</h1>
+        <div class="q-stack">
+          <div class="scenario-q">
+            <p class="q-text"><b>1.</b> The template tag used to loop over a list of items, closed with <span class="inline">{% endfor %}</span>.</p>
+            <div class="answer-blank">Answer: ____________</div>
+          </div>
+          <div class="scenario-q">
+            <p class="q-text"><b>2.</b> The template tag used to conditionally show a section of HTML, closed with <span class="inline">{% endif %}</span>.</p>
+            <div class="answer-blank">Answer: ____________</div>
+          </div>
+          <div class="scenario-q">
+            <p class="q-text"><b>3.</b> The folder name Django looks for template files in, by convention, inside every app.</p>
+            <div class="answer-blank">Answer: ____________</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 16 : IDENTIFICATION 4-5 -->
+    <section class="slide" data-file="quiz/id_2.py">
+      <div class="slide-inner">
+        <div class="eyebrow">quiz/identification.py · page 2 of 2</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Identification (4–5)</h1>
+        <div class="q-stack">
+          <div class="scenario-q">
+            <p class="q-text"><b>4.</b> The tag that marks a section of a parent template as replaceable by a child template.</p>
+            <div class="answer-blank">Answer: ____________</div>
+          </div>
+          <div class="scenario-q">
+            <p class="q-text"><b>5.</b> The tag used inside an HTML attribute to build the correct URL for a CSS, JS, or image file.</p>
+            <div class="answer-blank">Answer: ____________</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 17 : RECAP -->
+    <section class="slide" data-file="recap.py">
+      <div class="slide-inner">
+        <div class="eyebrow">recap.py</div>
+        <h1 class="title">Recap Before You Go</h1>
+        <p class="subtitle">The essentials worth remembering.</p>
+        <div class="recap-list">
+          <div class="recap-item"><span class="tick">✓</span><span class="inline">{{ variable }}</span> prints a value. <span class="inline">{% tag %}</span> runs logic.</div>
+          <div class="recap-item"><span class="tick">✓</span>Templates live in <span class="inline">appname/templates/appname/</span> — namespaced to avoid collisions.</div>
+          <div class="recap-item"><span class="tick">✓</span>A child template's <span class="inline">{% extends %}</span> must be the very first line.</div>
+          <div class="recap-item"><span class="tick">✓</span>Context dict keys in <span class="inline">render()</span> must match variable names used in the template.</div>
+          <div class="recap-item"><span class="tick">✓</span>Static files live in <span class="inline">appname/static/appname/</span> — same namespacing idea as templates.</div>
+          <div class="recap-item"><span class="tick">✓</span><span class="inline">{% load static %}</span> comes first; <span class="inline">{% static 'path' %}</span> builds the real URL.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 18 : ANSWERS -->
+    <section class="slide tall" data-file="answers.py">
+      <div class="slide-inner">
+        <div class="eyebrow">answers.py</div>
+        <h1 class="title" style="font-size:clamp(26px,3vw,40px);">Answer Key</h1>
+        <div class="answers-grid">
+          <div class="answers-col">
+            <h3>Multiple Choice</h3>
+            <div class="ans-row"><b>1. B</b> — {{ variable }} is output; {% %} is logic.</div>
+            <div class="ans-row"><b>2. B</b> — {% extends %} inherits a parent layout.</div>
+            <div class="ans-row"><b>3. B</b> — blog/templates/blog/ is the namespaced convention.</div>
+            <div class="ans-row"><b>4. A</b> — {% load static %} unlocks the {% static %} tag.</div>
+            <div class="ans-row"><b>5. B</b> — STATICFILES_DIRS adds extra search folders.</div>
+          </div>
+          <div class="answers-col">
+            <h3>Identification</h3>
+            <div class="ans-row"><b>1. {% for %}</b> — loops over a list from the context.</div>
+            <div class="ans-row"><b>2. {% if %}</b> — conditionally renders a block.</div>
+            <div class="ans-row"><b>3. templates</b> — Django's default template folder name.</div>
+            <div class="ans-row"><b>4. {% block %}</b> — a replaceable section for child templates.</div>
+            <div class="ans-row"><b>5. {% static %}</b> — builds the correct static file URL.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="chrome-bottom">
+    <div class="seg"><span>Templating &amp; Static Files</span></div>
+    <div class="seg"><span>Right-click / <kbd>→</kbd> next</span><span><kbd>?</kbd> shortcuts</span></div>
+  </div>
+
+  <div class="modal-overlay" id="shortcutsModal">
+    <div class="modal">
+      <h2>Keyboard &amp; Mouse Shortcuts</h2>
+      <div class="row"><span>Next slide</span><span><kbd>→</kbd> / <kbd>Right-click</kbd> / <kbd>Mouse btn 4</kbd></span></div>
+      <div class="row"><span>Previous slide</span><span><kbd>←</kbd> / <kbd>Mouse btn 3</kbd></span></div>
+      <div class="row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+      <div class="row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+      <div class="row"><span>Show/hide this panel</span><span><kbd>?</kbd></span></div>
+      <div class="row"><span>Close panel</span><span><kbd>Esc</kbd></span></div>
+      <div class="row"><span>Swipe (mobile)</span><span>Left = next · Right = prev</span></div>
+      <div class="close-hint">Click outside this box, or press Esc, to close.</div>
+    </div>
+  </div>
+
+  <textarea id="raw-codeBad" hidden># views.py -- the bad way
+def post_list(request):
+    posts = ["Intro to Django", "Templating 101", "Static Files"]
+
+    html = "&lt;html&gt;&lt;head&gt;&lt;title&gt;Blog&lt;/title&gt;&lt;/head&gt;&lt;body&gt;"
+    html += "&lt;nav&gt;Home | Blog | Contact&lt;/nav&gt;"
+    html += "&lt;h1&gt;Blog Posts&lt;/h1&gt;&lt;ul&gt;"
+
+    for post in posts:
+        html += "&lt;li&gt;" + post + "&lt;/li&gt;"
+
+    html += "&lt;/ul&gt;&lt;footer&gt;&amp;copy; 2026 My Blog&lt;/footer&gt;"
+    html += "&lt;/body&gt;&lt;/html&gt;"
+
+    # every new page repeats this same nav + footer string,
+    # and one typo anywhere breaks the whole response
+    return HttpResponse(html)</textarea>
+
+  <textarea id="raw-codeGood" hidden># views.py -- the django way
+def post_list(request):
+    posts = ["Intro to Django", "Templating 101", "Static Files"]
+    return render(request, "blog/post_list.html", {"posts": posts})
+
+
+&lt;!-- blog/post_list.html --&gt;
+{% extends "blog/layout.html" %}
+
+{% block content %}
+  &lt;h1&gt;Blog Posts&lt;/h1&gt;
+  &lt;ul&gt;
+    {% for post in posts %}
+      &lt;li&gt;{{ post }}&lt;/li&gt;
+    {% endfor %}
+  &lt;/ul&gt;
+{% endblock %}
+
+&lt;!-- nav + footer live once, in blog/layout.html -- never repeated --&gt;</textarea>
+
+  <textarea id="raw-codeStart" hidden># from your project root
+python manage.py startapp blog
+
+
+# core/settings.py -- register the new app
+INSTALLED_APPS = [
+    # ...
+    "django.contrib.staticfiles",
+    "blog",
+]
+
+
+# core/urls.py -- project-level routing
+from django.contrib import admin
+from django.urls import path, include
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("blog/", include("blog.urls")),
+]
+
+
+# blog/urls.py -- app-level routing (new file, create it yourself)
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path("", views.post_list, name="post_list"),
+]</textarea>
+
+  <textarea id="raw-code0" hidden># from your project root, for an app called "blog"
+mkdir -p blog/templates/blog
+mkdir -p blog/static/blog
+
+
+# settings.py
+INSTALLED_APPS = [
+    # ...
+    "django.contrib.staticfiles",   # required for {% load static %}
+    "blog",
+]
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,   # auto-discovers each app's templates/ folder
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+            ],
+        },
+    },
+]
+
+STATIC_URL = "static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]   # optional, extra shared folders</textarea>
+
+  <textarea id="raw-code1" hidden># views.py
+from django.shortcuts import render
+
+def post_list(request):
+    posts = ["Intro to Django", "Templating 101", "Static Files"]
+    return render(request, "blog/post_list.html", {"posts": posts})
+
+
+&lt;!-- blog/post_list.html --&gt;
+{% extends "blog/layout.html" %}
+
+{% block content %}
+  &lt;h1&gt;Blog Posts&lt;/h1&gt;
+  &lt;ul&gt;
+    {% for post in posts %}
+      &lt;li&gt;{{ post }}&lt;/li&gt;
+    {% endfor %}
+  &lt;/ul&gt;
+{% endblock %}</textarea>
+
+  <textarea id="raw-code2" hidden>&lt;!-- blog/layout.html --&gt;
+{% load static %}
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;link rel="stylesheet" href="{% static 'blog/style.css' %}"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  {% block content %}{% endblock %}
+&lt;/body&gt;
+&lt;/html&gt;
+
+
+# settings.py
+STATIC_URL = "static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]</textarea>
+
+  <textarea id="raw-codeFullDemo" hidden># blog/views.py
+from django.shortcuts import render
+
+def post_list(request):
+    posts = ["Intro to Django", "Templating 101", "Static Files"]
+    return render(request, "blog/post_list.html", {"posts": posts})
+
+
+# blog/urls.py
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path("", views.post_list, name="post_list"),
+]
+
+
+&lt;!-- blog/templates/blog/layout.html --&gt;
+{% load static %}
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;title&gt;My Blog&lt;/title&gt;
+  &lt;link rel="stylesheet" href="{% static 'blog/style.css' %}"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;nav&gt;Home | Blog | Contact&lt;/nav&gt;
+  {% block content %}{% endblock %}
+  &lt;footer&gt;&amp;copy; 2026 My Blog&lt;/footer&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+
+
+&lt;!-- blog/templates/blog/post_list.html --&gt;
+{% extends "blog/layout.html" %}
+
+{% block content %}
+  &lt;h1&gt;Blog Posts&lt;/h1&gt;
+  &lt;ul&gt;
+    {% for post in posts %}
+      &lt;li&gt;{{ post }}&lt;/li&gt;
+    {% endfor %}
+  &lt;/ul&gt;
+{% endblock %}
+
+
+/* blog/static/blog/style.css */
+body { font-family: sans-serif; margin: 0; padding: 0 2rem; }
+nav { background: #222; color: white; padding: 1rem; margin: 0 -2rem; }
+footer { color: #888; margin-top: 2rem; }</textarea>
+
+  <textarea id="raw-fileLayout" hidden>&lt;!-- blog/templates/blog/layout.html  (new file) --&gt;
+{% load static %}
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;title&gt;My Blog&lt;/title&gt;
+  &lt;link rel="stylesheet" href="{% static 'blog/style.css' %}"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;nav&gt;Home | Blog | Contact&lt;/nav&gt;
+
+  {% block content %}{% endblock %}
+
+  &lt;footer&gt;&amp;copy; 2026 My Blog&lt;/footer&gt;
+&lt;/body&gt;
+&lt;/html&gt;</textarea>
+
+  <textarea id="raw-filePostList" hidden>&lt;!-- blog/templates/blog/post_list.html  (new file) --&gt;
+{% extends "blog/layout.html" %}
+
+{% block content %}
+  &lt;h1&gt;Blog Posts&lt;/h1&gt;
+  &lt;ul&gt;
+    {% for post in posts %}
+      &lt;li&gt;&lt;a href="{% url 'post_detail' post.id %}"&gt;{{ post.title }}&lt;/a&gt;&lt;/li&gt;
+    {% endfor %}
+  &lt;/ul&gt;
+{% endblock %}</textarea>
+
+  <textarea id="raw-filePostDetail" hidden># blog/views.py  (updated)
+from django.shortcuts import render
+
+POSTS = [
+    {"id": 1, "title": "Intro to Django"},
+    {"id": 2, "title": "Templating 101"},
+    {"id": 3, "title": "Static Files"},
+]
+
+def post_list(request):
+    return render(request, "blog/post_list.html", {"posts": POSTS})
+
+def post_detail(request, post_id):
+    post = next((p for p in POSTS if p["id"] == post_id), None)
+    return render(request, "blog/post_detail.html", {"post": post})
+
+
+# blog/urls.py  (updated -- one new line)
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path("", views.post_list, name="post_list"),
+    path("&lt;int:post_id&gt;/", views.post_detail, name="post_detail"),
+]
+
+
+&lt;!-- blog/templates/blog/post_detail.html  (new file) --&gt;
+{% extends "blog/layout.html" %}
+
+{% block content %}
+  &lt;h1&gt;{{ post.title }}&lt;/h1&gt;
+  &lt;p&gt;&lt;a href="{% url 'post_list' %}"&gt;&amp;larr; Back to all posts&lt;/a&gt;&lt;/p&gt;
+{% endblock %}</textarea>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ================= Syntax highlighting (two single-pass tokenizers) ================= */
+  function escapeHtml(s){
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  function highlightPython(code){
+    var keywords = ["def","return","if","else","elif","for","while","in","import","from","class",
+      "pass","None","True","False","and","or","not","is","as","with","try","except","finally",
+      "raise","yield","lambda","global","assert","break","continue"];
+    var kwPattern = keywords.join("|");
+    var tokenRe = new RegExp(
+      "(#[^\\n]*)" +
+      "|(\"\"\"[\\s\\S]*?\"\"\"|'''[\\s\\S]*?'''|\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*')" +
+      "|(@[A-Za-z_][A-Za-z0-9_.]*)" +
+      "|\\b(" + kwPattern + ")\\b" +
+      "|\\b([A-Za-z_][A-Za-z0-9_]*)(?=\\()" +
+      "|\\b(\\d+\\.?\\d*)\\b",
+      "g"
+    );
+    var result = "", lastIndex = 0, m;
+    while ((m = tokenRe.exec(code))) {
+      result += escapeHtml(code.slice(lastIndex, m.index));
+      if (m[1]) result += '<span class="tok-comment">' + escapeHtml(m[1]) + '</span>';
+      else if (m[2]) result += '<span class="tok-string">' + escapeHtml(m[2]) + '</span>';
+      else if (m[3]) result += '<span class="tok-decorator">' + escapeHtml(m[3]) + '</span>';
+      else if (m[4]) result += '<span class="tok-keyword">' + escapeHtml(m[4]) + '</span>';
+      else if (m[5]) result += '<span class="tok-func">' + escapeHtml(m[5]) + '</span>';
+      else if (m[6]) result += '<span class="tok-number">' + escapeHtml(m[6]) + '</span>';
+      lastIndex = tokenRe.lastIndex;
+    }
+    result += escapeHtml(code.slice(lastIndex));
+    return result;
+  }
+
+  /* Handles Django template syntax mixed with HTML (and tolerates leading '#'-style
+     Python comments/lines when python & template code are shown in the same block) */
+  function highlightTemplate(code){
+    var tokenRe = /(#[^\n]*)|(\{#[\s\S]*?#\})|(\{%[\s\S]*?%\})|(\{\{[\s\S]*?\}\})|(<\/?[a-zA-Z][a-zA-Z0-9-]*(?:\s+[a-zA-Z-]+(?:="[^"]*")?)*\s*\/?>)/g;
+    var result = "", lastIndex = 0, m;
+    while((m = tokenRe.exec(code))){
+      result += escapeHtml(code.slice(lastIndex, m.index));
+      if (m[1]) result += '<span class="tok-comment">' + escapeHtml(m[1]) + '</span>';
+      else if (m[2]) result += '<span class="tok-comment">' + escapeHtml(m[2]) + '</span>';
+      else if (m[3]) result += '<span class="tok-decorator">' + escapeHtml(m[3]) + '</span>';
+      else if (m[4]) result += '<span class="tok-string">' + escapeHtml(m[4]) + '</span>';
+      else if (m[5]) result += '<span class="tok-keyword">' + escapeHtml(m[5]) + '</span>';
+      lastIndex = tokenRe.lastIndex;
+    }
+    result += escapeHtml(code.slice(lastIndex));
+    return result;
+  }
+
+  document.querySelectorAll(".code-content[data-raw-id]").forEach(function(el){
+    var rawId = el.getAttribute("data-raw-id");
+    var rawEl = document.getElementById("raw-" + rawId);
+    if (!rawEl) return;
+    var raw = rawEl.value;
+    var lang = el.getAttribute("data-lang");
+    el.innerHTML = (lang === "python") ? highlightPython(raw) : highlightTemplate(raw);
+    el.setAttribute("data-raw", raw);
+  });
+
+  document.querySelectorAll(".copy-btn").forEach(function(btn){
+    btn.addEventListener("click", function(e){
+      e.stopPropagation();
+      var block = btn.closest(".code-block");
+      var contentEl = block ? block.querySelector(".code-content") : null;
+      var text = contentEl ? (contentEl.getAttribute("data-raw") || contentEl.textContent) : "";
+      var done = function(){
+        var original = btn.textContent;
+        btn.textContent = "Copied!";
+        btn.classList.add("copied");
+        setTimeout(function(){ btn.textContent = original; btn.classList.remove("copied"); }, 1400);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(done);
+      } else {
+        var ta = document.createElement("textarea");
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand("copy"); } catch(err){}
+        document.body.removeChild(ta);
+        done();
+      }
+    });
+  });
+
+  /* ================= Slide navigation ================= */
+  var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var total = slides.length;
+  var current = 0;
+  var deckEl = document.getElementById("deck");
+  var progressFill = document.getElementById("progressFill");
+  var slideCounter = document.getElementById("slideCounter");
+  var tabName = document.getElementById("tabName");
+  var shortcutsModal = document.getElementById("shortcutsModal");
+
+  function reduceMotion(){
+    return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  function render(direction){
+    slides.forEach(function(s, i){ s.classList.toggle("active", i === current); });
+    deckEl.classList.toggle("reverse", direction === -1);
+    progressFill.style.width = ((current + 1) / total * 100) + "%";
+    slideCounter.textContent = (current + 1) + " / " + total;
+    var file = slides[current].getAttribute("data-file") || "slide.py";
+    tabName.textContent = file;
+    slides[current].scrollTop = 0;
+  }
+
+  function goTo(index, direction){
+    if (index < 0 || index >= total || index === current) return;
+    current = index;
+    render(direction);
+  }
+  function next(){ goTo(current + 1, 1); }
+  function prev(){ goTo(current - 1, -1); }
+  function first(){ goTo(0, -1); }
+  function last(){ goTo(total - 1, 1); }
+
+  function isInteractive(target){
+    return !!target.closest("button, a, input, textarea, select, [contenteditable], .copy-btn, .modal");
+  }
+
+  document.addEventListener("mousedown", function(e){
+    if (e.button === 2) {
+      if (isInteractive(e.target)) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    } else if (e.button === 3) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      prev();
+    } else if (e.button === 4) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    }
+  }, true);
+
+  document.addEventListener("mouseup", function(e){
+    if (e.button === 3 || e.button === 4) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, true);
+
+  document.addEventListener("contextmenu", function(e){
+    if (isInteractive(e.target)) return;
+    e.preventDefault();
+  }, true);
+
+  document.addEventListener("auxclick", function(e){
+    if (e.button === 1 || e.button === 3 || e.button === 4) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, true);
+
+  document.addEventListener("keydown", function(e){
+    if (shortcutsModal.classList.contains("open")) {
+      if (e.key === "Escape" || e.key === "?") { closeModal(); e.preventDefault(); }
+      return;
+    }
+    switch(e.key){
+      case "ArrowRight": case "ArrowDown": case "PageDown": next(); e.preventDefault(); break;
+      case "ArrowLeft": case "ArrowUp": case "PageUp": prev(); e.preventDefault(); break;
+      case "Home": first(); e.preventDefault(); break;
+      case "End": last(); e.preventDefault(); break;
+      case "?": openModal(); e.preventDefault(); break;
+    }
+  });
+
+  function openModal(){ shortcutsModal.classList.add("open"); }
+  function closeModal(){ shortcutsModal.classList.remove("open"); }
+  shortcutsModal.addEventListener("mousedown", function(e){
+    if (e.target === shortcutsModal) closeModal();
+  });
+
+  var touchStartX = null, touchStartY = null;
+  document.addEventListener("touchstart", function(e){
+    if (e.touches.length !== 1) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, {passive:true});
+  document.addEventListener("touchend", function(e){
+    if (touchStartX === null) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) next(); else prev();
+    }
+    touchStartX = null; touchStartY = null;
+  }, {passive:true});
+
+  if (reduceMotion()) document.body.classList.add("no-motion");
+
+  render(1);
+})();
+</script>
+</body>
+</html>

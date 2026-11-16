@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQLite, Tailwind &amp; Gmail OTP</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --surface:#141a21;
+    --surface-2:#1b222b;
+    --border:#2b333d;
+    --border-soft:#242c36;
+    --text:#e6edf3;
+    --muted:#8b949e;
+    --muted-2:#6e7681;
+    --accent:#58a6ff;
+    --accent-soft:#58a6ff22;
+    --accent-2:#7ee787;
+    --accent-3:#d29922;
+    --accent-4:#f78166;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--bg); color:var(--text);
+    font-family:var(--sans);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  body.no-motion *{ transition:none !important; animation:none !important; }
+  ::selection{ background:var(--accent-soft); color:var(--text); }
+
+  /* ---------- Chrome ---------- */
+  .chrome-top{
+    position:fixed; top:0; left:0; right:0; height:44px;
+    background:var(--surface); border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:14px; padding:0 18px;
+    z-index:50; font-family:var(--mono); font-size:13px; color:var(--muted);
+  }
+  .win-dots{ display:flex; gap:7px; flex:0 0 auto; }
+  .win-dots span{ width:11px; height:11px; border-radius:50%; display:block; }
+  .win-dots span:nth-child(1){ background:#ff5f57; }
+  .win-dots span:nth-child(2){ background:#febc2e; }
+  .win-dots span:nth-child(3){ background:#28c840; }
+  .file-tab{
+    display:flex; align-items:center; gap:8px;
+    background:var(--surface-2); border:1px solid var(--border-soft);
+    border-bottom:none; padding:6px 14px; border-radius:6px 6px 0 0;
+    color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .file-tab .dot{ width:7px; height:7px; border-radius:50%; background:var(--accent-3); flex:0 0 auto; }
+  .chrome-top .spacer{ flex:1; }
+  .chrome-top .counter{ color:var(--muted); }
+
+  .progress-track{ position:fixed; top:44px; left:0; right:0; height:3px; background:var(--surface-2); z-index:51; }
+  .progress-fill{ height:100%; background:linear-gradient(90deg, var(--accent), var(--accent-2)); width:0%; transition:width .35s ease; }
+
+  .chrome-bottom{
+    position:fixed; bottom:0; left:0; right:0; height:30px;
+    background:var(--accent); color:#04101d;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 16px; font-family:var(--mono); font-size:12px; font-weight:600;
+    z-index:50;
+  }
+  .chrome-bottom .seg{ display:flex; align-items:center; gap:16px; }
+  .chrome-bottom kbd{ background:#04101d22; border-radius:3px; padding:1px 6px; font-family:var(--mono); border:1px solid #04101d33; }
+
+  /* ---------- Slides ---------- */
+  .deck{ position:fixed; inset:44px 0 30px 0; }
+  .slide{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    opacity:0; transform:translateX(36px);
+    transition:opacity .35s ease, transform .35s ease;
+    pointer-events:none; overflow-y:auto;
+  }
+  .slide.active{ opacity:1; transform:translateX(0); pointer-events:auto; }
+  .deck.reverse .slide{ transform:translateX(-36px); }
+  .deck.reverse .slide.active{ transform:translateX(0); }
+
+  .slide-inner{
+    margin:auto; width:100%; max-width:1680px;
+    padding:clamp(20px,3.2vh,48px) clamp(24px,4vw,72px);
+    display:flex; flex-direction:column; min-height:100%;
+    justify-content:center; min-width:0;
+  }
+  .slide.tall .slide-inner{ justify-content:flex-start; }
+
+  .eyebrow{
+    font-family:var(--mono); font-size:14px; color:var(--accent-2);
+    letter-spacing:.03em; margin-bottom:14px; display:flex; align-items:center; gap:8px;
+  }
+  .eyebrow::before{ content:"//"; color:var(--muted-2); }
+
+  h1.title{
+    font-family:var(--mono); font-weight:700;
+    font-size:clamp(28px, 3.4vw, 50px); line-height:1.15; margin:0 0 8px 0;
+    letter-spacing:-0.01em;
+  }
+  h1.title .cursor{ display:inline-block; width:.5ch; background:var(--accent-2); margin-left:4px; animation:blink 1.1s steps(1) infinite; }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  .subtitle{ font-size:clamp(15px,1.3vw,20px); color:var(--muted); margin:0 0 28px 0; max-width:74ch; line-height:1.55; }
+
+  .grid-2{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:28px; min-width:0; }
+  .grid-3{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; min-width:0; }
+  .grid-4{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:18px; min-width:0; }
+
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px 22px; min-width:0; }
+  .card h3{ margin:0 0 10px 0; font-size:17px; font-family:var(--mono); color:var(--accent); }
+  .card p, .card li{ font-size:15px; line-height:1.6; color:var(--text); }
+  .card ul{ margin:0; padding-left:20px; }
+  .card ul li{ margin-bottom:6px; }
+
+  .inline{ background:var(--surface-2); border:1px solid var(--border-soft); border-radius:4px; padding:1px 6px; font-family:var(--mono); font-size:0.92em; color:var(--accent-3); }
+
+  /* ---------- Code blocks ---------- */
+  .code-block{ background:#0a0e13; border:1px solid var(--border); border-radius:10px; overflow:hidden; margin:0; min-width:0; max-height:50vh; display:flex; flex-direction:column; }
+  .code-header{ display:flex; align-items:center; justify-content:space-between; background:var(--surface-2); border-bottom:1px solid var(--border-soft); padding:7px 12px; flex:0 0 auto; }
+  .code-lang{ font-family:var(--mono); font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  .copy-btn{ font-family:var(--mono); font-size:12px; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:4px 10px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:background .15s ease, border-color .15s ease; }
+  .copy-btn:hover{ background:var(--border-soft); border-color:var(--accent); }
+  .copy-btn.copied{ color:var(--accent-2); border-color:var(--accent-2); }
+  .code-scroll{ overflow:auto; padding:14px 16px; }
+  .code-content{ font-family:var(--mono); font-size:15px; line-height:1.6; white-space:pre; color:var(--text); tab-size:2; }
+  .tok-comment{ color:var(--muted-2); font-style:italic; }
+  .tok-string{ color:var(--accent-2); }
+  .tok-keyword{ color:var(--accent); font-weight:600; }
+  .tok-func{ color:var(--accent-3); }
+  .tok-number{ color:var(--accent-4); }
+  .tok-decorator{ color:var(--accent-4); }
+
+  .callouts{ display:flex; flex-direction:column; gap:10px; min-width:0; }
+  .callout{ display:flex; gap:10px; align-items:flex-start; font-size:15px; line-height:1.55; background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); padding:10px 14px; border-radius:6px; min-width:0; }
+  .callout b{ color:var(--accent); font-family:var(--mono); font-size:13px; flex:0 0 auto; }
+
+  .diagram-wrap{ display:flex; justify-content:center; align-items:center; padding:6px 0; }
+  .diagram-wrap svg{ width:100%; height:auto; max-height:34vh; }
+
+  .test-banner{ display:inline-flex; align-items:center; gap:10px; font-family:var(--mono); font-size:13px; color:var(--bg); background:var(--accent-3); padding:5px 12px; border-radius:20px; margin-bottom:18px; font-weight:700; width:fit-content; }
+
+  .q-stack{ display:flex; flex-direction:column; gap:16px; min-width:0; }
+  .mc-q{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px 18px; min-width:0; }
+  .mc-q-head{ display:flex; gap:12px; align-items:flex-start; margin-bottom:10px; }
+  .q-num{ font-family:var(--mono); font-size:13px; color:var(--bg); background:var(--accent-2); border-radius:5px; padding:3px 8px; flex:0 0 auto; font-weight:700; }
+  .q-text{ margin:0; font-size:16.5px; line-height:1.5; }
+  .options{ display:grid; grid-template-columns:1fr 1fr; gap:8px; min-width:0; }
+  .opt{ display:flex; gap:8px; align-items:flex-start; font-size:15px; line-height:1.4; background:var(--surface-2); border:1px solid var(--border-soft); border-radius:7px; padding:8px 10px; min-width:0; }
+  .opt-letter{ font-family:var(--mono); font-weight:700; color:var(--accent); flex:0 0 auto; }
+
+  .scenario-q{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px 18px; min-width:0; }
+  .scenario-q .q-text{ font-size:16px; margin-bottom:10px; }
+  .answer-blank{ font-family:var(--mono); font-size:15px; color:var(--muted); border-top:1px dashed var(--border-soft); padding-top:8px; margin-top:6px; }
+
+  .recap-list{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 28px; }
+
+  .translate-row{ display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:14px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 16px; }
+  .translate-row code{ font-family:var(--mono); font-size:15px; }
+  .translate-row .bs{ color:var(--accent-4); }
+  .translate-row .tw{ color:var(--accent-2); }
+  .translate-row .arrow{ color:var(--muted); font-size:18px; }
+  .recap-item{ display:flex; gap:12px; align-items:flex-start; font-size:16px; line-height:1.55; }
+  .recap-item .tick{ color:var(--accent-2); font-weight:700; flex:0 0 auto; }
+
+  .answers-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:26px; min-width:0; }
+  .answers-col h3{ font-family:var(--mono); color:var(--accent); font-size:16px; border-bottom:1px solid var(--border); padding-bottom:8px; margin:0 0 12px 0; }
+  .ans-row{ font-size:15px; line-height:1.6; margin-bottom:9px; }
+  .ans-row b{ color:var(--accent-2); font-family:var(--mono); }
+
+  .modal-overlay{ position:fixed; inset:0; background:#000000aa; z-index:100; display:none; align-items:center; justify-content:center; }
+  .modal-overlay.open{ display:flex; }
+  .modal{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:28px 32px; width:min(560px,90vw); font-size:15px; }
+  .modal h2{ font-family:var(--mono); margin:0 0 18px 0; font-size:20px; color:var(--accent-2); }
+  .modal .row{ display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border-soft); }
+  .modal .row:last-child{ border-bottom:none; }
+  .modal kbd{ font-family:var(--mono); background:var(--surface-2); border:1px solid var(--border-soft); border-radius:5px; padding:2px 9px; }
+  .modal .close-hint{ margin-top:16px; color:var(--muted); font-size:13px; text-align:center; }
+
+  @media (max-width: 1100px){ .answers-grid{ grid-template-columns:1fr; } }
+  @media (max-width: 900px){
+    .grid-2, .grid-3, .grid-4{ grid-template-columns:1fr; }
+    .recap-list{ grid-template-columns:1fr; }
+    .options{ grid-template-columns:1fr; }
+    .translate-row{ grid-template-columns:1fr; text-align:center; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition:opacity .01s linear !important; transform:none !important; }
+    .progress-fill{ transition:none !important; }
+    h1.title .cursor{ animation:none !important; opacity:1; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="chrome-top">
+    <div class="win-dots"><span></span><span></span><span></span></div>
+    <div class="file-tab"><span class="dot"></span><span id="tabName">sqlite_tailwind_otp.py</span></div>
+    <div class="spacer"></div>
+    <div class="counter" id="slideCounter">1 / 24</div>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+  <div class="deck" id="deck">
+
+    <!-- 1 : COVER -->
+    <section class="slide active" data-file="sqlite_tailwind_otp.py">
+      <div class="slide-inner">
+        <div class="eyebrow">integrative_programming / extras</div>
+        <h1 class="title" style="font-size:clamp(30px,3.8vw,54px);">SQLite, Tailwind &amp; Gmail OTP<span class="cursor">&nbsp;</span></h1>
+        <p class="subtitle" style="font-size:clamp(17px,1.6vw,22px);">Three practical upgrades to the <span class="inline">feedback</span> app: where its data actually lives, how it can look better fast, and how to prove an email is real.</p>
+        <div class="grid-4" style="margin-top:10px;">
+          <div class="card"><h3>SQLite</h3><p>The database you've been using this whole time, explained.</p></div>
+          <div class="card"><h3>Tailwind CSS</h3><p>Styling with utility classes instead of a growing stylesheet.</p></div>
+          <div class="card"><h3>Gmail OTP</h3><p>Verifying a real email address with a one-time code.</p></div>
+          <div class="card"><h3>Quiz</h3><p>10 items, answer key included.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 : INTRO -->
+    <section class="slide" data-file="00_intro.py">
+      <div class="slide-inner">
+        <div class="eyebrow">00_intro.py</div>
+        <h1 class="title">Three Loose Ends, Tied Off</h1>
+        <p class="subtitle">You've been using one of these already without naming it. The other two are the next two upgrades most real projects need.</p>
+        <div class="grid-3">
+          <div class="card"><h3>1. Where does the data actually live?</h3><p>Every migration you've run has been writing to a file called <span class="inline">db.sqlite3</span>. Time to open it up and see what's inside.</p></div>
+          <div class="card"><h3>2. How does this get styled, fast?</h3><p>Writing a growing CSS file for every new page doesn't scale. Tailwind is how most modern projects style things instead.</p></div>
+          <div class="card"><h3>3. Is that really their email?</h3><p>Nothing stops someone from typing a fake address into a signup form — unless you make them prove they can read it.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SQLITE INTRO -->
+    <section class="slide" data-file="01_sqlite_intro.py">
+      <div class="slide-inner">
+        <div class="eyebrow">01_sqlite_intro.py</div>
+        <h1 class="title">SQLite — The Database Hiding in Plain Sight</h1>
+        <div class="grid-2">
+          <div class="card">
+            <h3>What it actually is</h3>
+            <ul>
+              <li>A full relational database that lives inside <em>one single file</em> — <span class="inline">db.sqlite3</span></li>
+              <li>No separate server process to install, start, or stop</li>
+              <li>Ships with Python itself — nothing extra to install</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Why Django defaults to it</h3>
+            <ul>
+              <li>Zero configuration — <span class="inline">startproject</span> is ready to <span class="inline">migrate</span> immediately</li>
+              <li>Perfect for learning, prototypes, and small single-user apps</li>
+              <li>The exact same ORM code works if you switch databases later</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card" style="margin-top:14px;">
+          <h3>Analogy</h3>
+          <p>Like a spreadsheet file you can query with real SQL — no server to boot up, just a file sitting in your project folder.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SQLITE CODE BREAKDOWN -->
+    <section class="slide tall" data-file="02_sqlite_code.py">
+      <div class="slide-inner">
+        <div class="eyebrow">02_sqlite_code.py</div>
+        <h1 class="title">Code Breakdown — Looking Inside db.sqlite3</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:56vh;">
+            <div class="code-header"><span class="code-lang">settings.py + terminal</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeSqlite" data-lang="python"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>ENGINE</b> <span class="inline">django.db.backends.sqlite3</span> — the setting that's been running this whole course.</div>
+            <div class="callout"><b>NAME</b> Just a file path here, not a hostname or database name like other engines need.</div>
+            <div class="callout"><b>dbshell</b> Opens a live SQL prompt straight into that file — no separate database client needed.</div>
+            <div class="callout"><b>Table names</b> Auto-generated as <span class="inline">appname_modelname</span> — <span class="inline">Feedback</span> in the <span class="inline">feedback</span> app becomes <span class="inline">feedback_feedback</span>.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SQLITE: WHEN TO GRADUATE -->
+    <section class="slide" data-file="03_sqlite_when_to_switch.py">
+      <div class="slide-inner">
+        <div class="eyebrow">03_sqlite_when_to_switch.py</div>
+        <h1 class="title">When to Outgrow SQLite</h1>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Stick with SQLite when</h3>
+            <ul>
+              <li>You're learning, prototyping, or building a small single-user tool</li>
+              <li>Traffic is light — one or two people writing data at a time</li>
+              <li>You want zero deployment complexity</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Switch to MySQL/Postgres when</h3>
+            <ul>
+              <li>Many users write data at the same time — SQLite locks the whole file per write</li>
+              <li>You need the database running on its own server, separate from the app</li>
+              <li>You're heading toward real production traffic</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card" style="margin-top:14px;">
+          <h3>The good news</h3>
+          <p>Switching only ever touches <span class="inline">settings.py</span>'s <span class="inline">DATABASES</span> block. Every model and every view stays exactly the same — that's the entire point of Django's ORM.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAILWIND INTRO -->
+    <section class="slide" data-file="04_tailwind_intro.py">
+      <div class="slide-inner">
+        <div class="eyebrow">04_tailwind_intro.py</div>
+        <h1 class="title">Tailwind CSS — If You've Used Bootstrap, You Already Get This</h1>
+        <p class="subtitle">Same goal — styled pages fast, without hand-writing CSS. Different philosophy underneath.</p>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Bootstrap's approach</h3>
+            <ul>
+              <li>Pre-built components: <span class="inline">.btn</span>, <span class="inline">.card</span>, <span class="inline">.container</span></li>
+              <li>You memorize component class names, then get the look for free</li>
+              <li>Customizing beyond the default look usually means overriding Bootstrap's own CSS</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Tailwind's approach</h3>
+            <ul>
+              <li><b style="color:var(--accent-2);">Utility-first</b> — every class does exactly one thing</li>
+              <li><span class="inline">bg-white p-4 rounded-lg</span> — background, padding, corner radius, composed directly in the HTML</li>
+              <li>No component names to memorize — the classes describe exactly what they do</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BOOTSTRAP TO TAILWIND DICTIONARY -->
+    <section class="slide" data-file="04a_tailwind_dictionary.py">
+      <div class="slide-inner">
+        <div class="eyebrow">04a_tailwind_dictionary.py</div>
+        <h1 class="title">The Bootstrap-to-Tailwind Dictionary</h1>
+        <p class="subtitle">You already know what these do. Here's the Tailwind spelling.</p>
+        <div class="q-stack">
+          <div class="translate-row"><code class="bs">.btn .btn-primary</code><span class="arrow">→</span><code class="tw">bg-blue-600 text-white px-4 py-2 rounded</code></div>
+          <div class="translate-row"><code class="bs">.card</code><span class="arrow">→</span><code class="tw">bg-white shadow rounded-lg p-6</code></div>
+          <div class="translate-row"><code class="bs">.container</code><span class="arrow">→</span><code class="tw">max-w-7xl mx-auto px-4</code></div>
+          <div class="translate-row"><code class="bs">.d-flex .justify-content-between</code><span class="arrow">→</span><code class="tw">flex justify-between</code></div>
+          <div class="translate-row"><code class="bs">.text-center</code><span class="arrow">→</span><code class="tw">text-center</code> <span style="color:var(--muted); font-size:13px;">(some names are just... the same)</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAILWIND SETUP GUIDE -->
+    <section class="slide tall" data-file="05_tailwind_setup_guide.py">
+      <div class="slide-inner">
+        <div class="eyebrow">05_tailwind_setup_guide.py</div>
+        <h1 class="title">Setup Guide — Adding Tailwind</h1>
+        <p class="subtitle">Two ways in, depending on what you're building.</p>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:52vh;">
+            <div class="code-header"><span class="code-lang">html</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeTailwindSetup" data-lang="template"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>CDN script tag</b> Same idea as loading Bootstrap's CSS from a CDN — one line in your base template's <span class="inline">&lt;head&gt;</span>, no build step.</div>
+            <div class="callout"><b>Great for learning, not production</b> The CDN ships every utility class ever, unminified — slow and heavy at real scale.</div>
+            <div class="callout"><b>Production path</b> <span class="inline">django-tailwind</span> or a Node build step compiles only the classes you actually used into one small file.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAILWIND CODE BREAKDOWN: BEFORE / AFTER -->
+    <section class="slide tall" data-file="06_tailwind_before_after.py">
+      <div class="slide-inner">
+        <div class="eyebrow">06_tailwind_before_after.py</div>
+        <h1 class="title">Before / After — Styling the Same Form</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:54vh; border-color:var(--accent-4);">
+            <div class="code-header"><span class="code-lang">😩 custom css</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeTailwindBad" data-lang="template"></pre></div>
+          </div>
+          <div class="code-block" style="max-height:54vh; border-color:var(--accent-2);">
+            <div class="code-header"><span class="code-lang">✅ tailwind</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeTailwindGood" data-lang="template"></pre></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:14px;">
+          <h3>Same result, one fewer file</h3>
+          <p>No <span class="inline">style.css</span> to open, no class name to invent — <span class="inline">max-w-md</span>, <span class="inline">rounded-lg</span>, and <span class="inline">shadow</span> already say exactly what they do.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAILWIND SAMPLE PROJECT -->
+    <section class="slide tall" data-file="07_tailwind_sample_project.py">
+      <div class="slide-inner">
+        <div class="eyebrow">07_tailwind_sample_project.py</div>
+        <h1 class="title">Sample Project: Restyling feedback_list.html</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:56vh;">
+            <div class="code-header"><span class="code-lang">django template</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeTailwindSample" data-lang="template"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>space-y-3</b> Adds consistent vertical gaps between every entry — no margin rules to write per item.</div>
+            <div class="callout"><b>{% for entry in entries %}</b> Unchanged from earlier lectures — Tailwind only touches the HTML classes, not the template logic.</div>
+            <div class="callout"><b>Try it</b> Swap <span class="inline">bg-blue-600</span> for <span class="inline">bg-emerald-600</span> and refresh — no CSS file to find or edit.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- OTP INTRO -->
+    <section class="slide" data-file="08_otp_intro.py">
+      <div class="slide-inner">
+        <div class="eyebrow">08_otp_intro.py</div>
+        <h1 class="title">Gmail OTP — Proving an Email Is Real</h1>
+        <div class="grid-2">
+          <div class="card">
+            <h3>😩 Without verification</h3>
+            <ul>
+              <li>Anyone can type any email address into a form — yours, a stranger's, a fake one</li>
+              <li>Nothing confirms the person submitting it can actually read that inbox</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>✅ One-Time Password (OTP)</h3>
+            <ul>
+              <li>A short-lived code, emailed to the address they typed</li>
+              <li>Only someone who can open that inbox can type the code back correctly</li>
+              <li>Same idea as the "enter the code we texted you" flow on almost every app</li>
+            </ul>
+          </div>
+        </div>
+        <div class="diagram-wrap">
+          <svg viewBox="0 0 1000 180" role="img" aria-label="Diagram: user submits email, server generates and emails a one-time code, user enters the code, server compares it and verifies on a match">
+            <title>OTP verification flow: submit email, generate and send code, enter code, compare and verify</title>
+            <g font-family="ui-monospace,monospace" font-size="14" fill="#e6edf3">
+              <rect x="10" y="55" width="180" height="70" rx="10" fill="#161b22" stroke="#58a6ff" stroke-width="2"/>
+              <text x="100" y="95" text-anchor="middle" fill="#58a6ff">Submit email</text>
+              <rect x="260" y="55" width="180" height="70" rx="10" fill="#161b22" stroke="#d29922" stroke-width="2"/>
+              <text x="350" y="88" text-anchor="middle" fill="#d29922">Generate + email</text>
+              <text x="350" y="106" text-anchor="middle" font-size="11" fill="#8b949e">a 6-digit code</text>
+              <rect x="510" y="55" width="180" height="70" rx="10" fill="#161b22" stroke="#8b949e" stroke-width="2"/>
+              <text x="600" y="95" text-anchor="middle">Enter code</text>
+              <rect x="760" y="55" width="220" height="70" rx="10" fill="#161b22" stroke="#7ee787" stroke-width="2"/>
+              <text x="870" y="95" text-anchor="middle" fill="#7ee787">Match → verified</text>
+            </g>
+            <line x1="190" y1="90" x2="255" y2="90" stroke="#8b949e" stroke-width="2" marker-end="url(#otp1)"/>
+            <line x1="440" y1="90" x2="505" y2="90" stroke="#8b949e" stroke-width="2" marker-end="url(#otp1)"/>
+            <line x1="690" y1="90" x2="755" y2="90" stroke="#8b949e" stroke-width="2" marker-end="url(#otp1)"/>
+            <defs><marker id="otp1" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b949e"/></marker></defs>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- GOOGLE APP PASSWORD WALKTHROUGH -->
+    <section class="slide" data-file="08a_google_app_password.py">
+      <div class="slide-inner">
+        <div class="eyebrow">08a_google_app_password.py</div>
+        <h1 class="title">Setting Up Google: Generating Your App Password</h1>
+        <p class="subtitle">A one-time walkthrough inside your Google Account — no code yet, just clicks.</p>
+        <div class="flow-steps">
+          <div class="flow-step"><span class="num">1</span><p>In Gmail, click your profile icon (top right) → <b>Manage your Google Account.</b></p></div>
+          <div class="flow-step"><span class="num">2</span><p>Turn on <b>2-Step Verification</b> first if you haven't — App Passwords stay hidden in the menu until it's enabled.</p></div>
+          <div class="flow-step"><span class="num">3</span><p>Type <b>"App Passwords"</b> into the account's search bar and open it — the exact menu location moves around, so searching is the fastest way in.</p></div>
+          <div class="flow-step"><span class="num">4</span><p>Re-enter your regular Google password when asked, to confirm it's really you.</p></div>
+          <div class="flow-step"><span class="num">5</span><p>Give the app a name you'll recognize later — e.g. <span class="inline">"Django OTP App"</span> — and click <b>Create</b>.</p></div>
+          <div class="flow-step"><span class="num">6</span><p>Google shows a 16-character password <em>once</em> — copy it immediately, then click <b>Done</b>.</p></div>
+          <div class="flow-step"><span class="num">7</span><p>Paste it into your project as <span class="inline">EMAIL_HOST_PASSWORD</span>, removing any spaces Google inserted for readability. Never your regular Gmail password here — it will always be rejected.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- OTP SETUP GUIDE -->
+    <section class="slide tall" data-file="09_otp_setup_guide.py">
+      <div class="slide-inner">
+        <div class="eyebrow">09_otp_setup_guide.py</div>
+        <h1 class="title">Setup Guide — Gmail SMTP</h1>
+        <p class="subtitle">Gmail won't accept your normal password for this — one extra step first.</p>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:52vh;">
+            <div class="code-header"><span class="code-lang">settings.py</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeOtpSetup" data-lang="python"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>App Password</b> Enable 2-Step Verification on the Gmail account first, then generate a 16-character App Password — Google blocks plain-password SMTP logins entirely.</div>
+            <div class="callout"><b>EMAIL_HOST_PASSWORD</b> Never commit this directly — real projects load it from an environment variable or a <span class="inline">.env</span> file.</div>
+            <div class="callout"><b>EMAIL_USE_TLS</b> Encrypts the connection to Gmail's SMTP server — required, not optional.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- OTP CODE BREAKDOWN: SEND -->
+    <section class="slide tall" data-file="10_otp_send_code.py">
+      <div class="slide-inner">
+        <div class="eyebrow">10_otp_send_code.py</div>
+        <h1 class="title">Code Breakdown — Generating and Sending the Code</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:56vh;">
+            <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeOtpSend" data-lang="python"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>random.randint(100000, 999999)</b> A fresh 6-digit code every time — never reused.</div>
+            <div class="callout"><b>request.session[...]</b> Stored per-visitor, exactly like the session lecture — never a global variable.</div>
+            <div class="callout"><b>send_mail()</b> Django's built-in helper — no extra library needed to actually send the email.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- OTP CODE BREAKDOWN: VERIFY -->
+    <section class="slide tall" data-file="11_otp_verify_code.py">
+      <div class="slide-inner">
+        <div class="eyebrow">11_otp_verify_code.py</div>
+        <h1 class="title">Code Breakdown — Verifying the Code</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:56vh;">
+            <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeOtpVerify" data-lang="python"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>Same shape as before</b> GET shows the form, POST checks it — the exact flow from the Form Processing lecture.</div>
+            <div class="callout"><b>request.session.get("otp_code")</b> Compared against what the visitor typed — only their own session's code counts.</div>
+            <div class="callout"><b>On match</b> <span class="inline">email_verified</span> is set in the session — the rest of the app can check this flag before trusting the address.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- OTP FULL DEMO -->
+    <section class="slide tall" data-file="12_otp_full_demo.py">
+      <div class="slide-inner">
+        <div class="eyebrow">12_otp_full_demo.py</div>
+        <h1 class="title">Full Demo — Copy This and Try It</h1>
+        <p class="subtitle">Email verification, end to end, added on top of the <span class="inline">feedback</span> app.</p>
+        <div class="code-block" style="max-height:52vh;">
+          <div class="code-header"><span class="code-lang">views.py + urls.py + templates</span><button class="copy-btn">Copy</button></div>
+          <div class="code-scroll"><pre class="code-content" data-raw-id="codeOtpFullDemo" data-lang="template"></pre></div>
+        </div>
+        <div class="card" style="margin-top:14px;">
+          <h3>Run it</h3>
+          <p>Add the settings from the setup guide, drop these views and templates into <span class="inline">feedback</span>, wire the two new paths in <span class="inline">urls.py</span>, then visit <span class="inline">/feedback/send-otp/</span> with a real email address you can check.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- WHY WE DO THIS -->
+    <section class="slide" data-file="13_why_we_do_this.py">
+      <div class="slide-inner">
+        <div class="eyebrow">13_why_we_do_this.py</div>
+        <h1 class="title">Why We Bother With Any of This</h1>
+        <div class="grid-3">
+          <div class="card"><h3>SQLite</h3><p>Zero setup means you spend your first weeks learning Django itself, not fighting a database server.</p></div>
+          <div class="card"><h3>Tailwind</h3><p>Styling stays fast and consistent as a project grows — no stylesheet slowly turning into spaghetti.</p></div>
+          <div class="card"><h3>OTP</h3><p>The difference between "an email was typed" and "a real person confirmed they own that inbox."</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- QUIZ INTRO -->
+    <section class="slide" data-file="14_quiz.py">
+      <div class="slide-inner">
+        <div class="eyebrow">14_quiz.py</div>
+        <div class="test-banner">🧪 QUICK QUIZ</div>
+        <h1 class="title">10 Items — SQLite, Tailwind &amp; OTP</h1>
+        <p class="subtitle">Options and questions are shown — answers are on the very last slide.</p>
+        <div class="grid-2">
+          <div class="card"><h3>Part 1</h3><p>5 Multiple Choice questions.</p></div>
+          <div class="card"><h3>Part 2</h3><p>5 Identification — name the file, class, or concept.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MC 1-3 -->
+    <section class="slide" data-file="quiz/mc_1.py">
+      <div class="slide-inner">
+        <div class="eyebrow">quiz/mc.py · page 1 of 2</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Multiple Choice (1–3)</h1>
+        <div class="q-stack">
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q1</span><p class="q-text">Which <span class="inline">ENGINE</span> value does Django use for SQLite by default?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>django.db.backends.mysql</div>
+              <div class="opt"><span class="opt-letter">B</span>django.db.backends.sqlite3</div>
+              <div class="opt"><span class="opt-letter">C</span>django.db.backends.postgresql</div>
+              <div class="opt"><span class="opt-letter">D</span>django.db.backends.file</div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q2</span><p class="q-text">What is Tailwind CSS best described as?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>A JavaScript framework</div>
+              <div class="opt"><span class="opt-letter">B</span>A utility-first CSS framework</div>
+              <div class="opt"><span class="opt-letter">C</span>A database ORM</div>
+              <div class="opt"><span class="opt-letter">D</span>A templating engine</div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q3</span><p class="q-text">Which Django setting specifies the SMTP server used to send email?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>EMAIL_BACKEND</div>
+              <div class="opt"><span class="opt-letter">B</span>EMAIL_HOST</div>
+              <div class="opt"><span class="opt-letter">C</span>SMTP_URL</div>
+              <div class="opt"><span class="opt-letter">D</span>MAIL_SERVER</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MC 4-5 -->
+    <section class="slide" data-file="quiz/mc_2.py">
+      <div class="slide-inner">
+        <div class="eyebrow">quiz/mc.py · page 2 of 2</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Multiple Choice (4–5)</h1>
+        <div class="q-stack">
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q4</span><p class="q-text">Why does Gmail require an "App Password" instead of your normal password for SMTP?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>It's faster to type</div>
+              <div class="opt"><span class="opt-letter">B</span>Google blocks plain-password SMTP logins from external apps for security</div>
+              <div class="opt"><span class="opt-letter">C</span>Django requires it by convention</div>
+              <div class="opt"><span class="opt-letter">D</span>It's optional, just a suggestion</div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q5</span><p class="q-text">In the OTP demo shown, where is the generated code temporarily stored before verification?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>A global variable</div>
+              <div class="opt"><span class="opt-letter">B</span>request.session</div>
+              <div class="opt"><span class="opt-letter">C</span>A cookie visible in the browser's console</div>
+              <div class="opt"><span class="opt-letter">D</span>It's never stored anywhere</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ID 1-3 -->
+    <section class="slide" data-file="quiz/id_1.py">
+      <div class="slide-inner">
+        <div class="eyebrow">quiz/identification.py · page 1 of 2</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Identification (1–3)</h1>
+        <div class="q-stack">
+          <div class="scenario-q">
+            <p class="q-text"><b>1.</b> The single file an entire SQLite database lives inside.</p>
+            <div class="answer-blank">Answer: ____________</div>
+          </div>
+          <div class="scenario-q">
+            <p class="q-text"><b>2.</b> The Django management command that opens a live SQL prompt into your database.</p>
+            <div class="answer-blank">Answer: ____________</div>
+          </div>
+          <div class="scenario-q">
+            <p class="q-text"><b>3.</b> The Tailwind utility class that applies a large border radius.</p>
+            <div class="answer-blank">Answer: ____________</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ID 4-5 -->
+    <section class="slide" data-file="quiz/id_2.py">
+      <div class="slide-inner">
+        <div class="eyebrow">quiz/identification.py · page 2 of 2</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Identification (4–5)</h1>
+        <div class="q-stack">
+          <div class="scenario-q">
+            <p class="q-text"><b>4.</b> The Django function used to send an email without any extra library installed.</p>
+            <div class="answer-blank">Answer: ____________</div>
+          </div>
+          <div class="scenario-q">
+            <p class="q-text"><b>5.</b> The short-lived code emailed to a user to prove they actually own that address.</p>
+            <div class="answer-blank">Answer: ____________</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RECAP -->
+    <section class="slide" data-file="recap.py">
+      <div class="slide-inner">
+        <div class="eyebrow">recap.py</div>
+        <h1 class="title">Recap Before You Go</h1>
+        <p class="subtitle">The essentials worth remembering.</p>
+        <div class="recap-list">
+          <div class="recap-item"><span class="tick">✓</span>SQLite is a whole database in one file — <span class="inline">db.sqlite3</span> — with zero server to run.</div>
+          <div class="recap-item"><span class="tick">✓</span>Switching databases later only touches <span class="inline">settings.py</span> — models and views stay untouched.</div>
+          <div class="recap-item"><span class="tick">✓</span>Tailwind styles directly in HTML with utility classes — no separate stylesheet growing forever.</div>
+          <div class="recap-item"><span class="tick">✓</span>The CDN is for learning and demos; a real build step is for production.</div>
+          <div class="recap-item"><span class="tick">✓</span>Gmail SMTP needs an App Password — your regular password will be rejected.</div>
+          <div class="recap-item"><span class="tick">✓</span>An OTP proves inbox ownership — store it in the session, never a global variable.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ANSWERS -->
+    <section class="slide tall" data-file="answers.py">
+      <div class="slide-inner">
+        <div class="eyebrow">answers.py</div>
+        <h1 class="title" style="font-size:clamp(26px,3vw,40px);">Answer Key</h1>
+        <div class="answers-grid">
+          <div class="answers-col">
+            <h3>Multiple Choice</h3>
+            <div class="ans-row"><b>1. B</b> — django.db.backends.sqlite3 is the default engine.</div>
+            <div class="ans-row"><b>2. B</b> — Tailwind is a utility-first CSS framework.</div>
+            <div class="ans-row"><b>3. B</b> — EMAIL_HOST specifies the SMTP server.</div>
+            <div class="ans-row"><b>4. B</b> — Google blocks plain-password SMTP for security.</div>
+            <div class="ans-row"><b>5. B</b> — request.session stores it per-visitor.</div>
+          </div>
+          <div class="answers-col">
+            <h3>Identification</h3>
+            <div class="ans-row"><b>1. db.sqlite3</b> — the single database file.</div>
+            <div class="ans-row"><b>2. dbshell</b> — opens a live SQL prompt.</div>
+            <div class="ans-row"><b>3. rounded-lg</b> — a large border radius utility.</div>
+            <div class="ans-row"><b>4. send_mail()</b> — Django's built-in email function.</div>
+            <div class="ans-row"><b>5. OTP (One-Time Password)</b> — proves inbox ownership.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="chrome-bottom">
+    <div class="seg"><span>SQLite, Tailwind &amp; Gmail OTP</span></div>
+    <div class="seg"><span>Right-click / <kbd>→</kbd> next</span><span><kbd>?</kbd> shortcuts</span></div>
+  </div>
+
+  <div class="modal-overlay" id="shortcutsModal">
+    <div class="modal">
+      <h2>Keyboard &amp; Mouse Shortcuts</h2>
+      <div class="row"><span>Next slide</span><span><kbd>→</kbd> / <kbd>Right-click</kbd> / <kbd>Mouse btn 4</kbd></span></div>
+      <div class="row"><span>Previous slide</span><span><kbd>←</kbd> / <kbd>Mouse btn 3</kbd></span></div>
+      <div class="row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+      <div class="row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+      <div class="row"><span>Show/hide this panel</span><span><kbd>?</kbd></span></div>
+      <div class="row"><span>Close panel</span><span><kbd>Esc</kbd></span></div>
+      <div class="row"><span>Swipe (mobile)</span><span>Left = next · Right = prev</span></div>
+      <div class="close-hint">Click outside this box, or press Esc, to close.</div>
+    </div>
+  </div>
+
+  <textarea id="raw-codeSqlite" hidden># settings.py -- already the default from startproject
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
+}
+
+
+# terminal -- inspect it directly
+python manage.py dbshell
+# sqlite> .tables
+# sqlite> SELECT * FROM feedback_feedback;
+# sqlite> .quit</textarea>
+
+  <textarea id="raw-codeTailwindSetup" hidden>&lt;!-- quickest way to try it: CDN, inside your base template's &lt;head&gt; --&gt;
+&lt;script src="https://cdn.tailwindcss.com"&gt;&lt;/script&gt;
+
+&lt;!-- production path (conceptual, not run here): --&gt;
+&lt;!-- pip install django-tailwind          --&gt;
+&lt;!-- python manage.py tailwind init        --&gt;
+&lt;!-- python manage.py tailwind start       --&gt;</textarea>
+
+  <textarea id="raw-codeTailwindBad" hidden>&lt;!-- feedback/submit_feedback.html -- before --&gt;
+{% load static %}
+&lt;link rel="stylesheet" href="{% static 'feedback/style.css' %}"&gt;
+
+&lt;form method="post" class="feedback-form"&gt;
+  {% csrf_token %}
+  {{ form.as_p }}
+  &lt;button type="submit" class="btn-submit"&gt;Submit&lt;/button&gt;
+&lt;/form&gt;
+
+
+/* feedback/static/feedback/style.css */
+.feedback-form {
+  max-width: 480px;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.1);
+}
+.btn-submit {
+  background: #2563eb;
+  color: white;
+  padding: .5rem 1rem;
+  border-radius: 6px;
+  border: none;
+}</textarea>
+
+  <textarea id="raw-codeTailwindGood" hidden>&lt;!-- feedback/submit_feedback.html -- with tailwind --&gt;
+&lt;form method="post" class="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow"&gt;
+  {% csrf_token %}
+  {{ form.as_p }}
+  &lt;button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md"&gt;
+    Submit
+  &lt;/button&gt;
+&lt;/form&gt;
+
+&lt;!-- no separate stylesheet needed for any of this --&gt;</textarea>
+
+  <textarea id="raw-codeTailwindSample" hidden>&lt;!-- feedback/templates/feedback/feedback_list.html --&gt;
+&lt;div class="max-w-2xl mx-auto mt-8 space-y-3"&gt;
+  {% for entry in entries %}
+    &lt;div class="p-4 bg-white rounded-lg shadow flex justify-between"&gt;
+      &lt;span class="font-semibold"&gt;{{ entry.name }}&lt;/span&gt;
+      &lt;span class="text-gray-600"&gt;{{ entry.message }}&lt;/span&gt;
+    &lt;/div&gt;
+  {% endfor %}
+
+  &lt;a href="{% url 'feedback:submit_feedback' %}"
+     class="inline-block mt-4 bg-blue-600 text-white px-4 py-2 rounded-md"&gt;
+    Leave feedback
+  &lt;/a&gt;
+&lt;/div&gt;</textarea>
+
+  <textarea id="raw-codeOtpSetup" hidden># settings.py
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "youraddress@gmail.com"
+EMAIL_HOST_PASSWORD = "your-16-character-app-password"  # never your real password</textarea>
+
+  <textarea id="raw-codeOtpSend" hidden># feedback/views.py
+import random
+from django.core.mail import send_mail
+from django.shortcuts import render, redirect
+
+def send_otp(request):
+    code = str(random.randint(100000, 999999))
+    request.session["otp_code"] = code
+    request.session["otp_email"] = request.POST["email"]
+
+    send_mail(
+        subject="Your verification code",
+        message=f"Your code is {code}. It expires in 5 minutes.",
+        from_email="youraddress@gmail.com",
+        recipient_list=[request.POST["email"]],
+    )
+    return redirect("feedback:verify_otp")</textarea>
+
+  <textarea id="raw-codeOtpVerify" hidden># feedback/views.py
+def verify_otp(request):
+    if request.method == "POST":
+        entered = request.POST["code"]
+        if entered == request.session.get("otp_code"):
+            request.session["email_verified"] = True
+            return redirect("feedback:feedback_list")
+        return render(request, "feedback/verify_otp.html",
+                       {"error": "Incorrect code, try again."})
+
+    return render(request, "feedback/verify_otp.html")</textarea>
+
+  <textarea id="raw-codeOtpFullDemo" hidden># feedback/views.py
+import random
+from django.core.mail import send_mail
+from django.shortcuts import render, redirect
+
+def send_otp(request):
+    code = str(random.randint(100000, 999999))
+    request.session["otp_code"] = code
+    request.session["otp_email"] = request.POST["email"]
+
+    send_mail(
+        subject="Your verification code",
+        message=f"Your code is {code}. It expires in 5 minutes.",
+        from_email="youraddress@gmail.com",
+        recipient_list=[request.POST["email"]],
+    )
+    return redirect("feedback:verify_otp")
+
+
+def verify_otp(request):
+    if request.method == "POST":
+        entered = request.POST["code"]
+        if entered == request.session.get("otp_code"):
+            request.session["email_verified"] = True
+            return redirect("feedback:feedback_list")
+        return render(request, "feedback/verify_otp.html",
+                       {"error": "Incorrect code, try again."})
+
+    return render(request, "feedback/verify_otp.html")
+
+
+# feedback/urls.py  (two new lines)
+urlpatterns = [
+    # ...existing paths...
+    path("send-otp/", views.send_otp, name="send_otp"),
+    path("verify-otp/", views.verify_otp, name="verify_otp"),
+]
+
+
+&lt;!-- feedback/templates/feedback/verify_otp.html --&gt;
+&lt;form method="post"&gt;
+  {% csrf_token %}
+  &lt;input type="text" name="code" placeholder="Enter your code"&gt;
+  &lt;button type="submit"&gt;Verify&lt;/button&gt;
+  {% if error %}&lt;p&gt;{{ error }}&lt;/p&gt;{% endif %}
+&lt;/form&gt;</textarea>
+
+<script>
+(function(){
+  "use strict";
+
+  function escapeHtml(s){
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  function highlightPython(code){
+    var keywords = ["def","return","if","else","elif","for","while","in","import","from","class",
+      "pass","None","True","False","and","or","not","is","as","with","try","except","finally",
+      "raise","yield","lambda","global","assert","break","continue"];
+    var kwPattern = keywords.join("|");
+    var tokenRe = new RegExp(
+      "(#[^\\n]*)" +
+      "|(\"\"\"[\\s\\S]*?\"\"\"|'''[\\s\\S]*?'''|\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*')" +
+      "|(@[A-Za-z_][A-Za-z0-9_.]*)" +
+      "|\\b(" + kwPattern + ")\\b" +
+      "|\\b([A-Za-z_][A-Za-z0-9_]*)(?=\\()" +
+      "|\\b(\\d+\\.?\\d*)\\b",
+      "g"
+    );
+    var result = "", lastIndex = 0, m;
+    while ((m = tokenRe.exec(code))) {
+      result += escapeHtml(code.slice(lastIndex, m.index));
+      if (m[1]) result += '<span class="tok-comment">' + escapeHtml(m[1]) + '</span>';
+      else if (m[2]) result += '<span class="tok-string">' + escapeHtml(m[2]) + '</span>';
+      else if (m[3]) result += '<span class="tok-decorator">' + escapeHtml(m[3]) + '</span>';
+      else if (m[4]) result += '<span class="tok-keyword">' + escapeHtml(m[4]) + '</span>';
+      else if (m[5]) result += '<span class="tok-func">' + escapeHtml(m[5]) + '</span>';
+      else if (m[6]) result += '<span class="tok-number">' + escapeHtml(m[6]) + '</span>';
+      lastIndex = tokenRe.lastIndex;
+    }
+    result += escapeHtml(code.slice(lastIndex));
+    return result;
+  }
+
+  function highlightTemplate(code){
+    var tokenRe = /(#[^\n]*)|(\{#[\s\S]*?#\})|(\{%[\s\S]*?%\})|(\{\{[\s\S]*?\}\})|(<\/?[a-zA-Z][a-zA-Z0-9-]*(?:\s+[a-zA-Z-]+(?:="[^"]*")?)*\s*\/?>)/g;
+    var result = "", lastIndex = 0, m;
+    while((m = tokenRe.exec(code))){
+      result += escapeHtml(code.slice(lastIndex, m.index));
+      if (m[1]) result += '<span class="tok-comment">' + escapeHtml(m[1]) + '</span>';
+      else if (m[2]) result += '<span class="tok-comment">' + escapeHtml(m[2]) + '</span>';
+      else if (m[3]) result += '<span class="tok-decorator">' + escapeHtml(m[3]) + '</span>';
+      else if (m[4]) result += '<span class="tok-string">' + escapeHtml(m[4]) + '</span>';
+      else if (m[5]) result += '<span class="tok-keyword">' + escapeHtml(m[5]) + '</span>';
+      lastIndex = tokenRe.lastIndex;
+    }
+    result += escapeHtml(code.slice(lastIndex));
+    return result;
+  }
+
+  document.querySelectorAll(".code-content[data-raw-id]").forEach(function(el){
+    var rawId = el.getAttribute("data-raw-id");
+    var rawEl = document.getElementById("raw-" + rawId);
+    if (!rawEl) return;
+    var raw = rawEl.value;
+    var lang = el.getAttribute("data-lang");
+    el.innerHTML = (lang === "python") ? highlightPython(raw) : highlightTemplate(raw);
+    el.setAttribute("data-raw", raw);
+  });
+
+  document.querySelectorAll(".copy-btn").forEach(function(btn){
+    btn.addEventListener("click", function(e){
+      e.stopPropagation();
+      var block = btn.closest(".code-block");
+      var contentEl = block ? block.querySelector(".code-content") : null;
+      var text = contentEl ? (contentEl.getAttribute("data-raw") || contentEl.textContent) : "";
+      var done = function(){
+        var original = btn.textContent;
+        btn.textContent = "Copied!";
+        btn.classList.add("copied");
+        setTimeout(function(){ btn.textContent = original; btn.classList.remove("copied"); }, 1400);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(done);
+      } else {
+        var ta = document.createElement("textarea");
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand("copy"); } catch(err){}
+        document.body.removeChild(ta);
+        done();
+      }
+    });
+  });
+
+  var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var total = slides.length;
+  var current = 0;
+  var deckEl = document.getElementById("deck");
+  var progressFill = document.getElementById("progressFill");
+  var slideCounter = document.getElementById("slideCounter");
+  var tabName = document.getElementById("tabName");
+  var shortcutsModal = document.getElementById("shortcutsModal");
+
+  function reduceMotion(){
+    return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  function render(direction){
+    slides.forEach(function(s, i){ s.classList.toggle("active", i === current); });
+    deckEl.classList.toggle("reverse", direction === -1);
+    progressFill.style.width = ((current + 1) / total * 100) + "%";
+    slideCounter.textContent = (current + 1) + " / " + total;
+    var file = slides[current].getAttribute("data-file") || "slide.py";
+    tabName.textContent = file;
+    slides[current].scrollTop = 0;
+  }
+
+  function goTo(index, direction){
+    if (index < 0 || index >= total || index === current) return;
+    current = index;
+    render(direction);
+  }
+  function next(){ goTo(current + 1, 1); }
+  function prev(){ goTo(current - 1, -1); }
+  function first(){ goTo(0, -1); }
+  function last(){ goTo(total - 1, 1); }
+
+  function isInteractive(target){
+    return !!target.closest("button, a, input, textarea, select, [contenteditable], .copy-btn, .modal");
+  }
+
+  document.addEventListener("mousedown", function(e){
+    if (e.button === 2) {
+      if (isInteractive(e.target)) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    } else if (e.button === 3) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      prev();
+    } else if (e.button === 4) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    }
+  }, true);
+
+  document.addEventListener("mouseup", function(e){
+    if (e.button === 3 || e.button === 4) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, true);
+
+  document.addEventListener("contextmenu", function(e){
+    if (isInteractive(e.target)) return;
+    e.preventDefault();
+  }, true);
+
+  document.addEventListener("auxclick", function(e){
+    if (e.button === 1 || e.button === 3 || e.button === 4) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, true);
+
+  document.addEventListener("keydown", function(e){
+    if (shortcutsModal.classList.contains("open")) {
+      if (e.key === "Escape" || e.key === "?") { closeModal(); e.preventDefault(); }
+      return;
+    }
+    switch(e.key){
+      case "ArrowRight": case "ArrowDown": case "PageDown": next(); e.preventDefault(); break;
+      case "ArrowLeft": case "ArrowUp": case "PageUp": prev(); e.preventDefault(); break;
+      case "Home": first(); e.preventDefault(); break;
+      case "End": last(); e.preventDefault(); break;
+      case "?": openModal(); e.preventDefault(); break;
+    }
+  });
+
+  function openModal(){ shortcutsModal.classList.add("open"); }
+  function closeModal(){ shortcutsModal.classList.remove("open"); }
+  shortcutsModal.addEventListener("mousedown", function(e){
+    if (e.target === shortcutsModal) closeModal();
+  });
+
+  var touchStartX = null, touchStartY = null;
+  document.addEventListener("touchstart", function(e){
+    if (e.touches.length !== 1) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, {passive:true});
+  document.addEventListener("touchend", function(e){
+    if (touchStartX === null) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) next(); else prev();
+    }
+    touchStartX = null; touchStartY = null;
+  }, {passive:true});
+
+  if (reduceMotion()) document.body.classList.add("no-motion");
+
+  render(1);
+})();
+</script>
+</body>
+</html>

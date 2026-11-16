@@ -1,0 +1,1989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Program &amp; Project Architecture · Summative Exam</title>
+    <style>
+        /* ---------- variables ---------- */
+        :root {
+            --bg: #0d1117;
+            --surface: #141a21;
+            --surface-2: #1b222b;
+            --border: #2b333d;
+            --border-soft: #242c36;
+            --text: #e6edf3;
+            --muted: #8b949e;
+            --muted-2: #6e7681;
+            --accent: #58a6ff;
+            --accent-soft: #58a6ff22;
+            --accent-2: #7ee787;
+            --accent-3: #d29922;
+            --accent-4: #f78166;
+            --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+            --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        /* All icon glyphs share viewBox="0 0 24 24" — size them here globally.
+           More specific rules further down (.badge svg, .closing-wrap svg, etc.)
+           intentionally override this for their own contexts. */
+        svg[viewBox="0 0 24 24"] {
+            width: 20px;
+            height: 20px;
+            display: inline-block;
+            vertical-align: -4px;
+            flex-shrink: 0;
+        }
+        h3 svg[viewBox="0 0 24 24"] {
+            width: 18px;
+            height: 18px;
+            vertical-align: -3px;
+            margin-right: 2px;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--sans);
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        body.no-motion * {
+            transition: none !important;
+            animation: none !important;
+        }
+        ::selection {
+            background: var(--accent-soft);
+            color: var(--text);
+        }
+
+        /* ---------- chrome ---------- */
+        .chrome-top {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 44px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 0 18px;
+            z-index: 50;
+            font-family: var(--mono);
+            font-size: 15px;
+            color: var(--muted);
+        }
+        .win-dots {
+            display: flex;
+            gap: 7px;
+            flex: 0 0 auto;
+        }
+        .win-dots span {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            display: block;
+        }
+        .win-dots span:nth-child(1) {
+            background: #ff5f57;
+        }
+        .win-dots span:nth-child(2) {
+            background: #febc2e;
+        }
+        .win-dots span:nth-child(3) {
+            background: #28c840;
+        }
+        .file-tab {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--surface-2);
+            border: 1px solid var(--border-soft);
+            border-bottom: none;
+            padding: 6px 14px;
+            border-radius: 6px 6px 0 0;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 15px;
+        }
+        .file-tab .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--accent-3);
+            flex: 0 0 auto;
+        }
+        .chrome-top .spacer {
+            flex: 1;
+        }
+        .chrome-top .counter {
+            color: var(--muted);
+            font-size: 15px;
+        }
+
+        .progress-track {
+            position: fixed;
+            top: 44px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--surface-2);
+            z-index: 51;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-2));
+            width: 0%;
+            transition: width .35s ease;
+        }
+
+        .chrome-bottom {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: var(--accent);
+            color: #04101d;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            font-family: var(--mono);
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 50;
+        }
+        .chrome-bottom .seg {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 14px;
+        }
+        .chrome-bottom kbd {
+            background: #04101d22;
+            border-radius: 3px;
+            padding: 1px 6px;
+            font-family: var(--mono);
+            border: 1px solid #04101d33;
+            font-size: 14px;
+        }
+
+        /* ---------- slides ---------- */
+        .deck {
+            position: fixed;
+            inset: 44px 0 30px 0;
+        }
+        .slide {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            transform: translateX(36px);
+            transition: opacity .35s ease, transform .35s ease;
+            pointer-events: none;
+            overflow-y: auto;
+        }
+        .slide.active {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+        }
+        .deck.reverse .slide {
+            transform: translateX(-36px);
+        }
+        .deck.reverse .slide.active {
+            transform: translateX(0);
+        }
+
+        .slide-inner {
+            margin: auto;
+            width: 100%;
+            max-width: 1680px;
+            padding: clamp(20px, 3.2vh, 48px) clamp(24px, 4vw, 72px);
+            display: flex;
+            flex-direction: column;
+            min-height: 100%;
+            justify-content: center;
+            min-width: 0;
+        }
+        .slide.tall .slide-inner {
+            justify-content: flex-start;
+        }
+        .slide.exam .slide-inner {
+            justify-content: flex-start;
+            padding-top: clamp(16px, 2.5vh, 32px);
+        }
+
+        .eyebrow {
+            font-family: var(--mono);
+            font-size: 16px;
+            color: var(--accent-2);
+            letter-spacing: .03em;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .eyebrow .mark {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .eyebrow .mark svg {
+            width: 18px;
+            height: 18px;
+        }
+        .eyebrow::before {
+            content: "//";
+            color: var(--muted-2);
+        }
+
+        h1.title {
+            font-family: var(--mono);
+            font-weight: 700;
+            font-size: clamp(28px, 3.4vw, 50px);
+            line-height: 1.15;
+            margin: 0 0 8px 0;
+            letter-spacing: -0.01em;
+        }
+        h1.title .cursor {
+            display: inline-block;
+            width: .5ch;
+            background: var(--accent-2);
+            margin-left: 4px;
+            animation: blink 1.1s steps(1) infinite;
+        }
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+
+        .subtitle {
+            font-size: clamp(16px, 1.3vw, 20px);
+            color: var(--muted);
+            margin: 0 0 28px 0;
+            max-width: 74ch;
+            line-height: 1.55;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 28px;
+            min-width: 0;
+        }
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 20px;
+            min-width: 0;
+        }
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 18px;
+            min-width: 0;
+        }
+        .grid-5 {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 16px;
+            min-width: 0;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px 22px;
+            min-width: 0;
+        }
+        .card h3 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+            font-family: var(--mono);
+            color: var(--accent);
+        }
+        .card p,
+        .card li {
+            font-size: 16px;
+            line-height: 1.6;
+            color: var(--text);
+        }
+        .card ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .card ul li {
+            margin-bottom: 6px;
+        }
+
+        .inline {
+            background: var(--surface-2);
+            border: 1px solid var(--border-soft);
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-family: var(--mono);
+            font-size: 0.92em;
+            color: var(--accent-3);
+        }
+
+        /* ---------- code blocks ---------- */
+        .code-block {
+            background: #0a0e13;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 0;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 0;
+        }
+        .code-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--surface-2);
+            border-bottom: 1px solid var(--border-soft);
+            padding: 7px 12px;
+            flex: 0 0 auto;
+        }
+        .code-lang {
+            font-family: var(--mono);
+            font-size: 14px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+        .copy-btn {
+            font-family: var(--mono);
+            font-size: 14px;
+            color: var(--text);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 4px 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background .15s ease, border-color .15s ease;
+        }
+        .copy-btn:hover {
+            background: var(--border-soft);
+            border-color: var(--accent);
+        }
+        .copy-btn.copied {
+            color: var(--accent-2);
+            border-color: var(--accent-2);
+        }
+        .code-scroll {
+            overflow: auto;
+            padding: 14px 16px;
+            flex: 1;
+            min-height: 0;
+        }
+        .code-content {
+            font-family: var(--mono);
+            font-size: 16px;
+            line-height: 1.65;
+            white-space: pre;
+            color: var(--text);
+            tab-size: 2;
+            margin: 0;
+        }
+        .tok-comment {
+            color: var(--muted-2);
+            font-style: italic;
+        }
+        .tok-string {
+            color: var(--accent-2);
+        }
+        .tok-keyword {
+            color: var(--accent);
+            font-weight: 600;
+        }
+        .tok-func {
+            color: var(--accent-3);
+        }
+        .tok-number {
+            color: var(--accent-4);
+        }
+        .tok-decorator {
+            color: var(--accent-4);
+        }
+
+        .callouts {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 0;
+        }
+        .callout {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            font-size: 16px;
+            line-height: 1.55;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            padding: 10px 14px;
+            border-radius: 6px;
+            min-width: 0;
+        }
+        .callout b {
+            color: var(--accent);
+            font-family: var(--mono);
+            font-size: 14px;
+            flex: 0 0 auto;
+        }
+
+        .diagram-wrap {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 6px 0;
+            flex: 1;
+            min-height: 0;
+        }
+        .diagram-wrap svg {
+            width: 100%;
+            height: auto;
+            max-height: 48vh;
+            max-width: 900px;
+        }
+
+        .badge-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 14px 0;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: var(--surface-2);
+            border: 1px solid var(--border-soft);
+            color: var(--text);
+        }
+        .badge svg {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .test-banner {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-family: var(--mono);
+            font-size: 15px;
+            color: var(--bg);
+            background: var(--accent-3);
+            padding: 5px 14px;
+            border-radius: 20px;
+            margin-bottom: 18px;
+            font-weight: 700;
+            width: fit-content;
+        }
+
+        /* ---------- exam styles ---------- */
+        .q-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            min-width: 0;
+        }
+        .mc-q {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px 18px;
+            min-width: 0;
+        }
+        .mc-q-head {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+        .q-num {
+            font-family: var(--mono);
+            font-size: 15px;
+            color: var(--bg);
+            background: var(--accent-2);
+            border-radius: 5px;
+            padding: 3px 10px;
+            flex: 0 0 auto;
+            font-weight: 700;
+        }
+        .q-text {
+            margin: 0;
+            font-size: 17px;
+            line-height: 1.5;
+        }
+        .options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            min-width: 0;
+        }
+        .opt {
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+            font-size: 16px;
+            line-height: 1.4;
+            background: var(--surface-2);
+            border: 1px solid var(--border-soft);
+            border-radius: 7px;
+            padding: 8px 10px;
+            min-width: 0;
+        }
+        .opt-letter {
+            font-family: var(--mono);
+            font-weight: 700;
+            color: var(--accent);
+            flex: 0 0 auto;
+        }
+
+        .id-item {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 18px;
+            min-width: 0;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .id-item .num {
+            color: var(--accent-2);
+            font-weight: 700;
+            font-family: var(--mono);
+            margin-right: 6px;
+        }
+        .id-item .blank {
+            color: var(--muted-2);
+            font-family: var(--mono);
+            margin-top: 6px;
+            border-top: 1px dashed var(--border-soft);
+            padding-top: 6px;
+        }
+
+        .guess-q {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px 18px;
+            min-width: 0;
+        }
+        .guess-q .code-snip {
+            background: #0a0e13;
+            border-radius: 6px;
+            padding: 12px 14px;
+            font-family: var(--mono);
+            font-size: 16px;
+            white-space: pre-wrap;
+            margin: 8px 0;
+            border: 1px solid var(--border-soft);
+            color: var(--text);
+        }
+        .guess-q .output-blank {
+            color: var(--muted-2);
+            font-family: var(--mono);
+            border-top: 1px dashed var(--border-soft);
+            padding-top: 6px;
+            margin-top: 6px;
+        }
+        .mc-stack,
+        .guess-stack {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-rows: repeat(2, minmax(0, 1fr));
+            grid-auto-flow: column;
+            gap: 16px;
+        }
+
+        .recap-list {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px 28px;
+        }
+        .recap-item {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            font-size: 16px;
+            line-height: 1.55;
+        }
+        .recap-item .tick {
+            color: var(--accent-2);
+            font-weight: 700;
+            flex: 0 0 auto;
+            font-size: 18px;
+        }
+
+        .answers-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 26px;
+            min-width: 0;
+        }
+        .answers-col h3 {
+            font-family: var(--mono);
+            color: var(--accent);
+            font-size: 17px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+            margin: 0 0 12px 0;
+        }
+        .ans-row {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 9px;
+        }
+        .ans-row b {
+            color: var(--accent-2);
+            font-family: var(--mono);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: #000000aa;
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.open {
+            display: flex;
+        }
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 28px 32px;
+            width: min(560px, 90vw);
+            font-size: 16px;
+        }
+        .modal h2 {
+            font-family: var(--mono);
+            margin: 0 0 18px 0;
+            font-size: 20px;
+            color: var(--accent-2);
+        }
+        .modal .row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-soft);
+            font-size: 16px;
+        }
+        .modal .row:last-child {
+            border-bottom: none;
+        }
+        .modal kbd {
+            font-family: var(--mono);
+            background: var(--surface-2);
+            border: 1px solid var(--border-soft);
+            border-radius: 5px;
+            padding: 2px 9px;
+            font-size: 16px;
+        }
+        .modal .close-hint {
+            margin-top: 16px;
+            color: var(--muted);
+            font-size: 15px;
+            text-align: center;
+        }
+
+        .flow-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .flow-step {
+            display: flex;
+            gap: 14px;
+            align-items: center;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 16px;
+        }
+        .flow-step .num {
+            font-family: var(--mono);
+            font-weight: 700;
+            color: var(--bg);
+            background: var(--accent);
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            font-size: 16px;
+        }
+        .flow-step p {
+            margin: 0;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .closing-wrap {
+            text-align: center;
+            max-width: 70ch;
+            margin: 0 auto;
+        }
+        .closing-wrap .quote {
+            font-size: 22px;
+            font-style: italic;
+            color: var(--text);
+            line-height: 1.5;
+            margin-bottom: 14px;
+        }
+        .closing-wrap .who {
+            font-size: 16px;
+            color: var(--muted);
+            margin-bottom: 26px;
+        }
+        .closing-wrap .bye {
+            font-family: var(--mono);
+            font-size: 26px;
+            color: var(--accent-2);
+            font-weight: 700;
+        }
+        .closing-wrap svg {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 18px auto;
+            display: block;
+        }
+
+        .center-col {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+
+        /* ---------- exam part-divider slides ---------- */
+        .divider-wrap {
+            text-align: center;
+            max-width: 680px;
+            margin: 0 auto;
+        }
+        .divider-wrap .eyebrow {
+            justify-content: center;
+        }
+        .divider-wrap .test-banner {
+            margin: 0 auto 18px auto;
+        }
+        .divider-wrap h1.title {
+            margin-bottom: 10px;
+        }
+        .divider-wrap .subtitle {
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .divider-num {
+            font-family: var(--mono);
+            font-size: 64px;
+            font-weight: 700;
+            color: var(--accent-soft);
+            -webkit-text-stroke: 1.5px var(--accent);
+            line-height: 1;
+            margin-bottom: 6px;
+        }
+
+        .row-fixed {
+            height: min(560px, 62vh);
+            min-height: 0;
+        }
+        .stretch {
+            align-items: stretch;
+            height: 100%;
+            min-height: 0;
+        }
+
+        .table-wrap {
+            background: var(--surface);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            overflow: auto;
+            padding: 0;
+        }
+        .table-wrap table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 16px;
+        }
+        .table-wrap th {
+            background: var(--surface-2);
+            text-align: left;
+            padding: 12px 16px;
+            font-family: var(--mono);
+            font-size: 16px;
+            color: var(--accent);
+            border-bottom: 1px solid var(--border);
+        }
+        .table-wrap td {
+            padding: 11px 16px;
+            border-bottom: 1px solid var(--border-soft);
+            font-size: 16px;
+            color: var(--text);
+            vertical-align: top;
+        }
+        .table-wrap tr:last-child td {
+            border-bottom: none;
+        }
+
+        .quote-card {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 24px 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            height: 100%;
+        }
+        .quote-card .mark-q {
+            font-family: var(--mono);
+            font-size: 40px;
+            color: var(--accent);
+            line-height: 1;
+        }
+        .quote-card p {
+            font-size: 18px;
+            line-height: 1.6;
+            font-style: italic;
+            color: var(--text);
+            margin: 0;
+        }
+        .quote-card .who {
+            font-size: 16px;
+            color: var(--muted);
+            font-style: normal;
+        }
+
+        .hero-wrap {
+            display: flex;
+            align-items: center;
+            gap: 48px;
+            height: 100%;
+        }
+        .hero-text {
+            flex: 1.1;
+            min-width: 0;
+        }
+        .hero-title {
+            font-family: var(--mono);
+            font-weight: 800;
+            font-size: clamp(32px, 5.4vw, 60px);
+            line-height: 1.08;
+            margin: 0 0 18px 0;
+            letter-spacing: -0.02em;
+        }
+        .hero-title .hl {
+            color: var(--accent);
+        }
+        .hero-sub {
+            font-size: 18px;
+            color: var(--muted);
+            max-width: 52ch;
+            line-height: 1.6;
+            margin-bottom: 26px;
+        }
+        .hero-art {
+            flex: 0.9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 0;
+        }
+        .hero-art svg {
+            width: 100%;
+            max-width: 420px;
+            height: auto;
+        }
+
+        @media (max-width: 1100px) {
+            .answers-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 900px) {
+            .grid-2,
+            .grid-3,
+            .grid-4,
+            .grid-5 {
+                grid-template-columns: 1fr;
+            }
+            .recap-list {
+                grid-template-columns: 1fr;
+            }
+            .options {
+                grid-template-columns: 1fr;
+            }
+            .mc-stack,
+            .guess-stack {
+                grid-template-columns: 1fr;
+                grid-template-rows: none;
+                grid-auto-flow: row;
+            }
+            .hero-wrap {
+                flex-direction: column;
+            }
+            .hero-art {
+                order: -1;
+            }
+            .row-fixed {
+                height: auto;
+            }
+            .slide.exam .slide-inner {
+                padding-top: clamp(12px, 2vh, 24px);
+            }
+            .chrome-top .counter {
+                font-size: 14px;
+            }
+            .chrome-bottom .seg {
+                font-size: 13px;
+            }
+            .chrome-bottom kbd {
+                font-size: 13px;
+            }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .slide {
+                transition: opacity .01s linear !important;
+                transform: none !important;
+            }
+            .progress-fill {
+                transition: none !important;
+            }
+            h1.title .cursor {
+                animation: none !important;
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="chrome-top">
+        <div class="win-dots"><span></span><span></span><span></span></div>
+        <div class="file-tab"><span class="dot"></span><span id="tabName">architecture_review.py</span></div>
+        <div class="spacer"></div>
+        <div class="counter" id="slideCounter">1 / 1</div>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+    <div class="deck" id="deck"></div>
+
+    <div class="chrome-bottom">
+        <div class="seg"><span>Program &amp; Project Architecture · Exam</span></div>
+        <div class="seg"><span>Right-click / <kbd>→</kbd> next</span><span><kbd>?</kbd> shortcuts</span></div>
+    </div>
+
+    <div class="modal-overlay" id="shortcutsModal">
+        <div class="modal">
+            <h2>Keyboard &amp; Mouse Shortcuts</h2>
+            <div class="row"><span>Next slide</span><span><kbd>→</kbd> / <kbd>Right-click</kbd> / <kbd>Mouse4</kbd></span></div>
+            <div class="row"><span>Previous slide</span><span><kbd>←</kbd> / <kbd>Mouse3</kbd></span></div>
+            <div class="row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+            <div class="row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+            <div class="row"><span>Show/hide this panel</span><span><kbd>?</kbd></span></div>
+            <div class="row"><span>Close panel</span><span><kbd>Esc</kbd></span></div>
+            <div class="row"><span>Swipe (mobile)</span><span>Left = next · Right = prev</span></div>
+            <div class="close-hint">Click outside this box, or press Esc, to close.</div>
+        </div>
+    </div>
+
+    <script>
+        // ------------------------------------------------------------
+        // ICON helpers
+        // ------------------------------------------------------------
+        const I = {
+            layers: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img"><title>Layers</title><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>',
+            blocks: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img"><title>Blocks</title><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+            target: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2" role="img"><title>Target</title><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>',
+            gear: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img"><title>Gear</title><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 0 1-4 0v-.09A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 0 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3a2 2 0 0 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 0 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>',
+            repeat: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img"><title>DRY</title><path d="M17 2l4 4-4 4"/><path d="M3 12v-2a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 12v2a4 4 0 0 1-4 4H3"/></svg>',
+            feather: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img"><title>KISS</title><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><path d="M16 8L2 22"/><path d="M17.5 15H9"/></svg>',
+            unlink: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img"><title>Loose coupling</title><rect x="2" y="9" width="6" height="6" rx="1.5"/><rect x="16" y="9" width="6" height="6" rx="1.5"/><path d="M8 12h2M14 12h2" stroke-dasharray="2 2"/></svg>',
+            magnet: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img"><title>High cohesion</title><path d="M6 15v-4a6 6 0 1 1 12 0v4"/><path d="M6 15h4v4H6zM14 15h4v4h-4z"/></svg>',
+            server: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img"><title>Server</title><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><path d="M7 7h.01M7 17h.01"/></svg>',
+            db: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img"><title>Database</title><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/></svg>',
+            api: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img"><title>API</title><rect x="3" y="8" width="18" height="8" rx="2"/><path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2M7 12h.01M12 12h.01M17 12h.01"/></svg>',
+            cloud: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img"><title>Cloud</title><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A5 5 0 0 0 6.5 19h11Z"/></svg>',
+            bolt: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img"><title>Event</title><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/></svg>',
+            check: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img"><title>Check</title><path d="M20 6 9 17l-5-5"/></svg>',
+            party: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img"><title>Celebration</title><path d="M5.8 11.3 2 22l10.7-3.8"/><path d="M4 3l1.5 1.5M11 2l.5 2M18 5l1.5 1.5"/><path d="M14.5 4.5a5 5 0 0 1 5 5c0 4-5 9.5-5 9.5s-2-2.2-3.5-4.8"/></svg>',
+            chip: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img"><title>Chip</title><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>',
+            quoteMark: '<svg viewBox="0 0 24 24" fill="var(--accent)" role="img"><title>Quote</title><path d="M3 17c0-4 2-7 6-9l1 2c-2.5 1.3-3.7 3-4 5h4v5H3v-3Zm11 0c0-4 2-7 6-9l1 2c-2.5 1.3-3.7 3-4 5h4v5h-7v-3Z"/></svg>',
+        };
+
+        function badge(label, color, svg) {
+            return '<span class="badge">' + svg + label + '</span>';
+        }
+
+        // ------------------------------------------------------------
+        // Syntax highlighting (single-pass)
+        // ------------------------------------------------------------
+        function escapeHtml(s) {
+            return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        function highlightPython(code) {
+            var keywords = ["def", "return", "if", "else", "elif", "for", "while", "in", "import", "from", "class",
+                "pass", "None", "True", "False", "and", "or", "not", "is", "as", "with", "try", "except", "finally",
+                "raise", "yield", "lambda", "global", "assert", "break", "continue"
+            ];
+            var kwPattern = keywords.join("|");
+            var tokenRe = new RegExp(
+                "(#[^\\n]*)" +
+                "|(\"\"\"[\\s\\S]*?\"\"\"|'''[\\s\\S]*?'''|\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*')" +
+                "|(@[A-Za-z_][A-Za-z0-9_.]*)" +
+                "|\\b(" + kwPattern + ")\\b" +
+                "|\\b([A-Za-z_][A-Za-z0-9_]*)(?=\\()" +
+                "|\\b(\\d+\\.?\\d*)\\b",
+                "g"
+            );
+            var result = "",
+                lastIndex = 0,
+                m;
+            while ((m = tokenRe.exec(code))) {
+                result += escapeHtml(code.slice(lastIndex, m.index));
+                if (m[1]) result += '<span class="tok-comment">' + escapeHtml(m[1]) + '</span>';
+                else if (m[2]) result += '<span class="tok-string">' + escapeHtml(m[2]) + '</span>';
+                else if (m[3]) result += '<span class="tok-decorator">' + escapeHtml(m[3]) + '</span>';
+                else if (m[4]) result += '<span class="tok-keyword">' + escapeHtml(m[4]) + '</span>';
+                else if (m[5]) result += '<span class="tok-func">' + escapeHtml(m[5]) + '</span>';
+                else if (m[6]) result += '<span class="tok-number">' + escapeHtml(m[6]) + '</span>';
+                lastIndex = tokenRe.lastIndex;
+            }
+            result += escapeHtml(code.slice(lastIndex));
+            return result;
+        }
+
+        function highlightTemplate(code) {
+            var tokenRe = /(#[^\n]*)|(\{#[\s\S]*?#\})|(\{%[\s\S]*?%\})|(\{\{[\s\S]*?\}\})|(<\/?[a-zA-Z][a-zA-Z0-9-]*(?:\s+[a-zA-Z-]+(?:="[^"]*")?)*\s*\/?>)/g;
+            var result = "",
+                lastIndex = 0,
+                m;
+            while ((m = tokenRe.exec(code))) {
+                result += escapeHtml(code.slice(lastIndex, m.index));
+                if (m[1]) result += '<span class="tok-comment">' + escapeHtml(m[1]) + '</span>';
+                else if (m[2]) result += '<span class="tok-comment">' + escapeHtml(m[2]) + '</span>';
+                else if (m[3]) result += '<span class="tok-decorator">' + escapeHtml(m[3]) + '</span>';
+                else if (m[4]) result += '<span class="tok-string">' + escapeHtml(m[4]) + '</span>';
+                else if (m[5]) result += '<span class="tok-keyword">' + escapeHtml(m[5]) + '</span>';
+                lastIndex = tokenRe.lastIndex;
+            }
+            result += escapeHtml(code.slice(lastIndex));
+            return result;
+        }
+
+        function codePanel(title, lang, code, rawId) {
+            var id = 'code_' + rawId;
+            var fn = (lang === 'python') ? highlightPython : highlightTemplate;
+            return '<div class="code-block">' +
+                '<div class="code-header"><span class="code-lang">' + title + '</span><button class="copy-btn" data-target="' + id +
+                '">Copy</button></div>' +
+                '<div class="code-scroll"><pre class="code-content" id="' + id + '">' + fn(code) + '</pre></div>' +
+                '</div>';
+        }
+
+        // ------------------------------------------------------------
+        // Slide builder
+        // ------------------------------------------------------------
+        var SLIDES = [];
+
+        // 1: TITLE
+        SLIDES.push(function() {
+            return '<div class="slide-inner"><div class="hero-wrap">' +
+                '<div class="hero-text">' +
+                '<div class="eyebrow"><span class="mark">' + I.layers + '</span>Integrative Programming · Summative Exam</div>' +
+                '<h1 class="hero-title">Program &amp; <span class="hl">Project</span><br>Architecture</h1>' +
+                '<p class="hero-sub">40-question exam · 10 MCQ · 20 Identification · 8 Guess the Output · 2 Scenario Application<br>All concepts from the architecture module, plus Python dunder methods and Django essentials.</p>' +
+                '<div class="badge-row">' +
+                badge('Python', '#58a6ff',
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="#58a6ff" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>') +
+                badge('Django', '#7ee787',
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="#7ee787" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 8h8M8 12h6M8 16h4"/></svg>') +
+                badge('MVC', '#d29922',
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="#d29922" stroke-width="2"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="9" y="15" width="6" height="6" rx="1"/><path d="M6 9v4h12V9"/></svg>') +
+                badge('REST', '#f78166',
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="#f78166" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h6M8 16h4"/></svg>') +
+                '</div></div>' +
+                '<div class="hero-art">' +
+                '<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Isometric architecture layers"><title>Isometric architecture layers</title><g opacity="0.9"><polygon points="200,60 340,120 200,180 60,120" fill="var(--surface-2)" stroke="var(--accent)" stroke-width="2.5"/><polygon points="200,150 340,210 200,270 60,210" fill="var(--surface-2)" stroke="var(--accent-3)" stroke-width="2.5"/><polygon points="200,240 340,300 200,360 60,300" fill="var(--surface-2)" stroke="var(--accent-2)" stroke-width="2.5"/><line x1="60" y1="120" x2="60" y2="210" stroke="var(--muted-2)" stroke-width="1.5"/><line x1="340" y1="120" x2="340" y2="210" stroke="var(--muted-2)" stroke-width="1.5"/><line x1="60" y1="210" x2="60" y2="300" stroke="var(--muted-2)" stroke-width="1.5"/><line x1="340" y1="210" x2="340" y2="300" stroke="var(--muted-2)" stroke-width="1.5"/><text x="200" y="124" text-anchor="middle" fill="var(--accent)" font-size="16" font-family="var(--mono)">Presentation</text><text x="200" y="214" text-anchor="middle" fill="var(--accent-3)" font-size="16" font-family="var(--mono)">Logic</text><text x="200" y="304" text-anchor="middle" fill="var(--accent-2)" font-size="16" font-family="var(--mono)">Data</text></g></svg>' +
+                '</div></div></div>';
+        });
+
+        // 2: WHAT IS ARCHITECTURE
+        SLIDES.push(function() {
+            return '<div class="slide-inner">' +
+                '<div class="eyebrow"><span class="mark">' + I.blocks + '</span>Foundations</div>' +
+                '<h1 class="title">What Is <span class="hl">Architecture</span> in Software?</h1>' +
+                '<p class="subtitle">The high-level structure of a system: how it is broken into parts, how those parts communicate, and the principles that guide their design.</p>' +
+                '<div class="grid-2">' +
+                '<div class="card"><h3>' + I.target + ' Program Architecture</h3><p>The internal structure of <strong>one</strong> application — e.g. MVC pattern inside a Django app.</p></div>' +
+                '<div class="card"><h3>' + I.server + ' Project / System Architecture</h3><p>The bigger picture — how multiple services, servers, databases, and third-party systems interact as a whole.</p></div>' +
+                '</div></div>';
+        });
+
+        // 3: WHY ARCHITECTURE MATTERS
+        SLIDES.push(function() {
+            var items = [
+                [I.gear, 'Maintainability', 'Easier to fix bugs and add features.'],
+                [I.target, 'Scalability', 'System grows with more users without collapsing.'],
+                [I.repeat, 'Reusability', 'Components can be reused across projects.'],
+                [I.check, 'Testability', 'Isolated components are easier to test.'],
+                [I.unlink, 'Integration', 'Different systems connect cleanly — core theme of this course.']
+            ];
+            var cards = items.map(function(i) {
+                return '<div class="card"><h3>' + i[0] + i[1] + '</h3><p>' + i[2] + '</p></div>';
+            }).join('');
+            return '<div class="slide-inner">' +
+                '<div class="eyebrow"><span class="mark">' + I.target + '</span>Foundations</div>' +
+                '<h1 class="title">Why Architecture <span class="hl">Matters</span></h1>' +
+                '<div class="grid-3">' + cards + '</div></div>';
+        });
+
+        // 4: CORE PRINCIPLES
+        SLIDES.push(function() {
+            return '<div class="slide-inner">' +
+                '<div class="eyebrow"><span class="mark">' + I.gear + '</span>Foundations</div>' +
+                '<h1 class="title">Core Design <span class="hl">Principles</span></h1>' +
+                '<p class="subtitle">These explain why the patterns look the way they do.</p>' +
+                '<div class="grid-2">' +
+                '<div class="card"><h3>' + I.unlink + 'Separation of Concerns (SoC)</h3><p>Each part handles one responsibility — don\'t mix database code with UI code.</p></div>' +
+                '<div class="card"><h3>' + I.repeat + 'DRY</h3><p>Don\'t Repeat Yourself — avoid duplicating logic; centralize it.</p></div>' +
+                '<div class="card"><h3>' + I.feather + 'KISS</h3><p>Keep It Simple, Stupid — avoid unnecessary complexity.</p></div>' +
+                '<div class="card"><h3>' + I.unlink + 'Loose Coupling</h3><p>Components depend on each other as little as possible.</p></div>' +
+                '<div class="card"><h3>' + I.magnet + 'High Cohesion</h3><p>Related logic is grouped together.</p></div>' +
+                '<div class="card"><h3>' + I.gear + 'SOLID</h3><p><strong>S</strong>ingle Responsibility · <strong>O</strong>pen/Closed · <strong>L</strong>iskov Substitution · <strong>I</strong>nterface Segregation · <strong>D</strong>ependency Inversion</p></div>' +
+                '</div></div>';
+        });
+
+        // 5: CLIENT-SERVER
+        SLIDES.push(function() {
+            return '<div class="slide-inner">' +
+                '<div class="eyebrow"><span class="mark">' + I.server + '</span>Foundational Model</div>' +
+                '<h1 class="title">The <span class="hl">Client-Server</span> Model</h1>' +
+                '<p class="subtitle">Nearly every web architecture pattern sits on top of this base model.</p>' +
+                '<div class="diagram-wrap">' +
+                '<svg viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Client-server diagram"><title>Client-server model</title><rect x="30" y="55" width="160" height="80" rx="14" fill="var(--surface-2)" stroke="var(--accent)" stroke-width="2"/><text x="110" y="95" text-anchor="middle" fill="var(--accent)" font-size="16" font-family="var(--mono)">CLIENT</text><text x="110" y="118" text-anchor="middle" fill="var(--muted)" font-size="14">Browser / Mobile</text><rect x="530" y="55" width="160" height="80" rx="14" fill="var(--surface-2)" stroke="var(--accent-3)" stroke-width="2"/><text x="610" y="95" text-anchor="middle" fill="var(--accent-3)" font-size="16" font-family="var(--mono)">SERVER</text><text x="610" y="118" text-anchor="middle" fill="var(--muted)" font-size="14">Web / App Server</text><rect x="530" y="165" width="160" height="55" rx="12" fill="var(--surface-2)" stroke="var(--accent-2)" stroke-width="2"/><text x="610" y="197" text-anchor="middle" fill="var(--accent-2)" font-size="16" font-family="var(--mono)">DATABASE</text><line x1="190" y1="85" x2="525" y2="85" stroke="var(--accent)" stroke-width="2" marker-end="url(#cs1)"/><text x="360" y="72" text-anchor="middle" fill="var(--muted)" font-size="14">HTTP Request</text><line x1="525" y1="115" x2="190" y2="115" stroke="var(--muted-2)" stroke-width="2" marker-end="url(#cs2)"/><text x="360" y="138" text-anchor="middle" fill="var(--muted)" font-size="14">HTTP Response</text><line x1="610" y1="135" x2="610" y2="160" stroke="var(--muted-2)" stroke-width="2" marker-end="url(#cs3)"/><defs><marker id="cs1" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="var(--accent)"/></marker><marker id="cs2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="var(--muted-2)"/></marker><marker id="cs3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="var(--muted-2)"/></marker></defs></svg>' +
+                '</div></div>';
+        });
+
+        // 6: THREE-TIER
+        SLIDES.push(function() {
+            return '<div class="slide-inner">' +
+                '<div class="eyebrow"><span class="mark">' + I.layers + '</span>Tiered Architectures</div>' +
+                '<h1 class="title">Three-Tier <span class="hl">Architecture</span></h1>' +
+                '<p class="subtitle">The most common architecture for web systems — each tier is a separate layer.</p>' +
+                '<div class="table-wrap"><table><thead><tr><th>Tier</th><th>Responsibility</th><th>Web Examples</th></tr></thead><tbody>' +
+                '<tr><td><strong>1. Presentation</strong></td><td>UI — what the user sees</td><td>HTML/CSS/JS, React</td></tr>' +
+                '<tr><td><strong>2. Application / Logic</strong></td><td>Business rules, processing, validation</td><td>Django, Node.js/Express</td></tr>' +
+                '<tr><td><strong>3. Data</strong></td><td>Storage and retrieval</td><td>MySQL, PostgreSQL</td></tr>' +
+                '</tbody></table></div></div>';
+        });
+
+        // 7: MVC
+        SLIDES.push(function() {
+            return '<div class="slide-inner">' +
+                '<div class="eyebrow"><span class="mark">' + I.chip + '</span>Program Architecture</div>' +
+                '<h1 class="title"><span class="hl">MVC</span> — Model-View-Controller</h1>' +
+                '<p class="subtitle">The most widely used pattern in web frameworks: Django, Rails, Spring MVC.</p>' +
+                '<div class="grid-2 row-fixed stretch">' +
+                '<div class="diagram-wrap" style="height:100%;">' +
+                '<svg viewBox="0 0 500 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MVC diagram"><title>MVC pattern</title><rect x="170" y="20" width="160" height="60" rx="12" fill="var(--surface-2)" stroke="var(--accent)" stroke-width="2"/><text x="250" y="48" text-anchor="middle" fill="var(--accent)" font-size="16" font-family="var(--mono)">CONTROLLER</text><text x="250" y="66" text-anchor="middle" fill="var(--muted)" font-size="14">Receives input</text><rect x="40" y="200" width="170" height="70" rx="12" fill="var(--surface-2)" stroke="var(--accent-3)" stroke-width="2"/><text x="125" y="232" text-anchor="middle" fill="var(--accent-3)" font-size="16" font-family="var(--mono)">MODEL</text><text x="125" y="252" text-anchor="middle" fill="var(--muted)" font-size="14">Data + logic</text><rect x="290" y="200" width="170" height="70" rx="12" fill="var(--surface-2)" stroke="var(--accent-2)" stroke-width="2"/><text x="375" y="232" text-anchor="middle" fill="var(--accent-2)" font-size="16" font-family="var(--mono)">VIEW</text><text x="375" y="252" text-anchor="middle" fill="var(--muted)" font-size="14">UI / output</text><line x1="230" y1="80" x2="145" y2="195" stroke="var(--accent)" stroke-width="2" marker-end="url(#mv1)"/><line x1="270" y1="80" x2="355" y2="195" stroke="var(--accent)" stroke-width="2" marker-end="url(#mv2)"/><line x1="210" y1="235" x2="285" y2="235" stroke="var(--muted-2)" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#mv3)"/><text x="80" y="155" text-anchor="middle" fill="var(--muted)" font-size="14">updates</text><text x="420" y="155" text-anchor="middle" fill="var(--muted)" font-size="14">renders</text><defs><marker id="mv1" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="var(--accent)"/></marker><marker id="mv2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="var(--accent)"/></marker><marker id="mv3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="var(--muted-2)"/></marker></defs></svg>' +
+                '</div>' +
+                '<div style="display:flex;flex-direction:column;gap:12px;min-height:0;">' +
+                '<div class="card"><h3>Model</h3><p>Data and business logic — e.g. database interaction.</p></div>' +
+                '<div class="card"><h3>View</h3><p>What the user sees — UI templates.</p></div>' +
+                '<div class="card"><h3>Controller</h3><p>Handles user input and coordinates Model and View.</p></div>' +
+                '</div></div></div>';
+        });
+
+        // 8: MVVM & MVP
+        SLIDES.push(function() {
+            return '<div class="slide-inner">' +
+                '<div class="eyebrow"><span class="mark">' + I.chip + '</span>Program Architecture</div>' +
+                '<h1 class="title"><span class="hl">MVVM</span> &amp; <span class="hl">MVP</span></h1>' +
+                '<p class="subtitle">Two relatives of MVC, each moving UI logic to a different place.</p>' +
+                '<div class="grid-2">' +
+                '<div class="card"><h3>MVVM — Model-View-ViewModel</h3><p>Common in Vue, Angular, React with state managers. The <strong>ViewModel</strong> binds Model to View via two-way data binding — View updates automatically.</p></div>' +
+                '<div class="card"><h3>MVP — Model-View-Presenter</h3><p>The <strong>Presenter</strong> holds all UI logic while the View stays passive ("dumb"), just displaying what the Presenter tells it.</p></div>' +
+                '</div></div>';
+        });
+
+        // 9: MONOLITHIC
+        SLIDES.push(function() {
+            return '<div class="slide-inner">' +
+                '<div class="eyebrow"><span class="mark">' + I.blocks + '</span>System Architecture</div>' +
+                '<h1 class="title"><span class="hl">Monolithic</span> Architecture</h1>' +
+                '<p class="subtitle">The entire application — UI, business logic, data access — is built and deployed as one single unit.</p>' +
+                '<div class="grid-2">' +
+                '<div class="card"><h3>' + I.check + ' Pros</h3><ul><li>Simple to develop, test, and deploy initially</li><li>Easy for small teams</li></ul></div>' +
+                '<div class="card"><h3>' + I.gear + ' Cons</h3><ul><li>Hard to scale specific parts</li><li>One bug can bring down the whole app</li><li>Harder to adopt new tech gradually</li></ul></div>' +
+                '</div></div>';
+        });
+
+        // 10: MICROSERVICES
+        SLIDES.push(function() {
+            return '<div class="slide-inner">' +
+                '<div class="eyebrow"><span class="mark">' + I.blocks + '</span>System Architecture</div>' +
+                '<h1 class="title"><span class="hl">Microservices</span> Architecture</h1>' +
+                '<p class="subtitle">The application splits into small, independent services, each owning one business capability.</p>' +
+                '<div class="grid-2">' +
+                '<div class="card"><h3>' + I.check + ' Pros</h3><ul><li>Each service deployed and scaled independently</li><li>Different tech stacks possible</li><li>Failure isolation</li></ul></div>' +
+                '<div class="card"><h3>' + I.gear + ' Cons</h3><ul><li>Complex to manage (networking, deployment)</li><li>Needs strong DevOps practices</li><li>Data consistency across services is harder</li></ul></div>' +
+                '</div></div>';
+        });
+
+        // 11: SOA, SERVERLESS, EVENT-DRIVEN
+        SLIDES.push(function() {
+            return '<div class="slide-inner">' +
+                '<div class="eyebrow"><span class="mark">' + I.cloud + '</span>System Architecture</div>' +
+                '<h1 class="title">SOA · Serverless · <span class="hl">Event-Driven</span></h1>' +
+                '<div class="grid-3">' +
+                '<div class="card"><h3>' + I.api + ' SOA</h3><p>Service-Oriented Architecture — larger, shared services communicate through an Enterprise Service Bus (ESB). Predecessor to microservices.</p></div>' +
+                '<div class="card"><h3>' + I.cloud + ' Serverless</h3><p>Code runs in stateless functions (AWS Lambda, Azure Functions). No server management, auto-scaling, pay-per-execution.</p></div>' +
+                '<div class="card"><h3>' + I.bolt + ' Event-Driven</h3><p>Components communicate by producing and reacting to events via a message broker (Kafka, RabbitMQ). Real-time, decoupled systems.</p></div>' +
+                '</div></div>';
+        });
+
+        // 12: REST
+        SLIDES.push(function() {
+            return '<div class="slide-inner">' +
+                '<div class="eyebrow"><span class="mark">' + I.api + '</span>API-Centric Architecture</div>' +
+                '<h1 class="title"><span class="hl">RESTful</span> Architecture</h1>' +
+                '<p class="subtitle">Uses standard HTTP methods to act on resources. Stateless, resource-based URLs, standard status codes, typically JSON.</p>' +
+                '<div class="table-wrap"><table><thead><tr><th>Method</th><th>Action</th><th>Example</th></tr></thead><tbody>' +
+                '<tr><td><strong>GET</strong></td><td>Read</td><td><span class="inline">GET /api/students</span></td></tr>' +
+                '<tr><td><strong>POST</strong></td><td>Create</td><td><span class="inline">POST /api/students</span></td></tr>' +
+                '<tr><td><strong>PUT / PATCH</strong></td><td>Update</td><td><span class="inline">PUT /api/students/5</span></td></tr>' +
+                '<tr><td><strong>DELETE</strong></td><td>Delete</td><td><span class="inline">DELETE /api/students/5</span></td></tr>' +
+                '</tbody></table></div></div>';
+        });
+
+        // 13: HOW TO CHOOSE
+        SLIDES.push(function() {
+            var qs = [
+                'How big is the team / project? — small team leans monolithic/MVC; large team leans microservices.',
+                'Do we expect rapid scaling? — yes points to microservices or serverless.',
+                'How complex is the domain? — many business units points to microservices or SOA.',
+                'What\'s the DevOps maturity? — low maturity should avoid microservices.',
+                'Do we need real-time features? — consider event-driven architecture and WebSockets.',
+                'Are we integrating multiple external systems? — focus on a well-designed API layer.'
+            ];
+            var items = qs.map(function(q, i) {
+                return '<div class="flow-step"><span class="num">' + (i + 1) + '</span><p>' + q + '</p></div>';
+            }).join('');
+            return '<div class="slide-inner">' +
+                '<div class="eyebrow"><span class="mark">' + I.target + '</span>Decision Guide</div>' +
+                '<h1 class="title">How to <span class="hl">Choose</span> an Architecture</h1>' +
+                '<div class="flow-steps">' + items + '</div></div>';
+        });
+
+        // 14: PYTHON DUNDER METHODS
+        SLIDES.push(function() {
+            var rows = [
+                ['<span class="inline">__init__</span>', 'Constructor — initializes object'],
+                ['<span class="inline">__str__</span>', 'String representation for users (<span class="inline">print()</span>)'],
+                ['<span class="inline">__repr__</span>', 'String representation for developers'],
+                ['<span class="inline">__len__</span>', 'Length of object (<span class="inline">len()</span>)'],
+                ['<span class="inline">__getitem__</span>', 'Indexing/slicing (<span class="inline">obj[key]</span>)'],
+                ['<span class="inline">__eq__</span>', 'Equality comparison (<span class="inline">==</span>)'],
+                ['<span class="inline">__lt__</span>', 'Less than comparison (<span class="inline">&lt;</span>)'],
+                ['<span class="inline">__add__</span>', 'Addition (<span class="inline">+</span>)'],
+                ['<span class="inline">__call__</span>', 'Object callable like a function'],
+                ['<span class="inline">__enter__</span> / <span class="inline">__exit__</span>', 'Context manager (<span class="inline">with</span>)']
+            ];
+            var tableRows = rows.map(function(r) {
+                return '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>';
+            }).join('');
+            return '<div class="slide-inner">' +
+                '<div class="eyebrow"><span class="mark">' + I.gear + '</span>Python Essentials</div>' +
+                '<h1 class="title">Python <span class="hl">Dunder</span> Methods</h1>' +
+                '<p class="subtitle">Special methods with double underscores — define how objects behave with built-in operations.</p>' +
+                '<div class="table-wrap"><table><thead><tr><th style="width:30%">Method</th><th>Purpose</th></tr></thead><tbody>' +
+                tableRows +
+                '</tbody></table></div></div>';
+        });
+
+        // 15: DUNDER EXAMPLE
+        SLIDES.push(function() {
+            var code =
+                'class Task:\n' +
+                '    def __init__(self, title, priority=1):\n' +
+                '        self.title = title\n' +
+                '        self.priority = priority\n' +
+                '        self.completed = False\n' +
+                '\n' +
+                '    def __str__(self):\n' +
+                '        return f"{self.title} (Priority: {self.priority})"\n' +
+                '\n' +
+                '    def __repr__(self):\n' +
+                '        return f"Task(\'{self.title}\', {self.priority})"\n' +
+                '\n' +
+                '    def __eq__(self, other):\n' +
+                '        if not isinstance(other, Task): return False\n' +
+                '        return self.title == other.title\n' +
+                '\n' +
+                '    def __lt__(self, other):\n' +
+                '        return self.priority < other.priority\n' +
+                '\n' +
+                '# Usage\n' +
+                't1 = Task("Learn Django", 2)\n' +
+                't2 = Task("Build a project", 1)\n' +
+                'print(t1)              # Uses __str__\n' +
+                'print(repr(t1))        # Uses __repr__\n' +
+                'print(t1 == t2)        # Uses __eq__\n' +
+                'print(t1 < t2)         # Uses __lt__ (False)';
+            return '<div class="slide-inner">' +
+                '<div class="eyebrow"><span class="mark">' + I.gear + '</span>Python Essentials</div>' +
+                '<h1 class="title">Dunder Methods — <span class="hl">Example</span></h1>' +
+                '<div class="row-fixed stretch">' +
+                codePanel('task.py · dunder methods', 'python', code, 'dunder_example') +
+                '</div></div>';
+        });
+
+        // 16: DJANGO ESSENTIALS
+        SLIDES.push(function() {
+            return '<div class="slide-inner">' +
+                '<div class="eyebrow"><span class="mark">' + I.layers + '</span>Django Essentials</div>' +
+                '<h1 class="title">Django — <span class="hl">Key Concepts</span></h1>' +
+                '<div class="grid-2">' +
+                '<div class="card"><h3>Project vs App</h3><p><strong>Project</strong> = entire website. <strong>App</strong> = specific functionality within it. One project can have multiple apps.</p></div>' +
+                '<div class="card"><h3>Views + URLs</h3><p><span class="inline">views.py</span> contains functions that handle requests. <span class="inline">urls.py</span> maps URLs to views.</p></div>' +
+                '<div class="card"><h3>Templates</h3><p>HTML with Django templating — <span class="inline">{{ variable }}</span> for output, <span class="inline">{% for %}</span> for loops, <span class="inline">{% extends %}</span> for inheritance.</p></div>' +
+                '<div class="card"><h3>Sessions</h3><p><span class="inline">request.session</span> — per-user dictionary storage. Always check with <span class="inline">.get(key, default)</span>.</p></div>' +
+                '</div></div>';
+        });
+
+        // 17: DJANGO FORM FLOW
+        SLIDES.push(function() {
+            return '<div class="slide-inner">' +
+                '<div class="eyebrow"><span class="mark">' + I.layers + '</span>Django Essentials</div>' +
+                '<h1 class="title">Form Processing <span class="hl">Flow</span></h1>' +
+                '<p class="subtitle">Every form view follows this exact pattern:</p>' +
+                '<div class="flow-steps">' +
+                '<div class="flow-step"><span class="num">1</span><p><strong>GET</strong> — display a blank, unbound form</p></div>' +
+                '<div class="flow-step"><span class="num">2</span><p><strong>POST</strong> — bind data to form with <span class="inline">FormClass(request.POST)</span></p></div>' +
+                '<div class="flow-step"><span class="num">3</span><p><strong>is_valid()</strong> — validates all fields; returns <span class="inline">True</span> or <span class="inline">False</span></p></div>' +
+                '<div class="flow-step"><span class="num">4a</span><p><strong>Valid</strong> — <span class="inline">form.save()</span> (ModelForm) or process <span class="inline">cleaned_data</span>, then redirect</p></div>' +
+                '<div class="flow-step"><span class="num">4b</span><p><strong>Invalid</strong> — re-render form with errors</p></div>' +
+                '</div></div>';
+        });
+
+        // 18: DJANGO COMMANDS
+        SLIDES.push(function() {
+            var cmds = [
+                ['django-admin startproject name', 'Create a new project'],
+                ['python manage.py startapp name', 'Create a new app'],
+                ['python manage.py runserver', 'Run development server'],
+                ['python manage.py makemigrations', 'Create migration files'],
+                ['python manage.py migrate', 'Apply migrations to database'],
+                ['python manage.py dbshell', 'Open database shell'],
+                ['python manage.py shell', 'Open Django shell']
+            ];
+            var rows = cmds.map(function(c) {
+                return '<tr><td><span class="inline">' + c[0] + '</span></td><td>' + c[1] + '</td></tr>';
+            }).join('');
+            return '<div class="slide-inner">' +
+                '<div class="eyebrow"><span class="mark">' + I.layers + '</span>Django Essentials</div>' +
+                '<h1 class="title">Django <span class="hl">Commands</span></h1>' +
+                '<div class="table-wrap"><table><thead><tr><th style="width:50%">Command</th><th>Purpose</th></tr></thead><tbody>' +
+                rows +
+                '</tbody></table></div></div>';
+        });
+
+        // 19: RECAP
+        SLIDES.push(function() {
+            var items = [
+                'Program architecture = internal code organization (MVC, MVVM, MVP).',
+                'Project / system architecture = how whole systems interact (monolith, microservices, SOA).',
+                'Core principles: SoC, DRY, KISS, Loose Coupling, High Cohesion, SOLID.',
+                'Client-server is the foundation; 3-tier adds presentation, logic, data layers.',
+                'Python dunder methods (__init__, __str__, __eq__, etc.) define object behavior.',
+                'Django: project vs app, views + URLs, templates, sessions, form processing flow.'
+            ];
+            var recaps = items.map(function(p) {
+                return '<div class="recap-item"><span class="tick">✓</span><span>' + p + '</span></div>';
+            }).join('');
+            return '<div class="slide-inner">' +
+                '<div class="eyebrow"><span class="mark">' + I.check + '</span>Recap</div>' +
+                '<h1 class="title">Quick <span class="hl">Review</span></h1>' +
+                '<p class="subtitle">Key takeaways before the exam.</p>' +
+                '<div class="recap-list">' + recaps + '</div></div>';
+        });
+
+        // 20: EXAM INTRO
+        SLIDES.push(function() {
+            return '<div class="slide-inner">' +
+                '<div class="eyebrow"><span class="mark">' + I.target + '</span>Summative Exam</div>' +
+                '<div class="test-banner">📝 40 POINTS</div>' +
+                '<h1 class="title">Program &amp; Project <span class="hl">Architecture</span></h1>' +
+                '<p class="subtitle">10 Multiple Choice · 20 Identification · 8 Guess the Output · 2 Scenario Application</p>' +
+                '<div class="grid-5">' +
+                '<div class="card"><h3>Part I</h3><p>10 Multiple Choice — choose the best answer. <b>10 pts</b></p></div>' +
+                '<div class="card"><h3>Part II</h3><p>20 Identification — name the term, concept, or command. <b>20 pts</b></p></div>' +
+                '<div class="card"><h3>Part III</h3><p>8 Guess the Output — trace the code. <b>8 pts</b></p></div>' +
+                '<div class="card"><h3>Part IV</h3><p>2 Scenario — pick the best-fit architecture. <b>2 pts</b></p></div>' +
+                '</div></div>';
+        });
+
+        // 20b: PART I DIVIDER
+        SLIDES.push(function() {
+            return '<div class="slide-inner"><div class="divider-wrap">' +
+                '<div class="divider-num">I</div>' +
+                '<div class="eyebrow"><span class="mark">' + I.target + '</span>Summative Exam</div>' +
+                '<div class="test-banner">10 POINTS</div>' +
+                '<h1 class="title">Part I — <span class="hl">Multiple Choice</span></h1>' +
+                '<p class="subtitle">10 questions · choose the single best answer for each.</p>' +
+                '</div></div>';
+        });
+
+        // 21: MCQ 1-5
+        SLIDES.push(function() {
+            return '<div class="slide-inner exam">' +
+                '<div class="eyebrow"><span class="mark">' + I.target + '</span>Part I · Multiple Choice</div>' +
+                '<h1 class="title" style="font-size:clamp(24px,2.6vw,36px);">MCQ (1–4)</h1>' +
+                '<div class="q-stack mc-stack">' +
+                '<div class="mc-q"><div class="mc-q-head"><span class="q-num">1</span><p class="q-text">Which term describes the internal code structure of a single application?</p></div><div class="options"><div class="opt"><span class="opt-letter">A</span>Program architecture</div><div class="opt"><span class="opt-letter">B</span>Project architecture</div><div class="opt"><span class="opt-letter">C</span>Service mesh</div><div class="opt"><span class="opt-letter">D</span>Load balancing</div></div></div>' +
+                '<div class="mc-q"><div class="mc-q-head"><span class="q-num">2</span><p class="q-text">Which principle says related logic should be grouped together?</p></div><div class="options"><div class="opt"><span class="opt-letter">A</span>Loose coupling</div><div class="opt"><span class="opt-letter">B</span>High cohesion</div><div class="opt"><span class="opt-letter">C</span>DRY</div><div class="opt"><span class="opt-letter">D</span>KISS</div></div></div>' +
+                '<div class="mc-q"><div class="mc-q-head"><span class="q-num">3</span><p class="q-text">In MVC, which component handles user input and coordinates Model and View?</p></div><div class="options"><div class="opt"><span class="opt-letter">A</span>Model</div><div class="opt"><span class="opt-letter">B</span>View</div><div class="opt"><span class="opt-letter">C</span>Controller</div><div class="opt"><span class="opt-letter">D</span>Presenter</div></div></div>' +
+                '<div class="mc-q"><div class="mc-q-head"><span class="q-num">4</span><p class="q-text">Which architecture splits an app into small, independently deployable services?</p></div><div class="options"><div class="opt"><span class="opt-letter">A</span>Monolithic</div><div class="opt"><span class="opt-letter">B</span>3-Tier</div><div class="opt"><span class="opt-letter">C</span>Microservices</div><div class="opt"><span class="opt-letter">D</span>MVVM</div></div></div>' +
+                '</div></div>';
+        });
+
+        // 22: MCQ 5-6
+        SLIDES.push(function() {
+            return '<div class="slide-inner exam">' +
+                '<div class="eyebrow"><span class="mark">' + I.target + '</span>Part I · Multiple Choice</div>' +
+                '<h1 class="title" style="font-size:clamp(24px,2.6vw,36px);">MCQ (5–6)</h1>' +
+                '<div class="q-stack mc-stack">' +
+                '<div class="mc-q"><div class="mc-q-head"><span class="q-num">5</span><p class="q-text">Which HTTP method is used to update an existing resource in REST?</p></div><div class="options"><div class="opt"><span class="opt-letter">A</span>GET</div><div class="opt"><span class="opt-letter">B</span>POST</div><div class="opt"><span class="opt-letter">C</span>PUT / PATCH</div><div class="opt"><span class="opt-letter">D</span>DELETE</div></div></div>' +
+                '<div class="mc-q"><div class="mc-q-head"><span class="q-num">6</span><p class="q-text">In a 3-Tier architecture, which layer handles business rules, processing, and validation?</p></div><div class="options"><div class="opt"><span class="opt-letter">A</span>Presentation</div><div class="opt"><span class="opt-letter">B</span>Application/Logic</div><div class="opt"><span class="opt-letter">C</span>Data</div><div class="opt"><span class="opt-letter">D</span>Client</div></div></div>' +
+                '</div></div>';
+        });
+
+        // 22b: SCENARIO-BASED MCQ 7-10
+        SLIDES.push(function() {
+            return '<div class="slide-inner exam">' +
+                '<div class="eyebrow"><span class="mark">' + I.target + '</span>Part I · Multiple Choice</div>' +
+                '<h1 class="title" style="font-size:clamp(24px,2.6vw,36px);">MCQ (7–10) · Scenario Based</h1>' +
+                '<div class="q-stack mc-stack">' +
+                '<div class="mc-q"><div class="mc-q-head"><span class="q-num">7</span><p class="q-text">A two-person team must ship an MVP in 3 weeks with no dedicated DevOps support. Which architecture best fits?</p></div><div class="options"><div class="opt"><span class="opt-letter">A</span>Monolithic</div><div class="opt"><span class="opt-letter">B</span>Microservices</div><div class="opt"><span class="opt-letter">C</span>SOA</div><div class="opt"><span class="opt-letter">D</span>Event-Driven</div></div></div>' +
+                '<div class="mc-q"><div class="mc-q-head"><span class="q-num">8</span><p class="q-text">A large enterprise needs legacy departments to communicate through one centralized integration layer. Which architecture best fits?</p></div><div class="options"><div class="opt"><span class="opt-letter">A</span>3-Tier</div><div class="opt"><span class="opt-letter">B</span>SOA</div><div class="opt"><span class="opt-letter">C</span>Serverless</div><div class="opt"><span class="opt-letter">D</span>MVVM</div></div></div>' +
+                '<div class="mc-q"><div class="mc-q-head"><span class="q-num">9</span><p class="q-text">A company expects unpredictable traffic spikes and does not want to manage idle servers. Which architecture best fits?</p></div><div class="options"><div class="opt"><span class="opt-letter">A</span>Monolithic</div><div class="opt"><span class="opt-letter">B</span>Microservices</div><div class="opt"><span class="opt-letter">C</span>Serverless</div><div class="opt"><span class="opt-letter">D</span>SOA</div></div></div>' +
+                '<div class="mc-q"><div class="mc-q-head"><span class="q-num">10</span><p class="q-text">A startup needs checkout and recommendations to scale and deploy independently. Which architecture best fits?</p></div><div class="options"><div class="opt"><span class="opt-letter">A</span>Monolithic</div><div class="opt"><span class="opt-letter">B</span>Microservices</div><div class="opt"><span class="opt-letter">C</span>Serverless</div><div class="opt"><span class="opt-letter">D</span>2-Tier</div></div></div>' +
+                '</div></div>';
+        });
+
+        // 22c: PART II DIVIDER
+        SLIDES.push(function() {
+            return '<div class="slide-inner"><div class="divider-wrap">' +
+                '<div class="divider-num">II</div>' +
+                '<div class="eyebrow"><span class="mark">' + I.target + '</span>Summative Exam</div>' +
+                '<div class="test-banner">20 POINTS</div>' +
+                '<h1 class="title">Part II — <span class="hl">Identification</span></h1>' +
+                '<p class="subtitle">20 items · name the exact term, concept, or command being described.</p>' +
+                '</div></div>';
+        });
+
+        // 23: ID 1-5
+        SLIDES.push(function() {
+            var ids = [
+                'The architecture pattern where the entire app is built and deployed as one unit.',
+                'The design principle abbreviated "SoC".',
+                'The component in MVVM that binds the Model to the View via two-way data binding.',
+                'The predecessor of microservices that typically uses a centralized ESB.',
+                'The API style where the client specifies exactly what data it needs in a single query.'
+            ];
+            var items = ids.map(function(t, i) {
+                return '<div class="id-item"><span class="num">' + (i + 11) + '.</span>' + t +
+                    '<div class="blank">Answer: ____________</div></div>';
+            }).join('');
+            return '<div class="slide-inner exam">' +
+                '<div class="eyebrow"><span class="mark">' + I.target + '</span>Part II · Identification</div>' +
+                '<h1 class="title" style="font-size:clamp(24px,2.6vw,36px);">Identification (11–15)</h1>' +
+                '<div class="q-stack">' + items + '</div></div>';
+        });
+
+        // 24: ID 6-10
+        SLIDES.push(function() {
+            var ids = [
+                'The XML-based, strict integration protocol common in older enterprise/banking systems.',
+                'The integration style using a persistent two-way connection, ideal for chat and live dashboards.',
+                'Two well-known message brokers used to implement Event-Driven Architecture.',
+                'The Django template tag used to loop over a list, closed with <span class="inline">{% endfor %}</span>.',
+                'The Django command that applies migration files to the real database.'
+            ];
+            var items = ids.map(function(t, i) {
+                return '<div class="id-item"><span class="num">' + (i + 6) + '.</span>' + t +
+                    '<div class="blank">Answer: ____________</div></div>';
+            }).join('');
+            return '<div class="slide-inner exam">' +
+                '<div class="eyebrow"><span class="mark">' + I.target + '</span>Part II · Identification</div>' +
+                '<h1 class="title" style="font-size:clamp(24px,2.6vw,36px);">Identification (16–20)</h1>' +
+                '<div class="q-stack">' + items + '</div></div>';
+        });
+
+        // 25: ID 11-15
+        SLIDES.push(function() {
+            var ids = [
+                'The Python dunder method used to initialize an object.',
+                'The Python dunder method that lets an object work with the <span class="inline">len()</span> built-in.',
+                'The Python dunder method that enables indexing/slicing, e.g. <span class="inline">obj[key]</span>.',
+                'The Django method that validates a form and returns True/False.',
+                'The Django object used to store per-user data across requests.'
+            ];
+            var items = ids.map(function(t, i) {
+                return '<div class="id-item"><span class="num">' + (i + 21) + '.</span>' + t +
+                    '<div class="blank">Answer: ____________</div></div>';
+            }).join('');
+            return '<div class="slide-inner exam">' +
+                '<div class="eyebrow"><span class="mark">' + I.target + '</span>Part II · Identification</div>' +
+                '<h1 class="title" style="font-size:clamp(24px,2.6vw,36px);">Identification (21–25)</h1>' +
+                '<div class="q-stack">' + items + '</div></div>';
+        });
+
+        // 26: ID 16-20
+        SLIDES.push(function() {
+            var ids = [
+                'The <span class="inline">urls.py</span> variable that namespaces an app\'s URLs to avoid collisions.',
+                'The function used to build a URL from its name in Django (Python-side).',
+                'The HTTP status code for "Not Found".',
+                'The middleware Django enables by default to protect against CSRF attacks.',
+                'The design principle meaning components should depend on each other as little as possible.'
+            ];
+            var items = ids.map(function(t, i) {
+                return '<div class="id-item"><span class="num">' + (i + 26) + '.</span>' + t +
+                    '<div class="blank">Answer: ____________</div></div>';
+            }).join('');
+            return '<div class="slide-inner exam">' +
+                '<div class="eyebrow"><span class="mark">' + I.target + '</span>Part II · Identification</div>' +
+                '<h1 class="title" style="font-size:clamp(24px,2.6vw,36px);">Identification (26–30)</h1>' +
+                '<div class="q-stack">' + items + '</div></div>';
+        });
+
+        // 28b: PART III DIVIDER
+        SLIDES.push(function() {
+            return '<div class="slide-inner"><div class="divider-wrap">' +
+                '<div class="divider-num">III</div>' +
+                '<div class="eyebrow"><span class="mark">' + I.target + '</span>Summative Exam</div>' +
+                '<div class="test-banner">8 POINTS</div>' +
+                '<h1 class="title">Part IV — <span class="hl">Guess the Output</span></h1>' +
+                '<p class="subtitle">8 code snippets · trace through and predict exactly what prints.</p>' +
+                '</div></div>';
+        });
+
+        // 27: GUESS THE OUTPUT 1-4
+        SLIDES.push(function() {
+            var qs = [
+                { q: 'What does this Django template output when <span class="inline">tasks = ["A","B","C"]</span>?', code: '{% for t in tasks %}\n  {{ t }}\n{% endfor %}', ans: 'A B C' },
+                { q: 'What does this Python code print?', code: 'class Demo:\n    def __str__(self):\n        return "Hello"\n    def __repr__(self):\n        return "Repr"\n\nd = Demo()\nprint(d)', ans: 'Hello' },
+                { q: 'What does this Django form snippet print after <span class="inline">is_valid()</span> runs?', code: 'form = TaskForm(request.POST)\nif form.is_valid():\n    print("Valid")\nelse:\n    print("Invalid")', ans: 'Valid (if data is valid) / Invalid (if not)' },
+                { q: 'What does this Django URL pattern match? <span class="inline">path("&lt;str:name&gt;/", views.greet)</span>', code: 'URL: /hello/Hermione/', ans: 'name = "Hermione"' }
+            ];
+            var items = qs.map(function(item, i) {
+                return '<div class="guess-q"><div class="mc-q-head"><span class="q-num">' + (i + 31) +
+                    '</span><p class="q-text">' + item.q + '</p></div><div class="code-snip">' + item.code +
+                    '</div><div class="output-blank">Output: ____________</div></div>';
+            }).join('');
+            return '<div class="slide-inner exam">' +
+                '<div class="eyebrow"><span class="mark">' + I.target + '</span>Part IV · Guess the Output</div>' +
+                '<h1 class="title" style="font-size:clamp(24px,2.6vw,36px);">Guess the Output (31–34)</h1>' +
+                '<div class="q-stack guess-stack">' + items + '</div></div>';
+        });
+
+        // 28: GUESS THE OUTPUT 5-8
+        SLIDES.push(function() {
+            var qs = [
+                { q: 'What does this Python code print?', code: 'class Task:\n    def __eq__(self, other):\n        return True\n\nt1 = Task()\nt2 = Task()\nprint(t1 == t2)', ans: 'True' },
+                { q: 'What does this Python code print? (no <span class="inline">__str__</span> is defined)', code: 'class Task:\n    def __repr__(self):\n        return "Task(X)"\n\nt = Task()\nprint(t)', ans: 'Task(X) — print() falls back to __repr__ when __str__ is missing.' },
+                { q: 'What does this Python code print?', code: 'class Task:\n    def __init__(self, name, priority):\n        self.name = name\n        self.priority = priority\n    def __lt__(self, other):\n        return self.priority < other.priority\n\ntasks = [Task("B", 3), Task("A", 1)]\ntasks.sort()\nprint([t.priority for t in tasks])', ans: '[1, 3] — sort() uses __lt__ to compare by priority.' },
+                { q: 'What does this print on a user\'s very first visit (fresh session)?', code: 'visits = request.session.get("visits", 0)\nrequest.session["visits"] = visits + 1\nprint(request.session["visits"])', ans: '1 — .get() safely defaults to 0 when the key is missing.' }
+            ];
+            var items = qs.map(function(item, i) {
+                return '<div class="guess-q"><div class="mc-q-head"><span class="q-num">' + (i + 35) +
+                    '</span><p class="q-text">' + item.q + '</p></div><div class="code-snip">' + item.code +
+                    '</div><div class="output-blank">Output: ____________</div></div>';
+            }).join('');
+            return '<div class="slide-inner exam">' +
+                '<div class="eyebrow"><span class="mark">' + I.target + '</span>Part IV · Guess the Output</div>' +
+                '<h1 class="title" style="font-size:clamp(24px,2.6vw,36px);">Guess the Output (35–38)</h1>' +
+                '<div class="q-stack guess-stack">' + items + '</div></div>';
+        });
+
+        // 28c: PART IV DIVIDER
+        SLIDES.push(function() {
+            return '<div class="slide-inner"><div class="divider-wrap">' +
+                '<div class="divider-num">IV</div>' +
+                '<div class="eyebrow"><span class="mark">' + I.target + '</span>Summative Exam</div>' +
+                '<div class="test-banner">2 POINTS</div>' +
+                '<h1 class="title">Part IV — <span class="hl">Scenario Application</span></h1>' +
+                '<p class="subtitle">2 mini-scenarios · pick the architecture that best fits the situation.</p>' +
+                '</div></div>';
+        });
+
+        // 28e: SCENARIO 1-2
+        SLIDES.push(function() {
+            var sc = [
+                { q: 'An order-processing pipeline needs multiple decoupled services to react automatically whenever a new order is placed. Which architecture best fits?', o: ['Event-Driven', 'Monolithic', 'SOA', '3-Tier'] },
+                { q: 'A team building a standard web app wants the clear Presentation/Logic/Data separation that a framework like Django already provides out of the box. Which architecture best fits?', o: ['Microservices', 'Serverless', '3-Tier / MVC', 'Event-Driven'] }
+            ];
+            var items = sc.map(function(item, i) {
+                var opts = item.o.map(function(o, j) {
+                    return '<div class="opt"><span class="opt-letter">' + String.fromCharCode(65 + j) + '</span>' + o + '</div>';
+                }).join('');
+                return '<div class="mc-q"><div class="mc-q-head"><span class="q-num">' + (i + 39) + '</span><p class="q-text">' + item.q + '</p></div><div class="options">' + opts + '</div></div>';
+            }).join('');
+            return '<div class="slide-inner exam">' +
+                '<div class="eyebrow"><span class="mark">' + I.target + '</span>Part IV · Scenario Application</div>' +
+                '<h1 class="title" style="font-size:clamp(24px,2.6vw,36px);">Scenario (39–40)</h1>' +
+                '<div class="q-stack">' + items + '</div></div>';
+        });
+
+        // 29: ANSWER KEY 1 — MCQ + ID (1-10)
+        SLIDES.push(function() {
+            var mcq = [
+                ['1', 'A — Program architecture describes internal code structure.'],
+                ['2', 'B — High cohesion groups related logic together.'],
+                ['3', 'C — Controller handles input and coordinates Model and View.'],
+                ['4', 'C — Microservices are small, independently deployable services.'],
+                ['5', 'C — PUT / PATCH are used to update existing resources.'],
+                ['6', 'B — Application/Logic handles business rules and validation.'],
+                ['7', 'A — Monolithic is simplest for a small team and tight deadline.'],
+                ['8', 'B — SOA uses a centralized integration layer for shared enterprise services.'],
+                ['9', 'C — Serverless handles unpredictable traffic without idle servers.'],
+                ['10', 'B — Microservices allow independent scaling and deployment.']
+            ];
+            var id1 = [
+                ['1', 'Monolithic architecture.'],
+                ['2', 'Separation of Concerns (SoC).'],
+                ['3', 'ViewModel.'],
+                ['4', 'Service-Oriented Architecture (SOA).'],
+                ['5', 'GraphQL.'],
+                ['6', 'SOAP.'],
+                ['7', 'WebSockets.'],
+                ['8', 'Kafka and RabbitMQ.'],
+                ['9', '{% for %} ... {% endfor %}.'],
+                ['10', 'migrate.']
+            ];
+            var mcqRows = mcq.map(function(a) {
+                return '<div class="ans-row"><b>' + a[0] + '</b> — ' + a[1] + '</div>';
+            }).join('');
+            var idRows = id1.map(function(a, i) {
+                return '<div class="ans-row"><b>' + (i + 11) + '</b> — ' + a[1] + '</div>';
+            }).join('');
+            return '<div class="slide-inner">' +
+                '<div class="eyebrow"><span class="mark">' + I.check + '</span>Answer Key</div>' +
+                '<h1 class="title" style="font-size:clamp(24px,3vw,38px);">Answer Key <span class="hl">(Part I–II, 1/3)</span></h1>' +
+                '<div class="answers-grid">' +
+                '<div class="answers-col"><h3>Multiple Choice</h3>' + mcqRows + '</div>' +
+                '<div class="answers-col"><h3>Identification (11–20)</h3>' + idRows + '</div>' +
+                '</div></div>';
+        });
+
+        // 29b: ANSWER KEY 2 — ID (21-30)
+        SLIDES.push(function() {
+            var id2 = [
+                ['11', '__init__ — the constructor method.'],
+                ['12', '__len__ — used by the len() built-in.'],
+                ['13', '__getitem__ — enables obj[key] indexing/slicing.'],
+                ['14', 'is_valid() — validates a form, returns True/False.'],
+                ['15', 'request.session — stores per-user data across requests.'],
+                ['16', 'app_name — namespaces an app\'s URLs.'],
+                ['17', 'reverse() — builds a URL from its name.'],
+                ['18', '404 — HTTP status code for "Not Found".'],
+                ['19', 'CsrfViewMiddleware — enabled by default for CSRF protection.'],
+                ['20', 'Loose coupling — components depend on each other as little as possible.']
+            ];
+            var idRows = id2.map(function(a, i) {
+                return '<div class="ans-row"><b>' + (i + 21) + '</b> — ' + a[1] + '</div>';
+            }).join('');
+            return '<div class="slide-inner">' +
+                '<div class="eyebrow"><span class="mark">' + I.check + '</span>Answer Key</div>' +
+                '<h1 class="title" style="font-size:clamp(24px,3vw,38px);">Answer Key <span class="hl">(Part II, 2/3)</span></h1>' +
+                '<div class="answers-grid">' +
+                '<div class="answers-col"><h3>Identification (21–30)</h3>' + idRows + '</div>' +
+                '</div></div>';
+        });
+
+        // 29c: ANSWER KEY 3 — Guess the Output + Scenario
+        SLIDES.push(function() {
+            var guess = [
+                ['1', 'A B C — the for loop iterates over the list.'],
+                ['2', 'Hello — __str__ is used by print().'],
+                ['3', 'Valid (if data valid) / Invalid (if not) — is_valid() determines the branch.'],
+                ['4', 'name = "Hermione" — the URL pattern captures the string parameter.'],
+                ['5', 'True — __eq__ always returns True, regardless of object equality.'],
+                ['6', 'Task(X) — print() falls back to __repr__ when __str__ isn\'t defined.'],
+                ['7', '[1, 3] — sort() uses __lt__ to compare by priority.'],
+                ['8', '1 — .get("visits", 0) safely defaults to 0 on a fresh session.']
+            ];
+            var guessRows = guess.map(function(a, i) {
+                return '<div class="ans-row"><b>' + (i + 31) + '</b> — ' + a[1] + '</div>';
+            }).join('');
+            var scenario = [
+                ['1', 'Event-Driven — decoupled services reacting to published events.'],
+                ['2', '3-Tier / MVC — Django\'s built-in structure already gives this separation.']
+            ];
+            var scenarioRows = scenario.map(function(a, i) {
+                return '<div class="ans-row"><b>' + (i + 39) + '</b> — ' + a[1] + '</div>';
+            }).join('');
+            return '<div class="slide-inner">' +
+                '<div class="eyebrow"><span class="mark">' + I.check + '</span>Answer Key</div>' +
+                '<h1 class="title" style="font-size:clamp(24px,3vw,38px);">Answer Key <span class="hl">(Part III–IV, 3/3)</span></h1>' +
+                '<div class="answers-grid">' +
+                '<div class="answers-col"><h3>Guess the Output</h3>' + guessRows + '</div>' +
+                '<div class="answers-col"><h3>Scenario Application</h3>' + scenarioRows + '</div>' +
+                '</div></div>';
+        });
+
+        // 31: CLOSING
+        SLIDES.push(function() {
+            return '<div class="slide-inner"><div class="center-col"><div class="closing-wrap">' +
+                I.party +
+                '<p class="quote">&ldquo;Good architecture isn&rsquo;t about picking the fanciest pattern — it&rsquo;s about matching the pattern to the project.&rdquo;</p>' +
+                '<p class="who">&mdash; Key takeaway, Integrative Programming</p>' +
+                '<p class="bye">Nice work! Go build something well-structured. ✅</p>' +
+                '</div></div></div>';
+        });
+
+        // ------------------------------------------------------------
+        // RENDER
+        // ------------------------------------------------------------
+        var deckEl = document.getElementById('deck');
+        var current = 0;
+        var slideDivs = [];
+
+        function buildSlideDiv(i) {
+            var div = document.createElement('div');
+            div.className = 'slide';
+            div.dataset.index = i;
+            div.innerHTML = SLIDES[i]();
+            deckEl.appendChild(div);
+            return div;
+        }
+
+        for (var i = 0; i < SLIDES.length; i++) {
+            slideDivs.push(buildSlideDiv(i));
+        }
+
+        var total = SLIDES.length;
+        var progressFill = document.getElementById('progressFill');
+        var slideCounter = document.getElementById('slideCounter');
+        var tabName = document.getElementById('tabName');
+
+        function updateCounter() {
+            slideCounter.textContent = (current + 1) + ' / ' + total;
+            progressFill.style.width = ((current + 1) / total * 100) + '%';
+            var file = 'architecture_review.py';
+            tabName.textContent = file;
+        }
+
+        function showOnly(i) {
+            slideDivs.forEach(function(d, idx) {
+                d.classList.toggle('active', idx === i);
+            });
+            updateCounter();
+        }
+
+        function goTo(i) {
+            if (i < 0) i = 0;
+            if (i >= total) i = total - 1;
+            if (i === current) { showOnly(i); return; }
+            var dir = i > current ? 1 : -1;
+            slideDivs[current].classList.remove('active');
+            if (dir > 0) slideDivs[current].classList.add('prev');
+            current = i;
+            slideDivs.forEach(function(d, idx) {
+                if (idx !== current) d.classList.remove('active');
+            });
+            slideDivs[current].classList.remove('prev');
+            slideDivs[current].classList.add('active');
+            updateCounter();
+        }
+
+        function next() { goTo(current + 1); }
+
+        function prev() { goTo(current - 1); }
+
+        function first() { goTo(0); }
+
+        function last() { goTo(total - 1); }
+
+        showOnly(0);
+
+        // ------------------------------------------------------------
+        // NAVIGATION
+        // ------------------------------------------------------------
+        var shortcutsModal = document.getElementById('shortcutsModal');
+
+        function isInteractive(target) {
+            return !!target.closest('button, a, input, textarea, select, [contenteditable], .copy-btn, .modal');
+        }
+
+        document.addEventListener('mousedown', function(e) {
+            if (e.button === 2) {
+                if (isInteractive(e.target)) return;
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                next();
+            } else if (e.button === 3) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                prev();
+            } else if (e.button === 4) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                next();
+            }
+        }, true);
+
+        document.addEventListener('mouseup', function(e) {
+            if (e.button === 3 || e.button === 4) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+            }
+        }, true);
+
+        document.addEventListener('contextmenu', function(e) {
+            if (isInteractive(e.target)) return;
+            e.preventDefault();
+        }, true);
+
+        document.addEventListener('auxclick', function(e) {
+            if (e.button === 1 || e.button === 3 || e.button === 4) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+            }
+        }, true);
+
+        document.addEventListener('keydown', function(e) {
+            if (shortcutsModal.classList.contains('open')) {
+                if (e.key === 'Escape' || e.key === '?') { closeModal();
+                    e.preventDefault(); }
+                return;
+            }
+            switch (e.key) {
+                case 'ArrowRight':
+                case 'ArrowDown':
+                case 'PageDown':
+                    next();
+                    e.preventDefault();
+                    break;
+                case 'ArrowLeft':
+                case 'ArrowUp':
+                case 'PageUp':
+                    prev();
+                    e.preventDefault();
+                    break;
+                case 'Home':
+                    first();
+                    e.preventDefault();
+                    break;
+                case 'End':
+                    last();
+                    e.preventDefault();
+                    break;
+                case '?':
+                    openModal();
+                    e.preventDefault();
+                    break;
+            }
+        });
+
+        function openModal() { shortcutsModal.classList.add('open'); }
+
+        function closeModal() { shortcutsModal.classList.remove('open'); }
+        shortcutsModal.addEventListener('mousedown', function(e) {
+            if (e.target === shortcutsModal) closeModal();
+        });
+
+        // Swipe
+        var touchStartX = null;
+        document.addEventListener('touchstart', function(e) {
+            if (e.touches.length !== 1) return;
+            touchStartX = e.touches[0].clientX;
+        }, { passive: true });
+        document.addEventListener('touchend', function(e) {
+            if (touchStartX === null) return;
+            var dx = e.changedTouches[0].clientX - touchStartX;
+            if (Math.abs(dx) > 60) {
+                if (dx < 0) next();
+                else prev();
+            }
+            touchStartX = null;
+        }, { passive: true });
+
+        // Copy buttons
+        deckEl.addEventListener('click', function(e) {
+            var btn = e.target.closest('.copy-btn');
+            if (!btn) return;
+            var pre = document.getElementById(btn.dataset.target);
+            if (!pre) return;
+            var text = pre.textContent;
+            var done = function() {
+                var orig = btn.textContent;
+                btn.textContent = 'Copied!';
+                btn.classList.add('copied');
+                setTimeout(function() {
+                    btn.textContent = orig;
+                    btn.classList.remove('copied');
+                }, 1400);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(done).catch(done);
+            } else {
+                var ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); } catch (err) {}
+                document.body.removeChild(ta);
+                done();
+            }
+        });
+
+        // Respect reduced motion
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            document.body.classList.add('no-motion');
+        }
+    </script>
+</body>
+</html>

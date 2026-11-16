@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Form Flow, Best Practices &amp; Docker</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --surface:#141a21;
+    --surface-2:#1b222b;
+    --border:#2b333d;
+    --border-soft:#242c36;
+    --text:#e6edf3;
+    --muted:#8b949e;
+    --muted-2:#6e7681;
+    --accent:#58a6ff;
+    --accent-soft:#58a6ff22;
+    --accent-2:#7ee787;
+    --accent-3:#d29922;
+    --accent-4:#f78166;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--bg); color:var(--text);
+    font-family:var(--sans);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  body.no-motion *{ transition:none !important; animation:none !important; }
+  ::selection{ background:var(--accent-soft); color:var(--text); }
+
+  /* ---------- Chrome ---------- */
+  .chrome-top{
+    position:fixed; top:0; left:0; right:0; height:44px;
+    background:var(--surface); border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:14px; padding:0 18px;
+    z-index:50; font-family:var(--mono); font-size:13px; color:var(--muted);
+  }
+  .win-dots{ display:flex; gap:7px; flex:0 0 auto; }
+  .win-dots span{ width:11px; height:11px; border-radius:50%; display:block; }
+  .win-dots span:nth-child(1){ background:#ff5f57; }
+  .win-dots span:nth-child(2){ background:#febc2e; }
+  .win-dots span:nth-child(3){ background:#28c840; }
+  .file-tab{
+    display:flex; align-items:center; gap:8px;
+    background:var(--surface-2); border:1px solid var(--border-soft);
+    border-bottom:none; padding:6px 14px; border-radius:6px 6px 0 0;
+    color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .file-tab .dot{ width:7px; height:7px; border-radius:50%; background:var(--accent-3); flex:0 0 auto; }
+  .chrome-top .spacer{ flex:1; }
+  .chrome-top .counter{ color:var(--muted); }
+
+  .progress-track{ position:fixed; top:44px; left:0; right:0; height:3px; background:var(--surface-2); z-index:51; }
+  .progress-fill{ height:100%; background:linear-gradient(90deg, var(--accent), var(--accent-2)); width:0%; transition:width .35s ease; }
+
+  .chrome-bottom{
+    position:fixed; bottom:0; left:0; right:0; height:30px;
+    background:var(--accent); color:#04101d;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 16px; font-family:var(--mono); font-size:12px; font-weight:600;
+    z-index:50;
+  }
+  .chrome-bottom .seg{ display:flex; align-items:center; gap:16px; }
+  .chrome-bottom kbd{ background:#04101d22; border-radius:3px; padding:1px 6px; font-family:var(--mono); border:1px solid #04101d33; }
+
+  /* ---------- Slides ---------- */
+  .deck{ position:fixed; inset:44px 0 30px 0; }
+  .slide{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    opacity:0; transform:translateX(36px);
+    transition:opacity .35s ease, transform .35s ease;
+    pointer-events:none; overflow-y:auto;
+  }
+  .slide.active{ opacity:1; transform:translateX(0); pointer-events:auto; }
+  .deck.reverse .slide{ transform:translateX(-36px); }
+  .deck.reverse .slide.active{ transform:translateX(0); }
+
+  .slide-inner{
+    margin:auto; width:100%; max-width:1680px;
+    padding:clamp(20px,3.2vh,48px) clamp(24px,4vw,72px);
+    display:flex; flex-direction:column; min-height:100%;
+    justify-content:center; min-width:0;
+  }
+  .slide.tall .slide-inner{ justify-content:flex-start; }
+
+  .eyebrow{
+    font-family:var(--mono); font-size:14px; color:var(--accent-2);
+    letter-spacing:.03em; margin-bottom:14px; display:flex; align-items:center; gap:8px;
+  }
+  .eyebrow::before{ content:"//"; color:var(--muted-2); }
+
+  h1.title{
+    font-family:var(--mono); font-weight:700;
+    font-size:clamp(28px, 3.4vw, 50px); line-height:1.15; margin:0 0 8px 0;
+    letter-spacing:-0.01em;
+  }
+  h1.title .cursor{ display:inline-block; width:.5ch; background:var(--accent-2); margin-left:4px; animation:blink 1.1s steps(1) infinite; }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  .subtitle{ font-size:clamp(15px,1.3vw,20px); color:var(--muted); margin:0 0 28px 0; max-width:74ch; line-height:1.55; }
+
+  .grid-2{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:28px; min-width:0; }
+  .grid-3{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; min-width:0; }
+  .grid-4{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:18px; min-width:0; }
+  .grid-5{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:16px; min-width:0; }
+
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px 22px; min-width:0; }
+  .card h3{ margin:0 0 10px 0; font-size:17px; font-family:var(--mono); color:var(--accent); }
+  .card p, .card li{ font-size:15px; line-height:1.6; color:var(--text); }
+  .card ul{ margin:0; padding-left:20px; }
+  .card ul li{ margin-bottom:6px; }
+
+  .inline{ background:var(--surface-2); border:1px solid var(--border-soft); border-radius:4px; padding:1px 6px; font-family:var(--mono); font-size:0.92em; color:var(--accent-3); }
+
+  /* ---------- Code blocks ---------- */
+  .code-block{ background:#0a0e13; border:1px solid var(--border); border-radius:10px; overflow:hidden; margin:0; min-width:0; max-height:50vh; display:flex; flex-direction:column; }
+  .code-header{ display:flex; align-items:center; justify-content:space-between; background:var(--surface-2); border-bottom:1px solid var(--border-soft); padding:7px 12px; flex:0 0 auto; }
+  .code-lang{ font-family:var(--mono); font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  .copy-btn{ font-family:var(--mono); font-size:12px; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:4px 10px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:background .15s ease, border-color .15s ease; }
+  .copy-btn:hover{ background:var(--border-soft); border-color:var(--accent); }
+  .copy-btn.copied{ color:var(--accent-2); border-color:var(--accent-2); }
+  .code-scroll{ overflow:auto; padding:14px 16px; }
+  .code-content{ font-family:var(--mono); font-size:15px; line-height:1.6; white-space:pre; color:var(--text); tab-size:2; }
+  .tok-comment{ color:var(--muted-2); font-style:italic; }
+  .tok-string{ color:var(--accent-2); }
+  .tok-keyword{ color:var(--accent); font-weight:600; }
+  .tok-func{ color:var(--accent-3); }
+  .tok-number{ color:var(--accent-4); }
+  .tok-decorator{ color:var(--accent-4); }
+
+  .callouts{ display:flex; flex-direction:column; gap:10px; min-width:0; }
+  .callout{ display:flex; gap:10px; align-items:flex-start; font-size:15px; line-height:1.55; background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); padding:10px 14px; border-radius:6px; min-width:0; }
+  .callout b{ color:var(--accent); font-family:var(--mono); font-size:13px; flex:0 0 auto; }
+
+  .diagram-wrap{ display:flex; justify-content:center; align-items:center; padding:6px 0; }
+  .diagram-wrap svg{ width:100%; height:auto; max-height:34vh; }
+
+  .test-banner{ display:inline-flex; align-items:center; gap:10px; font-family:var(--mono); font-size:13px; color:var(--bg); background:var(--accent-3); padding:5px 12px; border-radius:20px; margin-bottom:18px; font-weight:700; width:fit-content; }
+
+  .q-stack{ display:flex; flex-direction:column; gap:16px; min-width:0; }
+  .mc-q{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px 18px; min-width:0; }
+  .mc-q-head{ display:flex; gap:12px; align-items:flex-start; margin-bottom:10px; }
+  .q-num{ font-family:var(--mono); font-size:13px; color:var(--bg); background:var(--accent-2); border-radius:5px; padding:3px 8px; flex:0 0 auto; font-weight:700; }
+  .q-text{ margin:0; font-size:16.5px; line-height:1.5; }
+  .options{ display:grid; grid-template-columns:1fr 1fr; gap:8px; min-width:0; }
+  .opt{ display:flex; gap:8px; align-items:flex-start; font-size:15px; line-height:1.4; background:var(--surface-2); border:1px solid var(--border-soft); border-radius:7px; padding:8px 10px; min-width:0; }
+  .opt-letter{ font-family:var(--mono); font-weight:700; color:var(--accent); flex:0 0 auto; }
+
+  .scenario-q{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px 18px; min-width:0; }
+  .scenario-q .q-text{ font-size:16px; margin-bottom:10px; }
+  .answer-blank{ font-family:var(--mono); font-size:15px; color:var(--muted); border-top:1px dashed var(--border-soft); padding-top:8px; margin-top:6px; }
+
+  .recap-list{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 28px; }
+  .recap-item{ display:flex; gap:12px; align-items:flex-start; font-size:16px; line-height:1.55; }
+  .recap-item .tick{ color:var(--accent-2); font-weight:700; flex:0 0 auto; }
+
+  .answers-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:26px; min-width:0; }
+  .answers-col h3{ font-family:var(--mono); color:var(--accent); font-size:16px; border-bottom:1px solid var(--border); padding-bottom:8px; margin:0 0 12px 0; }
+  .ans-row{ font-size:15px; line-height:1.6; margin-bottom:9px; }
+  .ans-row b{ color:var(--accent-2); font-family:var(--mono); }
+
+  .modal-overlay{ position:fixed; inset:0; background:#000000aa; z-index:100; display:none; align-items:center; justify-content:center; }
+  .modal-overlay.open{ display:flex; }
+  .modal{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:28px 32px; width:min(560px,90vw); font-size:15px; }
+  .modal h2{ font-family:var(--mono); margin:0 0 18px 0; font-size:20px; color:var(--accent-2); }
+  .modal .row{ display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border-soft); }
+  .modal .row:last-child{ border-bottom:none; }
+  .modal kbd{ font-family:var(--mono); background:var(--surface-2); border:1px solid var(--border-soft); border-radius:5px; padding:2px 9px; }
+  .modal .close-hint{ margin-top:16px; color:var(--muted); font-size:13px; text-align:center; }
+
+  .flow-steps{ display:flex; flex-direction:column; gap:10px; }
+  .flow-step{ display:flex; gap:14px; align-items:center; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 16px; }
+  .flow-step .num{ font-family:var(--mono); font-weight:700; color:var(--bg); background:var(--accent); border-radius:50%; width:28px; height:28px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+  .flow-step p{ margin:0; font-size:15.5px; line-height:1.5; }
+
+  .cmd-row{ display:flex; align-items:center; gap:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:10px 16px; }
+  .cmd-row code{ font-family:var(--mono); font-size:15px; color:var(--accent-2); background:#0a0e13; padding:3px 10px; border-radius:5px; flex:0 0 auto; white-space:nowrap; }
+  .cmd-row p{ margin:0; font-size:15px; color:var(--muted); }
+
+  @media (max-width: 1100px){ .answers-grid{ grid-template-columns:1fr; } }
+  @media (max-width: 900px){
+    .grid-2, .grid-3, .grid-4, .grid-5{ grid-template-columns:1fr; }
+    .recap-list{ grid-template-columns:1fr; }
+    .options{ grid-template-columns:1fr; }
+    .cmd-row{ flex-direction:column; align-items:flex-start; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition:opacity .01s linear !important; transform:none !important; }
+    .progress-fill{ transition:none !important; }
+    h1.title .cursor{ animation:none !important; opacity:1; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="chrome-top">
+    <div class="win-dots"><span></span><span></span><span></span></div>
+    <div class="file-tab"><span class="dot"></span><span id="tabName">flow_practices_docker.py</span></div>
+    <div class="spacer"></div>
+    <div class="counter" id="slideCounter">1 / 32</div>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+  <div class="deck" id="deck">
+
+    <!-- 1 : COVER -->
+    <section class="slide active" data-file="flow_practices_docker.py">
+      <div class="slide-inner">
+        <div class="eyebrow">integrative_programming / phase_09_10</div>
+        <h1 class="title" style="font-size:clamp(30px,3.8vw,54px);">Form Flow, Best Practices &amp; Docker<span class="cursor">&nbsp;</span></h1>
+        <p class="subtitle" style="font-size:clamp(17px,1.6vw,22px);">The exact pattern behind every form view, the habits that keep a project from rotting, and shipping it all in a container.</p>
+        <div class="grid-4" style="margin-top:10px;">
+          <div class="card"><h3>09 · Form Flow</h3><p>The GET/POST/valid/invalid pattern, named and diagrammed.</p></div>
+          <div class="card"><h3>10 · Best Practices</h3><p><span class="inline">reverse()</span>, <span class="inline">app_name</span>, and three more habits.</p></div>
+          <div class="card"><h3>Docker</h3><p>Containerizing the app so it runs the same everywhere.</p></div>
+          <div class="card"><h3>Quiz</h3><p>10 items, answer key included.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 : INTRO -->
+    <section class="slide" data-file="00_intro.py">
+      <div class="slide-inner">
+        <div class="eyebrow">00_intro.py</div>
+        <h1 class="title">Closing the Loop</h1>
+        <p class="subtitle">You've built models, forms, and sessions. Three things left before this feels like a real, shippable project.</p>
+        <div class="grid-3">
+          <div class="card"><h3>1. Name the pattern</h3><p>Every form view you've written already follows one shape. Naming it makes it something you can apply on autopilot.</p></div>
+          <div class="card"><h3>2. Stop hardcoding</h3><p>Hardcoded URLs and repeated logic are the #1 reason small Django projects become fragile fast.</p></div>
+          <div class="card"><h3>3. Ship it</h3><p>A project that only runs on your machine isn't finished. Docker is how it runs the same way everywhere.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- THE PROBLEM, IN CODE -->
+    <section class="slide tall" data-file="01_the_problem_in_code.py">
+      <div class="slide-inner">
+        <div class="eyebrow">01_the_problem_in_code.py</div>
+        <h1 class="title">The Problem, in Actual Code</h1>
+        <p class="subtitle">Same redirect, two ways. One of these breaks the instant a URL path changes.</p>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:54vh; border-color:var(--accent-4);">
+            <div class="code-header"><span class="code-lang">😩 the bad way</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeBad" data-lang="python"></pre></div>
+          </div>
+          <div class="code-block" style="max-height:54vh; border-color:var(--accent-2);">
+            <div class="code-header"><span class="code-lang">✅ the django way</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeGood" data-lang="python"></pre></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:14px;">
+          <h3>What actually changed</h3>
+          <p>The path string <span class="inline">"/tasks/"</span> only ever existed in one place: <span class="inline">urls.py</span>. Nothing else in the project needs to know or care what the actual URL text is.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FORM PROCESSING FLOW — MAIN LESSON -->
+    <section class="slide" data-file="02_form_processing_flow.py">
+      <div class="slide-inner">
+        <div class="eyebrow">02_form_processing_flow.py</div>
+        <h1 class="title">Form Processing Flow — The Pattern, Named</h1>
+        <p class="subtitle">You've already written this shape several times. Here it is, laid out on its own.</p>
+        <div class="diagram-wrap">
+          <svg viewBox="0 0 1000 260" role="img" aria-label="Diagram: a GET request displays a blank form, while a POST request is processed and branches into a valid path that saves and redirects, or an invalid path that redisplays the form with errors">
+            <title>The form processing flow: GET shows a blank form, POST branches into valid-and-save or invalid-and-redisplay</title>
+            <g font-family="ui-monospace,monospace" font-size="15" fill="#e6edf3">
+              <rect x="20" y="95" width="160" height="70" rx="10" fill="#161b22" stroke="#58a6ff" stroke-width="2"/>
+              <text x="100" y="135" text-anchor="middle" fill="#58a6ff">Request</text>
+
+              <rect x="260" y="20" width="200" height="60" rx="10" fill="#161b22" stroke="#8b949e" stroke-width="2"/>
+              <text x="360" y="55" text-anchor="middle" font-size="13">GET → blank form</text>
+
+              <rect x="260" y="170" width="200" height="60" rx="10" fill="#161b22" stroke="#8b949e" stroke-width="2"/>
+              <text x="360" y="205" text-anchor="middle" font-size="13">POST → validate</text>
+
+              <rect x="580" y="130" width="190" height="60" rx="10" fill="#161b22" stroke="#7ee787" stroke-width="2"/>
+              <text x="675" y="155" text-anchor="middle" fill="#7ee787" font-size="13">Valid</text>
+              <text x="675" y="173" text-anchor="middle" font-size="12" fill="#8b949e">save() + redirect</text>
+
+              <rect x="580" y="210" width="190" height="60" rx="10" fill="#161b22" stroke="#f78166" stroke-width="2"/>
+              <text x="675" y="235" text-anchor="middle" fill="#f78166" font-size="13">Invalid</text>
+              <text x="675" y="253" text-anchor="middle" font-size="12" fill="#8b949e">re-render + errors</text>
+            </g>
+            <line x1="180" y1="120" x2="255" y2="55" stroke="#8b949e" stroke-width="2" marker-end="url(#ff1)"/>
+            <line x1="180" y1="140" x2="255" y2="200" stroke="#8b949e" stroke-width="2" marker-end="url(#ff1)"/>
+            <line x1="460" y1="195" x2="575" y2="165" stroke="#8b949e" stroke-width="2" marker-end="url(#ff1)"/>
+            <line x1="460" y1="210" x2="575" y2="240" stroke="#8b949e" stroke-width="2" marker-end="url(#ff1)"/>
+            <defs><marker id="ff1" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b949e"/></marker></defs>
+          </svg>
+        </div>
+        <div class="card">
+          <h3>Every form view is this same four-step shape</h3>
+          <p>GET displays. POST validates. Valid saves and redirects. Invalid redisplays with errors. Once you see it, you'll notice it in nearly every framework, not just Django.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FORM PROCESSING CODE BREAKDOWN -->
+    <section class="slide tall" data-file="03_form_processing_code.py">
+      <div class="slide-inner">
+        <div class="eyebrow">03_form_processing_code.py</div>
+        <h1 class="title">Code Breakdown — The Flow in Practice</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:56vh;">
+            <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeFlow" data-lang="python"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>if request.method == "POST"</b> The single fork every form view starts from.</div>
+            <div class="callout"><b>else: form = TaskModelForm()</b> The GET branch — an empty, unbound form, nothing validated yet.</div>
+            <div class="callout"><b>if form.is_valid():</b> The only gate that leads to <span class="inline">save()</span> — nothing skips this check.</div>
+            <div class="callout"><b>Falls through</b> If <span class="inline">is_valid()</span> is False, execution simply reaches the final <span class="inline">render()</span> — same template, now holding errors.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BEST PRACTICES — MAIN LESSON -->
+    <section class="slide" data-file="04_best_practices.py">
+      <div class="slide-inner">
+        <div class="eyebrow">04_best_practices.py</div>
+        <h1 class="title">Best Practices — Five Habits Worth Keeping</h1>
+        <div class="grid-5">
+          <div class="card"><h3>reverse()</h3><p>Build URLs from their name, never hardcode the path string.</p></div>
+          <div class="card"><h3>app_name</h3><p>Namespace an app's URLs so two apps can both have a route called <span class="inline">"list"</span>.</p></div>
+          <div class="card"><h3>Inheritance</h3><p>Write the layout once with <span class="inline">{% extends %}</span> — never copy-paste nav and footer.</p></div>
+          <div class="card"><h3>Session init check</h3><p>Always <span class="inline">.get(key, default)</span> — never assume a session key already exists.</p></div>
+          <div class="card"><h3>csrf_token</h3><p>Every single <span class="inline">method="post"</span> form, no exceptions, ever.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BEST PRACTICES CODE BREAKDOWN -->
+    <section class="slide tall" data-file="05_best_practices_code.py">
+      <div class="slide-inner">
+        <div class="eyebrow">05_best_practices_code.py</div>
+        <h1 class="title">Code Breakdown — app_name + reverse() Together</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:56vh;">
+            <div class="code-header"><span class="code-lang">python + template</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeBestPractice" data-lang="template"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>app_name = "tasks"</b> Declared once in the app's <span class="inline">urls.py</span> — now every route name needs the <span class="inline">tasks:</span> prefix elsewhere.</div>
+            <div class="callout"><b>reverse("tasks:task_list")</b> Used in Python code (views, redirects) — resolves to the real path at request time.</div>
+            <div class="callout"><b>{% url 'tasks:add_task' %}</b> The template-side equivalent — same idea, different syntax.</div>
+            <div class="callout"><b>Why the prefix</b> If another app also names a route <span class="inline">"list"</span>, <span class="inline">tasks:list</span> and <span class="inline">blog:list</span> stay unambiguous.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SAMPLE PROJECT — REFACTOR -->
+    <section class="slide" data-file="06_sample_project.py">
+      <div class="slide-inner">
+        <div class="eyebrow">06_sample_project.py</div>
+        <h1 class="title">Sample Project: Refactoring the Tasks App</h1>
+        <p class="subtitle">Take the <span class="inline">tasks</span> app from the last lecture and apply all four best practices in a single pass. <b style="color:var(--accent-2);">Full code, file by file, next.</b></p>
+        <div class="flow-steps">
+          <div class="flow-step"><span class="num">1</span><p>Add <span class="inline">app_name = "tasks"</span> to <span class="inline">tasks/urls.py</span> — every route name now needs the <span class="inline">tasks:</span> prefix.</p></div>
+          <div class="flow-step"><span class="num">2</span><p>Replace every hardcoded <span class="inline">redirect("/tasks/...")</span> in <span class="inline">views.py</span> with <span class="inline">redirect(reverse("tasks:..."))</span>.</p></div>
+          <div class="flow-step"><span class="num">3</span><p>Replace every hardcoded <span class="inline">&lt;a href="/tasks/..."&gt;</span> in templates with <span class="inline">{% url 'tasks:...' %}</span>.</p></div>
+          <div class="flow-step"><span class="num">4</span><p>Result: renaming any route in <span class="inline">urls.py</span> is now the <em>only</em> change ever needed — nothing else to hunt down.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SAMPLE PROJECT FILE 1: urls.py -->
+    <section class="slide tall" data-file="06a_urls_py.py">
+      <div class="slide-inner">
+        <div class="eyebrow">06a_urls_py.py · file 1 of 3</div>
+        <h1 class="title" style="font-size:clamp(26px,3vw,40px);">Update: tasks/urls.py</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:56vh;">
+            <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="fileUrlsRefactor" data-lang="python"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>app_name = "tasks"</b> The one new line — declares this app's namespace.</div>
+            <div class="callout"><b>Every path() stays the same</b> Only the namespace changed. No routes moved, nothing broke.</div>
+            <div class="callout"><b>From here on</b> Every <span class="inline">name="task_list"</span> etc. is referenced elsewhere as <span class="inline">tasks:task_list</span>.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SAMPLE PROJECT FILE 2: views.py -->
+    <section class="slide tall" data-file="06b_views_py.py">
+      <div class="slide-inner">
+        <div class="eyebrow">06b_views_py.py · file 2 of 3</div>
+        <h1 class="title" style="font-size:clamp(26px,3vw,40px);">Update: tasks/views.py</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:56vh;">
+            <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="fileViewsRefactor" data-lang="python"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>One import added</b> <span class="inline">from django.urls import reverse</span>.</div>
+            <div class="callout"><b>One line changed</b> The redirect inside <span class="inline">add_task</span> — everything else in the view is untouched.</div>
+            <div class="callout"><b>This is normal</b> A real "best practices pass" is usually this small and surgical, not a rewrite.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SAMPLE PROJECT FILE 3: template -->
+    <section class="slide tall" data-file="06c_template.py">
+      <div class="slide-inner">
+        <div class="eyebrow">06c_template.py · file 3 of 3</div>
+        <h1 class="title" style="font-size:clamp(26px,3vw,40px);">Update: task_list.html</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:56vh;">
+            <div class="code-header"><span class="code-lang">django template</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="fileTemplateRefactor" data-lang="template"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>{% url 'tasks:add_task' %}</b> Replaces the hardcoded <span class="inline">&lt;a href="/tasks/add/"&gt;</span> from before.</div>
+            <div class="callout"><b>The tasks: prefix</b> Required now that <span class="inline">app_name</span> exists — leaving it off will raise a <span class="inline">NoReverseMatch</span> error.</div>
+            <div class="callout"><b>Try it</b> Rename <span class="inline">"add/"</span> to <span class="inline">"new/"</span> in <span class="inline">urls.py</span> — this link updates itself, no template edit needed.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SAMPLE PROJECT FROM SCRATCH: INTRO -->
+    <section class="slide" data-file="07_new_project_intro.py">
+      <div class="slide-inner">
+        <div class="eyebrow">07_new_project_intro.py</div>
+        <h1 class="title">Sample Project From Scratch: A Feedback App</h1>
+        <p class="subtitle">Everything from this lecture, built in from the very first line — not retrofitted afterward.</p>
+        <div class="flow-steps">
+          <div class="flow-step"><span class="num">1</span><p>A visitor can read existing feedback and leave their own — two views, one model.</p></div>
+          <div class="flow-step"><span class="num">2</span><p>The submit view follows the exact GET/POST/valid/invalid flow from earlier in this lecture.</p></div>
+          <div class="flow-step"><span class="num">3</span><p><span class="inline">app_name</span> and <span class="inline">reverse()</span> are there from line one — no separate refactor pass needed.</p></div>
+          <div class="flow-step"><span class="num">4</span><p>Full code, file by file, next — then we'll containerize this exact project with Docker.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEEDBACK SETUP -->
+    <section class="slide tall" data-file="07a_feedback_setup.py">
+      <div class="slide-inner">
+        <div class="eyebrow">07a_feedback_setup.py · file 1 of 4</div>
+        <h1 class="title" style="font-size:clamp(26px,3vw,40px);">Start the App: python manage.py startapp feedback</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:56vh;">
+            <div class="code-header"><span class="code-lang">terminal + python</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="fileFeedbackSetup" data-lang="python"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>startapp</b> Scaffolds <span class="inline">models.py</span>, <span class="inline">views.py</span>, <span class="inline">admin.py</span> — but not <span class="inline">urls.py</span>. That's next.</div>
+            <div class="callout"><b>INSTALLED_APPS</b> Without this, Django won't discover this app's models or templates.</div>
+            <div class="callout"><b>include()</b> Hands off anything under <span class="inline">/feedback/</span> to the app's own <span class="inline">urls.py</span>.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEEDBACK MODELS -->
+    <section class="slide tall" data-file="07b_feedback_models.py">
+      <div class="slide-inner">
+        <div class="eyebrow">07b_feedback_models.py · file 2 of 4</div>
+        <h1 class="title" style="font-size:clamp(26px,3vw,40px);">Create: feedback/models.py</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:56vh;">
+            <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="fileFeedbackModels" data-lang="python"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>TextField</b> Unlike <span class="inline">CharField</span>, no <span class="inline">max_length</span> required — right for an open-ended message.</div>
+            <div class="callout"><b>auto_now_add=True</b> Stamps the moment feedback was submitted, set once, never edited.</div>
+            <div class="callout"><b>__str__</b> Truncates the message so the admin site and shell stay readable.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEEDBACK FORMS + VIEWS -->
+    <section class="slide tall" data-file="07c_feedback_forms_views.py">
+      <div class="slide-inner">
+        <div class="eyebrow">07c_feedback_forms_views.py · file 3 of 4</div>
+        <h1 class="title" style="font-size:clamp(26px,3vw,40px);">Create: feedback/forms.py + feedback/views.py</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:56vh;">
+            <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="fileFeedbackFormsViews" data-lang="python"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>FeedbackForm</b> A <span class="inline">ModelForm</span> — no fields redeclared, they're pulled straight from the model.</div>
+            <div class="callout"><b>submit_feedback</b> The exact four-step flow from this lecture: GET shows blank, POST validates, valid saves + redirects.</div>
+            <div class="callout"><b>redirect(reverse(...))</b> Best practice applied from the first line written — never a hardcoded path to begin with.</div>
+            <div class="callout"><b>feedback_list</b> No form needed here at all — just a read-only view.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEEDBACK URLS + TEMPLATES -->
+    <section class="slide tall" data-file="07d_feedback_urls_templates.py">
+      <div class="slide-inner">
+        <div class="eyebrow">07d_feedback_urls_templates.py · file 4 of 4</div>
+        <h1 class="title" style="font-size:clamp(26px,3vw,40px);">Create: feedback/urls.py + Templates</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:56vh;">
+            <div class="code-header"><span class="code-lang">python + template</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="fileFeedbackUrlsTemplates" data-lang="template"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>app_name = "feedback"</b> Declared from day one — every route name below needs the <span class="inline">feedback:</span> prefix elsewhere.</div>
+            <div class="callout"><b>{% url 'feedback:submit_feedback' %}</b> Namespaced from the start — no refactor needed later.</div>
+            <div class="callout"><b>{% csrf_token %}</b> Still non-negotiable, exactly like every other POST form in this course.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEEDBACK FULL DEMO -->
+    <section class="slide tall" data-file="08_feedback_full_demo.py">
+      <div class="slide-inner">
+        <div class="eyebrow">08_feedback_full_demo.py</div>
+        <h1 class="title">Full Demo — Copy This and Try It</h1>
+        <p class="subtitle">Every file from the Feedback app, in one place. Run it locally first — we'll containerize it next.</p>
+        <div class="code-block" style="max-height:54vh;">
+          <div class="code-header"><span class="code-lang">models.py + forms.py + views.py + urls.py + templates</span><button class="copy-btn">Copy</button></div>
+          <div class="code-scroll"><pre class="code-content" data-raw-id="codeFeedbackFullDemo" data-lang="template"></pre></div>
+        </div>
+        <div class="card" style="margin-top:14px;">
+          <h3>Run it</h3>
+          <p>Drop these five pieces into the <span class="inline">feedback</span> app, run <span class="inline">makemigrations</span> and <span class="inline">migrate</span>, then <span class="inline">python manage.py runserver</span> and visit <span class="inline">/feedback/</span>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- WHY WE DO THIS (9/10) -->
+    <section class="slide" data-file="10_why_we_do_this.py">
+      <div class="slide-inner">
+        <div class="eyebrow">10_why_we_do_this.py</div>
+        <h1 class="title">Why We Bother With Any of This</h1>
+        <div class="grid-3">
+          <div class="card"><h3>Predictability</h3><p>Every teammate who knows the four-step form flow can read any view in the project in seconds — no surprises.</p></div>
+          <div class="card"><h3>Refactor safety</h3><p>Rename a URL path once in <span class="inline">urls.py</span>. Every <span class="inline">reverse()</span> and <span class="inline">{% url %}</span> call updates itself — nothing else to hunt down.</p></div>
+          <div class="card"><h3>It scales past one app</h3><p><span class="inline">app_name</span> is what makes it safe to add a second, third, and tenth app to the same project without name collisions.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DOCKER INTRO -->
+    <section class="slide" data-file="11_docker_intro.py">
+      <div class="slide-inner">
+        <div class="eyebrow">11_docker_intro.py</div>
+        <h1 class="title">Docker — "It Works on My Machine," Solved</h1>
+        <p class="subtitle">Time to containerize the <span class="inline">feedback</span> app you just built, so it runs identically anywhere.</p>
+        <div class="grid-2">
+          <div class="card">
+            <h3>😩 Without it</h3>
+            <ul>
+              <li>Your Python version, OS, and installed packages differ from your teammate's</li>
+              <li>"Works on my laptop" is not the same as "works on the server"</li>
+              <li>Setting up a new dev's machine takes half a day of troubleshooting</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>✅ With it</h3>
+            <ul>
+              <li>A <b style="color:var(--accent-2);">container</b> packages your code, Python version, and dependencies together</li>
+              <li>The exact same container runs identically on your laptop, a teammate's, or a real server</li>
+              <li>New developer? <span class="inline">docker-compose up</span> and they're running the whole project in minutes</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DOCKER SETUP GUIDE -->
+    <section class="slide tall" data-file="12_docker_setup_guide.py">
+      <div class="slide-inner">
+        <div class="eyebrow">12_docker_setup_guide.py</div>
+        <h1 class="title">Setup Guide — Before You Containerize</h1>
+        <p class="subtitle">Three things to have ready before writing a single Docker file.</p>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:52vh;">
+            <div class="code-header"><span class="code-lang">terminal + requirements.txt</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeDockerSetup" data-lang="python"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>Docker Desktop</b> Installed and running — it's what actually builds and runs containers on your machine.</div>
+            <div class="callout"><b>requirements.txt</b> A frozen list of every Python package your project needs — Docker installs from this, not from your local machine.</div>
+            <div class="callout"><b>manage.py at the project root</b> Docker's build context assumes the standard Django layout — no surprises for the container.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DOCKERFILE CODE BREAKDOWN -->
+    <section class="slide tall" data-file="13_dockerfile_code.py">
+      <div class="slide-inner">
+        <div class="eyebrow">13_dockerfile_code.py</div>
+        <h1 class="title">Code Breakdown — The Dockerfile</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:56vh;">
+            <div class="code-header"><span class="code-lang">dockerfile</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeDockerfile" data-lang="infra"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>FROM python:3.12-slim</b> The starting image — a minimal Linux with Python already installed.</div>
+            <div class="callout"><b>WORKDIR /app</b> Every command after this runs inside <span class="inline">/app</span> — the container's version of your project folder.</div>
+            <div class="callout"><b>COPY requirements.txt . first</b> A deliberate order — Docker caches this layer, so dependencies aren't reinstalled every time your code changes.</div>
+            <div class="callout"><b>CMD [...]</b> The command that runs the moment the container starts.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DOCKER COMPOSE CODE BREAKDOWN -->
+    <section class="slide tall" data-file="14_compose_code.py">
+      <div class="slide-inner">
+        <div class="eyebrow">14_compose_code.py</div>
+        <h1 class="title">Code Breakdown — docker-compose.yml</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:56vh;">
+            <div class="code-header"><span class="code-lang">yaml</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeCompose" data-lang="infra"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>services:</b> Each key is one container. This project needs two — the app, and its database.</div>
+            <div class="callout"><b>web</b> Builds from the <span class="inline">Dockerfile</span> right next to it, and maps the container's port 8000 to your machine's.</div>
+            <div class="callout"><b>db</b> A ready-made MySQL image — no Dockerfile needed for a database this common.</div>
+            <div class="callout"><b>depends_on</b> Makes sure the database container starts before the web container tries to connect to it.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DOCKER COMMANDS -->
+    <section class="slide" data-file="15_docker_commands.py">
+      <div class="slide-inner">
+        <div class="eyebrow">15_docker_commands.py</div>
+        <h1 class="title">The Commands You'll Actually Use</h1>
+        <div class="flow-steps">
+          <div class="cmd-row"><code>docker-compose up --build</code><p>Builds the images (first time, or after a Dockerfile change) and starts everything.</p></div>
+          <div class="cmd-row"><code>docker-compose up -d</code><p>Starts everything in the background — your terminal stays free.</p></div>
+          <div class="cmd-row"><code>docker-compose exec web python manage.py migrate</code><p>Runs a management command <em>inside</em> the running <span class="inline">web</span> container.</p></div>
+          <div class="cmd-row"><code>docker-compose logs -f web</code><p>Tails the app's live output — your main debugging window.</p></div>
+          <div class="cmd-row"><code>docker-compose down</code><p>Stops and removes the containers — a clean slate for next time.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FULL DEMO -->
+    <section class="slide tall" data-file="16_full_demo.py">
+      <div class="slide-inner">
+        <div class="eyebrow">16_full_demo.py</div>
+        <h1 class="title">Full Demo — Copy This and Try It</h1>
+        <p class="subtitle">Everything needed to containerize the <span class="inline">feedback</span> project you just built.</p>
+        <div class="code-block" style="max-height:54vh;">
+          <div class="code-header"><span class="code-lang">Dockerfile + docker-compose.yml + requirements.txt</span><button class="copy-btn">Copy</button></div>
+          <div class="code-scroll"><pre class="code-content" data-raw-id="codeFullDemo" data-lang="infra"></pre></div>
+        </div>
+        <div class="card" style="margin-top:14px;">
+          <h3>Run it</h3>
+          <p>Save these three files at your project root, then <span class="inline">docker-compose up --build</span>, then in a second terminal <span class="inline">docker-compose exec web python manage.py migrate</span>. Visit <span class="inline">localhost:8000</span>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- WHY DOCKER -->
+    <section class="slide" data-file="17_why_docker.py">
+      <div class="slide-inner">
+        <div class="eyebrow">17_why_docker.py</div>
+        <h1 class="title">Why We Bother Containerizing</h1>
+        <div class="grid-3">
+          <div class="card"><h3>Consistency</h3><p>The exact same environment runs on every machine — no more "it worked yesterday" mysteries.</p></div>
+          <div class="card"><h3>Fast onboarding</h3><p>A new teammate is running the full project — app and database — with one command.</p></div>
+          <div class="card"><h3>A real deployment story</h3><p>The container that runs on your laptop is the same one a production server runs — no surprises at launch.</p></div>
+        </div>
+        <div class="card" style="margin-top:20px;">
+          <h3>The bigger picture</h3>
+          <p>This is the same foundation behind shipping APIs, adding authentication, or calling external services later — a containerized app is what makes all of that reliable to build on top of.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- QUIZ INTRO -->
+    <section class="slide" data-file="18_quiz.py">
+      <div class="slide-inner">
+        <div class="eyebrow">18_quiz.py</div>
+        <div class="test-banner">🧪 QUICK QUIZ</div>
+        <h1 class="title">10 Items — Flow, Practices &amp; Docker</h1>
+        <p class="subtitle">Options and questions are shown — answers are on the very last slide.</p>
+        <div class="grid-2">
+          <div class="card"><h3>Part 1</h3><p>5 Multiple Choice questions.</p></div>
+          <div class="card"><h3>Part 2</h3><p>5 Identification — name the function, file, or concept.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MC 1-3 -->
+    <section class="slide" data-file="quiz/mc_1.py">
+      <div class="slide-inner">
+        <div class="eyebrow">quiz/mc.py · page 1 of 2</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Multiple Choice (1–3)</h1>
+        <div class="q-stack">
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q1</span><p class="q-text">In the standard Django form-processing pattern, what happens on a GET request?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>The form is validated</div>
+              <div class="opt"><span class="opt-letter">B</span>A blank form is displayed</div>
+              <div class="opt"><span class="opt-letter">C</span>The database is queried for errors</div>
+              <div class="opt"><span class="opt-letter">D</span>The session is cleared</div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q2</span><p class="q-text">What does <span class="inline">reverse()</span> do?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>Reverses a queryset</div>
+              <div class="opt"><span class="opt-letter">B</span>Builds a URL from its name, without hardcoding the path</div>
+              <div class="opt"><span class="opt-letter">C</span>Reverses a string</div>
+              <div class="opt"><span class="opt-letter">D</span>Rolls back a migration</div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q3</span><p class="q-text">What does <span class="inline">app_name</span> in <span class="inline">urls.py</span> prevent?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>CSRF attacks</div>
+              <div class="opt"><span class="opt-letter">B</span>Namespace collisions between apps reusing the same URL name</div>
+              <div class="opt"><span class="opt-letter">C</span>SQL injection</div>
+              <div class="opt"><span class="opt-letter">D</span>Session leaks</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MC 4-5 -->
+    <section class="slide" data-file="quiz/mc_2.py">
+      <div class="slide-inner">
+        <div class="eyebrow">quiz/mc.py · page 2 of 2</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Multiple Choice (4–5)</h1>
+        <div class="q-stack">
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q4</span><p class="q-text">Which file lists the Python packages a Docker image needs to install?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>Dockerfile</div>
+              <div class="opt"><span class="opt-letter">B</span>requirements.txt</div>
+              <div class="opt"><span class="opt-letter">C</span>docker-compose.yml</div>
+              <div class="opt"><span class="opt-letter">D</span>settings.py</div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q5</span><p class="q-text">Which command builds and starts all services defined in <span class="inline">docker-compose.yml</span>?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>docker build</div>
+              <div class="opt"><span class="opt-letter">B</span>docker-compose up --build</div>
+              <div class="opt"><span class="opt-letter">C</span>docker run</div>
+              <div class="opt"><span class="opt-letter">D</span>docker start</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ID 1-3 -->
+    <section class="slide" data-file="quiz/id_1.py">
+      <div class="slide-inner">
+        <div class="eyebrow">quiz/identification.py · page 1 of 2</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Identification (1–3)</h1>
+        <div class="q-stack">
+          <div class="scenario-q">
+            <p class="q-text"><b>1.</b> The function used to build a URL from its name instead of hardcoding the path string.</p>
+            <div class="answer-blank">Answer: ____________</div>
+          </div>
+          <div class="scenario-q">
+            <p class="q-text"><b>2.</b> The <span class="inline">urls.py</span> variable that namespaces an app's URL names to avoid collisions.</p>
+            <div class="answer-blank">Answer: ____________</div>
+          </div>
+          <div class="scenario-q">
+            <p class="q-text"><b>3.</b> The branch of the form-processing flow that re-renders the same form with error messages.</p>
+            <div class="answer-blank">Answer: ____________</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ID 4-5 -->
+    <section class="slide" data-file="quiz/id_2.py">
+      <div class="slide-inner">
+        <div class="eyebrow">quiz/identification.py · page 2 of 2</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Identification (4–5)</h1>
+        <div class="q-stack">
+          <div class="scenario-q">
+            <p class="q-text"><b>4.</b> The file that defines how to build a Docker image for a project.</p>
+            <div class="answer-blank">Answer: ____________</div>
+          </div>
+          <div class="scenario-q">
+            <p class="q-text"><b>5.</b> The file that defines multiple services — like an app and its database — that run together as containers.</p>
+            <div class="answer-blank">Answer: ____________</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RECAP -->
+    <section class="slide" data-file="recap.py">
+      <div class="slide-inner">
+        <div class="eyebrow">recap.py</div>
+        <h1 class="title">Recap Before You Go</h1>
+        <p class="subtitle">The essentials worth remembering.</p>
+        <div class="recap-list">
+          <div class="recap-item"><span class="tick">✓</span>Every form view is the same shape: GET displays, POST validates, valid saves + redirects, invalid re-renders with errors.</div>
+          <div class="recap-item"><span class="tick">✓</span>Never hardcode a URL path — use <span class="inline">reverse()</span> in Python and <span class="inline">{% url %}</span> in templates.</div>
+          <div class="recap-item"><span class="tick">✓</span><span class="inline">app_name</span> namespaces an app's routes so two apps can safely reuse the same URL name.</div>
+          <div class="recap-item"><span class="tick">✓</span>A <span class="inline">Dockerfile</span> builds one image; <span class="inline">docker-compose.yml</span> runs multiple containers together.</div>
+          <div class="recap-item"><span class="tick">✓</span><span class="inline">docker-compose exec web ...</span> is how you run management commands inside a running container.</div>
+          <div class="recap-item"><span class="tick">✓</span>Containerizing isn't optional polish — it's what makes "works on my machine" stop being a problem.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ANSWERS -->
+    <section class="slide tall" data-file="answers.py">
+      <div class="slide-inner">
+        <div class="eyebrow">answers.py</div>
+        <h1 class="title" style="font-size:clamp(26px,3vw,40px);">Answer Key</h1>
+        <div class="answers-grid">
+          <div class="answers-col">
+            <h3>Multiple Choice</h3>
+            <div class="ans-row"><b>1. B</b> — GET always displays a blank, unbound form.</div>
+            <div class="ans-row"><b>2. B</b> — reverse() resolves a URL from its name.</div>
+            <div class="ans-row"><b>3. B</b> — app_name prevents URL-name collisions between apps.</div>
+            <div class="ans-row"><b>4. B</b> — requirements.txt lists the Python dependencies.</div>
+            <div class="ans-row"><b>5. B</b> — docker-compose up --build builds and starts everything.</div>
+          </div>
+          <div class="answers-col">
+            <h3>Identification</h3>
+            <div class="ans-row"><b>1. reverse()</b> — builds a URL from its name.</div>
+            <div class="ans-row"><b>2. app_name</b> — namespaces an app's URLs.</div>
+            <div class="ans-row"><b>3. Invalid</b> — the branch that redisplays the form with errors.</div>
+            <div class="ans-row"><b>4. Dockerfile</b> — defines how to build one image.</div>
+            <div class="ans-row"><b>5. docker-compose.yml</b> — defines multiple services together.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="chrome-bottom">
+    <div class="seg"><span>Form Flow, Best Practices &amp; Docker</span></div>
+    <div class="seg"><span>Right-click / <kbd>→</kbd> next</span><span><kbd>?</kbd> shortcuts</span></div>
+  </div>
+
+  <div class="modal-overlay" id="shortcutsModal">
+    <div class="modal">
+      <h2>Keyboard &amp; Mouse Shortcuts</h2>
+      <div class="row"><span>Next slide</span><span><kbd>→</kbd> / <kbd>Right-click</kbd> / <kbd>Mouse btn 4</kbd></span></div>
+      <div class="row"><span>Previous slide</span><span><kbd>←</kbd> / <kbd>Mouse btn 3</kbd></span></div>
+      <div class="row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+      <div class="row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+      <div class="row"><span>Show/hide this panel</span><span><kbd>?</kbd></span></div>
+      <div class="row"><span>Close panel</span><span><kbd>Esc</kbd></span></div>
+      <div class="row"><span>Swipe (mobile)</span><span>Left = next · Right = prev</span></div>
+      <div class="close-hint">Click outside this box, or press Esc, to close.</div>
+    </div>
+  </div>
+
+  <textarea id="raw-codeBad" hidden># views.py -- the bad way
+def add_task(request):
+    if request.method == "POST":
+        form = TaskModelForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("/tasks/")   # hardcoded path
+    else:
+        form = TaskModelForm()
+    return render(request, "tasks/add_task.html", {"form": form})
+
+
+&lt;!-- tasks/task_list.html -- the bad way --&gt;
+&lt;a href="/tasks/add/"&gt;Add a task&lt;/a&gt;
+&lt;!-- rename this route later, and every hardcoded link like this quietly breaks --&gt;</textarea>
+
+  <textarea id="raw-codeGood" hidden># views.py -- the django way
+from django.urls import reverse
+
+def add_task(request):
+    if request.method == "POST":
+        form = TaskModelForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect(reverse("tasks:task_list"))
+    else:
+        form = TaskModelForm()
+    return render(request, "tasks/add_task.html", {"form": form})
+
+
+&lt;!-- tasks/task_list.html -- the django way --&gt;
+&lt;a href="{% url 'tasks:add_task' %}"&gt;Add a task&lt;/a&gt;
+&lt;!-- rename the route in urls.py, and this link updates itself --&gt;</textarea>
+
+  <textarea id="raw-codeFlow" hidden># tasks/views.py
+from django.shortcuts import render, redirect
+from django.urls import reverse
+from .forms import TaskModelForm
+
+def add_task(request):
+    if request.method == "POST":
+        form = TaskModelForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect(reverse("tasks:task_list"))
+        # falls through to the render() below, now with errors attached
+    else:
+        form = TaskModelForm()
+
+    return render(request, "tasks/add_task.html", {"form": form})</textarea>
+
+  <textarea id="raw-codeBestPractice" hidden># tasks/urls.py
+from django.urls import path
+from . import views
+
+app_name = "tasks"   # <-- the namespace
+
+urlpatterns = [
+    path("", views.task_list, name="task_list"),
+    path("add/", views.add_task, name="add_task"),
+]
+
+
+# tasks/views.py
+from django.urls import reverse
+
+def add_task(request):
+    # ...
+    return redirect(reverse("tasks:task_list"))
+
+
+&lt;!-- tasks/templates/tasks/task_list.html --&gt;
+&lt;a href="{% url 'tasks:add_task' %}"&gt;Add a task&lt;/a&gt;</textarea>
+
+  <textarea id="raw-codeDockerSetup" hidden># confirm Docker Desktop is installed and running
+docker --version
+
+
+# requirements.txt -- at your project root
+Django==5.0
+mysqlclient==2.2.4
+
+
+# confirm manage.py sits at the project root
+ls
+# manage.py  core/  feedback/  requirements.txt</textarea>
+
+  <textarea id="raw-codeDockerfile" hidden>FROM python:3.12-slim
+
+WORKDIR /app
+
+# copied first so this layer is cached --
+# code changes won't force a full reinstall
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]</textarea>
+
+  <textarea id="raw-codeCompose" hidden>services:
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_NAME=feedback_db
+
+  db:
+    image: mysql:8
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=feedback_db
+    ports:
+      - "3306:3306"</textarea>
+
+  <textarea id="raw-codeFullDemo" hidden># Dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+
+
+# docker-compose.yml
+services:
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_NAME=feedback_db
+
+  db:
+    image: mysql:8
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=feedback_db
+    ports:
+      - "3306:3306"
+
+
+# requirements.txt
+Django==5.0
+mysqlclient==2.2.4</textarea>
+
+  <textarea id="raw-fileUrlsRefactor" hidden># tasks/urls.py  (refactored -- one line added)
+from django.urls import path
+from . import views
+
+app_name = "tasks"
+
+urlpatterns = [
+    path("", views.task_list, name="task_list"),
+    path("add/", views.add_task, name="add_task"),
+    path("visits/", views.homepage, name="homepage"),
+]</textarea>
+
+  <textarea id="raw-fileViewsRefactor" hidden># tasks/views.py  (refactored -- one import, one line changed)
+from django.shortcuts import render, redirect
+from django.urls import reverse
+from .models import Task
+from .forms import TaskModelForm
+
+def task_list(request):
+    tasks = Task.objects.all()
+    return render(request, "tasks/task_list.html", {"tasks": tasks})
+
+def add_task(request):
+    if request.method == "POST":
+        form = TaskModelForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect(reverse("tasks:task_list"))   # <-- changed
+    else:
+        form = TaskModelForm()
+    return render(request, "tasks/add_task.html", {"form": form})</textarea>
+
+  <textarea id="raw-fileTemplateRefactor" hidden>&lt;!-- tasks/templates/tasks/task_list.html  (refactored) --&gt;
+&lt;ul&gt;
+  {% for task in tasks %}
+    &lt;li&gt;{{ task.title }} {% if task.is_done %}&amp;#10003;{% endif %}&lt;/li&gt;
+  {% endfor %}
+&lt;/ul&gt;
+
+&lt;a href="{% url 'tasks:add_task' %}"&gt;Add a task&lt;/a&gt;</textarea>
+
+  <textarea id="raw-fileFeedbackSetup" hidden># from your project root
+python manage.py startapp feedback
+
+
+# core/settings.py -- register the new app
+INSTALLED_APPS = [
+    # ...
+    "feedback",
+]
+
+
+# core/urls.py -- project-level routing
+from django.contrib import admin
+from django.urls import path, include
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("feedback/", include("feedback.urls")),
+]</textarea>
+
+  <textarea id="raw-fileFeedbackModels" hidden># feedback/models.py  (new file)
+from django.db import models
+
+class Feedback(models.Model):
+    name = models.CharField(max_length=100)
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name}: {self.message[:30]}"</textarea>
+
+  <textarea id="raw-fileFeedbackFormsViews" hidden># feedback/forms.py  (new file)
+from django import forms
+from .models import Feedback
+
+class FeedbackForm(forms.ModelForm):
+    class Meta:
+        model = Feedback
+        fields = ["name", "message"]
+
+
+# feedback/views.py  (new file)
+from django.shortcuts import render, redirect
+from django.urls import reverse
+from .models import Feedback
+from .forms import FeedbackForm
+
+def feedback_list(request):
+    entries = Feedback.objects.all().order_by("-created_at")
+    return render(request, "feedback/feedback_list.html", {"entries": entries})
+
+def submit_feedback(request):
+    if request.method == "POST":
+        form = FeedbackForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect(reverse("feedback:feedback_list"))
+    else:
+        form = FeedbackForm()
+    return render(request, "feedback/submit_feedback.html", {"form": form})</textarea>
+
+  <textarea id="raw-fileFeedbackUrlsTemplates" hidden># feedback/urls.py  (new file)
+from django.urls import path
+from . import views
+
+app_name = "feedback"
+
+urlpatterns = [
+    path("", views.feedback_list, name="feedback_list"),
+    path("submit/", views.submit_feedback, name="submit_feedback"),
+]
+
+
+&lt;!-- feedback/templates/feedback/feedback_list.html --&gt;
+{% for entry in entries %}
+  &lt;p&gt;&lt;b&gt;{{ entry.name }}&lt;/b&gt;: {{ entry.message }}&lt;/p&gt;
+{% endfor %}
+&lt;a href="{% url 'feedback:submit_feedback' %}"&gt;Leave feedback&lt;/a&gt;
+
+
+&lt;!-- feedback/templates/feedback/submit_feedback.html --&gt;
+&lt;form method="post"&gt;
+  {% csrf_token %}
+  {{ form.as_p }}
+  &lt;button type="submit"&gt;Submit&lt;/button&gt;
+&lt;/form&gt;</textarea>
+
+  <textarea id="raw-codeFeedbackFullDemo" hidden># feedback/models.py
+from django.db import models
+
+class Feedback(models.Model):
+    name = models.CharField(max_length=100)
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name}: {self.message[:30]}"
+
+
+# feedback/forms.py
+from django import forms
+from .models import Feedback
+
+class FeedbackForm(forms.ModelForm):
+    class Meta:
+        model = Feedback
+        fields = ["name", "message"]
+
+
+# feedback/views.py
+from django.shortcuts import render, redirect
+from django.urls import reverse
+from .models import Feedback
+from .forms import FeedbackForm
+
+def feedback_list(request):
+    entries = Feedback.objects.all().order_by("-created_at")
+    return render(request, "feedback/feedback_list.html", {"entries": entries})
+
+def submit_feedback(request):
+    if request.method == "POST":
+        form = FeedbackForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect(reverse("feedback:feedback_list"))
+    else:
+        form = FeedbackForm()
+    return render(request, "feedback/submit_feedback.html", {"form": form})
+
+
+# feedback/urls.py
+from django.urls import path
+from . import views
+
+app_name = "feedback"
+
+urlpatterns = [
+    path("", views.feedback_list, name="feedback_list"),
+    path("submit/", views.submit_feedback, name="submit_feedback"),
+]
+
+
+&lt;!-- feedback/templates/feedback/feedback_list.html --&gt;
+{% for entry in entries %}
+  &lt;p&gt;&lt;b&gt;{{ entry.name }}&lt;/b&gt;: {{ entry.message }}&lt;/p&gt;
+{% endfor %}
+&lt;a href="{% url 'feedback:submit_feedback' %}"&gt;Leave feedback&lt;/a&gt;
+
+
+&lt;!-- feedback/templates/feedback/submit_feedback.html --&gt;
+&lt;form method="post"&gt;
+  {% csrf_token %}
+  {{ form.as_p }}
+  &lt;button type="submit"&gt;Submit&lt;/button&gt;
+&lt;/form&gt;</textarea>
+
+<script>
+(function(){
+  "use strict";
+
+  function escapeHtml(s){
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  function highlightPython(code){
+    var keywords = ["def","return","if","else","elif","for","while","in","import","from","class",
+      "pass","None","True","False","and","or","not","is","as","with","try","except","finally",
+      "raise","yield","lambda","global","assert","break","continue"];
+    var kwPattern = keywords.join("|");
+    var tokenRe = new RegExp(
+      "(#[^\\n]*)" +
+      "|(\"\"\"[\\s\\S]*?\"\"\"|'''[\\s\\S]*?'''|\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*')" +
+      "|(@[A-Za-z_][A-Za-z0-9_.]*)" +
+      "|\\b(" + kwPattern + ")\\b" +
+      "|\\b([A-Za-z_][A-Za-z0-9_]*)(?=\\()" +
+      "|\\b(\\d+\\.?\\d*)\\b",
+      "g"
+    );
+    var result = "", lastIndex = 0, m;
+    while ((m = tokenRe.exec(code))) {
+      result += escapeHtml(code.slice(lastIndex, m.index));
+      if (m[1]) result += '<span class="tok-comment">' + escapeHtml(m[1]) + '</span>';
+      else if (m[2]) result += '<span class="tok-string">' + escapeHtml(m[2]) + '</span>';
+      else if (m[3]) result += '<span class="tok-decorator">' + escapeHtml(m[3]) + '</span>';
+      else if (m[4]) result += '<span class="tok-keyword">' + escapeHtml(m[4]) + '</span>';
+      else if (m[5]) result += '<span class="tok-func">' + escapeHtml(m[5]) + '</span>';
+      else if (m[6]) result += '<span class="tok-number">' + escapeHtml(m[6]) + '</span>';
+      lastIndex = tokenRe.lastIndex;
+    }
+    result += escapeHtml(code.slice(lastIndex));
+    return result;
+  }
+
+  function highlightTemplate(code){
+    var tokenRe = /(#[^\n]*)|(\{#[\s\S]*?#\})|(\{%[\s\S]*?%\})|(\{\{[\s\S]*?\}\})|(<\/?[a-zA-Z][a-zA-Z0-9-]*(?:\s+[a-zA-Z-]+(?:="[^"]*")?)*\s*\/?>)/g;
+    var result = "", lastIndex = 0, m;
+    while((m = tokenRe.exec(code))){
+      result += escapeHtml(code.slice(lastIndex, m.index));
+      if (m[1]) result += '<span class="tok-comment">' + escapeHtml(m[1]) + '</span>';
+      else if (m[2]) result += '<span class="tok-comment">' + escapeHtml(m[2]) + '</span>';
+      else if (m[3]) result += '<span class="tok-decorator">' + escapeHtml(m[3]) + '</span>';
+      else if (m[4]) result += '<span class="tok-string">' + escapeHtml(m[4]) + '</span>';
+      else if (m[5]) result += '<span class="tok-keyword">' + escapeHtml(m[5]) + '</span>';
+      lastIndex = tokenRe.lastIndex;
+    }
+    result += escapeHtml(code.slice(lastIndex));
+    return result;
+  }
+
+  /* Single-pass tokenizer for Dockerfile + docker-compose (YAML) syntax */
+  function highlightInfra(code){
+    var kw = "FROM|WORKDIR|COPY|RUN|CMD|ENV|EXPOSE|ENTRYPOINT|ARG|LABEL|USER|VOLUME";
+    var tokenRe = new RegExp(
+      "(#[^\\n]*)" +
+      "|(\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*')" +
+      "|\\b(" + kw + ")\\b" +
+      "|(^[ \\t]*[A-Za-z_][\\w-]*:)",
+      "gm"
+    );
+    var result = "", lastIndex = 0, m;
+    while((m = tokenRe.exec(code))){
+      result += escapeHtml(code.slice(lastIndex, m.index));
+      if (m[1]) result += '<span class="tok-comment">' + escapeHtml(m[1]) + '</span>';
+      else if (m[2]) result += '<span class="tok-string">' + escapeHtml(m[2]) + '</span>';
+      else if (m[3]) result += '<span class="tok-keyword">' + escapeHtml(m[3]) + '</span>';
+      else if (m[4]) result += '<span class="tok-func">' + escapeHtml(m[4]) + '</span>';
+      lastIndex = tokenRe.lastIndex;
+    }
+    result += escapeHtml(code.slice(lastIndex));
+    return result;
+  }
+
+  document.querySelectorAll(".code-content[data-raw-id]").forEach(function(el){
+    var rawId = el.getAttribute("data-raw-id");
+    var rawEl = document.getElementById("raw-" + rawId);
+    if (!rawEl) return;
+    var raw = rawEl.value;
+    var lang = el.getAttribute("data-lang");
+    if (lang === "python") el.innerHTML = highlightPython(raw);
+    else if (lang === "infra") el.innerHTML = highlightInfra(raw);
+    else el.innerHTML = highlightTemplate(raw);
+    el.setAttribute("data-raw", raw);
+  });
+
+  document.querySelectorAll(".copy-btn").forEach(function(btn){
+    btn.addEventListener("click", function(e){
+      e.stopPropagation();
+      var block = btn.closest(".code-block");
+      var contentEl = block ? block.querySelector(".code-content") : null;
+      var text = contentEl ? (contentEl.getAttribute("data-raw") || contentEl.textContent) : "";
+      var done = function(){
+        var original = btn.textContent;
+        btn.textContent = "Copied!";
+        btn.classList.add("copied");
+        setTimeout(function(){ btn.textContent = original; btn.classList.remove("copied"); }, 1400);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(done);
+      } else {
+        var ta = document.createElement("textarea");
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand("copy"); } catch(err){}
+        document.body.removeChild(ta);
+        done();
+      }
+    });
+  });
+
+  var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var total = slides.length;
+  var current = 0;
+  var deckEl = document.getElementById("deck");
+  var progressFill = document.getElementById("progressFill");
+  var slideCounter = document.getElementById("slideCounter");
+  var tabName = document.getElementById("tabName");
+  var shortcutsModal = document.getElementById("shortcutsModal");
+
+  function reduceMotion(){
+    return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  function render(direction){
+    slides.forEach(function(s, i){ s.classList.toggle("active", i === current); });
+    deckEl.classList.toggle("reverse", direction === -1);
+    progressFill.style.width = ((current + 1) / total * 100) + "%";
+    slideCounter.textContent = (current + 1) + " / " + total;
+    var file = slides[current].getAttribute("data-file") || "slide.py";
+    tabName.textContent = file;
+    slides[current].scrollTop = 0;
+  }
+
+  function goTo(index, direction){
+    if (index < 0 || index >= total || index === current) return;
+    current = index;
+    render(direction);
+  }
+  function next(){ goTo(current + 1, 1); }
+  function prev(){ goTo(current - 1, -1); }
+  function first(){ goTo(0, -1); }
+  function last(){ goTo(total - 1, 1); }
+
+  function isInteractive(target){
+    return !!target.closest("button, a, input, textarea, select, [contenteditable], .copy-btn, .modal");
+  }
+
+  document.addEventListener("mousedown", function(e){
+    if (e.button === 2) {
+      if (isInteractive(e.target)) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    } else if (e.button === 3) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      prev();
+    } else if (e.button === 4) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    }
+  }, true);
+
+  document.addEventListener("mouseup", function(e){
+    if (e.button === 3 || e.button === 4) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, true);
+
+  document.addEventListener("contextmenu", function(e){
+    if (isInteractive(e.target)) return;
+    e.preventDefault();
+  }, true);
+
+  document.addEventListener("auxclick", function(e){
+    if (e.button === 1 || e.button === 3 || e.button === 4) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, true);
+
+  document.addEventListener("keydown", function(e){
+    if (shortcutsModal.classList.contains("open")) {
+      if (e.key === "Escape" || e.key === "?") { closeModal(); e.preventDefault(); }
+      return;
+    }
+    switch(e.key){
+      case "ArrowRight": case "ArrowDown": case "PageDown": next(); e.preventDefault(); break;
+      case "ArrowLeft": case "ArrowUp": case "PageUp": prev(); e.preventDefault(); break;
+      case "Home": first(); e.preventDefault(); break;
+      case "End": last(); e.preventDefault(); break;
+      case "?": openModal(); e.preventDefault(); break;
+    }
+  });
+
+  function openModal(){ shortcutsModal.classList.add("open"); }
+  function closeModal(){ shortcutsModal.classList.remove("open"); }
+  shortcutsModal.addEventListener("mousedown", function(e){
+    if (e.target === shortcutsModal) closeModal();
+  });
+
+  var touchStartX = null, touchStartY = null;
+  document.addEventListener("touchstart", function(e){
+    if (e.touches.length !== 1) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, {passive:true});
+  document.addEventListener("touchend", function(e){
+    if (touchStartX === null) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) next(); else prev();
+    }
+    touchStartX = null; touchStartY = null;
+  }, {passive:true});
+
+  if (reduceMotion()) document.body.classList.add("no-motion");
+
+  render(1);
+})();
+</script>
+</body>
+</html>

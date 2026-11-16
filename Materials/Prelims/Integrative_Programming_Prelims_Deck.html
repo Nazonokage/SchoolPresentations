@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Integrative Programming — Prelims Crash Course</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --surface:#141a21;
+    --surface-2:#1b222b;
+    --surface-3:#20293380;
+    --border:#2b333d;
+    --border-soft:#242c36;
+    --text:#e6edf3;
+    --muted:#8b949e;
+    --muted-2:#6e7681;
+    --accent:#58a6ff;
+    --accent-soft:#58a6ff22;
+    --accent-2:#7ee787;
+    --accent-2-soft:#7ee78722;
+    --accent-3:#d29922;
+    --accent-3-soft:#d2992222;
+    --accent-4:#f78166;
+    --accent-4-soft:#f7816622;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--bg); color:var(--text);
+    font-family:var(--sans);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  body.no-motion *{ transition:none !important; animation:none !important; }
+
+  ::selection{ background:var(--accent-soft); color:var(--text); }
+
+  /* ---------- Chrome: tab bar + status bar (signature element) ---------- */
+  .chrome-top{
+    position:fixed; top:0; left:0; right:0; height:44px;
+    background:var(--surface); border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:14px; padding:0 18px;
+    z-index:50; font-family:var(--mono); font-size:13px; color:var(--muted);
+  }
+  .win-dots{ display:flex; gap:7px; flex:0 0 auto; }
+  .win-dots span{ width:11px; height:11px; border-radius:50%; display:block; }
+  .win-dots span:nth-child(1){ background:#ff5f57; }
+  .win-dots span:nth-child(2){ background:#febc2e; }
+  .win-dots span:nth-child(3){ background:#28c840; }
+  .file-tab{
+    display:flex; align-items:center; gap:8px;
+    background:var(--surface-2); border:1px solid var(--border-soft);
+    border-bottom:none; padding:6px 14px; border-radius:6px 6px 0 0;
+    color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .file-tab .dot{ width:7px; height:7px; border-radius:50%; background:var(--accent-3); flex:0 0 auto; }
+  .chrome-top .spacer{ flex:1; }
+  .chrome-top .counter{ color:var(--muted); }
+
+  .progress-track{ position:fixed; top:44px; left:0; right:0; height:3px; background:var(--surface-2); z-index:51; }
+  .progress-fill{ height:100%; background:linear-gradient(90deg, var(--accent), var(--accent-2)); width:0%; transition:width .35s ease; }
+
+  .chrome-bottom{
+    position:fixed; bottom:0; left:0; right:0; height:30px;
+    background:var(--accent); color:#04101d;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 16px; font-family:var(--mono); font-size:12px; font-weight:600;
+    z-index:50;
+  }
+  .chrome-bottom .seg{ display:flex; align-items:center; gap:16px; }
+  .chrome-bottom kbd{
+    background:#04101d22; border-radius:3px; padding:1px 6px; font-family:var(--mono);
+    border:1px solid #04101d33;
+  }
+
+  /* ---------- Slides ---------- */
+  .deck{ position:fixed; inset:44px 0 30px 0; }
+  .slide{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    opacity:0; transform:translateX(36px);
+    transition:opacity .35s ease, transform .35s ease;
+    pointer-events:none;
+    overflow-y:auto;
+  }
+  .slide.active{ opacity:1; transform:translateX(0); pointer-events:auto; }
+  .deck.reverse .slide{ transform:translateX(-36px); }
+  .deck.reverse .slide.active{ transform:translateX(0); }
+
+  .slide-inner{
+    margin:auto; width:100%; max-width:1680px;
+    padding:clamp(20px,3.2vh,48px) clamp(24px,4vw,72px);
+    display:flex; flex-direction:column; min-height:100%;
+    justify-content:center;
+    min-width:0;
+  }
+  .slide.tall .slide-inner{ justify-content:flex-start; }
+
+  .eyebrow{
+    font-family:var(--mono); font-size:14px; color:var(--accent-2);
+    letter-spacing:.03em; margin-bottom:14px; display:flex; align-items:center; gap:8px;
+  }
+  .eyebrow::before{ content:"//"; color:var(--muted-2); }
+
+  h1.title{
+    font-family:var(--mono); font-weight:700;
+    font-size:clamp(28px, 3.4vw, 50px); line-height:1.15; margin:0 0 8px 0;
+    letter-spacing:-0.01em;
+  }
+  h1.title .cursor{
+    display:inline-block; width:.5ch; background:var(--accent-2); margin-left:4px;
+    animation:blink 1.1s steps(1) infinite;
+  }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  .subtitle{ font-size:clamp(15px,1.3vw,20px); color:var(--muted); margin:0 0 28px 0; max-width:70ch; line-height:1.55; }
+
+  .grid-2{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:28px; min-width:0; }
+  .grid-3{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; min-width:0; }
+  .grid-4{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:18px; min-width:0; }
+
+  .card{
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; padding:20px 22px; min-width:0;
+  }
+  .card h3{ margin:0 0 10px 0; font-size:17px; font-family:var(--mono); color:var(--accent); }
+  .card p, .card li{ font-size:15px; line-height:1.6; color:var(--text); }
+  .card ul{ margin:0; padding-left:20px; }
+  .card ul li{ margin-bottom:6px; }
+
+  .badge{ display:inline-block; font-family:var(--mono); font-size:12px; padding:2px 8px; border-radius:4px; margin-right:6px; }
+  .badge-get{ background:var(--accent-soft); color:var(--accent); }
+  .badge-post{ background:var(--accent-3-soft); color:var(--accent-3); }
+
+  /* ---------- Code blocks ---------- */
+  .code-block{
+    background:#0a0e13; border:1px solid var(--border); border-radius:10px;
+    overflow:hidden; margin:0; min-width:0; max-height:46vh;
+    display:flex; flex-direction:column;
+  }
+  .code-header{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--surface-2); border-bottom:1px solid var(--border-soft);
+    padding:7px 12px; flex:0 0 auto;
+  }
+  .code-lang{ font-family:var(--mono); font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  .copy-btn{
+    font-family:var(--mono); font-size:12px; color:var(--text); background:var(--surface);
+    border:1px solid var(--border); border-radius:6px; padding:4px 10px; cursor:pointer;
+    display:flex; align-items:center; gap:6px; transition:background .15s ease, border-color .15s ease;
+  }
+  .copy-btn:hover{ background:var(--border-soft); border-color:var(--accent); }
+  .copy-btn.copied{ color:var(--accent-2); border-color:var(--accent-2); }
+  .code-scroll{ overflow:auto; padding:14px 16px; }
+  .code-content{
+    font-family:var(--mono); font-size:14px; line-height:1.65; white-space:pre;
+    color:var(--text); tab-size:4;
+  }
+  .tok-comment{ color:var(--muted-2); font-style:italic; }
+  .tok-string{ color:var(--accent-2); }
+  .tok-keyword{ color:var(--accent); font-weight:600; }
+  .tok-func{ color:var(--accent-3); }
+  .tok-number{ color:var(--accent-4); }
+  .tok-decorator{ color:var(--accent-4); }
+
+  .callouts{ display:flex; flex-direction:column; gap:10px; min-width:0; }
+  .callout{
+    display:flex; gap:10px; align-items:flex-start; font-size:14.5px; line-height:1.55;
+    background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent);
+    padding:10px 14px; border-radius:6px; min-width:0;
+  }
+  .callout b{ color:var(--accent); font-family:var(--mono); font-size:13px; flex:0 0 auto; }
+
+  /* ---------- Diagram (inline SVG wrapper) ---------- */
+  .diagram-wrap{ display:flex; justify-content:center; align-items:center; padding:6px 0; }
+  .diagram-wrap svg{ width:100%; height:auto; max-height:34vh; }
+
+  /* ---------- Status code chips ---------- */
+  .code-family{ border-radius:10px; padding:18px 18px; border:1px solid var(--border); min-width:0; }
+  .code-family h3{ font-family:var(--mono); font-size:16px; margin:0 0 10px 0; }
+  .chip-row{ display:flex; flex-wrap:wrap; gap:8px; }
+  .chip{ font-family:var(--mono); font-size:13px; padding:5px 10px; border-radius:6px; background:#0009; border:1px solid var(--border-soft); }
+  .fam-2xx{ border-top:3px solid var(--accent-2); } .fam-2xx h3{ color:var(--accent-2); }
+  .fam-3xx{ border-top:3px solid var(--accent); } .fam-3xx h3{ color:var(--accent); }
+  .fam-4xx{ border-top:3px solid var(--accent-3); } .fam-4xx h3{ color:var(--accent-3); }
+  .fam-5xx{ border-top:3px solid var(--accent-4); } .fam-5xx h3{ color:var(--accent-4); }
+
+  /* ---------- MC + activity questions ---------- */
+  .q-stack{ display:flex; flex-direction:column; gap:16px; min-width:0; }
+  .mc-q{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px 18px; min-width:0; }
+  .mc-q-head{ display:flex; gap:12px; align-items:flex-start; margin-bottom:10px; }
+  .q-num{
+    font-family:var(--mono); font-size:13px; color:var(--bg); background:var(--accent-2);
+    border-radius:5px; padding:3px 8px; flex:0 0 auto; font-weight:700;
+  }
+  .q-text{ margin:0; font-size:16.5px; line-height:1.5; }
+  .options{ display:grid; grid-template-columns:1fr 1fr; gap:8px; min-width:0; }
+  .opt{
+    display:flex; gap:8px; align-items:flex-start; font-size:14.5px; line-height:1.4;
+    background:var(--surface-2); border:1px solid var(--border-soft); border-radius:7px;
+    padding:8px 10px; min-width:0;
+  }
+  .opt-letter{
+    font-family:var(--mono); font-weight:700; color:var(--accent); flex:0 0 auto;
+  }
+
+  .scenario-q{
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:16px 18px; min-width:0;
+  }
+  .scenario-q .q-text{ font-size:15.5px; margin-bottom:10px; }
+  .scenario-q code.inline{
+    background:var(--surface-2); border:1px solid var(--border-soft); border-radius:4px;
+    padding:1px 6px; font-family:var(--mono); font-size:14px; color:var(--accent-3);
+  }
+  .answer-blank{
+    font-family:var(--mono); font-size:14px; color:var(--muted);
+    border-top:1px dashed var(--border-soft); padding-top:8px; margin-top:6px;
+  }
+
+  .test-banner{
+    display:inline-flex; align-items:center; gap:10px; font-family:var(--mono); font-size:13px;
+    color:var(--bg); background:var(--accent-3); padding:5px 12px; border-radius:20px; margin-bottom:18px;
+    font-weight:700; width:fit-content;
+  }
+
+  /* ---------- Recap / Answers ---------- */
+  .recap-list{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 28px; }
+  .recap-item{ display:flex; gap:12px; align-items:flex-start; font-size:16px; line-height:1.55; }
+  .recap-item .tick{ color:var(--accent-2); font-weight:700; flex:0 0 auto; }
+
+  .answers-grid{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:18px; min-width:0; }
+  .answers-col h3{
+    font-family:var(--mono); color:var(--accent); font-size:16px; border-bottom:1px solid var(--border);
+    padding-bottom:8px; margin:0 0 12px 0;
+  }
+  .ans-row{ font-size:14px; line-height:1.55; margin-bottom:9px; }
+  .ans-row b{ color:var(--accent-2); font-family:var(--mono); }
+
+  /* ---------- Shortcuts modal ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:#000000aa; z-index:100;
+    display:none; align-items:center; justify-content:center;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal{
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:28px 32px; width:min(560px,90vw); font-size:15px;
+  }
+  .modal h2{ font-family:var(--mono); margin:0 0 18px 0; font-size:20px; color:var(--accent-2); }
+  .modal .row{ display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border-soft); }
+  .modal .row:last-child{ border-bottom:none; }
+  .modal kbd{
+    font-family:var(--mono); background:var(--surface-2); border:1px solid var(--border-soft);
+    border-radius:5px; padding:2px 9px;
+  }
+  .modal .close-hint{ margin-top:16px; color:var(--muted); font-size:13px; text-align:center; }
+
+  @media (max-width: 1100px){
+    .answers-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+  }
+  @media (max-width: 900px){
+    .grid-2, .grid-3, .grid-4{ grid-template-columns:1fr; }
+    .answers-grid{ grid-template-columns:1fr; }
+    .recap-list{ grid-template-columns:1fr; }
+    .options{ grid-template-columns:1fr; }
+    .chrome-top .file-tab span.full{ display:none; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition:opacity .01s linear !important; transform:none !important; }
+    .progress-fill{ transition:none !important; }
+    h1.title .cursor{ animation:none !important; opacity:1; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="chrome-top">
+    <div class="win-dots"><span></span><span></span><span></span></div>
+    <div class="file-tab"><span class="dot"></span><span class="full" id="tabName">prelims_crash_course.py</span></div>
+    <div class="spacer"></div>
+    <div class="counter" id="slideCounter">1 / 24</div>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+  <div class="deck" id="deck">
+
+    <!-- 1 : COVER -->
+    <section class="slide active" data-file="prelims_crash_course.py">
+      <div class="slide-inner">
+        <div class="eyebrow">integrative_programming / prelims</div>
+        <h1 class="title" style="font-size:clamp(34px,4.6vw,66px);">Integrative Programming<span class="cursor">&nbsp;</span></h1>
+        <p class="subtitle" style="font-size:clamp(17px,1.6vw,24px);">Prelims Crash Course — the HTTP request/response cycle, GET vs POST, status codes, and Django's MVT routing, broken down line by line.</p>
+        <div class="grid-3" style="margin-top:10px;">
+          <div class="card"><h3>01 · Lecture</h3><p>Six short breakdowns covering everything the test touches.</p></div>
+          <div class="card"><h3>02 · Summative Test</h3><p>30 items: MC, code output, GET/POST, and status codes.</p></div>
+          <div class="card"><h3>03 · Answer Key</h3><p>Every answer, briefly explained, at the very end.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 : AGENDA -->
+    <section class="slide" data-file="00_agenda.py">
+      <div class="slide-inner">
+        <div class="eyebrow">00_agenda.py</div>
+        <h1 class="title">What We'll Cover</h1>
+        <p class="subtitle">Short lecture, then straight into practice — no filler.</p>
+        <div class="grid-2">
+          <div class="card">
+            <h3>📖 The Lecture</h3>
+            <ul>
+              <li>The HTTP request → response cycle</li>
+              <li>GET vs POST, with a real view function</li>
+              <li>HTTP status code families (2xx–5xx)</li>
+              <li>Django's MVT flow (not MVC!)</li>
+              <li>How to code a route: <code class="inline" style="background:var(--surface-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 6px;font-family:var(--mono);color:var(--accent-3);">urls.py</code> + <code class="inline" style="background:var(--surface-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 6px;font-family:var(--mono);color:var(--accent-3);">views.py</code>, with 3 converter types</li>
+              <li>F-strings, line by line</li>
+              <li>String methods you'll actually be tested on</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>✅ The Summative Test — 30 items</h3>
+            <ul>
+              <li>10 Multiple Choice — Django concepts</li>
+              <li>10 "Guess the Output" — real Python/Django code</li>
+              <li>5 "Guess the Output" — POST or GET?</li>
+              <li>5 Identification — name that status code</li>
+              <li>3 questions per page, no answers shown until the end</li>
+              <li>Recap slide before the answer key</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 : HTTP CYCLE -->
+    <section class="slide" data-file="01_http_cycle.py">
+      <div class="slide-inner">
+        <div class="eyebrow">01_http_cycle.py</div>
+        <h1 class="title">The Request → Response Cycle</h1>
+        <p class="subtitle">Every single page load is this loop, over and over.</p>
+        <div class="diagram-wrap">
+          <svg viewBox="0 0 900 220" role="img" aria-label="Diagram showing a client sending an HTTP request to a server, and the server sending back an HTTP response with a status code">
+            <title>Client-server HTTP request and response cycle</title>
+            <rect x="20" y="60" width="180" height="100" rx="12" fill="#161b22" stroke="#58a6ff" stroke-width="2"/>
+            <text x="110" y="100" fill="#e6edf3" font-family="ui-monospace,monospace" font-size="16" text-anchor="middle">Client</text>
+            <text x="110" y="124" fill="#8b949e" font-family="ui-monospace,monospace" font-size="12" text-anchor="middle">(browser)</text>
+            <rect x="700" y="60" width="180" height="100" rx="12" fill="#161b22" stroke="#7ee787" stroke-width="2"/>
+            <text x="790" y="100" fill="#e6edf3" font-family="ui-monospace,monospace" font-size="16" text-anchor="middle">Server</text>
+            <text x="790" y="124" fill="#8b949e" font-family="ui-monospace,monospace" font-size="12" text-anchor="middle">(Django)</text>
+            <line x1="200" y1="90" x2="695" y2="90" stroke="#58a6ff" stroke-width="2" marker-end="url(#arrow1)"/>
+            <text x="450" y="76" fill="#58a6ff" font-family="ui-monospace,monospace" font-size="14" text-anchor="middle">GET /users/ HTTP/1.1</text>
+            <line x1="695" y1="150" x2="200" y2="150" stroke="#7ee787" stroke-width="2" marker-end="url(#arrow2)"/>
+            <text x="450" y="176" fill="#7ee787" font-family="ui-monospace,monospace" font-size="14" text-anchor="middle">HTTP/1.1 200 OK</text>
+            <defs>
+              <marker id="arrow1" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#58a6ff"/></marker>
+              <marker id="arrow2" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7ee787"/></marker>
+            </defs>
+          </svg>
+        </div>
+        <div class="grid-3" style="margin-top:8px;">
+          <div class="card"><h3>Stateless</h3><p>Each request stands alone — the server keeps no memory of the last one unless sessions/cookies say otherwise.</p></div>
+          <div class="card"><h3>Client-initiated</h3><p>The browser always starts it. The server only ever replies, never pushes uninvited.</p></div>
+          <div class="card"><h3>Every reply has a code</h3><p>A response is never just HTML — it always ships with a 3-digit status code first.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 : GET vs POST -->
+    <section class="slide tall" data-file="02_get_vs_post.py">
+      <div class="slide-inner">
+        <div class="eyebrow">02_get_vs_post.py</div>
+        <h1 class="title">GET vs POST — Same Door, Different Manners</h1>
+        <div class="grid-2">
+          <div class="card">
+            <h3><span class="badge badge-get">GET</span> Reads</h3>
+            <ul>
+              <li>Retrieves data — never changes server state</li>
+              <li>Parameters ride in the URL (<code class="inline" style="background:var(--surface-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 6px;font-family:var(--mono);">?q=django</code>)</li>
+              <li>Safe to refresh, cache, and bookmark</li>
+              <li>Used for: viewing pages, search results, links</li>
+            </ul>
+            <h3 style="margin-top:16px;"><span class="badge badge-post">POST</span> Writes</h3>
+            <ul>
+              <li>Submits data that changes something server-side</li>
+              <li>Data travels in the request body, not the URL</li>
+              <li>Browsers warn before resubmitting</li>
+              <li>Used for: registration, login, checkout, edits</li>
+            </ul>
+          </div>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="code1"></pre></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 : STATUS CODES -->
+    <section class="slide" data-file="03_status_codes.py">
+      <div class="slide-inner">
+        <div class="eyebrow">03_status_codes.py</div>
+        <h1 class="title">Status Codes at a Glance</h1>
+        <p class="subtitle">Every code is a 3-digit sentence. The first digit tells you the genre.</p>
+        <div class="grid-4">
+          <div class="code-family fam-2xx">
+            <h3>2xx — Success</h3>
+            <div class="chip-row">
+              <span class="chip">200 OK</span>
+              <span class="chip">201 Created</span>
+              <span class="chip">204 No Content</span>
+            </div>
+          </div>
+          <div class="code-family fam-3xx">
+            <h3>3xx — Redirection</h3>
+            <div class="chip-row">
+              <span class="chip">301 Moved</span>
+              <span class="chip">302 Found</span>
+              <span class="chip">304 Not Modified</span>
+            </div>
+          </div>
+          <div class="code-family fam-4xx">
+            <h3>4xx — Client Error</h3>
+            <div class="chip-row">
+              <span class="chip">400 Bad Request</span>
+              <span class="chip">403 Forbidden</span>
+              <span class="chip">404 Not Found</span>
+            </div>
+          </div>
+          <div class="code-family fam-5xx">
+            <h3>5xx — Server Error</h3>
+            <div class="chip-row">
+              <span class="chip">500 Internal Error</span>
+              <span class="chip">502 Bad Gateway</span>
+              <span class="chip">503 Unavailable</span>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:20px;">
+          <h3>Quick logic</h3>
+          <p>2xx = "got it." 3xx = "look over there." 4xx = "you messed up." 5xx = "I messed up." Read the first digit before you panic about the rest.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 : MVT FLOW -->
+    <section class="slide" data-file="04_mvt_flow.py">
+      <div class="slide-inner">
+        <div class="eyebrow">04_mvt_flow.py</div>
+        <h1 class="title">Django's MVT, Not MVC</h1>
+        <p class="subtitle">The #1 trap in every quiz: Django's "View" does the Controller's job.</p>
+        <div class="diagram-wrap">
+          <svg viewBox="0 0 1000 200" role="img" aria-label="Diagram showing Django's MVT flow: urls.py routes to views.py, which talks to models.py and renders a template.html">
+            <title>Django MVT request flow: urls.py to views.py to models.py and template.html</title>
+            <g font-family="ui-monospace,monospace" font-size="15" fill="#e6edf3">
+              <rect x="10" y="70" width="160" height="70" rx="10" fill="#161b22" stroke="#58a6ff" stroke-width="2"/>
+              <text x="90" y="112" text-anchor="middle">urls.py</text>
+              <rect x="270" y="70" width="160" height="70" rx="10" fill="#161b22" stroke="#d29922" stroke-width="2"/>
+              <text x="350" y="105" text-anchor="middle">views.py</text>
+              <text x="350" y="123" text-anchor="middle" font-size="11" fill="#8b949e">(the "Controller")</text>
+              <rect x="530" y="0" width="160" height="70" rx="10" fill="#161b22" stroke="#7ee787" stroke-width="2"/>
+              <text x="610" y="42" text-anchor="middle">models.py</text>
+              <rect x="530" y="140" width="160" height="70" rx="10" fill="#161b22" stroke="#f78166" stroke-width="2"/>
+              <text x="610" y="175" text-anchor="middle">template.html</text>
+              <text x="610" y="192" text-anchor="middle" font-size="11" fill="#8b949e">(the real "View")</text>
+              <rect x="800" y="70" width="160" height="70" rx="10" fill="#161b22" stroke="#8b949e" stroke-width="2"/>
+              <text x="880" y="112" text-anchor="middle">Response</text>
+            </g>
+            <line x1="170" y1="105" x2="265" y2="105" stroke="#8b949e" stroke-width="2" marker-end="url(#a3)"/>
+            <line x1="430" y1="95" x2="525" y2="45" stroke="#8b949e" stroke-width="2" marker-end="url(#a3)"/>
+            <line x1="430" y1="115" x2="525" y2="165" stroke="#8b949e" stroke-width="2" marker-end="url(#a3)"/>
+            <line x1="690" y1="165" x2="795" y2="115" stroke="#8b949e" stroke-width="2" marker-end="url(#a3)"/>
+            <defs><marker id="a3" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b949e"/></marker></defs>
+          </svg>
+        </div>
+        <div class="grid-3">
+          <div class="card"><h3>Model</h3><p>Data &amp; DB logic. Same name, same job as MVC.</p></div>
+          <div class="card"><h3>View (views.py)</h3><p>Decides the logic — this is MVC's Controller wearing a different name tag.</p></div>
+          <div class="card"><h3>Template</h3><p>The actual HTML — this is what MVC calls its "View."</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 : ROUTING CODE -->
+    <section class="slide tall" data-file="05_routing.py">
+      <div class="slide-inner">
+        <div class="eyebrow">05_routing.py</div>
+        <h1 class="title">How to Code a Route — urls.py + views.py</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:60vh;">
+            <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="code2"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>path()</b> Maps one URL pattern to one view function — the receptionist's directory.</div>
+            <div class="callout"><b>&lt;str:name&gt;</b> Captures any text and hands it to the view as <code class="inline" style="background:var(--surface-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 6px;font-family:var(--mono);">name</code>.</div>
+            <div class="callout"><b>&lt;int:year&gt;</b> Two converters in one path work fine — Django just fills both parameters, in order.</div>
+            <div class="callout"><b>&lt;slug:tag&gt;</b> Built for URL-safe words: letters, numbers, hyphens, underscores — perfect for blog tags.</div>
+            <div class="callout"><b>&lt;uuid:id&gt;</b> Matches a formatted UUID — common for public IDs that shouldn't be guessable like 1, 2, 3.</div>
+            <div class="callout"><b>name=</b> Lets templates reference this URL by name, so it survives if the path text ever changes.</div>
+            <div class="callout"><b>Golden rule</b> Whatever's inside <code class="inline" style="background:var(--surface-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 6px;font-family:var(--mono);">&lt;type:name&gt;</code> must match the view's parameter name — exactly.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- F-STRINGS -->
+    <section class="slide tall" data-file="06_fstrings.py">
+      <div class="slide-inner">
+        <div class="eyebrow">06_fstrings.py</div>
+        <h1 class="title">F-Strings — How They Actually Work</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:60vh;">
+            <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="code4"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>f" "</b> The <b style="color:var(--accent-3);">f</b> prefix turns on <code class="inline" style="background:var(--surface-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 6px;font-family:var(--mono);">{ }</code> substitution inside the string.</div>
+            <div class="callout"><b>{name}</b> Anything inside the braces is plain Python — it runs, then gets dropped into the string.</div>
+            <div class="callout"><b>{name.capitalize()}</b> You can call a method right inside the braces — no separate variable needed.</div>
+            <div class="callout"><b>{a + b}</b> Even arithmetic works inside the braces — Python evaluates it first.</div>
+            <div class="callout"><b>Nested calls</b> A function that <code class="inline" style="background:var(--surface-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 6px;font-family:var(--mono);">return</code>s an f-string is one of the most common patterns in Django views.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STRING METHODS -->
+    <section class="slide tall" data-file="07_string_methods.py">
+      <div class="slide-inner">
+        <div class="eyebrow">07_string_methods.py</div>
+        <h1 class="title">String Methods You'll Actually Be Tested On</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:60vh;">
+            <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="code5"></pre></div>
+          </div>
+          <div class="card">
+            <h3>Cheat sheet</h3>
+            <ul>
+              <li><b style="color:var(--accent-3);">.capitalize()</b> — first letter up, rest down: <code class="inline" style="background:var(--surface-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 6px;font-family:var(--mono);">"hArRy"</code> → <code class="inline" style="background:var(--surface-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 6px;font-family:var(--mono);">"Harry"</code></li>
+              <li><b style="color:var(--accent-3);">.upper()</b> / <b style="color:var(--accent-3);">.lower()</b> — all caps / all lowercase</li>
+              <li><b style="color:var(--accent-3);">.title()</b> — capitalizes every word</li>
+              <li><b style="color:var(--accent-3);">.strip()</b> — trims outer whitespace</li>
+              <li><b style="color:var(--accent-3);">word[::-1]</b> — slicing trick that reverses a string</li>
+            </ul>
+            <p style="margin-top:10px;">These show up constantly in "guess the output" questions — read the code slowly, method by method, left to right.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 : TEST INTRO -->
+    <section class="slide" data-file="08_summative_test.py">
+      <div class="slide-inner">
+        <div class="eyebrow">08_summative_test.py</div>
+        <div class="test-banner">🧪 SUMMATIVE TEST</div>
+        <h1 class="title">Alright, Let's See What Stuck</h1>
+        <p class="subtitle">30 items total. Options and code are shown — but not the answers. That's what the last slide is for.</p>
+        <div class="grid-4">
+          <div class="card"><h3>Part 1</h3><p>10 Multiple Choice on Django.</p></div>
+          <div class="card"><h3>Part 2</h3><p>10 Guess the Output — real Python/Django code.</p></div>
+          <div class="card"><h3>Part 3</h3><p>5 "Guess the Output": GET or POST?</p></div>
+          <div class="card"><h3>Part 4</h3><p>5 Identification: name the status code.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 : MC 1-3 -->
+    <section class="slide" data-file="test/mc_django_1.py">
+      <div class="slide-inner">
+        <div class="eyebrow">test/mc_django.py · page 1 of 4</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Multiple Choice — Django (1–3)</h1>
+        <div class="q-stack">
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q1</span><p class="q-text">What does <b>MVT</b> stand for in Django?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>Model-View-Template</div>
+              <div class="opt"><span class="opt-letter">B</span>Model-View-Tool</div>
+              <div class="opt"><span class="opt-letter">C</span>Middleware-View-Template</div>
+              <div class="opt"><span class="opt-letter">D</span>Model-Verify-Template</div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q2</span><p class="q-text">Which file maps incoming URLs to view functions?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>models.py</div>
+              <div class="opt"><span class="opt-letter">B</span>urls.py</div>
+              <div class="opt"><span class="opt-letter">C</span>admin.py</div>
+              <div class="opt"><span class="opt-letter">D</span>wsgi.py</div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q3</span><p class="q-text">Which command creates a new app inside an existing Django project?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>django-admin startproject</div>
+              <div class="opt"><span class="opt-letter">B</span>python manage.py startapp</div>
+              <div class="opt"><span class="opt-letter">C</span>python manage.py createapp</div>
+              <div class="opt"><span class="opt-letter">D</span>django-admin newapp</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11 : MC 4-6 -->
+    <section class="slide" data-file="test/mc_django_2.py">
+      <div class="slide-inner">
+        <div class="eyebrow">test/mc_django.py · page 2 of 4</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Multiple Choice — Django (4–6)</h1>
+        <div class="q-stack">
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q4</span><p class="q-text">Which decorator restricts a view to logged-in users only?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>@require_login</div>
+              <div class="opt"><span class="opt-letter">B</span>@login_required</div>
+              <div class="opt"><span class="opt-letter">C</span>@auth_only</div>
+              <div class="opt"><span class="opt-letter">D</span>@user_required</div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q5</span><p class="q-text">Which built-in model does Django provide for authentication?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>Account</div>
+              <div class="opt"><span class="opt-letter">B</span>Person</div>
+              <div class="opt"><span class="opt-letter">C</span>User</div>
+              <div class="opt"><span class="opt-letter">D</span>Member</div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q6</span><p class="q-text">In <code class="inline" style="background:var(--surface-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 6px;font-family:var(--mono);">path("hello/&lt;str:name&gt;", views.greet)</code>, what is <code class="inline" style="background:var(--surface-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 6px;font-family:var(--mono);">str</code>?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>The variable name</div>
+              <div class="opt"><span class="opt-letter">B</span>A path converter type</div>
+              <div class="opt"><span class="opt-letter">C</span>A default value</div>
+              <div class="opt"><span class="opt-letter">D</span>A Python keyword</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 12 : MC 7-9 -->
+    <section class="slide" data-file="test/mc_django_3.py">
+      <div class="slide-inner">
+        <div class="eyebrow">test/mc_django.py · page 3 of 4</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Multiple Choice — Django (7–9)</h1>
+        <div class="q-stack">
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q7</span><p class="q-text">Which template tag protects a POST form from CSRF attacks?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>{% secure %}</div>
+              <div class="opt"><span class="opt-letter">B</span>{% csrf_token %}</div>
+              <div class="opt"><span class="opt-letter">C</span>{% protect %}</div>
+              <div class="opt"><span class="opt-letter">D</span>{% token %}</div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q8</span><p class="q-text">Since Django 5.0, which HTTP method does <code class="inline" style="background:var(--surface-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 6px;font-family:var(--mono);">LogoutView</code> require?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>GET</div>
+              <div class="opt"><span class="opt-letter">B</span>POST</div>
+              <div class="opt"><span class="opt-letter">C</span>PUT</div>
+              <div class="opt"><span class="opt-letter">D</span>DELETE</div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q9</span><p class="q-text">Which <code class="inline" style="background:var(--surface-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 6px;font-family:var(--mono);">settings.py</code> variable overrides the default login redirect URL?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>AUTH_REDIRECT</div>
+              <div class="opt"><span class="opt-letter">B</span>LOGIN_URL</div>
+              <div class="opt"><span class="opt-letter">C</span>DEFAULT_LOGIN</div>
+              <div class="opt"><span class="opt-letter">D</span>SIGNIN_URL</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 13 : MC 10 -->
+    <section class="slide" data-file="test/mc_django_4.py">
+      <div class="slide-inner">
+        <div class="eyebrow">test/mc_django.py · page 4 of 4</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Multiple Choice — Django (10)</h1>
+        <div class="q-stack">
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q10</span><p class="q-text">What does <code class="inline" style="background:var(--surface-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 6px;font-family:var(--mono);">python manage.py migrate</code> actually do?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>Creates the database itself</div>
+              <div class="opt"><span class="opt-letter">B</span>Applies model changes as tables in an existing database</div>
+              <div class="opt"><span class="opt-letter">C</span>Starts the dev server</div>
+              <div class="opt"><span class="opt-letter">D</span>Installs Django</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 14 : GUESS OUTPUT 1-3 -->
+    <section class="slide" data-file="test/guess_output_1.py">
+      <div class="slide-inner">
+        <div class="eyebrow">test/guess_output.py · page 1 of 4</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Guess the Output — Code (1–3)</h1>
+        <div class="q-stack">
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q1</span><p class="q-text">What gets printed?</p></div>
+            <div class="code-block" style="max-height:15vh;">
+              <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+              <div class="code-scroll"><pre class="code-content" data-raw-id="g1"></pre></div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q2</span><p class="q-text">What gets printed?</p></div>
+            <div class="code-block" style="max-height:15vh;">
+              <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+              <div class="code-scroll"><pre class="code-content" data-raw-id="g2"></pre></div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q3</span><p class="q-text">What gets printed?</p></div>
+            <div class="code-block" style="max-height:15vh;">
+              <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+              <div class="code-scroll"><pre class="code-content" data-raw-id="g3"></pre></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 15 : GUESS OUTPUT 4-6 -->
+    <section class="slide" data-file="test/guess_output_2.py">
+      <div class="slide-inner">
+        <div class="eyebrow">test/guess_output.py · page 2 of 4</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Guess the Output — Code (4–6)</h1>
+        <div class="q-stack">
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q4</span><p class="q-text">What gets printed?</p></div>
+            <div class="code-block" style="max-height:15vh;">
+              <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+              <div class="code-scroll"><pre class="code-content" data-raw-id="g4"></pre></div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q5</span><p class="q-text">What gets printed?</p></div>
+            <div class="code-block" style="max-height:15vh;">
+              <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+              <div class="code-scroll"><pre class="code-content" data-raw-id="g5"></pre></div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q6</span><p class="q-text">What gets printed?</p></div>
+            <div class="code-block" style="max-height:15vh;">
+              <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+              <div class="code-scroll"><pre class="code-content" data-raw-id="g6"></pre></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 16 : GUESS OUTPUT 7-9 -->
+    <section class="slide" data-file="test/guess_output_3.py">
+      <div class="slide-inner">
+        <div class="eyebrow">test/guess_output.py · page 3 of 4</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Guess the Output — Code (7–9)</h1>
+        <div class="q-stack">
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q7</span><p class="q-text">What gets printed?</p></div>
+            <div class="code-block" style="max-height:15vh;">
+              <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+              <div class="code-scroll"><pre class="code-content" data-raw-id="g7"></pre></div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q8</span><p class="q-text">What gets printed?</p></div>
+            <div class="code-block" style="max-height:15vh;">
+              <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+              <div class="code-scroll"><pre class="code-content" data-raw-id="g8"></pre></div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q9</span><p class="q-text">What gets printed?</p></div>
+            <div class="code-block" style="max-height:15vh;">
+              <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+              <div class="code-scroll"><pre class="code-content" data-raw-id="g9"></pre></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 17 : GUESS OUTPUT 10 -->
+    <section class="slide" data-file="test/guess_output_4.py">
+      <div class="slide-inner">
+        <div class="eyebrow">test/guess_output.py · page 4 of 4</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Guess the Output — Code (10)</h1>
+        <div class="q-stack">
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q10</span><p class="q-text">What gets printed?</p></div>
+            <div class="code-block" style="max-height:20vh;">
+              <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+              <div class="code-scroll"><pre class="code-content" data-raw-id="g10"></pre></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 18 : POST or GET 1-3 -->
+    <section class="slide" data-file="test/method_check_1.py">
+      <div class="slide-inner">
+        <div class="eyebrow">test/method_check.py · page 1 of 2</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Guess the Output: POST or GET? (1–3)</h1>
+        <div class="q-stack">
+          <div class="scenario-q">
+            <p class="q-text"><b>1.</b> A visitor clicks a plain link: <code class="inline">&lt;a href="/articles/5/"&gt;Read more&lt;/a&gt;</code></p>
+            <div class="answer-blank">Which method does the browser send?  ____________</div>
+          </div>
+          <div class="scenario-q">
+            <p class="q-text"><b>2.</b> A login form is submitted: <code class="inline">&lt;form method="post"&gt;</code> with username and password fields.</p>
+            <div class="answer-blank">Which method does the browser send?  ____________</div>
+          </div>
+          <div class="scenario-q">
+            <p class="q-text"><b>3.</b> A user types a URL directly into the browser's address bar and hits Enter.</p>
+            <div class="answer-blank">Which method does the browser send?  ____________</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 15 : POST or GET 4-5 -->
+    <section class="slide" data-file="test/method_check_2.py">
+      <div class="slide-inner">
+        <div class="eyebrow">test/method_check.py · page 2 of 2</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Guess the Output: POST or GET? (4–5)</h1>
+        <div class="q-stack">
+          <div class="scenario-q">
+            <p class="q-text"><b>4.</b> A checkout form charges a credit card the moment it's submitted.</p>
+            <div class="answer-blank">Which method should it use?  ____________</div>
+          </div>
+          <div class="scenario-q">
+            <p class="q-text"><b>5.</b> A view is decorated with <code class="inline">@require_http_methods(["GET"])</code> and only displays search results.</p>
+            <div class="answer-blank">Which method is this view expecting?  ____________</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 16 : STATUS ID 1-3 -->
+    <section class="slide" data-file="test/status_id_1.py">
+      <div class="slide-inner">
+        <div class="eyebrow">test/status_id.py · page 1 of 2</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Identification: Name the Status Code (1–3)</h1>
+        <div class="q-stack">
+          <div class="scenario-q">
+            <p class="q-text"><b>1.</b> The request succeeded and the server returned the requested resource normally.</p>
+            <div class="answer-blank">Status code: ____________</div>
+          </div>
+          <div class="scenario-q">
+            <p class="q-text"><b>2.</b> A brand-new resource — like a freshly registered user account — was successfully created.</p>
+            <div class="answer-blank">Status code: ____________</div>
+          </div>
+          <div class="scenario-q">
+            <p class="q-text"><b>3.</b> The visitor requested a page that simply doesn't exist on the server.</p>
+            <div class="answer-blank">Status code: ____________</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 17 : STATUS ID 4-5 -->
+    <section class="slide" data-file="test/status_id_2.py">
+      <div class="slide-inner">
+        <div class="eyebrow">test/status_id.py · page 2 of 2</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Identification: Name the Status Code (4–5)</h1>
+        <div class="q-stack">
+          <div class="scenario-q">
+            <p class="q-text"><b>4.</b> The user tried to access a page they don't have permission to view.</p>
+            <div class="answer-blank">Status code: ____________</div>
+          </div>
+          <div class="scenario-q">
+            <p class="q-text"><b>5.</b> The server hit an unexpected bug and crashed while handling the request.</p>
+            <div class="answer-blank">Status code: ____________</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RECAP -->
+    <section class="slide" data-file="recap.py">
+      <div class="slide-inner">
+        <div class="eyebrow">recap.py</div>
+        <h1 class="title">Recap Before You Go</h1>
+        <p class="subtitle">The essentials worth remembering walking into the actual exam.</p>
+        <div class="recap-list">
+          <div class="recap-item"><span class="tick">✓</span>GET reads, POST writes — GET params live in the URL, POST params live in the body.</div>
+          <div class="recap-item"><span class="tick">✓</span>Status codes read by their first digit: 2xx ok, 3xx redirect, 4xx your fault, 5xx server's fault.</div>
+          <div class="recap-item"><span class="tick">✓</span>Django is MVT, not MVC — views.py is the Controller, template.html is MVC's "View."</div>
+          <div class="recap-item"><span class="tick">✓</span>Path converter names in urls.py must match the view function's parameter names exactly.</div>
+          <div class="recap-item"><span class="tick">✓</span>An <code class="inline" style="background:var(--surface-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 6px;font-family:var(--mono);">f" "</code> string runs whatever's inside <code class="inline" style="background:var(--surface-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 6px;font-family:var(--mono);">{ }</code> first — method calls and math both work.</div>
+          <div class="recap-item"><span class="tick">✓</span><code class="inline" style="background:var(--surface-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 6px;font-family:var(--mono);">.capitalize()</code>, <code class="inline" style="background:var(--surface-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 6px;font-family:var(--mono);">.title()</code>, and <code class="inline" style="background:var(--surface-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 6px;font-family:var(--mono);">[::-1]</code> read left to right, one method at a time.</div>
+          <div class="recap-item"><span class="tick">✓</span><code class="inline" style="background:var(--surface-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 6px;font-family:var(--mono);">migrate</code> only builds tables — it never creates the database itself.</div>
+          <div class="recap-item"><span class="tick">✓</span>Since Django 5.0, logging out requires a POST request, not a plain link.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ANSWERS -->
+    <section class="slide tall" data-file="answers.py">
+      <div class="slide-inner">
+        <div class="eyebrow">answers.py</div>
+        <h1 class="title" style="font-size:clamp(26px,3vw,40px);">Answer Key</h1>
+        <div class="answers-grid">
+          <div class="answers-col">
+            <h3>Multiple Choice — Django</h3>
+            <div class="ans-row"><b>1. A</b> — Model-View-Template.</div>
+            <div class="ans-row"><b>2. B</b> — urls.py routes requests to views.</div>
+            <div class="ans-row"><b>3. B</b> — startapp creates an app inside a project.</div>
+            <div class="ans-row"><b>4. B</b> — @login_required guards the view.</div>
+            <div class="ans-row"><b>5. C</b> — Django reuses the built-in User model.</div>
+            <div class="ans-row"><b>6. B</b> — str is the converter type, not the variable.</div>
+            <div class="ans-row"><b>7. B</b> — {% csrf_token %} goes inside every POST form.</div>
+            <div class="ans-row"><b>8. B</b> — LogoutView requires POST since Django 5.0.</div>
+            <div class="ans-row"><b>9. B</b> — LOGIN_URL overrides the default redirect.</div>
+            <div class="ans-row"><b>10. B</b> — migrate applies tables; it never creates the DB.</div>
+          </div>
+          <div class="answers-col">
+            <h3>Guess the Output — Code</h3>
+            <div class="ans-row"><b>1.</b> Hi, Alice!</div>
+            <div class="ans-row"><b>2.</b> SERVER</div>
+            <div class="ans-row"><b>3.</b> nohtyp</div>
+            <div class="ans-row"><b>4.</b> 7 + 3 = 10</div>
+            <div class="ans-row"><b>5.</b> Harry Potter</div>
+            <div class="ans-row"><b>6.</b> /users/</div>
+            <div class="ans-row"><b>7.</b> POST</div>
+            <div class="ans-row"><b>8.</b> Error 404: Not Found</div>
+            <div class="ans-row"><b>9.</b> neo</div>
+            <div class="ans-row"><b>10.</b> Hello, Django!</div>
+          </div>
+          <div class="answers-col">
+            <h3>POST or GET?</h3>
+            <div class="ans-row"><b>1. GET</b> — plain links always fetch, never submit.</div>
+            <div class="ans-row"><b>2. POST</b> — the form explicitly sets method="post".</div>
+            <div class="ans-row"><b>3. GET</b> — typed URLs are always retrieved with GET.</div>
+            <div class="ans-row"><b>4. POST</b> — it changes state (charges money), so never GET.</div>
+            <div class="ans-row"><b>5. GET</b> — the decorator itself restricts it to GET.</div>
+          </div>
+          <div class="answers-col">
+            <h3>Identify the Status Code</h3>
+            <div class="ans-row"><b>1. 200 OK</b> — standard success response.</div>
+            <div class="ans-row"><b>2. 201 Created</b> — a new resource now exists.</div>
+            <div class="ans-row"><b>3. 404 Not Found</b> — the resource isn't there.</div>
+            <div class="ans-row"><b>4. 403 Forbidden</b> — recognized, but not allowed in.</div>
+            <div class="ans-row"><b>5. 500 Internal Server Error</b> — the server itself broke.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="chrome-bottom">
+    <div class="seg"><span>Prelims Crash Course</span></div>
+    <div class="seg"><span>Right-click / <kbd>→</kbd> next</span><span><kbd>?</kbd> shortcuts</span></div>
+  </div>
+
+  <div class="modal-overlay" id="shortcutsModal">
+    <div class="modal">
+      <h2>Keyboard &amp; Mouse Shortcuts</h2>
+      <div class="row"><span>Next slide</span><span><kbd>→</kbd> / <kbd>Right-click</kbd> / <kbd>Mouse btn 4</kbd></span></div>
+      <div class="row"><span>Previous slide</span><span><kbd>←</kbd> / <kbd>Mouse btn 3</kbd></span></div>
+      <div class="row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+      <div class="row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+      <div class="row"><span>Show/hide this panel</span><span><kbd>?</kbd></span></div>
+      <div class="row"><span>Close panel</span><span><kbd>Esc</kbd></span></div>
+      <div class="row"><span>Swipe (mobile)</span><span>Left = next · Right = prev</span></div>
+      <div class="close-hint">Click outside this box, or press Esc, to close.</div>
+    </div>
+  </div>
+
+  <!-- Raw code sources, kept out of the tokenizer's way -->
+  <textarea id="raw-code1" hidden>def contact_view(request):
+    if request.method == "POST":
+        name = request.POST.get("name")
+        return HttpResponse(f"Thanks, {name}!")
+    # GET falls through to a blank form
+    return render(request, "contact.html")</textarea>
+
+  <textarea id="raw-code2" hidden># urls.py
+urlpatterns = [
+    path("hello/&lt;str:name&gt;/", views.greet, name="greet"),
+    path("articles/&lt;int:year&gt;/&lt;int:month&gt;/", views.archive, name="archive"),
+    path("tags/&lt;slug:tag&gt;/", views.tag_page, name="tag_page"),
+]
+
+# views.py
+def greet(request, name):
+    return HttpResponse(f"Hello, {name.capitalize()}!")
+
+def archive(request, year, month):
+    return HttpResponse(f"Archive for {month}/{year}")
+
+def tag_page(request, tag):
+    return HttpResponse(f"Posts tagged: {tag}")</textarea>
+
+  <textarea id="raw-code4" hidden>name = "django"
+age = 5
+
+# 1. plain substitution
+print(f"Hello, {name}!")
+
+# 2. calling a method inside { }
+print(f"Hello, {name.capitalize()}!")
+
+# 3. arithmetic inside { }
+print(f"Next year this framework turns {age + 1}.")
+
+# 4. a function that returns an f-string
+def greet(username):
+    return f"Welcome back, {username.title()}!"
+
+print(greet("ada lovelace"))</textarea>
+
+  <textarea id="raw-code5" hidden>raw = "  hArRy Potter  "
+
+print(raw.strip())              # "hArRy Potter"
+print(raw.strip().lower())      # "harry potter"
+print(raw.strip().upper())      # "HARRY POTTER"
+print(raw.strip().title())      # "Harry Potter"
+print(raw.strip().capitalize()) # "Harry potter"
+
+word = "python"
+print(word[::-1])               # "nohtyp"</textarea>
+
+  <textarea id="raw-g1" hidden>name = "aLiCe"
+print(f"Hi, {name.capitalize()}!")</textarea>
+
+  <textarea id="raw-g2" hidden>word = "server"
+print(word.upper())</textarea>
+
+  <textarea id="raw-g3" hidden>word = "python"
+print(word[::-1])</textarea>
+
+  <textarea id="raw-g4" hidden>x = 7
+y = 3
+print(f"{x} + {y} = {x + y}")</textarea>
+
+  <textarea id="raw-g5" hidden>name = "harry potter"
+print(name.title())</textarea>
+
+  <textarea id="raw-g6" hidden>path_var = "users"
+print(f"/{path_var}/")</textarea>
+
+  <textarea id="raw-g7" hidden>items = ["get", "post", "put"]
+print(items[1].upper())</textarea>
+
+  <textarea id="raw-g8" hidden>code = 404
+print(f"Error {code}: Not Found")</textarea>
+
+  <textarea id="raw-g9" hidden>username = "  Neo  "
+print(username.strip().lower())</textarea>
+
+  <textarea id="raw-g10" hidden>def greet(name):
+    return f"Hello, {name.capitalize()}!"
+
+print(greet("django"))</textarea>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ================= Syntax highlighting (single-pass tokenizer) ================= */
+  function escapeHtml(s){
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  function highlightPython(code){
+    var keywords = ["def","return","if","else","elif","for","while","in","import","from","class",
+      "pass","None","True","False","and","or","not","is","as","with","try","except","finally",
+      "raise","yield","lambda","global","assert","break","continue"];
+    var kwPattern = keywords.join("|");
+    var tokenRe = new RegExp(
+      "(#[^\\n]*)" +
+      "|(\"\"\"[\\s\\S]*?\"\"\"|'''[\\s\\S]*?'''|\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*')" +
+      "|(@[A-Za-z_][A-Za-z0-9_.]*)" +
+      "|\\b(" + kwPattern + ")\\b" +
+      "|\\b([A-Za-z_][A-Za-z0-9_]*)(?=\\()" +
+      "|\\b(\\d+\\.?\\d*)\\b",
+      "g"
+    );
+
+    var result = "";
+    var lastIndex = 0;
+    var m;
+    while ((m = tokenRe.exec(code))) {
+      result += escapeHtml(code.slice(lastIndex, m.index));
+      if (m[1]) result += '<span class="tok-comment">' + escapeHtml(m[1]) + '</span>';
+      else if (m[2]) result += '<span class="tok-string">' + escapeHtml(m[2]) + '</span>';
+      else if (m[3]) result += '<span class="tok-decorator">' + escapeHtml(m[3]) + '</span>';
+      else if (m[4]) result += '<span class="tok-keyword">' + escapeHtml(m[4]) + '</span>';
+      else if (m[5]) result += '<span class="tok-func">' + escapeHtml(m[5]) + '</span>';
+      else if (m[6]) result += '<span class="tok-number">' + escapeHtml(m[6]) + '</span>';
+      lastIndex = tokenRe.lastIndex;
+    }
+    result += escapeHtml(code.slice(lastIndex));
+    return result;
+  }
+
+  document.querySelectorAll(".code-content[data-raw-id]").forEach(function(el){
+    var rawId = el.getAttribute("data-raw-id");
+    var rawEl = document.getElementById("raw-" + rawId);
+    if (!rawEl) return;
+    var raw = rawEl.value;
+    el.innerHTML = highlightPython(raw);
+    el.setAttribute("data-raw", raw);
+  });
+
+  /* Copy buttons: find the nearest code-block, grab its raw source, copy it */
+  document.querySelectorAll(".copy-btn").forEach(function(btn){
+    btn.addEventListener("click", function(e){
+      e.stopPropagation();
+      var block = btn.closest(".code-block");
+      var contentEl = block ? block.querySelector(".code-content") : null;
+      var text = contentEl ? (contentEl.getAttribute("data-raw") || contentEl.textContent) : "";
+      var done = function(){
+        var original = btn.textContent;
+        btn.textContent = "Copied!";
+        btn.classList.add("copied");
+        setTimeout(function(){ btn.textContent = original; btn.classList.remove("copied"); }, 1400);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(done);
+      } else {
+        var ta = document.createElement("textarea");
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand("copy"); } catch(err){}
+        document.body.removeChild(ta);
+        done();
+      }
+    });
+  });
+
+  /* ================= Slide navigation ================= */
+  var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var total = slides.length;
+  var current = 0;
+  var deckEl = document.getElementById("deck");
+  var progressFill = document.getElementById("progressFill");
+  var slideCounter = document.getElementById("slideCounter");
+  var tabName = document.getElementById("tabName");
+  var shortcutsModal = document.getElementById("shortcutsModal");
+
+  function reduceMotion(){
+    return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  function render(direction){
+    slides.forEach(function(s, i){ s.classList.toggle("active", i === current); });
+    deckEl.classList.toggle("reverse", direction === -1);
+    progressFill.style.width = ((current + 1) / total * 100) + "%";
+    slideCounter.textContent = (current + 1) + " / " + total;
+    var file = slides[current].getAttribute("data-file") || "slide.py";
+    tabName.textContent = file;
+    slides[current].scrollTop = 0;
+  }
+
+  function goTo(index, direction){
+    if (index < 0 || index >= total || index === current) return;
+    current = index;
+    render(direction);
+  }
+  function next(){ goTo(current + 1, 1); }
+  function prev(){ goTo(current - 1, -1); }
+  function first(){ goTo(0, -1); }
+  function last(){ goTo(total - 1, 1); }
+
+  function isInteractive(target){
+    return !!target.closest("button, a, input, textarea, select, [contenteditable], .copy-btn, .modal");
+  }
+
+  /* ---- Mouse: right-click (2) = next, side-back (3) = prev, side-forward (4) = next ---- */
+  document.addEventListener("mousedown", function(e){
+    if (e.button === 2) {
+      if (isInteractive(e.target)) return; // allow normal right-click on interactive elements
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    } else if (e.button === 3) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      prev();
+    } else if (e.button === 4) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    }
+  }, true);
+
+  document.addEventListener("mouseup", function(e){
+    if (e.button === 3 || e.button === 4) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, true);
+
+  document.addEventListener("contextmenu", function(e){
+    if (isInteractive(e.target)) return;
+    e.preventDefault();
+  }, true);
+
+  document.addEventListener("auxclick", function(e){
+    if (e.button === 1 || e.button === 3 || e.button === 4) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, true);
+
+  /* ---- Keyboard ---- */
+  document.addEventListener("keydown", function(e){
+    if (shortcutsModal.classList.contains("open")) {
+      if (e.key === "Escape" || e.key === "?") { closeModal(); e.preventDefault(); }
+      return;
+    }
+    switch(e.key){
+      case "ArrowRight": case "ArrowDown": case "PageDown": next(); e.preventDefault(); break;
+      case "ArrowLeft": case "ArrowUp": case "PageUp": prev(); e.preventDefault(); break;
+      case "Home": first(); e.preventDefault(); break;
+      case "End": last(); e.preventDefault(); break;
+      case "?": openModal(); e.preventDefault(); break;
+    }
+  });
+
+  function openModal(){ shortcutsModal.classList.add("open"); }
+  function closeModal(){ shortcutsModal.classList.remove("open"); }
+  shortcutsModal.addEventListener("mousedown", function(e){
+    if (e.target === shortcutsModal) closeModal();
+  });
+
+  /* ---- Touch swipe ---- */
+  var touchStartX = null, touchStartY = null;
+  document.addEventListener("touchstart", function(e){
+    if (e.touches.length !== 1) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, {passive:true});
+  document.addEventListener("touchend", function(e){
+    if (touchStartX === null) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) next(); else prev();
+    }
+    touchStartX = null; touchStartY = null;
+  }, {passive:true});
+
+  if (reduceMotion()) document.body.classList.add("no-motion");
+
+  render(1);
+})();
+</script>
+</body>
+</html>

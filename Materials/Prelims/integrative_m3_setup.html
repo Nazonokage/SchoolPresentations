@@ -1,0 +1,1495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2 — Project Setup & Basic Structure</title>
+    <style>
+        :root {
+            --bg: #0a0e14;
+            --panel: #131a29;
+            --panel-2: #0d1220;
+            --line: #22304a;
+            --ink: #e8edf7;
+            --ink-dim: #adc0e6;
+            --ink-faint: #4a5d80;
+            --cyan: #5ee1d8;
+            --amber: #f2b84b;
+            --green: #6ee79a;
+            --blue: #7aa7ff;
+            --orange: #f2924b;
+            --red: #f2645b;
+            --purple: #b58cf2;
+            --mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            --disp: 'Space Grotesk', 'Segoe UI', Helvetica, Arial, sans-serif;
+            --body: 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif;
+            --font-base: 15px;
+            --font-title-min: 25px;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: var(--body);
+            overflow: hidden;
+            font-size: var(--font-base);
+        }
+        body {
+            background:
+                radial-gradient(circle at 15% 10%, rgba(94, 225, 216, 0.06), transparent 40%),
+                radial-gradient(circle at 85% 90%, rgba(122, 167, 255, 0.07), transparent 45%),
+                var(--bg);
+        }
+
+        #progress-track {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.06);
+            z-index: 1000;
+        }
+        #progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--cyan), var(--blue));
+            transition: width .35s ease;
+        }
+        #counter {
+            position: fixed;
+            bottom: 18px;
+            right: 24px;
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--ink-dim);
+            letter-spacing: 0.05em;
+            z-index: 1000;
+            background: rgba(10, 14, 20, 0.6);
+            padding: 5px 12px;
+            border: 1px solid var(--line);
+            border-radius: 20px;
+        }
+        #hint {
+            position: fixed;
+            bottom: 18px;
+            left: 24px;
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--ink-faint);
+            letter-spacing: 0.04em;
+            z-index: 1000;
+            opacity: 0.7;
+        }
+        .eyebrow-tag {
+            position: fixed;
+            top: 22px;
+            right: 24px;
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--cyan);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            text-align: right;
+            z-index: 1000;
+            opacity: 0.85;
+        }
+
+        #deck {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            cursor: pointer;
+        }
+        .slide {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 58px 90px 66px 90px;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(24px);
+            transition: opacity .35s ease, transform .35s ease;
+            overflow-y: auto;
+        }
+        .slide.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(0);
+            z-index: 5;
+        }
+        .slide.prev {
+            transform: translateX(-24px);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .slide {
+                transition: none;
+                transform: none;
+            }
+        }
+
+        .eyebrow {
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--amber);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .eyebrow::before {
+            content: '';
+            width: 22px;
+            height: 1px;
+            background: var(--amber);
+            display: inline-block;
+        }
+        .eyebrow.blue {
+            color: var(--blue);
+        }
+        .eyebrow.blue::before {
+            background: var(--blue);
+        }
+
+        h1.title {
+            font-family: var(--disp);
+            font-weight: 700;
+            font-size: clamp(var(--font-title-min), 3.6vw, 46px);
+            line-height: 1.1;
+            margin: 0 0 8px 0;
+            color: var(--ink);
+            max-width: 22ch;
+            flex-shrink: 0;
+        }
+        h1.title.smaller {
+            font-size: clamp(var(--font-title-min), 3.2vw, 40px);
+        }
+        .subtitle {
+            font-size: calc(var(--font-base) + 0.5px);
+            color: var(--ink-dim);
+            max-width: 66ch;
+            margin-bottom: 6px;
+            flex-shrink: 0;
+        }
+        .content-area {
+            margin-top: 18px;
+            min-width: 0;
+        }
+
+        .slide.top-align {
+            justify-content: flex-start;
+            padding-top: 34px;
+        }
+
+        .content-area.tight .exercise {
+            margin-bottom: 12px;
+        }
+        .content-area.tight .exercise-head {
+            margin-bottom: 6px;
+        }
+        .content-area.tight .exercise-desc {
+            font-size: var(--font-base);
+            margin: 5px 0 8px 0;
+            line-height: 1.45;
+        }
+        .content-area.tight pre.code-block {
+            padding: 10px 14px;
+        }
+        .content-area.tight pre.code-block code {
+            font-size: var(--font-base);
+            line-height: 1.5;
+        }
+        .content-area.tight .exercise-title {
+            font-size: var(--font-base);
+        }
+
+        .card {
+            background: linear-gradient(180deg, var(--panel), var(--panel-2));
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 18px 20px;
+            min-width: 0;
+        }
+        .grid {
+            display: grid;
+            gap: 16px;
+            min-width: 0;
+        }
+        .g2 {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        }
+        .g3 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .g4 {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+        .g5 {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+        }
+
+        code,
+        .mono {
+            font-family: var(--mono);
+        }
+
+        ul.clean {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        ul.clean li {
+            margin-bottom: 9px;
+            padding-left: 20px;
+            position: relative;
+            font-size: var(--font-base);
+            line-height: 1.55;
+            color: var(--ink);
+        }
+        ul.clean li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: var(--cyan);
+        }
+
+        .pill {
+            display: inline-block;
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            padding: 3px 12px;
+            border-radius: 20px;
+            border: 1px solid currentColor;
+            letter-spacing: 0.04em;
+        }
+
+        /* terminal block */
+        .term {
+            background: #080b12;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+            position: relative;
+        }
+        .term-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 14px;
+            background: #0d1420;
+            border-bottom: 1px solid var(--line);
+        }
+        .dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+        }
+        .term-label {
+            margin-left: 8px;
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--ink-dim);
+            letter-spacing: 0.05em;
+        }
+        .term-body {
+            padding: 16px 18px;
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            line-height: 1.8;
+            color: var(--ink);
+            white-space: pre-wrap;
+        }
+        .term-body .prompt {
+            color: var(--green);
+        }
+        .term-body .cmd {
+            color: var(--ink);
+        }
+        .term-body .flag {
+            color: var(--amber);
+        }
+        .term-body .comment {
+            color: var(--ink-dim);
+        }
+        .term-body .out {
+            color: var(--ink-dim);
+        }
+        .term-body .hl {
+            color: var(--cyan);
+        }
+
+        /* file tree cards */
+        .file-card {
+            border-radius: 12px;
+            padding: 15px 16px;
+            border: 1px solid var(--line);
+            background: var(--panel);
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            min-width: 0;
+        }
+        .file-name {
+            font-family: var(--mono);
+            font-weight: 700;
+            font-size: var(--font-base);
+            color: var(--cyan);
+        }
+        .file-role {
+            font-size: var(--font-base);
+            color: var(--ink-dim);
+            line-height: 1.5;
+        }
+        .file-tag {
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--ink-faint);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        .file-card.core {
+            border-left: 3px solid var(--amber);
+        }
+        .file-card.aux {
+            border-left: 3px solid var(--line);
+            opacity: 0.85;
+        }
+
+        .arrow-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin: 16px 0;
+            flex-wrap: wrap;
+        }
+        .flow-node {
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            padding: 9px 18px;
+            border-radius: 8px;
+            border: 1px solid var(--line);
+            background: var(--panel);
+            color: var(--ink);
+            text-align: center;
+            white-space: nowrap;
+        }
+        .flow-arrow {
+            font-size: 20px;
+            color: var(--ink-dim);
+        }
+
+        /* recap strip */
+        .recap-strip {
+            display: flex;
+            gap: 14px;
+            margin-top: 18px;
+            flex-wrap: wrap;
+        }
+        .recap-chip {
+            flex: 1;
+            min-width: 140px;
+            padding: 14px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            background: var(--panel-2);
+        }
+        .recap-chip .num {
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--ink-faint);
+        }
+        .recap-chip .label {
+            font-size: var(--font-base);
+            color: var(--ink);
+            margin-top: 4px;
+            font-weight: 600;
+        }
+        .recap-chip .sub {
+            font-size: var(--font-base);
+            color: var(--ink-dim);
+            margin-top: 2px;
+        }
+
+        /* quotes */
+        .quote-card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-left: 3px solid var(--cyan);
+            border-radius: 10px;
+            padding: 16px 18px;
+            margin-bottom: 12px;
+        }
+        .quote-text {
+            font-size: var(--font-base);
+            line-height: 1.6;
+            color: var(--ink);
+            font-style: italic;
+        }
+        .quote-src {
+            margin-top: 7px;
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--ink-dim);
+        }
+
+        /* analogy / real-life callouts */
+        .analogy-card {
+            background: linear-gradient(180deg, rgba(181, 140, 242, 0.10), rgba(181, 140, 242, 0.03));
+            border: 1px solid rgba(181, 140, 242, 0.35);
+            border-left: 3px solid var(--purple);
+            border-radius: 10px;
+            padding: 14px 18px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            min-width: 0;
+        }
+        .analogy-card .icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            line-height: 1.3;
+        }
+        .analogy-card .body {
+            min-width: 0;
+        }
+        .analogy-card .label {
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--purple);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            font-weight: 700;
+        }
+        .analogy-card .text {
+            font-size: var(--font-base);
+            color: var(--ink);
+            line-height: 1.55;
+        }
+        .analogy-card.tight {
+            padding: 10px 14px;
+            margin-top: 8px;
+        }
+
+        .usecase-card {
+            background: linear-gradient(180deg, rgba(110, 231, 154, 0.09), rgba(110, 231, 154, 0.02));
+            border: 1px solid rgba(110, 231, 154, 0.30);
+            border-left: 3px solid var(--green);
+            border-radius: 10px;
+            padding: 14px 18px;
+            min-width: 0;
+        }
+        .usecase-card .label {
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--green);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            font-weight: 700;
+        }
+        .usecase-card .text {
+            font-size: var(--font-base);
+            color: var(--ink);
+            line-height: 1.55;
+        }
+
+        .step-card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 14px 16px;
+            min-width: 0;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .step-card .step-num {
+            font-family: var(--mono);
+            font-weight: 700;
+            font-size: var(--font-base);
+            color: var(--bg);
+            background: var(--cyan);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .step-card .step-body {
+            min-width: 0;
+        }
+        .step-card .step-title {
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--cyan);
+            margin-bottom: 3px;
+        }
+        .step-card .step-text {
+            font-size: var(--font-base);
+            color: var(--ink-dim);
+            line-height: 1.5;
+        }
+
+        /* code exercise blocks */
+        .exercise {
+            margin-bottom: 18px;
+        }
+        .exercise-head {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .exercise-num {
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--bg);
+            background: var(--cyan);
+            border-radius: 5px;
+            padding: 2px 10px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .exercise-title {
+            font-size: var(--font-base);
+            font-weight: 600;
+            color: var(--ink);
+        }
+        .exercise-desc {
+            font-size: var(--font-base);
+            color: var(--ink-dim);
+            margin: 6px 0 10px 0;
+            line-height: 1.55;
+        }
+        pre.code-block {
+            margin: 0;
+            background: #080b12;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 14px 18px;
+            overflow-x: auto;
+            position: relative;
+        }
+        pre.code-block code {
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            line-height: 1.7;
+            color: var(--ink);
+            white-space: pre;
+        }
+        .tok-kw {
+            color: var(--amber);
+        }
+        .tok-str {
+            color: var(--green);
+        }
+        .tok-com {
+            color: var(--ink-dim);
+            font-style: italic;
+        }
+        .tok-num {
+            color: var(--purple);
+        }
+        .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            padding: 4px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--line);
+            background: var(--panel);
+            color: var(--ink-dim);
+            cursor: pointer;
+            z-index: 2;
+            line-height: 1.4;
+        }
+        .copy-btn:hover {
+            color: var(--cyan);
+            border-color: var(--cyan);
+        }
+        .copy-btn.copied {
+            color: var(--green);
+            border-color: var(--green);
+        }
+
+        /* MC / activities */
+        .q-block {
+            margin-bottom: 16px;
+        }
+        .q-title {
+            font-weight: 600;
+            font-size: var(--font-base);
+            margin-bottom: 7px;
+            color: var(--ink);
+        }
+        .opts {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+        .opts.one-col {
+            grid-template-columns: minmax(0, 1fr);
+        }
+        .content-area.combined-check .q-block {
+            margin-bottom: 10px;
+        }
+        .content-area.combined-check .q-title {
+            margin-bottom: 5px;
+        }
+        .content-area.combined-check .opt {
+            padding: 6px 12px;
+        }
+        .content-area.combined-check .check-subhead {
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--ink-dim);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin: 4px 0 10px 0;
+            padding-top: 10px;
+            border-top: 1px solid var(--line);
+        }
+        .content-area.combined-check .check-subhead.first {
+            padding-top: 0;
+            border-top: none;
+        }
+        .content-area.combined-check .id-item {
+            padding: 7px 0;
+        }
+        .opt {
+            font-size: var(--font-base);
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--line);
+            background: var(--panel-2);
+            color: var(--ink-dim);
+            line-height: 1.4;
+        }
+        .opt b {
+            color: var(--cyan);
+            margin-right: 6px;
+        }
+
+        .id-item {
+            display: flex;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px dashed var(--line);
+            font-size: var(--font-base);
+            line-height: 1.5;
+        }
+        .id-item .num {
+            font-family: var(--mono);
+            color: var(--amber);
+            flex-shrink: 0;
+        }
+
+        .ans-item {
+            padding: 10px 0;
+            border-bottom: 1px solid var(--line);
+            font-size: var(--font-base);
+            line-height: 1.5;
+        }
+        .ans-item b {
+            color: var(--green);
+        }
+        .ans-item .expl {
+            color: var(--ink-dim);
+            font-size: var(--font-base);
+            margin-top: 3px;
+        }
+        .ans-block-title {
+            font-family: var(--mono);
+            font-size: var(--font-base);
+            color: var(--ink-dim);
+            margin-bottom: 10px;
+            letter-spacing: 0.08em;
+        }
+
+        #kb-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 7, 12, 0.75);
+            backdrop-filter: blur(4px);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        #kb-modal.show {
+            display: flex;
+        }
+        .kb-panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 28px 32px;
+            min-width: 340px;
+        }
+        .kb-panel h3 {
+            margin: 0 0 16px 0;
+            font-family: var(--disp);
+            font-size: clamp(25px, 2.2vw, 32px);
+        }
+        .kb-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: var(--font-base);
+            color: var(--ink-dim);
+            border-bottom: 1px solid var(--line);
+            line-height: 1.5;
+        }
+        .kb-row span.key {
+            font-family: var(--mono);
+            color: var(--cyan);
+            background: #080b12;
+            padding: 2px 10px;
+            border-radius: 5px;
+            border: 1px solid var(--line);
+        }
+
+        ::selection {
+            background: rgba(94, 225, 216, 0.3);
+        }
+
+        /* responsive tweaks for tighter screens */
+        @media (max-width: 820px) {
+            .slide {
+                padding: 40px 32px 50px 32px;
+            }
+            .g2,
+            .g3,
+            .g4,
+            .g5 {
+                grid-template-columns: 1fr;
+            }
+            .opts {
+                grid-template-columns: 1fr;
+            }
+            .recap-strip {
+                flex-direction: column;
+            }
+            .arrow-flow {
+                flex-wrap: wrap;
+            }
+            .flow-node {
+                white-space: normal;
+            }
+            .kb-panel {
+                min-width: 0;
+                width: 90%;
+                margin: 0 16px;
+                padding: 24px 20px;
+            }
+        }
+        @media (max-width: 480px) {
+            .slide {
+                padding: 30px 18px 40px 18px;
+            }
+            #counter {
+                bottom: 10px;
+                right: 14px;
+                font-size: 13px;
+                padding: 4px 10px;
+            }
+            #hint {
+                display: none;
+            }
+            .eyebrow-tag {
+                top: 14px;
+                right: 16px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="progress-track"><div id="progress-bar"></div></div>
+    <div class="eyebrow-tag">CS50W · Django Lecture 3</div>
+    <div id="counter">1 / 16</div>
+    <div id="hint">← → navigate · ? for shortcuts</div>
+
+    <div id="deck">
+
+        <!-- SLIDE 1: TITLE -->
+        <section class="slide">
+            <div class="eyebrow">Phase 2 · Project Setup</div>
+            <h1 class="title">Standing Up Your First Django Project</h1>
+            <p class="subtitle">You already know what happens on the wire — a request goes out, a response comes back. Now let's build the machine that sends those responses: installing Django, scaffolding a project, and understanding every file it hands you.</p>
+            <div class="arrow-flow" style="margin-top:30px;">
+                <div class="flow-node">📦 pip3 install</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node" style="border-color:var(--cyan); color:var(--cyan);">🏗️ startproject</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node">▶️ runserver</div>
+            </div>
+        </section>
+
+        <!-- SLIDE 2: RECAP BRIDGE -->
+        <section class="slide">
+            <div class="eyebrow blue">Recap · Where We Left Off</div>
+            <h1 class="title smaller">Quick Rewind: Phase 1</h1>
+            <div class="content-area">
+                <div class="card">
+                    <p style="font-size:var(--font-base); color:var(--ink-dim); margin:0 0 14px 0;">Before we touch any code, remember the cycle everything in Django ultimately serves:</p>
+                    <div class="arrow-flow" style="margin:0 0 14px 0;">
+                        <div class="flow-node">Client sends a <span style="color:var(--amber);">request</span></div>
+                        <div class="flow-arrow">⇄</div>
+                        <div class="flow-node">Server sends a <span style="color:var(--green);">response</span></div>
+                    </div>
+                    <div class="recap-strip">
+                        <div class="recap-chip"><div class="num">METHOD</div><div class="label">GET</div><div class="sub">retrieve a page</div></div>
+                        <div class="recap-chip"><div class="num">METHOD</div><div class="label">POST</div><div class="sub">submit changing data</div></div>
+                        <div class="recap-chip"><div class="num">STATUS</div><div class="label">200 · 404 · 500</div><div class="sub">OK / Not Found / Server Error</div></div>
+                    </div>
+                </div>
+                <p style="margin-top:16px; font-size:var(--font-base); color:var(--ink-dim);">Now: Django is the framework that sits on the <b style="color:var(--ink);">server</b> side of that cycle — it's what actually builds the response. Time to install it and see what it hands us.</p>
+            </div>
+        </section>
+
+        <!-- SLIDE 3: Install Django -->
+        <section class="slide">
+            <div class="eyebrow">Step 1 · Installation</div>
+            <h1 class="title smaller">Installing Django</h1>
+            <div class="content-area grid g2">
+                <div class="card">
+                    <ul class="clean">
+                        <li>Django is just a <b style="color:var(--ink);">Python package</b> — installed the same way as any other, using <b style="color:var(--cyan);">pip</b>, Python's package manager.</li>
+                        <li>We use <code class="mono" style="color:var(--amber);">pip3</code> specifically because we're working in <b style="color:var(--ink);">Python 3</b>.</li>
+                        <li>Once installed, Django gives us new command-line tools — most importantly <code class="mono" style="color:var(--cyan);">django-admin</code>.</li>
+                    </ul>
+                </div>
+                <div class="term">
+                    <div class="term-head"><div class="dot" style="background:#f2645b;"></div><div class="dot" style="background:#f2b84b;"></div><div class="dot" style="background:#6ee79a;"></div><span class="term-label">TERMINAL</span></div>
+                    <div class="term-body"><span class="prompt">$</span> <span class="cmd">pip3 install</span> <span class="hl">Django</span>
+                        <span class="out">Collecting Django...
+                            Successfully installed Django-5.x</span></div>
+                </div>
+            </div>
+            <div class="analogy-card" style="margin-top:16px;">
+                <span class="icon">🔧</span>
+                <div class="body">
+                    <div class="label">Real-life analogy</div>
+                    <div class="text">Think of <span class="mono" style="color:var(--purple);">pip3</span> as a hardware store and Django as a power tool on the shelf. You don't build the drill yourself — you just "buy" it (<span class="mono">pip3 install Django</span>) and it's ready to use in your toolbox.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 4: Create the Project -->
+        <section class="slide">
+            <div class="eyebrow">Step 2 · Scaffolding</div>
+            <h1 class="title smaller">Creating the Project</h1>
+            <div class="content-area grid g2">
+                <div>
+                    <div class="term">
+                        <div class="term-head"><div class="dot" style="background:#f2645b;"></div><div class="dot" style="background:#f2b84b;"></div><div class="dot" style="background:#6ee79a;"></div><span class="term-label">TERMINAL</span></div>
+                        <div class="term-body"><span class="prompt">$</span> <span class="cmd">django-admin</span> <span class="flag">startproject</span> <span class="hl">lecture3</span>
+                            <span class="out">$ ls
+                                lecture3/</span></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <ul class="clean">
+                        <li><code class="mono" style="color:var(--cyan);">django-admin startproject [name]</code> generates an entire starter folder for you — you write zero of these files by hand.</li>
+                        <li>The name (<code class="mono" style="color:var(--amber);">lecture3</code> here) can be anything — it becomes your project's root folder.</li>
+                        <li>This single command is the entire "birth" of a Django project. Everything else builds on top of it.</li>
+                    </ul>
+                    <div class="analogy-card tight">
+                        <span class="icon">🏠</span>
+                        <div class="body">
+                            <div class="label">Real-life analogy</div>
+                            <div class="text">Like ordering a furnished starter apartment instead of building a house from raw lumber — the walls, plumbing, and wiring (files &amp; folders) are already there. You just move in and start decorating.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 5: Project Structure -->
+        <section class="slide">
+            <div class="eyebrow">Step 3 · Anatomy</div>
+            <h1 class="title smaller">What Django Just Handed You</h1>
+            <p class="subtitle">Three files matter most right now — and a few quieter ones sit alongside them.</p>
+            <div class="content-area grid g3" style="margin-top:20px;">
+                <div class="file-card core">
+                    <span class="file-tag">Command Executor</span>
+                    <div class="file-name">manage.py</div>
+                    <div class="file-role">The tool you'll run every command through — <code class="mono">python manage.py [command]</code>. You'll rarely edit it, only run it.</div>
+                </div>
+                <div class="file-card core">
+                    <span class="file-tag">Configuration</span>
+                    <div class="file-name">settings.py</div>
+                    <div class="file-role">Every important setting for your app lives here — installed apps, database config, security settings, and more. Comes preloaded with sane defaults.</div>
+                </div>
+                <div class="file-card core">
+                    <span class="file-tag">Routing</span>
+                    <div class="file-name">urls.py</div>
+                    <div class="file-role">Think of it as the "table of contents" for your site — every visitable route on your web app is registered somewhere in here.</div>
+                </div>
+                <div class="file-card aux">
+                    <span class="file-tag">Package Marker</span>
+                    <div class="file-name">__init__.py</div>
+                    <div class="file-role">Tells Python this folder is a package. You'll almost never open it.</div>
+                </div>
+                <div class="file-card aux">
+                    <span class="file-tag">Deployment</span>
+                    <div class="file-name">wsgi.py</div>
+                    <div class="file-role">The entry point production web servers use to talk to your Django app.</div>
+                </div>
+                <div class="file-card aux">
+                    <span class="file-tag">Deployment (async)</span>
+                    <div class="file-name">asgi.py</div>
+                    <div class="file-role">Same idea as wsgi.py, but for asynchronous servers. Not a concern yet.</div>
+                </div>
+            </div>
+            <div class="analogy-card" style="margin-top:16px;">
+                <span class="icon">🏢</span>
+                <div class="body">
+                    <div class="label">Real-life analogy</div>
+                    <div class="text">Picture a small office: <span class="mono" style="color:var(--purple);">manage.py</span> is the front-desk phone you use to give commands, <span class="mono" style="color:var(--purple);">settings.py</span> is the office manual with all the rules, and <span class="mono" style="color:var(--purple);">urls.py</span> is the receptionist's directory that sends each visitor to the right room.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 5b: Sample Code Walkthrough (Part 1) -->
+        <section class="slide top-align">
+            <div class="eyebrow">Step 3.5 · Read The Code · Part 1</div>
+            <h1 class="title smaller">What's Actually Inside These Files</h1>
+            <p class="subtitle">Before the coding problems, get comfortable reading the real Python that Django scaffolds for you.</p>
+            <div class="content-area tight">
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">settings.py</span><span class="exercise-title">Configuration lives in plain Python lists &amp; variables</span></div>
+                    <pre class="code-block"><code data-lang="python">INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "hello",  # our own app, added manually
+]
+
+DEBUG = True
+ALLOWED_HOSTS = []</code></pre>
+                </div>
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">urls.py</span><span class="exercise-title">Routes are just a Python list called urlpatterns</span></div>
+                    <pre class="code-block"><code data-lang="python">from django.contrib import admin
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("", views.index, name="index"),
+]</code></pre>
+                </div>
+
+                <div class="analogy-card tight">
+                    <span class="icon">📋</span>
+                    <div class="body">
+                        <div class="label">Real-life analogy</div>
+                        <div class="text"><span class="mono" style="color:var(--purple);">urlpatterns</span> is just a Python list, so matching a route is like scanning a restaurant menu top to bottom until you find the dish name that matches your order.</div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SLIDE 5c: Sample Code Walkthrough (Part 2) -->
+        <section class="slide top-align">
+            <div class="eyebrow">Step 3.5 · Read The Code · Part 2</div>
+            <h1 class="title smaller">The File That Runs Everything</h1>
+            <div class="content-area tight">
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">manage.py</span><span class="exercise-title">The entry point every command runs through</span></div>
+                    <pre class="code-block"><code data-lang="python">import os
+import sys
+
+def main():
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "lecture3.settings")
+    from django.core.management import execute_from_command_line
+    execute_from_command_line(sys.argv)
+
+if __name__ == "__main__":
+    main()</code></pre>
+                </div>
+
+                <div class="analogy-card">
+                    <span class="icon">📺</span>
+                    <div class="body">
+                        <div class="label">Real-life analogy</div>
+                        <div class="text"><span class="mono" style="color:var(--purple);">manage.py</span> works like a TV remote: you never rewire the television itself, you just press a button (a command) and the remote tells the TV what to do.</div>
+                    </div>
+                </div>
+
+                <div class="usecase-card" style="margin-top:14px;">
+                    <div class="label">Sample use case</div>
+                    <div class="text">Say you want to check whether your app registered new database changes. Instead of digging through Django's internals, you just run <span class="mono" style="color:var(--green);">python manage.py migrate</span> — one command, routed through <span class="mono" style="color:var(--green);">manage.py</span>, that does the heavy lifting for you.</div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SLIDE 6: Run the server -->
+        <section class="slide">
+            <div class="eyebrow">Step 4 · Liftoff</div>
+            <h1 class="title smaller">Running the Development Server</h1>
+            <div class="content-area grid g2">
+                <div class="term">
+                    <div class="term-head"><div class="dot" style="background:#f2645b;"></div><div class="dot" style="background:#f2b84b;"></div><div class="dot" style="background:#6ee79a;"></div><span class="term-label">TERMINAL</span></div>
+                    <div class="term-body"><span class="prompt">$</span> <span class="cmd">python</span> <span class="cmd">manage.py</span> <span class="flag">runserver</span>
+                        <span class="out">Starting development server at
+                        </span><span class="hl">http://127.0.0.1:8000</span></div>
+                </div>
+                <div class="card">
+                    <ul class="clean">
+                        <li><code class="mono" style="color:var(--cyan);">manage.py</code> always takes a command as its argument — here, <code class="mono" style="color:var(--amber);">runserver</code> means "start the web server."</li>
+                        <li><code class="mono" style="color:var(--ink);">127.0.0.1</code> is your own computer's local address — <b>only you</b> can reach this server, nobody else on the internet.</li>
+                        <li><code class="mono" style="color:var(--ink);">8000</code> is the <b style="color:var(--ink);">port number</b> — it identifies which service is running, since a computer can host many at once.</li>
+                    </ul>
+                    <div class="analogy-card tight">
+                        <span class="icon">🏢</span>
+                        <div class="body">
+                            <div class="label">Real-life analogy</div>
+                            <div class="text"><span class="mono" style="color:var(--purple);">127.0.0.1</span> is like a private rehearsal room only you hold the key to. The <span class="mono" style="color:var(--purple);">8000</span> is the room number in the building — the address gets you inside, the number picks the exact room.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 6b: Sample Use Case -->
+        <section class="slide top-align">
+            <div class="eyebrow blue">Putting It Together</div>
+            <h1 class="title smaller">Sample Use Case: Building a Portfolio Site</h1>
+            <p class="subtitle">A concrete walkthrough tying every command and file from this lecture into one real task.</p>
+            <div class="content-area grid g2" style="margin-top:10px;">
+                <div class="step-card">
+                    <span class="step-num">1</span>
+                    <div class="step-body">
+                        <div class="step-title">pip3 install Django</div>
+                        <div class="step-text">You want a personal portfolio site. First, "buy the tool" — install Django into your Python environment.</div>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-num">2</span>
+                    <div class="step-body">
+                        <div class="step-title">django-admin startproject portfolio</div>
+                        <div class="step-text">Scaffold the whole project. You now have a furnished starter folder called <span class="mono">portfolio</span>.</div>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-num">3</span>
+                    <div class="step-body">
+                        <div class="step-title">Edit urls.py</div>
+                        <div class="step-text">Add a route so visiting <span class="mono">"/"</span> shows your homepage — like telling the receptionist where to send guests.</div>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-num">4</span>
+                    <div class="step-body">
+                        <div class="step-title">python manage.py runserver</div>
+                        <div class="step-text">Press the remote-control button to switch the server on and preview your site at <span class="mono">127.0.0.1:8000</span>.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="usecase-card" style="margin-top:16px;">
+                <div class="label">Why this matters</div>
+                <div class="text">Every Django project you'll ever build — a blog, a shop, a portfolio — starts with this exact same four-step rhythm: install, scaffold, configure routes, run. Once this feels automatic, everything later in the course builds on it.</div>
+            </div>
+        </section>
+
+        <!-- SLIDE 7: Phase 2 Recap -->
+        <section class="slide">
+            <div class="eyebrow blue">Recap · Phase 2</div>
+            <h1 class="title smaller">Everything We Just Covered</h1>
+            <div class="content-area">
+                <div class="arrow-flow" style="margin-top:6px;">
+                    <div class="flow-node">pip3 install Django</div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-node">django-admin startproject</div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-node">python manage.py runserver</div>
+                </div>
+                <div class="recap-strip" style="margin-top:22px;">
+                    <div class="recap-chip"><div class="num">FILE</div><div class="label">manage.py</div><div class="sub">runs commands</div></div>
+                    <div class="recap-chip"><div class="num">FILE</div><div class="label">settings.py</div><div class="sub">configuration</div></div>
+                    <div class="recap-chip"><div class="num">FILE</div><div class="label">urls.py</div><div class="sub">table of contents</div></div>
+                    <div class="recap-chip"><div class="num">ADDRESS</div><div class="label">127.0.0.1:8000</div><div class="sub">local dev server</div></div>
+                </div>
+                <p style="margin-top:20px; font-size:var(--font-base); color:var(--ink-dim); max-width:70ch;">One command scaffolds the whole project. One file routes URLs, one configures settings, and one file — <code class="mono" style="color:var(--cyan);">manage.py</code> — is how you talk to all of it.</p>
+            </div>
+        </section>
+
+        <!-- SLIDE 8: Key Quotes -->
+        <section class="slide">
+            <div class="eyebrow">Reference</div>
+            <h1 class="title smaller">Key Quotes</h1>
+            <div class="content-area">
+                <div class="quote-card">
+                    <div class="quote-text">"manage.py is a file that Django is going to create for us... we're going to use the manage.py file to be able to execute commands on this Django project."</div>
+                    <div class="quote-src">— on the purpose of manage.py</div>
+                </div>
+                <div class="quote-card">
+                    <div class="quote-text">"You can think of urls.py as a sort of table of contents for our web application."</div>
+                    <div class="quote-src">— on urls.py</div>
+                </div>
+                <div class="quote-card">
+                    <div class="quote-text">"127.0.0.1 is an IP address... that just refers to my local computer. So only I can access this, not anyone else on the internet."</div>
+                    <div class="quote-src">— on the local development address</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 9: Multiple Choice + Identification (combined, two columns) -->
+        <section class="slide top-align">
+            <div class="eyebrow">Check Your Understanding · Parts 1 &amp; 2</div>
+            <h1 class="title smaller">Multiple Choice &amp; Identification</h1>
+            <div class="content-area combined-check grid g2">
+
+                <div class="check-col">
+                    <div class="check-subhead first">Multiple Choice</div>
+
+                    <div class="q-block">
+                        <div class="q-title">1. Which command installs Django?</div>
+                        <div class="opts one-col">
+                            <div class="opt"><b>A</b>python install django</div>
+                            <div class="opt"><b>B</b>pip3 install Django</div>
+                            <div class="opt"><b>C</b>django-admin install</div>
+                            <div class="opt"><b>D</b>manage.py install</div>
+                        </div>
+                    </div>
+                    <div class="q-block">
+                        <div class="q-title">2. What command scaffolds a brand-new Django project?</div>
+                        <div class="opts one-col">
+                            <div class="opt"><b>A</b>python manage.py startproject</div>
+                            <div class="opt"><b>B</b>django-admin startproject [name]</div>
+                            <div class="opt"><b>C</b>django new [name]</div>
+                            <div class="opt"><b>D</b>pip3 startproject</div>
+                        </div>
+                    </div>
+                    <div class="q-block">
+                        <div class="q-title">3. Which file acts as the "table of contents" for a project's routes?</div>
+                        <div class="opts one-col">
+                            <div class="opt"><b>A</b>manage.py</div>
+                            <div class="opt"><b>B</b>settings.py</div>
+                            <div class="opt"><b>C</b>urls.py</div>
+                            <div class="opt"><b>D</b>wsgi.py</div>
+                        </div>
+                    </div>
+                    <div class="q-block">
+                        <div class="q-title">4. What does 127.0.0.1 refer to?</div>
+                        <div class="opts one-col">
+                            <div class="opt"><b>A</b>A random public server</div>
+                            <div class="opt"><b>B</b>Your own local computer</div>
+                            <div class="opt"><b>C</b>Django's official domain</div>
+                            <div class="opt"><b>D</b>A CDN address</div>
+                        </div>
+                    </div>
+                    <div class="q-block">
+                        <div class="q-title">5. Which command starts the local development server?</div>
+                        <div class="opts one-col">
+                            <div class="opt"><b>A</b>python manage.py runserver</div>
+                            <div class="opt"><b>B</b>django-admin runserver</div>
+                            <div class="opt"><b>C</b>pip3 run server</div>
+                            <div class="opt"><b>D</b>python manage.py start</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="check-col">
+                    <div class="check-subhead first">Identification</div>
+                    <div class="id-item"><span class="num">01</span><span>The file used to execute Django commands like runserver.</span></div>
+                    <div class="id-item"><span class="num">02</span><span>The file that holds a project's configuration, including installed apps.</span></div>
+                    <div class="id-item"><span class="num">03</span><span>The number that identifies which local service a server is running on.</span></div>
+                    <div class="id-item"><span class="num">04</span><span>The Python package manager used to install Django.</span></div>
+                    <div class="id-item"><span class="num">05</span><span>The command-line tool used to scaffold a brand-new Django project.</span></div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SLIDE 11: Coding Exercises (Part 1) -->
+        <section class="slide top-align">
+            <div class="eyebrow">Check Your Understanding · Part 3 · Hands-On (1/3)</div>
+            <h1 class="title smaller">Coding Exercises</h1>
+            <p class="subtitle">Basic problem-solving with what you just learned — revisit the "Sample Code" slides if you need a refresher before diving in.</p>
+            <div class="content-area tight">
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">01</span><span class="exercise-title">Debug the Command</span></div>
+                    <div class="exercise-desc">This install command is failing. Spot the typo and write the corrected version.</div>
+                    <pre class="code-block"><button class="copy-btn" data-copy>Copy</button><code data-lang="bash"># broken command — find the bug
+pip3 instal django-framework</code></pre>
+                </div>
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">02</span><span class="exercise-title">Write the Scaffold Command</span></div>
+                    <div class="exercise-desc">Write the single terminal command that creates a brand-new Django project named <code class="mono">portfolio</code>.</div>
+                    <pre class="code-block"><button class="copy-btn" data-copy>Copy</button><code data-lang="bash"># your answer goes here
+</code></pre>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SLIDE 11b: Coding Exercises (Part 2) -->
+        <section class="slide top-align">
+            <div class="eyebrow">Check Your Understanding · Part 3 · Hands-On (2/3)</div>
+            <h1 class="title smaller">Coding Exercises, Continued</h1>
+            <div class="content-area tight">
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">03</span><span class="exercise-title">Plain Python: Read the Settings</span></div>
+                    <div class="exercise-desc">INSTALLED_APPS is just a Python list living inside settings.py. Complete the function below so it returns True only if "tasks" is already registered.</div>
+                    <pre class="code-block"><button class="copy-btn" data-copy>Copy</button><code data-lang="python">INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "hello",
+]
+
+def is_installed(app_name):
+    # TODO: return True if app_name is in INSTALLED_APPS
+    pass
+
+print(is_installed("tasks"))   # should print False
+print(is_installed("hello"))   # should print True</code></pre>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SLIDE 11c: Coding Exercises (Part 3) -->
+        <section class="slide top-align">
+            <div class="eyebrow">Check Your Understanding · Part 3 · Hands-On (3/3)</div>
+            <h1 class="title smaller">Coding Exercises, Continued</h1>
+            <div class="content-area tight">
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">04</span><span class="exercise-title">Plain Python: Build a Route Matcher</span></div>
+                    <div class="exercise-desc">urlpatterns is just a list of path() calls. Complete the function so it returns the view name matched to a given route, or None if there's no match.</div>
+                    <pre class="code-block"><button class="copy-btn" data-copy>Copy</button><code data-lang="python">urlpatterns = [
+    {"route": "admin/", "view": "admin.site.urls"},
+    {"route": "", "view": "views.index"},
+    {"route": "about/", "view": "views.about"},
+]
+
+def match_route(route):
+    # TODO: loop through urlpatterns and return the "view"
+    # whose "route" equals the given route, else return None
+    pass
+
+print(match_route("about/"))  # should print "views.about"
+print(match_route("contact/"))  # should print None</code></pre>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SLIDE 12: Answers (MC + Identification) -->
+        <section class="slide">
+            <div class="eyebrow">Answer Key · Part 1</div>
+            <h1 class="title smaller">Answers & Explanations</h1>
+            <div class="content-area grid g2">
+                <div class="card">
+                    <div class="ans-block-title">MULTIPLE CHOICE</div>
+                    <div class="ans-item"><b>1. B</b><div class="expl">pip3 install Django installs the package.</div></div>
+                    <div class="ans-item"><b>2. B</b><div class="expl">django-admin startproject [name] scaffolds it.</div></div>
+                    <div class="ans-item"><b>3. C</b><div class="expl">urls.py routes every visitable URL.</div></div>
+                    <div class="ans-item"><b>4. B</b><div class="expl">127.0.0.1 is the local loopback address.</div></div>
+                    <div class="ans-item"><b>5. A</b><div class="expl">python manage.py runserver starts it.</div></div>
+                </div>
+                <div class="card">
+                    <div class="ans-block-title">IDENTIFICATION</div>
+                    <div class="ans-item"><b>1.</b> manage.py</div>
+                    <div class="ans-item"><b>2.</b> settings.py</div>
+                    <div class="ans-item"><b>3.</b> Port number</div>
+                    <div class="ans-item"><b>4.</b> pip (pip3)</div>
+                    <div class="ans-item"><b>5.</b> django-admin</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 13: Coding Exercise Answers (Part 1) -->
+        <section class="slide top-align">
+            <div class="eyebrow">Answer Key · Part 2 · Hands-On (1/2)</div>
+            <h1 class="title smaller">Coding Exercise Answers</h1>
+            <div class="content-area tight">
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">01</span><span class="exercise-title">Debug the Command</span></div>
+                    <pre class="code-block"><code data-lang="bash">pip3 install Django</code></pre>
+                    <div class="exercise-desc">"instal" and "django-framework" were both wrong — the package name is just "Django".</div>
+                </div>
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">02</span><span class="exercise-title">Write the Scaffold Command</span></div>
+                    <pre class="code-block"><code data-lang="bash">django-admin startproject portfolio</code></pre>
+                    <div class="exercise-desc">The project name goes right after startproject, with no extra flags needed.</div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SLIDE 13b: Coding Exercise Answers (Part 2) -->
+        <section class="slide top-align">
+            <div class="eyebrow">Answer Key · Part 2 · Hands-On (2/2)</div>
+            <h1 class="title smaller">Coding Exercise Answers, Continued</h1>
+            <div class="content-area tight">
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">03</span><span class="exercise-title">Plain Python: Read the Settings</span></div>
+                    <pre class="code-block"><code data-lang="python">def is_installed(app_name):
+    return app_name in INSTALLED_APPS</code></pre>
+                    <div class="exercise-desc">Python's <code class="mono">in</code> operator checks list membership in one step — no manual loop needed.</div>
+                </div>
+
+                <div class="exercise">
+                    <div class="exercise-head"><span class="exercise-num">04</span><span class="exercise-title">Plain Python: Build a Route Matcher</span></div>
+                    <pre class="code-block"><code data-lang="python">def match_route(route):
+    for p in urlpatterns:
+        if p["route"] == route:
+            return p["view"]
+    return None</code></pre>
+                    <div class="exercise-desc">Loop through each dict, compare the "route" key, and return its "view" on a match. If the loop finishes with no match, fall through to None.</div>
+                </div>
+
+            </div>
+        </section>
+
+    </div>
+
+    <div id="kb-modal">
+        <div class="kb-panel">
+            <h3>Keyboard Shortcuts</h3>
+            <div class="kb-row"><span>Next slide</span><span class="key">→</span></div>
+            <div class="kb-row"><span>Previous slide</span><span class="key">←</span></div>
+            <div class="kb-row"><span>First slide</span><span class="key">Home</span></div>
+            <div class="kb-row"><span>Last slide</span><span class="key">End</span></div>
+            <div class="kb-row"><span>Toggle this panel</span><span class="key">?</span></div>
+            <div class="kb-row" style="border-bottom:none;"><span>Advance</span><span class="key">Click</span></div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            var slides = document.querySelectorAll('.slide');
+            var total = slides.length;
+            var current = 0;
+
+            function render() {
+                slides.forEach(function(s, i) {
+                    s.classList.remove('active', 'prev');
+                    if (i === current) s.classList.add('active');
+                    else if (i < current) s.classList.add('prev');
+                });
+                document.getElementById('counter').textContent = (current + 1) + ' / ' + total;
+                document.getElementById('progress-bar').style.width = (((current + 1) / total) * 100) + '%';
+            }
+
+            function goTo(i) {
+                if (i < 0) i = 0;
+                if (i >= total) i = total - 1;
+                current = i;
+                render();
+            }
+
+            function next() { goTo(current + 1); }
+
+            function prev() { goTo(current - 1); }
+
+            document.getElementById('deck').addEventListener('click', function(e) {
+                if (e.target.closest('.copy-btn') || e.target.closest('a') || e.target.closest('button')) return;
+                next();
+            });
+
+            document.addEventListener('keydown', function(e) {
+                var modal = document.getElementById('kb-modal');
+                if (e.key === '?') { modal.classList.toggle('show'); return; }
+                if (modal.classList.contains('show')) { if (e.key === 'Escape') modal.classList.remove('show'); return; }
+                if (e.key === 'ArrowRight') { next(); } else if (e.key === 'ArrowLeft') { prev(); } else if (e.key ===
+                    'Home') { goTo(0); } else if (e.key === 'End') { goTo(total - 1); }
+            });
+            document.getElementById('kb-modal').addEventListener('click', function(e) {
+                if (e.target.id === 'kb-modal') e.target.classList.remove('show');
+            });
+
+            var touchStartX = 0;
+            document.getElementById('deck').addEventListener('touchstart', function(e) {
+                touchStartX = e.changedTouches[0].screenX;
+            }, { passive: true });
+            document.getElementById('deck').addEventListener('touchend', function(e) {
+                var dx = e.changedTouches[0].screenX - touchStartX;
+                if (Math.abs(dx) > 50) { dx < 0 ? next() : prev(); }
+            }, { passive: true });
+
+            /* ---- single-pass syntax tokenizer ---- */
+            function escapeHtml(s) {
+                return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
+
+            function highlight(code) {
+                var pattern =
+                    /(#.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|\b(def|import|from|return|if|elif|else|in|for|True|False|None|class|as|with|pass|print|is|not|and|or)\b|\b(\d+)\b/gm;
+                var result = '';
+                var last = 0;
+                var m;
+                while ((m = pattern.exec(code)) !== null) {
+                    result += escapeHtml(code.slice(last, m.index));
+                    if (m[1]) result += '<span class="tok-com">' + escapeHtml(m[1]) + '</span>';
+                    else if (m[2]) result += '<span class="tok-str">' + escapeHtml(m[2]) + '</span>';
+                    else if (m[3]) result += '<span class="tok-kw">' + escapeHtml(m[3]) + '</span>';
+                    else if (m[4]) result += '<span class="tok-num">' + escapeHtml(m[4]) + '</span>';
+                    last = m.index + m[0].length;
+                }
+                result += escapeHtml(code.slice(last));
+                return result;
+            }
+            document.querySelectorAll('pre.code-block code[data-lang]').forEach(function(el) {
+                var raw = el.textContent;
+                el.dataset.raw = raw;
+                el.innerHTML = highlight(raw);
+            });
+
+            /* ---- copy buttons ---- */
+            document.querySelectorAll('.copy-btn').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var codeEl = btn.parentElement.querySelector('code');
+                    var text = codeEl ? (codeEl.dataset.raw || codeEl.textContent) : '';
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text).catch(function() {});
+                    }
+                    btn.textContent = 'Copied!';
+                    btn.classList.add('copied');
+                    setTimeout(function() { btn.textContent = 'Copy';
+                        btn.classList.remove('copied'); }, 1400);
+                });
+            });
+
+            render();
+        })();
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clean Coding & Clean Vibe Coding Practices</title>
+<style>
+:root {
+  --bg: #1a1d23;
+  --bg-elevated: #22262e;
+  --shadow-dark: #12141a;
+  --shadow-light: #2a2f3a;
+  --text: #e8eaed;
+  --text-muted: #9aa0a8;
+  --accent: #6ee7b7;
+  --accent-dim: #34d399;
+  --accent-soft: rgba(110, 231, 183, 0.15);
+  --warn: #fbbf24;
+  --danger: #f87171;
+  --info: #60a5fa;
+  --radius: 18px;
+  --radius-sm: 12px;
+  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 18px;
+  line-height: 1.55;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+.deck {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+.slide {
+  position: absolute;
+  inset: 0;
+  padding: 48px 64px 72px;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(40px);
+  transition: opacity 350ms ease, transform 350ms ease;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.slide.active {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+  z-index: 2;
+}
+.slide.prev {
+  transform: translateX(-40px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .slide { transition: opacity 200ms ease; transform: none !important; }
+}
+.eyebrow {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+h1 {
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 20px;
+  color: var(--text);
+}
+h2 {
+  font-size: clamp(22px, 2.8vw, 30px);
+  font-weight: 650;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+h3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--accent-dim);
+}
+p, li { font-size: 18px; line-height: 1.6; }
+p { margin-bottom: 12px; }
+ul, ol { padding-left: 1.35em; margin-bottom: 14px; }
+li { margin-bottom: 8px; }
+.muted { color: var(--text-muted); }
+.card {
+  background: var(--bg-elevated);
+  border-radius: var(--radius);
+  padding: 22px 26px;
+  box-shadow:
+    6px 6px 14px var(--shadow-dark),
+    -5px -5px 12px var(--shadow-light);
+  margin-bottom: 16px;
+}
+.card-inset {
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 16px 18px;
+  box-shadow:
+    inset 3px 3px 7px var(--shadow-dark),
+    inset -2px -2px 5px var(--shadow-light);
+}
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: stretch;
+}
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 14px 0;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 600;
+  background: var(--bg-elevated);
+  box-shadow:
+    4px 4px 8px var(--shadow-dark),
+    -3px -3px 7px var(--shadow-light);
+  color: var(--text);
+}
+.badge svg { width: 22px; height: 22px; flex-shrink: 0; }
+.badge.accent { color: var(--accent); }
+.badge.warn { color: var(--warn); }
+.badge.danger { color: var(--danger); }
+.badge.info { color: var(--info); }
+.quote-block {
+  font-size: 22px;
+  font-style: italic;
+  line-height: 1.5;
+  padding: 28px 32px;
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  box-shadow:
+    6px 6px 14px var(--shadow-dark),
+    -5px -5px 12px var(--shadow-light);
+  position: relative;
+}
+.quote-block::before {
+  content: '"';
+  font-size: 72px;
+  color: var(--accent);
+  opacity: 0.35;
+  position: absolute;
+  top: 4px;
+  left: 16px;
+  font-family: Georgia, serif;
+  line-height: 1;
+}
+.quote-attr {
+  margin-top: 16px;
+  font-size: 17px;
+  font-style: normal;
+  color: var(--accent-dim);
+  text-align: right;
+}
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 17px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow:
+    4px 4px 10px var(--shadow-dark),
+    -3px -3px 8px var(--shadow-light);
+}
+th, td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+th {
+  background: var(--bg-elevated);
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+td { background: var(--bg); }
+tr:last-child td { border-bottom: none; }
+.code-wrap {
+  position: relative;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: #14171c;
+  box-shadow:
+    inset 3px 3px 8px #0c0e12,
+    inset -2px -2px 6px #1e222a;
+  margin: 12px 0;
+}
+.code-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 14px;
+  background: rgba(0,0,0,0.25);
+  font-size: 16px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.code-wrap pre {
+  margin: 0;
+  padding: 16px 18px;
+  overflow: auto;
+  font-family: var(--mono);
+  font-size: 16px;
+  line-height: 1.5;
+  color: #d4d8de;
+  max-height: 320px;
+}
+.code-wrap pre .kw { color: #c792ea; }
+.code-wrap pre .fn { color: #82aaff; }
+.code-wrap pre .str { color: #c3e88d; }
+.code-wrap pre .cm { color: #697098; font-style: italic; }
+.code-wrap pre .num { color: #f78c6c; }
+.code-wrap pre .op { color: #89ddff; }
+.code-wrap pre .bad { color: #f87171; }
+.code-wrap pre .good { color: #6ee7b7; }
+.copy-btn {
+  font-size: 16px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background: var(--bg-elevated);
+  color: var(--text);
+  box-shadow:
+    3px 3px 6px var(--shadow-dark),
+    -2px -2px 5px var(--shadow-light);
+  transition: box-shadow 0.15s, transform 0.1s;
+  font-family: var(--font);
+  font-weight: 600;
+}
+.copy-btn:active, .copy-btn.copied {
+  box-shadow:
+    inset 2px 2px 5px var(--shadow-dark),
+    inset -1px -1px 3px var(--shadow-light);
+  color: var(--accent);
+}
+.check-list { list-style: none; padding-left: 0; }
+.check-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-size: 17px;
+}
+.check-list li::before {
+  content: '';
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  box-shadow:
+    3px 3px 6px var(--shadow-dark),
+    -2px -2px 5px var(--shadow-light);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236ee7b7' stroke-width='2.5'%3E%3Cpath d='M5 13l4 4L19 7'/%3E%3C/svg%3E");
+  background-size: 14px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.progress-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  background: var(--accent);
+  z-index: 100;
+  transition: width 300ms ease;
+  border-radius: 0 2px 2px 0;
+}
+.counter {
+  position: fixed;
+  bottom: 16px;
+  right: 24px;
+  font-size: 16px;
+  color: var(--text-muted);
+  z-index: 100;
+  background: var(--bg-elevated);
+  padding: 6px 14px;
+  border-radius: 999px;
+  box-shadow:
+    3px 3px 8px var(--shadow-dark),
+    -2px -2px 6px var(--shadow-light);
+}
+.help-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10,12,16,0.85);
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.help-overlay.show { display: flex; }
+.help-card {
+  background: var(--bg-elevated);
+  border-radius: var(--radius);
+  padding: 32px 40px;
+  max-width: 480px;
+  width: 100%;
+  box-shadow:
+    8px 8px 24px var(--shadow-dark),
+    -6px -6px 18px var(--shadow-light);
+}
+.help-card h2 { margin-bottom: 18px; }
+.help-card ul { list-style: none; padding: 0; }
+.help-card li {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  font-size: 17px;
+}
+.help-card kbd {
+  background: var(--bg);
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 16px;
+  box-shadow:
+    inset 2px 2px 4px var(--shadow-dark),
+    inset -1px -1px 3px var(--shadow-light);
+}
+.icon-hero {
+  width: 72px;
+  height: 72px;
+  margin-bottom: 18px;
+  color: var(--accent);
+}
+.flow-svg {
+  width: 100%;
+  max-height: 160px;
+  margin: 12px 0;
+}
+.two-col-code {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  height: min(480px, 55vh);
+  min-height: 0;
+}
+.two-col-code > * {
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.two-col-code .code-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin: 0;
+}
+.two-col-code .code-wrap pre {
+  flex: 1;
+  max-height: none;
+  min-height: 0;
+}
+.smell-fix {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.smell-item {
+  display: grid;
+  grid-template-columns: 160px 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 12px 16px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  box-shadow:
+    4px 4px 10px var(--shadow-dark),
+    -3px -3px 8px var(--shadow-light);
+  font-size: 16px;
+}
+.smell-item strong { color: var(--danger); }
+.activity-q {
+  margin-bottom: 18px;
+}
+.activity-q .q-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 16px;
+  margin-right: 8px;
+}
+.options { margin-top: 8px; padding-left: 36px; }
+.options li { list-style: none; margin-bottom: 6px; font-size: 17px; }
+.options li::before {
+  content: attr(data-letter);
+  display: inline-block;
+  width: 24px;
+  color: var(--accent-dim);
+  font-weight: 600;
+}
+.scenario-card {
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+.scenario-card pre {
+  font-size: 16px;
+  margin-top: 8px;
+  max-height: 140px;
+}
+.closing-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  display: block;
+  color: var(--accent);
+}
+.center-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex: 1;
+}
+@media (max-width: 900px) {
+  .slide { padding: 32px 28px 64px; }
+  .grid-2, .grid-3, .two-col-code, .smell-item {
+    grid-template-columns: 1fr;
+  }
+  .smell-item { grid-template-columns: 1fr; }
+  h1 { font-size: 26px; }
+}
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+  <!-- SLIDES INJECTED BY JS -->
+</div>
+<div class="progress-bar" id="progress"></div>
+<div class="counter" id="counter">1 / 1</div>
+<div class="help-overlay" id="help">
+  <div class="help-card">
+    <h2>Keyboard Shortcuts</h2>
+    <ul>
+      <li><span>Next slide</span><kbd>→</kbd> or <kbd>Right-click</kbd></li>
+      <li><span>Previous slide</span><kbd>←</kbd></li>
+      <li><span>First / Last</span><kbd>Home</kbd> / <kbd>End</kbd></li>
+      <li><span>Toggle help</span><kbd>?</kbd></li>
+    </ul>
+    <p class="muted" style="margin-top:16px;font-size:16px;">Swipe left/right on mobile. Left-click remains free for selection &amp; buttons.</p>
+  </div>
+</div>
+
+<script>
+const slides = [
+/* ========== 0 TITLE ========== */
+`<div class="center-content">
+  <svg class="icon-hero" viewBox="0 0 64 64" fill="none" role="img" aria-label="Clean code icon">
+    <title>Clean code symbol</title>
+    <rect x="8" y="12" width="48" height="40" rx="6" stroke="currentColor" stroke-width="2.5"/>
+    <path d="M20 28l8 8-8 8M36 44h12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <p class="eyebrow">Integrative Programming</p>
+  <h1>Clean Coding &amp; Clean<br>“Vibe Coding” Practices</h1>
+  <p class="muted" style="max-width:520px;font-size:19px;">Write code that humans understand — even when you move fast with AI assistance.</p>
+  <div class="badge-row" style="justify-content:center;margin-top:28px;">
+    <span class="badge accent">Readable</span>
+    <span class="badge info">Maintainable</span>
+    <span class="badge warn">AI-Aware</span>
+  </div>
+</div>`,
+
+/* ========== 1 AGENDA ========== */
+`<p class="eyebrow">Overview</p>
+<h1>What We’ll Cover</h1>
+<div class="grid-2" style="margin-top:8px;">
+  <div class="card">
+    <h3>Concepts</h3>
+    <ul>
+      <li>What clean code really means</li>
+      <li>Vibe coding &amp; its risks</li>
+      <li>Clean vibe coding ground rules</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Practices</h3>
+    <ul>
+      <li>Core principles &amp; naming</li>
+      <li>Functions, DRY, errors</li>
+      <li>Code smells &amp; workflow</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Scenarios</h3>
+    <ul>
+      <li>Real-life analogies</li>
+      <li>Team &amp; integration impact</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Activities (15)</h3>
+    <ul>
+      <li>5 Multiple choice</li>
+      <li>5 Scenario identification</li>
+      <li>5 Good / Bad practice</li>
+    </ul>
+  </div>
+</div>`,
+
+/* ========== 2 WHAT IS CLEAN CODE ========== */
+`<p class="eyebrow">Foundation</p>
+<h1>What is “Clean Code”?</h1>
+<div class="card" style="margin-bottom:20px;">
+  <p style="font-size:20px;margin:0;">Clean code is code that is easy to <strong>read, understand, change, and maintain</strong> — by you in 6 months, and by anyone else on your team.</p>
+</div>
+<p>It’s not about being clever. It’s about being <em>clear</em>.</p>
+<div class="grid-2" style="margin-top:18px;">
+  <div class="card">
+    <h3>Looks like</h3>
+    <ul>
+      <li>Names that reveal intent</li>
+      <li>Small, focused functions</li>
+      <li>Predictable structure</li>
+      <li>No hidden surprises</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Doesn’t look like</h3>
+    <ul>
+      <li>Clever one-liners no one gets</li>
+      <li>Copy-paste sprawl</li>
+      <li>Silent error swallowing</li>
+      <li>“I’ll clean it later” piles</li>
+    </ul>
+  </div>
+</div>`,
+
+/* ========== 3 KEY QUOTE ========== */
+`<p class="eyebrow">Key Quote</p>
+<h1>Why Clarity Wins</h1>
+<div class="quote-block" style="margin-top:24px;">
+  <p style="margin:0;padding-left:28px;">Any fool can write code that a computer can understand. Good programmers write code that humans can understand.</p>
+  <p class="quote-attr">— Martin Fowler</p>
+</div>
+<p class="muted" style="margin-top:28px;max-width:640px;">Computers don’t care about style. Your teammates (and future you) do. Clean code is primarily a communication skill.</p>`,
+
+/* ========== 4 WHY IT MATTERS ========== */
+`<p class="eyebrow">Motivation</p>
+<h1>Why Clean Code Matters</h1>
+<p class="muted" style="margin-bottom:18px;">Especially in integrative / team projects</p>
+<div class="grid-2">
+  <div class="card">
+    <div class="badge-row"><span class="badge accent">Teams</span></div>
+    <p>Multiple people and systems touch the same codebase. Readable code reduces friction and merge pain.</p>
+  </div>
+  <div class="card">
+    <div class="badge-row"><span class="badge info">Bugs</span></div>
+    <p>Bugs are cheaper to fix when the code is readable. You find the root cause faster.</p>
+  </div>
+  <div class="card">
+    <div class="badge-row"><span class="badge warn">Onboarding</span></div>
+    <p>New developers ramp up faster when names, structure, and flow make sense at a glance.</p>
+  </div>
+  <div class="card">
+    <div class="badge-row"><span class="badge danger">Integration</span></div>
+    <p>Integrating with other systems is safer when behavior is predictable and side-effects are obvious.</p>
+  </div>
+</div>`,
+
+/* ========== 5 WHAT IS VIBE CODING ========== */
+`<p class="eyebrow">Modern Reality</p>
+<h1>What is “Vibe Coding”?</h1>
+<div class="card" style="margin-bottom:18px;">
+  <p style="margin:0;font-size:19px;"><strong>Vibe coding</strong> means writing code quickly, intuitively, and often with heavy AI assistance (Copilot, Claude, ChatGPT, Cursor, etc.) — prioritizing speed and “flow” over deep upfront planning.</p>
+</div>
+<div class="grid-2">
+  <div class="card">
+    <h3>Great for</h3>
+    <ul>
+      <li>Prototyping &amp; spikes</li>
+      <li>Building momentum</li>
+      <li>Boilerplate &amp; scaffolding</li>
+      <li>Exploring APIs fast</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Danger without discipline</h3>
+    <ul>
+      <li>Messy, hard-to-maintain code</li>
+      <li>Inconsistent style &amp; naming</li>
+      <li>Hidden architecture decisions</li>
+      <li>Untested edge cases</li>
+    </ul>
+  </div>
+</div>
+<p style="margin-top:12px;"><strong>Clean vibe coding</strong> = move fast, but don’t leave a mess.</p>`,
+
+/* ========== 6 GROUND RULES ========== */
+`<p class="eyebrow">Discipline Layer</p>
+<h1>Clean Vibe Coding Ground Rules</h1>
+<div class="grid-2" style="margin-top:6px;">
+  <div class="card"><strong>1. Always read</strong> what the AI generates before accepting it — never paste blindly.</div>
+  <div class="card"><strong>2. Prompt with structure</strong> — mention naming, architecture, and existing patterns.</div>
+  <div class="card"><strong>3. Refactor immediately</strong> — rename vague variables, remove dead code, split long functions.</div>
+  <div class="card"><strong>4. Keep consistent style</strong> — same linter/formatter for AI and hand-written code.</div>
+  <div class="card"><strong>5. You own architecture</strong> — AI fills implementation; you decide structure.</div>
+  <div class="card"><strong>6. Test generated code</strong> — vibes ≠ verification, especially for logic &amp; security.</div>
+  <div class="card" style="grid-column:1/-1;"><strong>7. Commit in small chunks</strong> — easier to review and roll back if a “vibe” turns out wrong.</div>
+</div>`,
+
+/* ========== 7 NAMING ========== */
+`<p class="eyebrow">Principle 3.1</p>
+<h1>Meaningful Naming</h1>
+<p>Names should reveal <strong>intent</strong> — no guessing needed. Avoid obscure abbreviations. Prefer pronounceable, searchable names.</p>
+<div class="two-col-code" style="margin-top:14px;">
+  <div>
+    <div class="code-wrap">
+      <div class="code-header"><span>❌ Bad</span><button class="copy-btn" data-code="bad-name">Copy</button></div>
+      <pre id="bad-name"><span class="cm">// elapsed time in days</span>
+<span class="kw">let</span> d;
+
+<span class="kw">function</span> <span class="fn">calc</span>(a, b) {
+  <span class="kw">return</span> a * b * <span class="num">0.12</span>;
+}</pre>
+    </div>
+  </div>
+  <div>
+    <div class="code-wrap">
+      <div class="code-header"><span>✅ Good</span><button class="copy-btn" data-code="good-name">Copy</button></div>
+      <pre id="good-name"><span class="kw">let</span> elapsedTimeInDays;
+
+<span class="kw">function</span> <span class="fn">calculateTax</span>(price, quantity) {
+  <span class="kw">const</span> TAX_RATE = <span class="num">0.12</span>;
+  <span class="kw">return</span> price * quantity * TAX_RATE;
+}</pre>
+    </div>
+  </div>
+</div>`,
+
+/* ========== 8 NAMING TABLE ========== */
+`<p class="eyebrow">Cheat Sheet</p>
+<h1>Naming Conventions</h1>
+<table>
+  <thead>
+    <tr><th>Type</th><th>Convention</th><th>Example</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Variables / functions (JS)</td><td>camelCase</td><td><code>getUserData()</code></td></tr>
+    <tr><td>Classes / Components</td><td>PascalCase</td><td><code>UserProfile</code></td></tr>
+    <tr><td>Constants</td><td>UPPER_SNAKE_CASE</td><td><code>MAX_RETRIES</code></td></tr>
+    <tr><td>React component files</td><td>PascalCase.jsx</td><td><code>UserCard.jsx</code></td></tr>
+    <tr><td>Utils / general files</td><td>kebab-case or camelCase</td><td><code>date-utils.js</code></td></tr>
+    <tr><td>DB tables / columns</td><td>snake_case</td><td><code>user_id</code>, <code>created_at</code></td></tr>
+    <tr><td>Booleans</td><td>is / has / can prefix</td><td><code>isActive</code>, <code>hasPermission</code></td></tr>
+  </tbody>
+</table>`,
+
+/* ========== 9 ONE THING ========== */
+`<p class="eyebrow">Principle 3.2</p>
+<h1>Functions Should Do One Thing</h1>
+<p>If you need “and” to describe it (“saves the user <em>and</em> sends an email”), split it. Prefer short functions (rule of thumb: under ~20 lines).</p>
+<div class="two-col-code" style="margin-top:12px;height:min(420px,50vh);">
+  <div>
+    <div class="code-wrap">
+      <div class="code-header"><span>❌ Does too much</span><button class="copy-btn" data-code="bad-fn">Copy</button></div>
+      <pre id="bad-fn"><span class="kw">function</span> <span class="fn">processOrder</span>(order) {
+  <span class="fn">validateOrder</span>(order);
+  <span class="fn">calculateTotal</span>(order);
+  <span class="fn">saveToDatabase</span>(order);
+  <span class="fn">sendConfirmationEmail</span>(order);
+}</pre>
+    </div>
+  </div>
+  <div>
+    <div class="code-wrap">
+      <div class="code-header"><span>✅ Orchestrator + focused helpers</span><button class="copy-btn" data-code="good-fn">Copy</button></div>
+      <pre id="good-fn"><span class="kw">function</span> <span class="fn">processOrder</span>(order) {
+  <span class="kw">if</span> (!<span class="fn">isValidOrder</span>(order))
+    <span class="kw">throw new</span> <span class="fn">Error</span>(<span class="str">"Invalid order"</span>);
+  <span class="kw">const</span> total = <span class="fn">calculateOrderTotal</span>(order);
+  <span class="kw">const</span> saved = <span class="fn">saveOrder</span>({ ...order, total });
+  <span class="fn">sendOrderConfirmation</span>(saved);
+  <span class="kw">return</span> saved;
+}</pre>
+    </div>
+  </div>
+</div>`,
+
+/* ========== 10 DRY ========== */
+`<p class="eyebrow">Principle 3.3</p>
+<h1>DRY — Don’t Repeat Yourself</h1>
+<p>If you copy-paste logic more than twice, extract it into a function, component, or module.</p>
+<div class="two-col-code" style="margin-top:14px;height:min(360px,45vh);">
+  <div>
+    <div class="code-wrap">
+      <div class="code-header"><span>❌ Repeated logic</span><button class="copy-btn" data-code="bad-dry">Copy</button></div>
+      <pre id="bad-dry"><span class="kw">const</span> adultDiscount = price * <span class="num">0.9</span>;
+<span class="kw">const</span> seniorDiscount = price * <span class="num">0.8</span>;</pre>
+    </div>
+  </div>
+  <div>
+    <div class="code-wrap">
+      <div class="code-header"><span>✅ Reusable</span><button class="copy-btn" data-code="good-dry">Copy</button></div>
+      <pre id="good-dry"><span class="kw">function</span> <span class="fn">applyDiscount</span>(price, rate) {
+  <span class="kw">return</span> price * (<span class="num">1</span> - rate);
+}
+
+<span class="kw">const</span> adult = <span class="fn">applyDiscount</span>(price, <span class="num">0.1</span>);
+<span class="kw">const</span> senior = <span class="fn">applyDiscount</span>(price, <span class="num">0.2</span>);</pre>
+    </div>
+  </div>
+</div>`,
+
+/* ========== 11 MAGIC + COMMENTS ========== */
+`<p class="eyebrow">Principles 3.4 &amp; 3.5</p>
+<h1>Magic Values &amp; Comments</h1>
+<div class="grid-2">
+  <div>
+    <h3>Avoid magic numbers / strings</h3>
+    <div class="code-wrap">
+      <div class="code-header"><span>Bad → Good</span><button class="copy-btn" data-code="magic">Copy</button></div>
+      <pre id="magic"><span class="cm">// ❌</span>
+<span class="kw">if</span> (user.role === <span class="num">2</span>) { ... }
+
+<span class="cm">// ✅</span>
+<span class="kw">const</span> ROLES = {
+  ADMIN: <span class="num">1</span>, EDITOR: <span class="num">2</span>, VIEWER: <span class="num">3</span>
+};
+<span class="kw">if</span> (user.role === ROLES.EDITOR) { ... }</pre>
+    </div>
+  </div>
+  <div>
+    <h3>Comments explain <em>why</em>, not <em>what</em></h3>
+    <div class="code-wrap">
+      <div class="code-header"><span>Bad → Good</span><button class="copy-btn" data-code="comments">Copy</button></div>
+      <pre id="comments"><span class="cm">// ❌ Redundant</span>
+<span class="cm">// increment i by 1</span>
+i++;
+
+<span class="cm">// ✅ Useful</span>
+<span class="cm">// Retry 3× — payment gateway is flaky</span>
+<span class="kw">for</span> (<span class="kw">let</span> a = <span class="num">0</span>; a &lt; <span class="num">3</span>; a++) { ... }</pre>
+    </div>
+  </div>
+</div>`,
+
+/* ========== 12 ERRORS + GUARDS ========== */
+`<p class="eyebrow">Principles 3.7 &amp; 3.8</p>
+<h1>Error Handling &amp; Guard Clauses</h1>
+<div class="grid-2">
+  <div>
+    <h3>Don’t swallow errors</h3>
+    <div class="code-wrap">
+      <div class="code-header"><span>Fail loudly (dev) / gracefully (prod)</span><button class="copy-btn" data-code="errors">Copy</button></div>
+      <pre id="errors"><span class="cm">// ❌ Silent</span>
+<span class="kw">try</span> { <span class="kw">await</span> <span class="fn">saveUser</span>(user); }
+<span class="kw">catch</span> (e) {}
+
+<span class="cm">// ✅</span>
+<span class="kw">try</span> {
+  <span class="kw">await</span> <span class="fn">saveUser</span>(user);
+} <span class="kw">catch</span> (error) {
+  logger.<span class="fn">error</span>(<span class="str">"Failed to save user:"</span>, error);
+  <span class="kw">throw new</span> <span class="fn">Error</span>(
+    <span class="str">"Unable to save user. Please try again."</span>
+  );
+}</pre>
+    </div>
+  </div>
+  <div>
+    <h3>Prefer early returns</h3>
+    <div class="code-wrap">
+      <div class="code-header"><span>Flatten deep nesting</span><button class="copy-btn" data-code="guards">Copy</button></div>
+      <pre id="guards"><span class="cm">// ❌ Nested</span>
+<span class="kw">function</span> <span class="fn">getDiscount</span>(user) {
+  <span class="kw">if</span> (user) {
+    <span class="kw">if</span> (user.isActive) {
+      <span class="kw">if</span> (user.isPremium) <span class="kw">return</span> <span class="num">0.2</span>;
+    }
+  }
+  <span class="kw">return</span> <span class="num">0</span>;
+}
+
+<span class="cm">// ✅ Guards</span>
+<span class="kw">function</span> <span class="fn">getDiscount</span>(user) {
+  <span class="kw">if</span> (!user || !user.isActive) <span class="kw">return</span> <span class="num">0</span>;
+  <span class="kw">if</span> (!user.isPremium) <span class="kw">return</span> <span class="num">0</span>;
+  <span class="kw">return</span> <span class="num">0.2</span>;
+}</pre>
+    </div>
+  </div>
+</div>`,
+
+/* ========== 13 SMALL MODULES ========== */
+`<p class="eyebrow">Principle 3.9</p>
+<h1>Keep Components &amp; Modules Small</h1>
+<p>A file or component should have <strong>one clear responsibility</strong> (Separation of Concerns).</p>
+<div class="grid-2" style="margin-top:16px;">
+  <div class="card">
+    <h3 style="color:var(--danger);">❌ God file</h3>
+    <p style="font-family:var(--mono);font-size:16px;margin:0;">UserPage.jsx<br><span class="muted">(500+ lines: fetch + form + style + validation mixed)</span></p>
+  </div>
+  <div class="card">
+    <h3 style="color:var(--accent);">✅ Focused pieces</h3>
+    <ul style="margin:0;font-size:17px;">
+      <li><code>UserPage.jsx</code> → layout only</li>
+      <li><code>useUserData.js</code> → data hook</li>
+      <li><code>UserForm.jsx</code> → form UI</li>
+      <li><code>userValidation.js</code> → rules</li>
+    </ul>
+  </div>
+</div>
+<div class="card" style="margin-top:16px;">
+  <p style="margin:0;">Small modules are easier to test, review, reuse, and replace without breaking everything else.</p>
+</div>`,
+
+/* ========== 14 CHECKLIST ========== */
+`<p class="eyebrow">Self-Review</p>
+<h1>Clean Code Checklist</h1>
+<p class="muted">Before you commit / push, ask yourself:</p>
+<ul class="check-list" style="margin-top:12px;">
+  <li>Can someone else understand this function’s purpose just from its name?</li>
+  <li>Does each function / component do just ONE thing?</li>
+  <li>Are there magic numbers or strings that should be constants?</li>
+  <li>Is there duplicated logic I should extract?</li>
+  <li>Are errors handled (not silently swallowed)?</li>
+  <li>Did I remove console.logs, commented-out code, and debug leftovers?</li>
+  <li>Is formatting consistent (ran the linter / formatter)?</li>
+  <li>If AI-generated: did I review and understand every line?</li>
+  <li>Are names descriptive without needing a comment to explain them?</li>
+  <li>Would I be comfortable if a teammate reviewed this right now?</li>
+</ul>`,
+
+/* ========== 15 CODE SMELLS ========== */
+`<p class="eyebrow">Smell Detection</p>
+<h1>Common Clean Code Smells</h1>
+<div class="smell-fix" style="margin-top:8px;">
+  <div class="smell-item">
+    <strong>God Function</strong>
+    <span>One function does everything</span>
+    <span class="muted">Split into focused units</span>
+  </div>
+  <div class="smell-item">
+    <strong>Shotgun Surgery</strong>
+    <span>One change needs edits in many files</span>
+    <span class="muted">Improve cohesion, centralize</span>
+  </div>
+  <div class="smell-item">
+    <strong>Copy-Paste</strong>
+    <span>Same logic duplicated</span>
+    <span class="muted">Extract reusable function</span>
+  </div>
+  <div class="smell-item">
+    <strong>Dead Code</strong>
+    <span>Unused vars / commented blocks</span>
+    <span class="muted">Delete — VCS remembers</span>
+  </div>
+  <div class="smell-item">
+    <strong>Long Params</strong>
+    <span>5+ parameters</span>
+    <span class="muted">Use object / config arg</span>
+  </div>
+  <div class="smell-item">
+    <strong>Deep Nesting</strong>
+    <span>Many nested if / for</span>
+    <span class="muted">Guard clauses, early return</span>
+  </div>
+  <div class="smell-item">
+    <strong>Inconsistent Naming</strong>
+    <span>Mixed camel / snake randomly</span>
+    <span class="muted">One convention + linter</span>
+  </div>
+</div>`,
+
+/* ========== 16 WORKFLOW ========== */
+`<p class="eyebrow">Practical Flow</p>
+<h1>Clean Vibe Coding Workflow</h1>
+<svg class="flow-svg" viewBox="0 0 900 120" role="img" aria-label="Eight-step clean vibe coding workflow">
+  <title>Plan → Prompt → Generate → Read → Refactor → Test → Lint → Commit</title>
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#6ee7b7"/></marker>
+  </defs>
+  <g font-size="13" fill="#e8eaed" text-anchor="middle" font-family="system-ui">
+    <rect x="10" y="30" width="90" height="50" rx="10" fill="#22262e" stroke="#6ee7b7" stroke-width="1.5"/>
+    <text x="55" y="60">1. Plan</text>
+    <line x1="100" y1="55" x2="120" y2="55" stroke="#6ee7b7" stroke-width="2" marker-end="url(#arr)"/>
+    <rect x="120" y="30" width="95" height="50" rx="10" fill="#22262e" stroke="#6ee7b7" stroke-width="1.5"/>
+    <text x="167" y="60">2. Prompt</text>
+    <line x1="215" y1="55" x2="235" y2="55" stroke="#6ee7b7" stroke-width="2" marker-end="url(#arr)"/>
+    <rect x="235" y="30" width="100" height="50" rx="10" fill="#22262e" stroke="#6ee7b7" stroke-width="1.5"/>
+    <text x="285" y="60">3. Generate</text>
+    <line x1="335" y1="55" x2="355" y2="55" stroke="#6ee7b7" stroke-width="2" marker-end="url(#arr)"/>
+    <rect x="355" y="30" width="90" height="50" rx="10" fill="#22262e" stroke="#6ee7b7" stroke-width="1.5"/>
+    <text x="400" y="60">4. Read</text>
+    <line x1="445" y1="55" x2="465" y2="55" stroke="#6ee7b7" stroke-width="2" marker-end="url(#arr)"/>
+    <rect x="465" y="30" width="100" height="50" rx="10" fill="#22262e" stroke="#6ee7b7" stroke-width="1.5"/>
+    <text x="515" y="60">5. Refactor</text>
+    <line x1="565" y1="55" x2="585" y2="55" stroke="#6ee7b7" stroke-width="2" marker-end="url(#arr)"/>
+    <rect x="585" y="30" width="80" height="50" rx="10" fill="#22262e" stroke="#6ee7b7" stroke-width="1.5"/>
+    <text x="625" y="60">6. Test</text>
+    <line x1="665" y1="55" x2="685" y2="55" stroke="#6ee7b7" stroke-width="2" marker-end="url(#arr)"/>
+    <rect x="685" y="30" width="80" height="50" rx="10" fill="#22262e" stroke="#6ee7b7" stroke-width="1.5"/>
+    <text x="725" y="60">7. Lint</text>
+    <line x1="765" y1="55" x2="785" y2="55" stroke="#6ee7b7" stroke-width="2" marker-end="url(#arr)"/>
+    <rect x="785" y="30" width="100" height="50" rx="10" fill="#22262e" stroke="#6ee7b7" stroke-width="1.5"/>
+    <text x="835" y="60">8. Commit</text>
+  </g>
+</svg>
+<div class="card" style="margin-top:8px;">
+  <h3>Commit message habits</h3>
+  <p style="margin:0;font-size:17px;"><span style="color:var(--danger);">❌</span> “fixed stuff” &nbsp;&nbsp;→&nbsp;&nbsp; <span style="color:var(--accent);">✅</span> <code>fix: handle null user in checkout validation</code><br>
+  <span style="color:var(--danger);">❌</span> “update” &nbsp;&nbsp;→&nbsp;&nbsp; <span style="color:var(--accent);">✅</span> <code>refactor: extract discount logic into utils/pricing.js</code></p>
+</div>`,
+
+/* ========== 17 REAL-LIFE SCENARIOS ========== */
+`<p class="eyebrow">Analogies</p>
+<h1>Real-Life Scenarios</h1>
+<div class="grid-2">
+  <div class="card">
+    <h3>Kitchen analogy</h3>
+    <p>Clean code is like a well-organized kitchen. You can cook fast because everything has a place. Messy code is a counter full of dirty pans — every new dish takes longer and risks contamination.</p>
+  </div>
+  <div class="card">
+    <h3>Team relay</h3>
+    <p>In integrative projects, code is a baton. If the previous runner left it tangled, the next runner stumbles. Clear names and small functions are a clean hand-off.</p>
+  </div>
+  <div class="card">
+    <h3>AI as intern</h3>
+    <p>Treat AI like a fast junior developer: it drafts quickly, but you still review, rename, and own the design. Blind acceptance is how spaghetti spreads.</p>
+  </div>
+  <div class="card">
+    <h3>Future you</h3>
+    <p>In six months you will be a different person. Leave notes (names + structure) that future-you can read without reverse-engineering intent.</p>
+  </div>
+</div>`,
+
+/* ========== 18 KEY TAKEAWAYS / RECAP ========== */
+`<p class="eyebrow">Recap</p>
+<h1>Key Takeaways</h1>
+<div class="grid-2" style="margin-top:8px;">
+  <div class="card">
+    <h3>Clean code</h3>
+    <p>= readable, predictable, easy to change — not “clever” code.</p>
+  </div>
+  <div class="card">
+    <h3>Vibe coding</h3>
+    <p>is productive when you <strong>review, refactor, and test</strong> instead of accepting blindly.</p>
+  </div>
+  <div class="card">
+    <h3>80% of the win</h3>
+    <p>Small single-purpose functions + meaningful names + no duplication.</p>
+  </div>
+  <div class="card">
+    <h3>Discipline keeps speed</h3>
+    <p>Linting, consistent naming, and small commits stop fast code from becoming messy code.</p>
+  </div>
+</div>
+<p class="muted" style="margin-top:16px;">Next up: 15 practice activities — no answers on the question slides.</p>`,
+
+/* ========== 19 MCQ 1-3 ========== */
+`<p class="eyebrow">Activities · Multiple Choice</p>
+<h1>MCQ Set A (1–3)</h1>
+<div class="activity-q">
+  <p><span class="q-num">1</span> Which statement best defines clean code?</p>
+  <ul class="options">
+    <li data-letter="A. ">Code that runs as fast as possible on the CPU</li>
+    <li data-letter="B. ">Code that is easy to read, understand, change, and maintain</li>
+    <li data-letter="C. ">Code that uses the newest language features</li>
+    <li data-letter="D. ">Code written entirely by AI without human edits</li>
+  </ul>
+</div>
+<div class="activity-q">
+  <p><span class="q-num">2</span> What is the main risk of “vibe coding” without discipline?</p>
+  <ul class="options">
+    <li data-letter="A. ">It is always slower than traditional coding</li>
+    <li data-letter="B. ">AI tools refuse to generate any code</li>
+    <li data-letter="C. ">It can produce messy, hard-to-maintain code</li>
+    <li data-letter="D. ">It only works for frontend projects</li>
+  </ul>
+</div>
+<div class="activity-q">
+  <p><span class="q-num">3</span> A function named <code>processOrderAndEmailAndLog</code> most likely violates which principle?</p>
+  <ul class="options">
+    <li data-letter="A. ">DRY</li>
+    <li data-letter="B. ">Functions should do one thing</li>
+    <li data-letter="C. ">Use magic numbers</li>
+    <li data-letter="D. ">Prefer deep nesting</li>
+  </ul>
+</div>`,
+
+/* ========== 20 MCQ 4-5 ========== */
+`<p class="eyebrow">Activities · Multiple Choice</p>
+<h1>MCQ Set B (4–5)</h1>
+<div class="activity-q">
+  <p><span class="q-num">4</span> Which is the best reason to replace <code>if (user.role === 2)</code> with a named constant?</p>
+  <ul class="options">
+    <li data-letter="A. ">It makes the code run faster</li>
+    <li data-letter="B. ">It makes the meaning of the value clear</li>
+    <li data-letter="C. ">It is required by the JavaScript language</li>
+    <li data-letter="D. ">It reduces the number of characters typed</li>
+  </ul>
+</div>
+<div class="activity-q">
+  <p><span class="q-num">5</span> In clean vibe coding, who should decide the overall architecture of a feature?</p>
+  <ul class="options">
+    <li data-letter="A. ">The AI tool, silently</li>
+    <li data-letter="B. ">Only the project manager</li>
+    <li data-letter="C. ">You (the developer); AI fills in implementation</li>
+    <li data-letter="D. ">Whoever merges last</li>
+  </ul>
+</div>
+<div class="card" style="margin-top:12px;">
+  <p class="muted" style="margin:0;font-size:17px;">Answers appear on the Answer Key slides near the end. No peeking yet.</p>
+</div>`,
+
+/* ========== 21 ID 1-3 ========== */
+`<p class="eyebrow">Activities · Scenario Identification</p>
+<h1>Identify the Smell / Principle (1–3)</h1>
+<div class="card scenario-card">
+  <p><span class="q-num">6</span> A teammate pastes a 40-line AI-generated function that validates input, writes to the DB, sends email, and updates analytics — then commits without reading it.</p>
+  <p class="muted" style="margin:0;">What clean vibe rule(s) were broken? Name the main smell.</p>
+</div>
+<div class="card scenario-card">
+  <p><span class="q-num">7</span> You see the same discount formula copied in three different components. Changing the rate means hunting all three places.</p>
+  <p class="muted" style="margin:0;">Which principle is violated? What fix would you apply?</p>
+</div>
+<div class="card scenario-card">
+  <p><span class="q-num">8</span> A function has nested <code>if</code> blocks five levels deep checking user, status, role, plan, and region before returning a boolean.</p>
+  <p class="muted" style="margin:0;">What technique would flatten this safely?</p>
+</div>`,
+
+/* ========== 22 ID 4-5 ========== */
+`<p class="eyebrow">Activities · Scenario Identification</p>
+<h1>Identify the Smell / Principle (4–5)</h1>
+<div class="card scenario-card">
+  <p><span class="q-num">9</span> File <code>Dashboard.jsx</code> is 620 lines: data fetching, chart config, form state, CSS-in-JS, and API error toasts all live together.</p>
+  <p class="muted" style="margin:0;">What smell is this? How would you restructure?</p>
+</div>
+<div class="card scenario-card">
+  <p><span class="q-num">10</span> Commit message: <code>update</code>. Diff shows a renamed variable, a new helper, and a silent <code>catch (e) {}</code> added around a payment call.</p>
+  <p class="muted" style="margin:0;">List at least two problems with this change set.</p>
+</div>
+<div class="card" style="margin-top:8px;">
+  <p class="muted" style="margin:0;font-size:17px;">Think in terms of smells, ground rules, and the checklist.</p>
+</div>`,
+
+/* ========== 23 GOOD/BAD 1-3 ========== */
+`<p class="eyebrow">Activities · Good or Bad Practice</p>
+<h1>Is This Good Practice? (1–3)</h1>
+<p class="muted">For each snippet, decide <strong>Good</strong> or <strong>Bad</strong> and briefly why.</p>
+<div class="card scenario-card">
+  <p><span class="q-num">11</span></p>
+  <div class="code-wrap">
+    <div class="code-header"><span>Snippet</span></div>
+    <pre><span class="kw">const</span> ROLES = { ADMIN: <span class="num">1</span>, EDITOR: <span class="num">2</span>, VIEWER: <span class="num">3</span> };
+<span class="kw">if</span> (user.role === ROLES.EDITOR) {
+  <span class="fn">showEditorTools</span>();
+}</pre>
+  </div>
+</div>
+<div class="card scenario-card">
+  <p><span class="q-num">12</span></p>
+  <div class="code-wrap">
+    <div class="code-header"><span>Snippet</span></div>
+    <pre><span class="kw">try</span> {
+  <span class="kw">await</span> <span class="fn">chargeCard</span>(payload);
+} <span class="kw">catch</span> (e) {
+  <span class="cm">// ignore — user can retry</span>
+}</pre>
+  </div>
+</div>
+<div class="card scenario-card">
+  <p><span class="q-num">13</span></p>
+  <div class="code-wrap">
+    <div class="code-header"><span>Snippet</span></div>
+    <pre><span class="kw">function</span> <span class="fn">getDiscount</span>(user) {
+  <span class="kw">if</span> (!user || !user.isActive) <span class="kw">return</span> <span class="num">0</span>;
+  <span class="kw">if</span> (!user.isPremium) <span class="kw">return</span> <span class="num">0</span>;
+  <span class="kw">return</span> <span class="num">0.2</span>;
+}</pre>
+  </div>
+</div>`,
+
+/* ========== 24 GOOD/BAD 4-5 ========== */
+`<p class="eyebrow">Activities · Good or Bad Practice</p>
+<h1>Is This Good Practice? (4–5)</h1>
+<div class="card scenario-card">
+  <p><span class="q-num">14</span></p>
+  <div class="code-wrap">
+    <div class="code-header"><span>Snippet</span></div>
+    <pre><span class="cm">// AI generated — accepted as-is</span>
+<span class="kw">function</span> <span class="fn">doStuff</span>(x, y, z, a, b, c) {
+  <span class="kw">let</span> tmp1 = x * y;
+  <span class="kw">let</span> tmp2 = z + a;
+  <span class="cm">// ... 35 more lines mixing UI + DB</span>
+  <span class="kw">return</span> tmp1 + tmp2;
+}</pre>
+  </div>
+</div>
+<div class="card scenario-card">
+  <p><span class="q-num">15</span></p>
+  <div class="code-wrap">
+    <div class="code-header"><span>Snippet</span></div>
+    <pre><span class="kw">function</span> <span class="fn">applyDiscount</span>(price, rate) {
+  <span class="kw">return</span> price * (<span class="num">1</span> - rate);
+}
+<span class="cm">// used in cart, checkout, and admin preview</span></pre>
+  </div>
+</div>
+<div class="card" style="margin-top:8px;">
+  <p class="muted" style="margin:0;">Decide Good / Bad and name the principle that guided your answer.</p>
+</div>`,
+
+/* ========== 25 ANSWER KEY MCQ ========== */
+`<p class="eyebrow">Answer Key</p>
+<h1>MCQ Answers (1–5)</h1>
+<div class="card" style="margin-bottom:12px;">
+  <p><strong>1 → B</strong> — Clean code is about readability, understanding, changeability, and maintainability for humans.</p>
+</div>
+<div class="card" style="margin-bottom:12px;">
+  <p><strong>2 → C</strong> — Without review/refactor/test discipline, vibe coding easily produces spaghetti.</p>
+</div>
+<div class="card" style="margin-bottom:12px;">
+  <p><strong>3 → B</strong> — The name itself signals multiple responsibilities; split into focused functions.</p>
+</div>
+<div class="card" style="margin-bottom:12px;">
+  <p><strong>4 → B</strong> — Named constants document intent; magic numbers force readers to guess meaning.</p>
+</div>
+<div class="card">
+  <p><strong>5 → C</strong> — Ground rule: you decide architecture; AI implements under your structure.</p>
+</div>`,
+
+/* ========== 26 ANSWER KEY ID ========== */
+`<p class="eyebrow">Answer Key</p>
+<h1>Scenario Identification (6–10)</h1>
+<div class="card" style="margin-bottom:10px;">
+  <p><strong>6</strong> — Broke: always read AI output, refactor, test, small commits. Smell: God function / multi-responsibility.</p>
+</div>
+<div class="card" style="margin-bottom:10px;">
+  <p><strong>7</strong> — Violates DRY. Extract a shared <code>applyDiscount(price, rate)</code> (or similar) used by all three places.</p>
+</div>
+<div class="card" style="margin-bottom:10px;">
+  <p><strong>8</strong> — Use guard clauses / early returns to flatten nesting and make the happy path obvious.</p>
+</div>
+<div class="card" style="margin-bottom:10px;">
+  <p><strong>9</strong> — God component / mixed concerns. Split into page layout, data hook, form, chart module, etc.</p>
+</div>
+<div class="card">
+  <p><strong>10</strong> — Vague commit message; silent error swallow is dangerous; mixed unrelated changes in one commit (harder to review/rollback).</p>
+</div>`,
+
+/* ========== 27 ANSWER KEY GOOD/BAD ========== */
+`<p class="eyebrow">Answer Key</p>
+<h1>Good / Bad Practice (11–15)</h1>
+<div class="card" style="margin-bottom:10px;">
+  <p><strong>11 → Good</strong> — Named constants replace magic numbers; intent is clear.</p>
+</div>
+<div class="card" style="margin-bottom:10px;">
+  <p><strong>12 → Bad</strong> — Errors are swallowed. Log and surface a meaningful failure (or retry with limits).</p>
+</div>
+<div class="card" style="margin-bottom:10px;">
+  <p><strong>13 → Good</strong> — Guard clauses; early returns; no deep nesting.</p>
+</div>
+<div class="card" style="margin-bottom:10px;">
+  <p><strong>14 → Bad</strong> — Vague name, long parameter list, mixed concerns, accepted AI output blindly.</p>
+</div>
+<div class="card">
+  <p><strong>15 → Good</strong> — DRY: single reusable function shared across features.</p>
+</div>`,
+
+/* ========== 28 CLOSING ========== */
+`<div class="center-content">
+  <svg class="closing-icon" viewBox="0 0 64 64" fill="none" role="img" aria-label="Celebration check">
+    <title>Done</title>
+    <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="2.5"/>
+    <path d="M18 33l10 10 18-20" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <p class="eyebrow">Closing</p>
+  <h1>Keep the Vibe — Keep it Clean</h1>
+  <div class="quote-block" style="max-width:560px;margin:20px auto;text-align:left;">
+    <p style="margin:0;padding-left:28px;font-size:20px;">Any fool can write code that a computer can understand. Good programmers write code that humans can understand.</p>
+    <p class="quote-attr">— Martin Fowler</p>
+  </div>
+  <p style="max-width:480px;font-size:18px;">Move fast with AI when it helps. Review, rename, test, and commit small so the next human (including future you) can keep moving too.</p>
+  <p class="muted" style="margin-top:24px;font-size:17px;">Thanks for working through this deck. Go write something clear.</p>
+</div>`
+];
+
+const deck = document.getElementById('deck');
+const progress = document.getElementById('progress');
+const counter = document.getElementById('counter');
+const help = document.getElementById('help');
+let current = 0;
+const total = slides.length;
+
+function render() {
+  deck.innerHTML = '';
+  slides.forEach((html, i) => {
+    const el = document.createElement('section');
+    el.className = 'slide' + (i === current ? ' active' : i < current ? ' prev' : '');
+    el.innerHTML = html;
+    deck.appendChild(el);
+  });
+  progress.style.width = ((current + 1) / total * 100) + '%';
+  counter.textContent = (current + 1) + ' / ' + total;
+  bindCopyButtons();
+}
+
+function go(n) {
+  if (n < 0 || n >= total) return;
+  current = n;
+  render();
+}
+
+function next() { go(current + 1); }
+function prev() { go(current - 1); }
+
+function bindCopyButtons() {
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.onclick = async (e) => {
+      e.stopPropagation();
+      const id = btn.getAttribute('data-code');
+      const pre = document.getElementById(id);
+      if (!pre) return;
+      const text = pre.innerText;
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 1500);
+      } catch (err) {
+        btn.textContent = 'Failed';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+      }
+    };
+  });
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); next(); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+  else if (e.key === 'Home') { e.preventDefault(); go(0); }
+  else if (e.key === 'End') { e.preventDefault(); go(total - 1); }
+  else if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+    e.preventDefault();
+    help.classList.toggle('show');
+  }
+  else if (e.key === 'Escape') help.classList.remove('show');
+});
+
+document.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  next();
+});
+
+document.addEventListener('mousedown', (e) => {
+  if (e.button === 3 || e.button === 4) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if (e.button === 4) next();
+    if (e.button === 3) prev();
+  }
+}, true);
+
+let touchX = null;
+document.addEventListener('touchstart', (e) => {
+  touchX = e.changedTouches[0].screenX;
+}, { passive: true });
+document.addEventListener('touchend', (e) => {
+  if (touchX === null) return;
+  const dx = e.changedTouches[0].screenX - touchX;
+  if (Math.abs(dx) > 50) {
+    if (dx < 0) next();
+    else prev();
+  }
+  touchX = null;
+}, { passive: true });
+
+help.addEventListener('click', (e) => {
+  if (e.target === help) help.classList.remove('show');
+});
+
+render();
+</script>
+</body>
+</html>

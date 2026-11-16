@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 1 — HTTP Protocol & Status Codes</title>
+<style>
+  @font-face { font-family: 'system-mono'; src: local(monospace); }
+
+  :root{
+    --bg: #0a0e14;
+    --bg-2: #0f1420;
+    --panel: #131a29;
+    --panel-2: #0d1220;
+    --line: #22304a;
+    --ink: #e8edf7;
+    --ink-dim: #8fa1c2;
+    --ink-faint: #4a5d80;
+    --cyan: #5ee1d8;
+    --amber: #f2b84b;
+    --green: #6ee79a;
+    --blue: #7aa7ff;
+    --orange: #f2924b;
+    --red: #f2645b;
+    --purple: #b58cf2;
+    --mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    --disp: 'Space Grotesk', 'Segoe UI', Helvetica, Arial, sans-serif;
+    --body: 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0; height:100%; background:var(--bg); color:var(--ink);
+    font-family:var(--body); overflow:hidden;
+  }
+  body{
+    background:
+      radial-gradient(circle at 15% 10%, rgba(94,225,216,0.06), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(122,167,255,0.07), transparent 45%),
+      var(--bg);
+  }
+
+  /* ---- progress bar ---- */
+  #progress-track{
+    position:fixed; top:0; left:0; width:100%; height:3px; background:rgba(255,255,255,0.06); z-index:1000;
+  }
+  #progress-bar{ height:100%; width:0%; background:linear-gradient(90deg,var(--cyan),var(--blue)); transition:width .35s ease; }
+
+  #counter{
+    position:fixed; bottom:18px; right:24px; font-family:var(--mono); font-size:13px; color:var(--ink-dim);
+    letter-spacing:0.05em; z-index:1000; background:rgba(10,14,20,0.6); padding:5px 10px; border:1px solid var(--line); border-radius:20px;
+  }
+
+  #hint{
+    position:fixed; bottom:18px; left:24px; font-family:var(--mono); font-size:11px; color:var(--ink-faint,#4a5d80);
+    letter-spacing:0.04em; z-index:1000; opacity:0.7;
+  }
+
+  .eyebrow-tag{
+    position:fixed; top:22px; left:24px; font-family:var(--mono); font-size:12px; color:var(--cyan);
+    letter-spacing:0.15em; text-transform:uppercase; z-index:1000; opacity:0.85;
+  }
+
+  /* ---- deck / slides ---- */
+  #deck{ position:relative; width:100vw; height:100vh; cursor:pointer; }
+  .slide{
+    position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center;
+    padding: 64px 90px 70px 90px; opacity:0; pointer-events:none;
+    transform: translateX(24px);
+    transition: opacity .35s ease, transform .35s ease;
+  }
+  .slide.active{ opacity:1; pointer-events:auto; transform:translateX(0); z-index:5; }
+  .slide.prev{ transform: translateX(-24px); }
+
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition:none; transform:none; }
+  }
+
+  .eyebrow{
+    font-family:var(--mono); font-size:13px; letter-spacing:0.18em; text-transform:uppercase;
+    color:var(--amber); margin-bottom:14px; display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::before{ content:''; width:22px; height:1px; background:var(--amber); display:inline-block; }
+
+  h1.title{
+    font-family:var(--disp); font-weight:700; font-size:clamp(30px,4.2vw,54px); line-height:1.08;
+    margin:0 0 8px 0; color:var(--ink); max-width:16ch;
+  }
+  .subtitle{ font-size:16px; color:var(--ink-dim); max-width:60ch; margin-bottom:8px; }
+
+  .content-area{ margin-top:22px; min-width:0; }
+
+  /* ---- generic card ---- */
+  .card{
+    background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    border:1px solid var(--line); border-radius:14px; padding:20px 22px;
+    min-width:0;
+  }
+  .grid{ display:grid; gap:18px; min-width:0; }
+  .g2{ grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+  .g3{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .g4{ grid-template-columns: repeat(4, minmax(0,1fr)); }
+  .g5{ grid-template-columns: repeat(5, minmax(0,1fr)); }
+
+  code, .mono{ font-family:var(--mono); }
+
+  /* ---- terminal / packet block ---- */
+  .packet{
+    background:#080b12; border:1px solid var(--line); border-radius:10px; overflow:hidden;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+  }
+  .packet-head{
+    display:flex; align-items:center; gap:8px; padding:9px 14px; background:#0d1420; border-bottom:1px solid var(--line);
+  }
+  .dot{ width:9px; height:9px; border-radius:50%; }
+  .packet-label{ margin-left:8px; font-family:var(--mono); font-size:11px; color:var(--ink-dim); letter-spacing:0.05em; }
+  .packet-body{ padding:16px 18px; font-family:var(--mono); font-size:15px; line-height:1.85; color:var(--ink); }
+  .packet-body .k{ color:var(--cyan); }
+  .packet-body .v{ color:var(--ink); }
+  .packet-body .method{ color:var(--amber); font-weight:700; }
+  .packet-body .code-num{ font-weight:700; }
+  .packet-body .comment{ color:var(--ink-dim); }
+
+  .arrow-flow{ display:flex; align-items:center; justify-content:center; gap:14px; margin:18px 0; }
+  .flow-node{
+    font-family:var(--mono); font-size:13px; padding:10px 18px; border-radius:8px; border:1px solid var(--line);
+    background:var(--panel); color:var(--ink); text-align:center; white-space:nowrap;
+  }
+  .flow-arrow{ font-size:20px; color:var(--ink-dim); }
+
+  ul.clean{ list-style:none; margin:0; padding:0; }
+  ul.clean li{ margin-bottom:10px; padding-left:20px; position:relative; font-size:15px; line-height:1.5; color:var(--ink); }
+  ul.clean li::before{ content:'▸'; position:absolute; left:0; color:var(--cyan); }
+
+  .pill{
+    display:inline-block; font-family:var(--mono); font-size:12px; padding:3px 10px; border-radius:20px;
+    border:1px solid currentColor; letter-spacing:0.04em;
+  }
+
+  /* method cards */
+  .method-card{ border-radius:14px; padding:22px; border:1px solid var(--line); position:relative; overflow:hidden; }
+  .method-card.get{ background:linear-gradient(160deg, rgba(94,225,216,0.10), var(--panel-2)); }
+  .method-card.post{ background:linear-gradient(160deg, rgba(242,184,75,0.10), var(--panel-2)); }
+  .method-name{ font-family:var(--mono); font-weight:700; font-size:26px; }
+  .method-card.get .method-name{ color:var(--cyan); }
+  .method-card.post .method-name{ color:var(--amber); }
+  .method-desc{ margin-top:8px; color:var(--ink-dim); font-size:14.5px; line-height:1.55; }
+  .method-eg{ margin-top:14px; font-family:var(--mono); font-size:13px; color:var(--ink); background:#080b12; padding:8px 12px; border-radius:8px; border:1px solid var(--line); }
+
+  /* status code chips */
+  .status-card{
+    border-radius:12px; padding:16px 16px; border:1px solid var(--line); background:var(--panel);
+    display:flex; flex-direction:column; gap:6px; min-width:0;
+  }
+  .status-num{ font-family:var(--mono); font-weight:700; font-size:28px; }
+  .status-name{ font-size:13.5px; color:var(--ink); font-weight:600; }
+  .status-desc{ font-size:12.5px; color:var(--ink-dim); line-height:1.4; }
+  .c-200 .status-num{ color:var(--green); } .c-200{ border-left:3px solid var(--green); }
+  .c-301 .status-num{ color:var(--blue); } .c-301{ border-left:3px solid var(--blue); }
+  .c-404 .status-num{ color:var(--orange); } .c-404{ border-left:3px solid var(--orange); }
+  .c-403 .status-num{ color:var(--red); } .c-403{ border-left:3px solid var(--red); }
+  .c-500 .status-num{ color:var(--purple); } .c-500{ border-left:3px solid var(--purple); }
+
+  .range-strip{ display:flex; gap:10px; margin-top:20px; }
+  .range-chip{
+    flex:1; text-align:center; padding:12px 8px; border-radius:10px; font-family:var(--mono); font-size:12.5px;
+    border:1px solid var(--line); background:var(--panel-2); color:var(--ink-dim);
+  }
+  .range-chip b{ display:block; font-size:15px; margin-bottom:4px; }
+  .range-chip.r2{ color:var(--green); border-color:rgba(110,231,154,0.35); }
+  .range-chip.r3{ color:var(--blue); border-color:rgba(122,167,255,0.35); }
+  .range-chip.r4{ color:var(--orange); border-color:rgba(242,146,75,0.35); }
+  .range-chip.r5{ color:var(--purple); border-color:rgba(181,140,242,0.35); }
+
+  /* quotes */
+  .quote-card{
+    background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--cyan);
+    border-radius:10px; padding:18px 20px; margin-bottom:14px;
+  }
+  .quote-text{ font-size:16px; line-height:1.55; color:var(--ink); font-style:italic; }
+  .quote-src{ margin-top:8px; font-family:var(--mono); font-size:12px; color:var(--ink-dim); }
+
+  /* MC / activities */
+  .q-block{ margin-bottom:16px; }
+  .q-title{ font-weight:600; font-size:15px; margin-bottom:8px; color:var(--ink); }
+  .opts{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:8px; }
+  .opt{
+    font-size:13.5px; padding:8px 12px; border-radius:8px; border:1px solid var(--line); background:var(--panel-2);
+    color:var(--ink-dim);
+  }
+  .opt b{ color:var(--cyan); margin-right:6px; }
+
+  .id-item{
+    display:flex; gap:12px; padding:10px 0; border-bottom:1px dashed var(--line); font-size:14.5px;
+  }
+  .id-item .num{ font-family:var(--mono); color:var(--amber); flex-shrink:0; }
+
+  /* answers */
+  .ans-item{ padding:10px 0; border-bottom:1px solid var(--line); font-size:14px; }
+  .ans-item b{ color:var(--green); }
+  .ans-item .expl{ color:var(--ink-dim); font-size:13px; margin-top:3px; }
+
+  /* copy button (kept for compliance, no code blocks needing copy but included utility) */
+  .copy-btn{
+    position:absolute; top:10px; right:10px; font-family:var(--mono); font-size:11px; padding:4px 10px;
+    border-radius:6px; border:1px solid var(--line); background:var(--panel); color:var(--ink-dim); cursor:pointer;
+  }
+  .copy-btn:hover{ color:var(--cyan); border-color:var(--cyan); }
+
+  /* keyboard shortcuts modal */
+  #kb-modal{
+    position:fixed; inset:0; background:rgba(5,7,12,0.75); backdrop-filter:blur(4px); z-index:2000;
+    display:none; align-items:center; justify-content:center;
+  }
+  #kb-modal.show{ display:flex; }
+  .kb-panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:28px 32px; min-width:340px;
+  }
+  .kb-panel h3{ margin:0 0 16px 0; font-family:var(--disp); font-size:19px; }
+  .kb-row{ display:flex; justify-content:space-between; padding:7px 0; font-size:14px; color:var(--ink-dim); border-bottom:1px solid var(--line); }
+  .kb-row span.key{ font-family:var(--mono); color:var(--cyan); background:#080b12; padding:2px 8px; border-radius:5px; border:1px solid var(--line); }
+
+  .footer-index{ position:absolute; bottom:26px; left:90px; font-family:var(--mono); font-size:11px; color:var(--ink-faint,#4a5d80); letter-spacing:0.05em; opacity:0.6; }
+
+  ::selection{ background: rgba(94,225,216,0.3); }
+</style>
+</head>
+<body>
+
+<div id="progress-track"><div id="progress-bar"></div></div>
+<div class="eyebrow-tag">CS50W · Django Lecture 3</div>
+<div id="counter">1 / 10</div>
+<div id="hint">← → navigate · ? for shortcuts</div>
+
+<div id="deck">
+
+  <!-- SLIDE 1: TITLE -->
+  <section class="slide">
+    <div class="eyebrow">Phase 1 · Foundations</div>
+    <h1 class="title">HTTP: The Protocol Behind Every Web Request</h1>
+    <p class="subtitle">Before Django can do anything, every click, load, and submit on the web speaks one shared language. Let's decode it — request methods and status codes.</p>
+    <div class="arrow-flow" style="margin-top:36px;">
+      <div class="flow-node">🖥️ Client<br><span style="color:var(--ink-dim);font-size:11px;">your browser</span></div>
+      <div class="flow-arrow">⇄</div>
+      <div class="flow-node" style="border-color:var(--cyan); color:var(--cyan);">HTTP</div>
+      <div class="flow-arrow">⇄</div>
+      <div class="flow-node">🗄️ Server<br><span style="color:var(--ink-dim);font-size:11px;">your Django app</span></div>
+    </div>
+  </section>
+
+  <!-- SLIDE 2: What is HTTP -->
+  <section class="slide">
+    <div class="eyebrow">01 · The Big Idea</div>
+    <h1 class="title" style="font-size:clamp(26px,3.2vw,42px);">What Is HTTP, Really?</h1>
+    <div class="content-area grid g2">
+      <div class="card">
+        <p style="font-size:15.5px; line-height:1.7; color:var(--ink); margin:0 0 12px 0;">
+          <b style="color:var(--cyan);">HTTP</b> = <b>HyperText Transfer Protocol</b> — the agreed-upon set of rules for how messages travel back and forth over the internet.
+        </p>
+        <ul class="clean">
+          <li>A <b style="color:var(--ink);">client</b> (your web browser) sends a <b>request</b>.</li>
+          <li>A <b style="color:var(--ink);">server</b> (our Django app) processes it and sends back a <b>response</b>.</li>
+          <li>This request → response cycle is the heartbeat of the entire web.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="packet">
+          <div class="packet-head"><div class="dot" style="background:var(--cyan);"></div><span class="packet-label">CLIENT SENDS →</span></div>
+          <div class="packet-body">
+            <span class="method">GET</span> <span class="v">/page</span> <span class="comment">HTTP/1.1</span><br>
+            <span class="k">Host:</span> <span class="v">example.com</span>
+          </div>
+        </div>
+        <div style="height:14px;"></div>
+        <div class="packet">
+          <div class="packet-head"><div class="dot" style="background:var(--green);"></div><span class="packet-label">← SERVER RESPONDS</span></div>
+          <div class="packet-body">
+            HTTP/1.1 <span class="code-num" style="color:var(--green);">200</span> OK<br>
+            <span class="k">Content-Type:</span> <span class="v">text/html</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 3: HTTP Methods -->
+  <section class="slide">
+    <div class="eyebrow">02 · Request Methods</div>
+    <h1 class="title" style="font-size:clamp(26px,3.2vw,42px);">GET vs. POST</h1>
+    <p class="subtitle">A request method tells the server <i>what kind of action</i> you're asking it to perform.</p>
+    <div class="content-area grid g2">
+      <div class="method-card get">
+        <span class="pill" style="color:var(--cyan);">RETRIEVE</span>
+        <div class="method-name" style="margin-top:10px;">GET</div>
+        <div class="method-desc">"I would like to <b>get</b> a particular page." Used any time you type a URL and hit Enter, or click a link. No state is changed on the server — you're just asking to view something.</div>
+        <div class="method-eg">→ typing example.com/hello</div>
+      </div>
+      <div class="method-card post">
+        <span class="pill" style="color:var(--amber);">SUBMIT</span>
+        <div class="method-name" style="margin-top:10px;">POST</div>
+        <div class="method-desc">Used to <b>submit data</b> that has the potential to change something — like adding a new task. Data travels in the body of the request, not exposed in the URL.</div>
+        <div class="method-eg">→ submitting an "Add Task" form</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 4: Status codes intro -->
+  <section class="slide">
+    <div class="eyebrow">03 · Status Codes</div>
+    <h1 class="title" style="font-size:clamp(26px,3.2vw,42px);">The Server Always Replies With a Code</h1>
+    <p class="subtitle">Every single response starts with a 3-digit status code — a quick signal for what happened to your request.</p>
+    <div class="content-area">
+      <div class="range-strip">
+        <div class="range-chip r2"><b>2xx</b>Success</div>
+        <div class="range-chip r3"><b>3xx</b>Redirection</div>
+        <div class="range-chip r4"><b>4xx</b>Client Error</div>
+        <div class="range-chip r5"><b>5xx</b>Server Error</div>
+      </div>
+      <p style="margin-top:22px; font-size:14.5px; color:var(--ink-dim); max-width:70ch;">
+        Think of it like a quick verbal reply: <span style="color:var(--green);">"got it, here you go"</span>, <span style="color:var(--blue);">"look over there instead"</span>, <span style="color:var(--orange);">"you asked for something wrong"</span>, or <span style="color:var(--purple);">"I messed up on my end."</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- SLIDE 5: The 5 common codes -->
+  <section class="slide">
+    <div class="eyebrow">03 · Status Codes</div>
+    <h1 class="title" style="font-size:clamp(26px,3.2vw,42px);">The 5 You'll See Constantly</h1>
+    <div class="content-area grid g5" style="margin-top:24px;">
+      <div class="status-card c-200">
+        <div class="status-num">200</div>
+        <div class="status-name">OK</div>
+        <div class="status-desc">Everything worked. Page returned successfully.</div>
+      </div>
+      <div class="status-card c-301">
+        <div class="status-num">301</div>
+        <div class="status-name">Moved Permanently</div>
+        <div class="status-desc">You're redirected from one URL to another.</div>
+      </div>
+      <div class="status-card c-404">
+        <div class="status-num">404</div>
+        <div class="status-name">Not Found</div>
+        <div class="status-desc">The page you requested doesn't exist.</div>
+      </div>
+      <div class="status-card c-403">
+        <div class="status-num">403</div>
+        <div class="status-name">Forbidden</div>
+        <div class="status-desc">You're not permitted to access this page.</div>
+      </div>
+      <div class="status-card c-500">
+        <div class="status-num">500</div>
+        <div class="status-name">Server Error</div>
+        <div class="status-desc">Something's buggy on the server's own code.</div>
+      </div>
+    </div>
+    <p style="margin-top:26px; font-size:13.5px; color:var(--ink-dim);">💡 Later on, submitting a form without a CSRF token will trigger a real <b style="color:var(--red);">403 Forbidden</b> — you'll meet this one again.</p>
+  </section>
+
+  <!-- SLIDE 6: Key Quotes -->
+  <section class="slide">
+    <div class="eyebrow">Reference</div>
+    <h1 class="title" style="font-size:clamp(26px,3.2vw,42px);">Key Quotes</h1>
+    <div class="content-area">
+      <div class="quote-card">
+        <div class="quote-text">"It boils down to this protocol, HTTP... the protocol for how messages are going to be sent back and forth over the internet."</div>
+        <div class="quote-src">— on what HTTP fundamentally is</div>
+      </div>
+      <div class="quote-card">
+        <div class="quote-text">"200 is a response code that just means OK. Everything was OK. The page was returned successfully."</div>
+        <div class="quote-src">— on the 200 status code</div>
+      </div>
+      <div class="quote-card">
+        <div class="quote-text">"Anytime you're submitting data that has the potential to change some state... we'll generally use a different request method called post."</div>
+        <div class="quote-src">— on when to use POST over GET</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 7: Multiple Choice -->
+  <section class="slide">
+    <div class="eyebrow">Check Your Understanding</div>
+    <h1 class="title" style="font-size:clamp(26px,3.2vw,42px);">Multiple Choice</h1>
+    <div class="content-area">
+      <div class="q-block">
+        <div class="q-title">1. What does HTTP stand for?</div>
+        <div class="opts">
+          <div class="opt"><b>A</b>HyperText Transfer Protocol</div>
+          <div class="opt"><b>B</b>High Traffic Transport Process</div>
+          <div class="opt"><b>C</b>Home Tool Transfer Program</div>
+          <div class="opt"><b>D</b>HyperLink Text Placement</div>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-title">2. Which request method should you use for a form that adds a new task?</div>
+        <div class="opts">
+          <div class="opt"><b>A</b>GET</div>
+          <div class="opt"><b>B</b>POST</div>
+          <div class="opt"><b>C</b>FETCH</div>
+          <div class="opt"><b>D</b>PUSH</div>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-title">3. A user tries to visit a page that doesn't exist. What status code comes back?</div>
+        <div class="opts">
+          <div class="opt"><b>A</b>200</div>
+          <div class="opt"><b>B</b>301</div>
+          <div class="opt"><b>C</b>404</div>
+          <div class="opt"><b>D</b>500</div>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-title">4. Which status code means the server itself has a bug?</div>
+        <div class="opts">
+          <div class="opt"><b>A</b>403</div>
+          <div class="opt"><b>B</b>301</div>
+          <div class="opt"><b>C</b>200</div>
+          <div class="opt"><b>D</b>500</div>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-title">5. Clicking a normal link on a website triggers which request method by default?</div>
+        <div class="opts">
+          <div class="opt"><b>A</b>POST</div>
+          <div class="opt"><b>B</b>GET</div>
+          <div class="opt"><b>C</b>DELETE</div>
+          <div class="opt"><b>D</b>PATCH</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 8: Identification -->
+  <section class="slide">
+    <div class="eyebrow">Check Your Understanding</div>
+    <h1 class="title" style="font-size:clamp(26px,3.2vw,42px);">Identification</h1>
+    <div class="content-area card">
+      <div class="id-item"><span class="num">01</span><span>The protocol that governs how messages are sent between a web client and server.</span></div>
+      <div class="id-item"><span class="num">02</span><span>The party that initiates an HTTP request, typically a web browser.</span></div>
+      <div class="id-item"><span class="num">03</span><span>The status code returned when a page is redirected to a new URL permanently.</span></div>
+      <div class="id-item"><span class="num">04</span><span>The HTTP method typically used when submitting form data that changes application state.</span></div>
+      <div class="id-item"><span class="num">05</span><span>The status code returned when access to a page is not permitted.</span></div>
+    </div>
+  </section>
+
+  <!-- SLIDE 9: Answers -->
+  <section class="slide">
+    <div class="eyebrow">Answer Key</div>
+    <h1 class="title" style="font-size:clamp(26px,3.2vw,42px);">Answers & Explanations</h1>
+    <div class="content-area grid g2">
+      <div class="card">
+        <div style="font-family:var(--mono); font-size:12px; color:var(--ink-dim); margin-bottom:10px; letter-spacing:0.08em;">MULTIPLE CHOICE</div>
+        <div class="ans-item"><b>1. A</b> — HyperText Transfer Protocol.<div class="expl">The core protocol for sending messages across the web.</div></div>
+        <div class="ans-item"><b>2. B</b> — POST.<div class="expl">Used whenever a submission changes application state.</div></div>
+        <div class="ans-item"><b>3. C</b> — 404.<div class="expl">Returned when the requested page can't be found.</div></div>
+        <div class="ans-item"><b>4. D</b> — 500.<div class="expl">Signals an internal server-side error/bug.</div></div>
+        <div class="ans-item"><b>5. B</b> — GET.<div class="expl">Links and typed URLs default to a GET request.</div></div>
+      </div>
+      <div class="card">
+        <div style="font-family:var(--mono); font-size:12px; color:var(--ink-dim); margin-bottom:10px; letter-spacing:0.08em;">IDENTIFICATION</div>
+        <div class="ans-item"><b>1.</b> HTTP (HyperText Transfer Protocol)</div>
+        <div class="ans-item"><b>2.</b> The Client</div>
+        <div class="ans-item"><b>3.</b> 301 (Moved Permanently)</div>
+        <div class="ans-item"><b>4.</b> POST</div>
+        <div class="ans-item"><b>5.</b> 403 (Forbidden)</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- keyboard shortcuts modal -->
+<div id="kb-modal">
+  <div class="kb-panel">
+    <h3>Keyboard Shortcuts</h3>
+    <div class="kb-row"><span>Next slide</span><span class="key">→</span></div>
+    <div class="kb-row"><span>Previous slide</span><span class="key">←</span></div>
+    <div class="kb-row"><span>First slide</span><span class="key">Home</span></div>
+    <div class="kb-row"><span>Last slide</span><span class="key">End</span></div>
+    <div class="kb-row"><span>Toggle this panel</span><span class="key">?</span></div>
+    <div class="kb-row" style="border-bottom:none;"><span>Advance</span><span class="key">Click</span></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var slides = document.querySelectorAll('.slide');
+  var total = slides.length;
+  var current = 0;
+
+  function render(){
+    slides.forEach(function(s, i){
+      s.classList.remove('active','prev');
+      if(i === current) s.classList.add('active');
+      else if(i < current) s.classList.add('prev');
+    });
+    document.getElementById('counter').textContent = (current+1) + ' / ' + total;
+    document.getElementById('progress-bar').style.width = (((current+1)/total)*100) + '%';
+  }
+
+  function goTo(i){
+    if(i < 0) i = 0;
+    if(i >= total) i = total - 1;
+    current = i;
+    render();
+  }
+  function next(){ goTo(current+1); }
+  function prev(){ goTo(current-1); }
+
+  document.getElementById('deck').addEventListener('click', function(e){
+    if(e.target.closest('.copy-btn') || e.target.closest('a') || e.target.closest('button')) return;
+    next();
+  });
+
+  document.addEventListener('keydown', function(e){
+    var modal = document.getElementById('kb-modal');
+    if(e.key === '?'){ modal.classList.toggle('show'); return; }
+    if(modal.classList.contains('show')){
+      if(e.key === 'Escape') modal.classList.remove('show');
+      return;
+    }
+    if(e.key === 'ArrowRight'){ next(); }
+    else if(e.key === 'ArrowLeft'){ prev(); }
+    else if(e.key === 'Home'){ goTo(0); }
+    else if(e.key === 'End'){ goTo(total-1); }
+  });
+
+  document.getElementById('kb-modal').addEventListener('click', function(e){
+    if(e.target.id === 'kb-modal') e.target.classList.remove('show');
+  });
+
+  /* swipe support */
+  var touchStartX = 0;
+  document.getElementById('deck').addEventListener('touchstart', function(e){
+    touchStartX = e.changedTouches[0].screenX;
+  }, {passive:true});
+  document.getElementById('deck').addEventListener('touchend', function(e){
+    var dx = e.changedTouches[0].screenX - touchStartX;
+    if(Math.abs(dx) > 50){ dx < 0 ? next() : prev(); }
+  }, {passive:true});
+
+  render();
+})();
+</script>
+
+</body>
+</html>

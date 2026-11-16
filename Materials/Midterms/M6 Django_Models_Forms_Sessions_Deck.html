@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Models, Forms, CSRF &amp; Sessions</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --surface:#141a21;
+    --surface-2:#1b222b;
+    --border:#2b333d;
+    --border-soft:#242c36;
+    --text:#e6edf3;
+    --muted:#8b949e;
+    --muted-2:#6e7681;
+    --accent:#58a6ff;
+    --accent-soft:#58a6ff22;
+    --accent-2:#7ee787;
+    --accent-3:#d29922;
+    --accent-4:#f78166;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--bg); color:var(--text);
+    font-family:var(--sans);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  body.no-motion *{ transition:none !important; animation:none !important; }
+  ::selection{ background:var(--accent-soft); color:var(--text); }
+
+  /* ---------- Chrome ---------- */
+  .chrome-top{
+    position:fixed; top:0; left:0; right:0; height:44px;
+    background:var(--surface); border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:14px; padding:0 18px;
+    z-index:50; font-family:var(--mono); font-size:13px; color:var(--muted);
+  }
+  .win-dots{ display:flex; gap:7px; flex:0 0 auto; }
+  .win-dots span{ width:11px; height:11px; border-radius:50%; display:block; }
+  .win-dots span:nth-child(1){ background:#ff5f57; }
+  .win-dots span:nth-child(2){ background:#febc2e; }
+  .win-dots span:nth-child(3){ background:#28c840; }
+  .file-tab{
+    display:flex; align-items:center; gap:8px;
+    background:var(--surface-2); border:1px solid var(--border-soft);
+    border-bottom:none; padding:6px 14px; border-radius:6px 6px 0 0;
+    color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .file-tab .dot{ width:7px; height:7px; border-radius:50%; background:var(--accent-3); flex:0 0 auto; }
+  .chrome-top .spacer{ flex:1; }
+  .chrome-top .counter{ color:var(--muted); }
+
+  .progress-track{ position:fixed; top:44px; left:0; right:0; height:3px; background:var(--surface-2); z-index:51; }
+  .progress-fill{ height:100%; background:linear-gradient(90deg, var(--accent), var(--accent-2)); width:0%; transition:width .35s ease; }
+
+  .chrome-bottom{
+    position:fixed; bottom:0; left:0; right:0; height:30px;
+    background:var(--accent); color:#04101d;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 16px; font-family:var(--mono); font-size:12px; font-weight:600;
+    z-index:50;
+  }
+  .chrome-bottom .seg{ display:flex; align-items:center; gap:16px; }
+  .chrome-bottom kbd{ background:#04101d22; border-radius:3px; padding:1px 6px; font-family:var(--mono); border:1px solid #04101d33; }
+
+  /* ---------- Slides ---------- */
+  .deck{ position:fixed; inset:44px 0 30px 0; }
+  .slide{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    opacity:0; transform:translateX(36px);
+    transition:opacity .35s ease, transform .35s ease;
+    pointer-events:none; overflow-y:auto;
+  }
+  .slide.active{ opacity:1; transform:translateX(0); pointer-events:auto; }
+  .deck.reverse .slide{ transform:translateX(-36px); }
+  .deck.reverse .slide.active{ transform:translateX(0); }
+
+  .slide-inner{
+    margin:auto; width:100%; max-width:1680px;
+    padding:clamp(20px,3.2vh,48px) clamp(24px,4vw,72px);
+    display:flex; flex-direction:column; min-height:100%;
+    justify-content:center; min-width:0;
+  }
+  .slide.tall .slide-inner{ justify-content:flex-start; }
+
+  .eyebrow{
+    font-family:var(--mono); font-size:14px; color:var(--accent-2);
+    letter-spacing:.03em; margin-bottom:14px; display:flex; align-items:center; gap:8px;
+  }
+  .eyebrow::before{ content:"//"; color:var(--muted-2); }
+
+  h1.title{
+    font-family:var(--mono); font-weight:700;
+    font-size:clamp(28px, 3.4vw, 50px); line-height:1.15; margin:0 0 8px 0;
+    letter-spacing:-0.01em;
+  }
+  h1.title .cursor{ display:inline-block; width:.5ch; background:var(--accent-2); margin-left:4px; animation:blink 1.1s steps(1) infinite; }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  .subtitle{ font-size:clamp(15px,1.3vw,20px); color:var(--muted); margin:0 0 28px 0; max-width:74ch; line-height:1.55; }
+
+  .grid-2{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:28px; min-width:0; }
+  .grid-3{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; min-width:0; }
+  .grid-4{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:18px; min-width:0; }
+
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px 22px; min-width:0; }
+  .card h3{ margin:0 0 10px 0; font-size:17px; font-family:var(--mono); color:var(--accent); }
+  .card p, .card li{ font-size:15px; line-height:1.6; color:var(--text); }
+  .card ul{ margin:0; padding-left:20px; }
+  .card ul li{ margin-bottom:6px; }
+
+  .inline{ background:var(--surface-2); border:1px solid var(--border-soft); border-radius:4px; padding:1px 6px; font-family:var(--mono); font-size:0.92em; color:var(--accent-3); }
+
+  /* ---------- Code blocks ---------- */
+  .code-block{ background:#0a0e13; border:1px solid var(--border); border-radius:10px; overflow:hidden; margin:0; min-width:0; max-height:50vh; display:flex; flex-direction:column; }
+  .code-header{ display:flex; align-items:center; justify-content:space-between; background:var(--surface-2); border-bottom:1px solid var(--border-soft); padding:7px 12px; flex:0 0 auto; }
+  .code-lang{ font-family:var(--mono); font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  .copy-btn{ font-family:var(--mono); font-size:12px; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:4px 10px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:background .15s ease, border-color .15s ease; }
+  .copy-btn:hover{ background:var(--border-soft); border-color:var(--accent); }
+  .copy-btn.copied{ color:var(--accent-2); border-color:var(--accent-2); }
+  .code-scroll{ overflow:auto; padding:14px 16px; }
+  .code-content{ font-family:var(--mono); font-size:15px; line-height:1.6; white-space:pre; color:var(--text); tab-size:2; }
+  .tok-comment{ color:var(--muted-2); font-style:italic; }
+  .tok-string{ color:var(--accent-2); }
+  .tok-keyword{ color:var(--accent); font-weight:600; }
+  .tok-func{ color:var(--accent-3); }
+  .tok-number{ color:var(--accent-4); }
+  .tok-decorator{ color:var(--accent-4); }
+
+  .callouts{ display:flex; flex-direction:column; gap:10px; min-width:0; }
+  .callout{ display:flex; gap:10px; align-items:flex-start; font-size:15px; line-height:1.55; background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); padding:10px 14px; border-radius:6px; min-width:0; }
+  .callout b{ color:var(--accent); font-family:var(--mono); font-size:13px; flex:0 0 auto; }
+
+  .diagram-wrap{ display:flex; justify-content:center; align-items:center; padding:6px 0; }
+  .diagram-wrap svg{ width:100%; height:auto; max-height:34vh; }
+
+  .test-banner{ display:inline-flex; align-items:center; gap:10px; font-family:var(--mono); font-size:13px; color:var(--bg); background:var(--accent-3); padding:5px 12px; border-radius:20px; margin-bottom:18px; font-weight:700; width:fit-content; }
+
+  .q-stack{ display:flex; flex-direction:column; gap:16px; min-width:0; }
+  .mc-q{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px 18px; min-width:0; }
+  .mc-q-head{ display:flex; gap:12px; align-items:flex-start; margin-bottom:10px; }
+  .q-num{ font-family:var(--mono); font-size:13px; color:var(--bg); background:var(--accent-2); border-radius:5px; padding:3px 8px; flex:0 0 auto; font-weight:700; }
+  .q-text{ margin:0; font-size:16.5px; line-height:1.5; }
+  .options{ display:grid; grid-template-columns:1fr 1fr; gap:8px; min-width:0; }
+  .opt{ display:flex; gap:8px; align-items:flex-start; font-size:15px; line-height:1.4; background:var(--surface-2); border:1px solid var(--border-soft); border-radius:7px; padding:8px 10px; min-width:0; }
+  .opt-letter{ font-family:var(--mono); font-weight:700; color:var(--accent); flex:0 0 auto; }
+
+  .scenario-q{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px 18px; min-width:0; }
+  .scenario-q .q-text{ font-size:16px; margin-bottom:10px; }
+  .answer-blank{ font-family:var(--mono); font-size:15px; color:var(--muted); border-top:1px dashed var(--border-soft); padding-top:8px; margin-top:6px; }
+
+  .recap-list{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 28px; }
+  .recap-item{ display:flex; gap:12px; align-items:flex-start; font-size:16px; line-height:1.55; }
+  .recap-item .tick{ color:var(--accent-2); font-weight:700; flex:0 0 auto; }
+
+  .answers-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:26px; min-width:0; }
+  .answers-col h3{ font-family:var(--mono); color:var(--accent); font-size:16px; border-bottom:1px solid var(--border); padding-bottom:8px; margin:0 0 12px 0; }
+  .ans-row{ font-size:15px; line-height:1.6; margin-bottom:9px; }
+  .ans-row b{ color:var(--accent-2); font-family:var(--mono); }
+
+  .modal-overlay{ position:fixed; inset:0; background:#000000aa; z-index:100; display:none; align-items:center; justify-content:center; }
+  .modal-overlay.open{ display:flex; }
+  .modal{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:28px 32px; width:min(560px,90vw); font-size:15px; }
+  .modal h2{ font-family:var(--mono); margin:0 0 18px 0; font-size:20px; color:var(--accent-2); }
+  .modal .row{ display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border-soft); }
+  .modal .row:last-child{ border-bottom:none; }
+  .modal kbd{ font-family:var(--mono); background:var(--surface-2); border:1px solid var(--border-soft); border-radius:5px; padding:2px 9px; }
+  .modal .close-hint{ margin-top:16px; color:var(--muted); font-size:13px; text-align:center; }
+
+  .flow-steps{ display:flex; flex-direction:column; gap:10px; }
+  .flow-step{ display:flex; gap:14px; align-items:center; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 16px; }
+  .flow-step .num{ font-family:var(--mono); font-weight:700; color:var(--bg); background:var(--accent); border-radius:50%; width:28px; height:28px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+  .flow-step p{ margin:0; font-size:15.5px; line-height:1.5; }
+
+  @media (max-width: 1100px){ .answers-grid{ grid-template-columns:1fr; } }
+  @media (max-width: 900px){
+    .grid-2, .grid-3, .grid-4{ grid-template-columns:1fr; }
+    .recap-list{ grid-template-columns:1fr; }
+    .options{ grid-template-columns:1fr; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition:opacity .01s linear !important; transform:none !important; }
+    .progress-fill{ transition:none !important; }
+    h1.title .cursor{ animation:none !important; opacity:1; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="chrome-top">
+    <div class="win-dots"><span></span><span></span><span></span></div>
+    <div class="file-tab"><span class="dot"></span><span id="tabName">models_forms_sessions.py</span></div>
+    <div class="spacer"></div>
+    <div class="counter" id="slideCounter">1 / 30</div>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+  <div class="deck" id="deck">
+
+    <!-- 1 : COVER -->
+    <section class="slide active" data-file="models_forms_sessions.py">
+      <div class="slide-inner">
+        <div class="eyebrow">integrative_programming / phase_07_08</div>
+        <h1 class="title" style="font-size:clamp(32px,4vw,58px);">Models, Forms, CSRF &amp; Sessions<span class="cursor">&nbsp;</span></h1>
+        <p class="subtitle" style="font-size:clamp(17px,1.6vw,23px);">How Django stores data, validates what users submit, and remembers who they are between requests.</p>
+        <div class="grid-4" style="margin-top:10px;">
+          <div class="card"><h3>Models</h3><p>Deep dive: your database, defined in Python.</p></div>
+          <div class="card"><h3>07 · Forms &amp; CSRF</h3><p><span class="inline">forms.Form</span>, validation, and ModelForm.</p></div>
+          <div class="card"><h3>08 · Sessions</h3><p><span class="inline">request.session</span> — per-user memory.</p></div>
+          <div class="card"><h3>Quiz</h3><p>10 items, answer key included.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 : INTRO -->
+    <section class="slide" data-file="00_intro.py">
+      <div class="slide-inner">
+        <div class="eyebrow">00_intro.py</div>
+        <h1 class="title">Why This Matters</h1>
+        <p class="subtitle">Three problems every real app runs into, in order.</p>
+        <div class="grid-3">
+          <div class="card"><h3>1. Where does data live?</h3><p>Variables inside a view vanish the moment the request ends. You need something permanent — a database, defined by <span class="inline">models.py</span>.</p></div>
+          <div class="card"><h3>2. Can you trust user input?</h3><p>Never. Forms validate it, and CSRF protection stops attackers from submitting on a user's behalf.</p></div>
+          <div class="card"><h3>3. Who is this visitor?</h3><p>HTTP forgets everyone between requests. Sessions are how a server remembers "this is the same person as before."</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- THE PROBLEM, IN CODE -->
+    <section class="slide tall" data-file="01_the_problem_in_code.py">
+      <div class="slide-inner">
+        <div class="eyebrow">01_the_problem_in_code.py</div>
+        <h1 class="title">The Problem, in Actual Code</h1>
+        <p class="subtitle">Same "add a task" view, two ways. One of these will eventually let someone else submit forms as your user.</p>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:56vh; border-color:var(--accent-4);">
+            <div class="code-header"><span class="code-lang">😩 the bad way</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeBad" data-lang="python"></pre></div>
+          </div>
+          <div class="code-block" style="max-height:56vh; border-color:var(--accent-2);">
+            <div class="code-header"><span class="code-lang">✅ the django way</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeGood" data-lang="template"></pre></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:14px;">
+          <h3>What actually changed</h3>
+          <p>Nothing is read from <span class="inline">request.POST</span> directly, and nothing is trusted until <span class="inline">is_valid()</span> says so. The form also carries its own CSRF check — the raw version has no defense against a forged submission at all.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETUP GUIDE PART 1 -->
+    <section class="slide tall" data-file="02_setup_guide_part1.py">
+      <div class="slide-inner">
+        <div class="eyebrow">02_setup_guide_part1.py</div>
+        <h1 class="title">Setup Guide, Part 1 — Starting From Scratch</h1>
+        <p class="subtitle">Assume nothing exists yet. Every step between <span class="inline">startproject</span> and a working <span class="inline">tasks</span> app.</p>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:56vh;">
+            <div class="code-header"><span class="code-lang">terminal + python</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeStart" data-lang="python"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>startapp</b> Scaffolds <span class="inline">models.py</span>, <span class="inline">views.py</span>, <span class="inline">admin.py</span> — but not <span class="inline">urls.py</span>, and not a <span class="inline">templates/</span> folder. Those are on you.</div>
+            <div class="callout"><b>INSTALLED_APPS</b> Without this line, Django won't discover this app's models or templates at all.</div>
+            <div class="callout"><b>Project urls.py</b> <span class="inline">include()</span> hands off anything under <span class="inline">/tasks/</span> to the app's own <span class="inline">urls.py</span>.</div>
+            <div class="callout"><b>App urls.py</b> A brand-new file — create it yourself, right after <span class="inline">startapp</span>.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 : SETUP GUIDE PART 2 -->
+    <section class="slide tall" data-file="03_setup_guide_part2.py">
+      <div class="slide-inner">
+        <div class="eyebrow">03_setup_guide_part2.py</div>
+        <h1 class="title">Setup Guide, Part 2 — Middleware Check</h1>
+        <p class="subtitle">Sessions and CSRF both depend on middleware that's usually already there — but it's worth confirming.</p>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:56vh;">
+            <div class="code-header"><span class="code-lang">settings.py</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="code0" data-lang="python"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>SessionMiddleware</b> Powers <span class="inline">request.session</span> — on by default since <span class="inline">startproject</span>.</div>
+            <div class="callout"><b>CsrfViewMiddleware</b> Rejects any POST missing a valid <span class="inline">{% csrf_token %}</span> — also on by default.</div>
+            <div class="callout"><b>django.contrib.sessions</b> Must be in <span class="inline">INSTALLED_APPS</span> — it owns the session database table.</div>
+            <div class="callout"><b>migrate</b> Run it once after setup — it's what actually creates that session table.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 : MODELS DEEP DIVE — MAIN LESSON -->
+    <section class="slide" data-file="04_models_deep_dive.py">
+      <div class="slide-inner">
+        <div class="eyebrow">04_models_deep_dive.py</div>
+        <h1 class="title">Models.py Deep Dive</h1>
+        <p class="subtitle">A model is a Python class that Django turns into a database table — one class, one table, one row per instance.</p>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Field types you'll use constantly</h3>
+            <ul>
+              <li><b style="color:var(--accent-3);">CharField</b> — short text, requires <span class="inline">max_length</span></li>
+              <li><b style="color:var(--accent-3);">TextField</b> — long text, no length limit</li>
+              <li><b style="color:var(--accent-3);">BooleanField</b> — True/False</li>
+              <li><b style="color:var(--accent-3);">IntegerField</b> — whole numbers</li>
+              <li><b style="color:var(--accent-3);">DateTimeField</b> — timestamps, often with <span class="inline">auto_now_add=True</span></li>
+              <li><b style="color:var(--accent-3);">ForeignKey</b> — links to another model (a relationship)</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>The two-step deploy</h3>
+            <ol style="margin:0; padding-left:20px; font-size:15px; line-height:1.7;">
+              <li><span class="inline">makemigrations</span> — Django reads your model changes and writes a migration file describing them.</li>
+              <li><span class="inline">migrate</span> — Django actually applies that file, creating or altering the real database table.</li>
+            </ol>
+            <p style="margin-top:10px;">Change a model without running both, and the database quietly falls out of sync with your code.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 : MODELS CODE BREAKDOWN -->
+    <section class="slide tall" data-file="05_models_code.py">
+      <div class="slide-inner">
+        <div class="eyebrow">05_models_code.py</div>
+        <h1 class="title">Code Breakdown — Your First Model</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:58vh;">
+            <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="code1" data-lang="python"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>models.Model</b> Every model inherits from this — it's what makes Django treat the class as a table.</div>
+            <div class="callout"><b>max_length=200</b> Required for <span class="inline">CharField</span> — Django needs to know the column size upfront.</div>
+            <div class="callout"><b>default=False</b> The value a new row gets if nothing else is specified.</div>
+            <div class="callout"><b>auto_now_add=True</b> Stamps the row with "right now" the moment it's created — never edited afterward.</div>
+            <div class="callout"><b>__str__</b> What shows up in the admin site and shell — always define one; the default is unreadable.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 : FORMS & CSRF — MAIN LESSON -->
+    <section class="slide" data-file="06_forms_csrf.py">
+      <div class="slide-inner">
+        <div class="eyebrow">06_forms_csrf.py</div>
+        <h1 class="title">Forms &amp; CSRF — Never Trust the Client</h1>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Why not just read <span class="inline">request.POST</span> directly?</h3>
+            <ul>
+              <li>Nothing stops a user from submitting empty, malformed, or malicious data</li>
+              <li><span class="inline">forms.Form</span> centralizes validation rules in one place, not scattered across views</li>
+              <li>Client-side (JS) validation is a UX nicety — it can always be bypassed. Server-side is the real gate</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>What is CSRF, really?</h3>
+            <p>Cross-Site Request Forgery: a malicious site tricks a logged-in user's browser into submitting a form to <em>your</em> site without them knowing.</p>
+            <p style="margin-top:8px;"><span class="inline">{% csrf_token %}</span> embeds a secret, per-session token. Django rejects any POST that doesn't include the matching token — a foreign site can't guess it.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 : FORMS CODE BREAKDOWN -->
+    <section class="slide tall" data-file="07_forms_code.py">
+      <div class="slide-inner">
+        <div class="eyebrow">07_forms_code.py</div>
+        <h1 class="title">Code Breakdown — forms.Form in Action</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:58vh;">
+            <div class="code-header"><span class="code-lang">python + template</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="code2" data-lang="template"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>forms.Form</b> Declares each field once — Django generates matching HTML inputs and validation rules automatically.</div>
+            <div class="callout"><b>form.is_valid()</b> Runs every field's validation. Returns <span class="inline">False</span> if anything's missing or malformed.</div>
+            <div class="callout"><b>form.cleaned_data</b> A dict of the validated, type-converted values — never read raw <span class="inline">request.POST</span> after this exists.</div>
+            <div class="callout"><b>{{ form.as_p }}</b> Renders every field as a <span class="inline">&lt;p&gt;</span>-wrapped input — errors included automatically on re-render.</div>
+            <div class="callout"><b>{% csrf_token %}</b> Non-negotiable inside every <span class="inline">method="post"</span> form.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 : MODELFORM -->
+    <section class="slide" data-file="08_modelform.py">
+      <div class="slide-inner">
+        <div class="eyebrow">08_modelform.py</div>
+        <h1 class="title">ModelForm — Where Models Meet Forms</h1>
+        <p class="subtitle">Writing the same fields twice — once in the model, once in the form — is exactly the duplication <span class="inline">ModelForm</span> removes.</p>
+        <div class="diagram-wrap">
+          <svg viewBox="0 0 900 190" role="img" aria-label="Diagram showing a ModelForm generating its fields directly from a Task model, then saving validated data straight back into the database">
+            <title>ModelForm bridges a Django model and a form, then saves directly to the database</title>
+            <g font-family="ui-monospace,monospace" font-size="15" fill="#e6edf3">
+              <rect x="20" y="55" width="220" height="80" rx="10" fill="#161b22" stroke="#7ee787" stroke-width="2"/>
+              <text x="130" y="90" text-anchor="middle" fill="#7ee787">Task (models.Model)</text>
+              <text x="130" y="112" text-anchor="middle" font-size="12" fill="#8b949e">title, is_done</text>
+
+              <rect x="340" y="55" width="220" height="80" rx="10" fill="#161b22" stroke="#d29922" stroke-width="2"/>
+              <text x="450" y="90" text-anchor="middle" fill="#d29922">TaskModelForm</text>
+              <text x="450" y="112" text-anchor="middle" font-size="12" fill="#8b949e">fields = [...]</text>
+
+              <rect x="660" y="55" width="220" height="80" rx="10" fill="#161b22" stroke="#58a6ff" stroke-width="2"/>
+              <text x="770" y="90" text-anchor="middle" fill="#58a6ff">form.save()</text>
+              <text x="770" y="112" text-anchor="middle" font-size="12" fill="#8b949e">writes the DB row</text>
+            </g>
+            <line x1="240" y1="95" x2="335" y2="95" stroke="#8b949e" stroke-width="2" marker-end="url(#mf1)"/>
+            <line x1="560" y1="95" x2="655" y2="95" stroke="#8b949e" stroke-width="2" marker-end="url(#mf1)"/>
+            <defs><marker id="mf1" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b949e"/></marker></defs>
+          </svg>
+        </div>
+        <div class="card">
+          <h3>The payoff</h3>
+          <p>No <span class="inline">Task.objects.create(...)</span> line needed — a valid <span class="inline">ModelForm</span> saves itself. Change a model field once, and the form picks it up automatically.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 : MODELFORM CODE BREAKDOWN -->
+    <section class="slide tall" data-file="09_modelform_code.py">
+      <div class="slide-inner">
+        <div class="eyebrow">09_modelform_code.py</div>
+        <h1 class="title">Code Breakdown — ModelForm + the View</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:58vh;">
+            <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="code3" data-lang="python"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>class Meta</b> Tells the form which model to mirror, and exactly which fields to expose.</div>
+            <div class="callout"><b>form.save()</b> Only reachable after <span class="inline">is_valid()</span> — creates (or updates) the row directly.</div>
+            <div class="callout"><b>GET branch</b> An unbound, empty form — nothing to validate yet, just something to display.</div>
+            <div class="callout"><b>POST branch</b> A bound form — filled with submitted data, ready to validate.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 : SAMPLE PROJECT — FORMS -->
+    <section class="slide" data-file="10_sample_project_forms.py">
+      <div class="slide-inner">
+        <div class="eyebrow">10_sample_project_forms.py</div>
+        <h1 class="title">Sample Project: A Task Form</h1>
+        <p class="subtitle">Tie models + ModelForm + templates together into something that actually saves. <b style="color:var(--accent-2);">Full code, file by file, next.</b></p>
+        <div class="flow-steps">
+          <div class="flow-step"><span class="num">1</span><p>Visitor opens <span class="inline">/tasks/add/</span> → GET request → blank <span class="inline">TaskModelForm</span> rendered.</p></div>
+          <div class="flow-step"><span class="num">2</span><p>Visitor fills it in and submits → POST request → form is bound with their data.</p></div>
+          <div class="flow-step"><span class="num">3</span><p><span class="inline">is_valid()</span> passes → <span class="inline">form.save()</span> writes a new <span class="inline">Task</span> row → redirect to the task list.</p></div>
+          <div class="flow-step"><span class="num">4</span><p><span class="inline">is_valid()</span> fails → the same template re-renders, now with error messages next to each bad field.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SAMPLE PROJECT FILE 1: forms.py -->
+    <section class="slide tall" data-file="10a_forms_py.py">
+      <div class="slide-inner">
+        <div class="eyebrow">10a_forms_py.py · file 1 of 3</div>
+        <h1 class="title" style="font-size:clamp(26px,3vw,40px);">Create: tasks/forms.py</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:58vh;">
+            <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="fileFormsPy" data-lang="python"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>New file</b> Doesn't exist after <span class="inline">startapp</span> — create it inside <span class="inline">tasks/</span>, next to <span class="inline">models.py</span>.</div>
+            <div class="callout"><b>class Meta</b> Points at the <span class="inline">Task</span> model from Setup Guide's models slide, and lists exactly which fields to expose.</div>
+            <div class="callout"><b>Nothing else to write</b> No <span class="inline">CharField</span> or <span class="inline">BooleanField</span> to redeclare — <span class="inline">ModelForm</span> copies them straight from the model.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SAMPLE PROJECT FILE 2: views.py -->
+    <section class="slide tall" data-file="10b_views_py.py">
+      <div class="slide-inner">
+        <div class="eyebrow">10b_views_py.py · file 2 of 3</div>
+        <h1 class="title" style="font-size:clamp(26px,3vw,40px);">Update: tasks/views.py</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:58vh;">
+            <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="fileViewsPy" data-lang="python"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>Updated file</b> Add this alongside your existing <span class="inline">task_list</span> view from Setup Guide Part 1.</div>
+            <div class="callout"><b>GET branch</b> An empty, unbound form — nothing to validate, just something to render.</div>
+            <div class="callout"><b>POST branch</b> Bound with the submitted data; <span class="inline">form.save()</span> only runs once <span class="inline">is_valid()</span> confirms it's clean.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SAMPLE PROJECT FILE 3: template + urls.py -->
+    <section class="slide tall" data-file="10c_template_urls.py">
+      <div class="slide-inner">
+        <div class="eyebrow">10c_template_urls.py · file 3 of 3</div>
+        <h1 class="title" style="font-size:clamp(26px,3vw,40px);">Create: add_task.html + Wire the Route</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:58vh;">
+            <div class="code-header"><span class="code-lang">template + urls.py</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="fileTemplateUrls" data-lang="template"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>New template</b> Create <span class="inline">tasks/templates/tasks/add_task.html</span> — same namespacing convention as Phase 5.</div>
+            <div class="callout"><b>{% csrf_token %}</b> Still non-negotiable — this form is a POST, exactly like every other one in this course.</div>
+            <div class="callout"><b>{{ form.as_p }}</b> Renders every field <span class="inline">ModelForm</span> pulled from <span class="inline">Task</span> — titles, checkboxes, and any validation errors, automatically.</div>
+            <div class="callout"><b>urls.py</b> One new line added to the file from Setup Guide Part 1 — <span class="inline">/tasks/add/</span> now actually resolves to something.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11 : SESSIONS — MAIN LESSON -->
+    <section class="slide" data-file="11_sessions.py">
+      <div class="slide-inner">
+        <div class="eyebrow">11_sessions.py</div>
+        <h1 class="title">Sessions — Remembering One Visitor</h1>
+        <div class="grid-2">
+          <div class="card">
+            <h3>😩 The problem with a plain global variable</h3>
+            <ul>
+              <li>A variable set in a view is shared by <em>every single visitor</em>, not just one</li>
+              <li>User A's cart, login state, or progress would leak straight into User B's request</li>
+              <li>HTTP itself has no memory — each request is a stranger to the last</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>✅ request.session fixes it</h3>
+            <ul>
+              <li>Acts like a dictionary — but scoped to one visitor's browser via a cookie</li>
+              <li>Data set in one request is still there on their next request</li>
+              <li>Backed by a real database table — created the moment you run <span class="inline">migrate</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SESSIONS: BEFORE / AFTER IN CODE -->
+    <section class="slide tall" data-file="11a_sessions_before_after.py">
+      <div class="slide-inner">
+        <div class="eyebrow">11a_sessions_before_after.py</div>
+        <h1 class="title">The Problem, in Actual Code</h1>
+        <p class="subtitle">A visit counter, two ways. Only one of these actually counts <em>your</em> visits.</p>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:54vh; border-color:var(--accent-4);">
+            <div class="code-header"><span class="code-lang">😩 the bad way</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeSessionBad" data-lang="python"></pre></div>
+          </div>
+          <div class="code-block" style="max-height:54vh; border-color:var(--accent-2);">
+            <div class="code-header"><span class="code-lang">✅ the django way</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="codeSessionGood" data-lang="python"></pre></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 12 : SESSIONS CODE BREAKDOWN -->
+    <section class="slide tall" data-file="12_sessions_code.py">
+      <div class="slide-inner">
+        <div class="eyebrow">12_sessions_code.py</div>
+        <h1 class="title">Code Breakdown — request.session</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:56vh;">
+            <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="code4" data-lang="python"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>.get("visits", 0)</b> Reads the key if it exists, otherwise falls back to <span class="inline">0</span> — safe on a brand-new session.</div>
+            <div class="callout"><b>request.session["visits"] = visits</b> Writing to the session is just dictionary assignment — Django handles the cookie and storage.</div>
+            <div class="callout"><b>Per-visitor, not global</b> Two different browsers get two completely separate counters.</div>
+            <div class="callout"><b>Initialization check</b> Always use <span class="inline">.get(key, default)</span> the first time — a key that's never been set will otherwise raise an error.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 13 : SAMPLE PROJECT — SESSIONS -->
+    <section class="slide" data-file="13_sample_project_sessions.py">
+      <div class="slide-inner">
+        <div class="eyebrow">13_sample_project_sessions.py</div>
+        <h1 class="title">Sample Project: A Per-Visitor Counter</h1>
+        <p class="subtitle">The smallest possible demo that proves sessions actually work. <b style="color:var(--accent-2);">Full code, file by file, next.</b></p>
+        <div class="grid-3">
+          <div class="card"><h3>1. First visit</h3><p>No <span class="inline">"visits"</span> key yet → defaults to 0 → becomes 1 → saved to their session.</p></div>
+          <div class="card"><h3>2. Refresh the page</h3><p>Same browser, same cookie → Django finds their session → count becomes 2, 3, 4...</p></div>
+          <div class="card"><h3>3. Open an incognito tab</h3><p>New session, new cookie → counter starts back at 1 — proof it's per-visitor, not global.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SAMPLE PROJECT FILE 1: urls.py -->
+    <section class="slide tall" data-file="13a_urls_py.py">
+      <div class="slide-inner">
+        <div class="eyebrow">13a_urls_py.py · file 1 of 2</div>
+        <h1 class="title" style="font-size:clamp(26px,3vw,40px);">Update: tasks/urls.py</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:54vh;">
+            <div class="code-header"><span class="code-lang">python</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="fileUrlsSession" data-lang="python"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>One new line</b> Wires up the <span class="inline">homepage</span> view already written in the code breakdown a moment ago.</div>
+            <div class="callout"><b>Any path works</b> <span class="inline">"visits/"</span> is just this demo's route — sessions work identically no matter what the URL is.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SAMPLE PROJECT FILE 2: home.html -->
+    <section class="slide tall" data-file="13b_home_html.py">
+      <div class="slide-inner">
+        <div class="eyebrow">13b_home_html.py · file 2 of 2</div>
+        <h1 class="title" style="font-size:clamp(26px,3vw,40px);">Create: home.html</h1>
+        <div class="grid-2">
+          <div class="code-block" style="max-height:54vh;">
+            <div class="code-header"><span class="code-lang">html</span><button class="copy-btn">Copy</button></div>
+            <div class="code-scroll"><pre class="code-content" data-raw-id="fileHomeHtml" data-lang="template"></pre></div>
+          </div>
+          <div class="callouts">
+            <div class="callout"><b>New file</b> A minimal template — kept deliberately plain since this demo is only about the session count.</div>
+            <div class="callout"><b>{{ visits }}</b> The exact context key the <span class="inline">homepage</span> view passed in — nothing more is needed to prove sessions work.</div>
+            <div class="callout"><b>Try it</b> Load the page a few times, then open an incognito window — watch the counter reset.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FULL DEMO -->
+    <section class="slide tall" data-file="14_full_demo.py">
+      <div class="slide-inner">
+        <div class="eyebrow">14_full_demo.py</div>
+        <h1 class="title">Full Demo — Copy This and Try It</h1>
+        <p class="subtitle">Everything from this lecture, in one place: a model, a ModelForm, three views, routing, and templates.</p>
+        <div class="code-block" style="max-height:56vh;">
+          <div class="code-header"><span class="code-lang">models.py + forms.py + views.py + urls.py + templates</span><button class="copy-btn">Copy</button></div>
+          <div class="code-scroll"><pre class="code-content" data-raw-id="codeFullDemo" data-lang="template"></pre></div>
+        </div>
+        <div class="card" style="margin-top:14px;">
+          <h3>Run it</h3>
+          <p>Drop these six pieces into the <span class="inline">tasks</span> app from Setup Guide Part 1, run <span class="inline">makemigrations</span> and <span class="inline">migrate</span>, then <span class="inline">python manage.py runserver</span> and visit <span class="inline">/tasks/</span>, <span class="inline">/tasks/add/</span>, and <span class="inline">/tasks/visits/</span>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 14 : WHY WE DO THIS -->
+    <section class="slide" data-file="15_why_we_do_this.py">
+      <div class="slide-inner">
+        <div class="eyebrow">15_why_we_do_this.py</div>
+        <h1 class="title">Why We Bother With Any of This</h1>
+        <div class="grid-3">
+          <div class="card"><h3>Data integrity</h3><p>Models + migrations keep your database structure and your Python code from silently drifting apart.</p></div>
+          <div class="card"><h3>Security by default</h3><p>Forms + CSRF mean "trust nothing from the client" is the default, not something you have to remember every time.</p></div>
+          <div class="card"><h3>Personalized state</h3><p>Sessions are what let a stateless protocol (HTTP) feel like a stateful app — carts, logins, preferences that persist.</p></div>
+        </div>
+        <div class="card" style="margin-top:20px;">
+          <h3>The bigger picture</h3>
+          <p>Every serious framework — Express, Rails, Laravel — solves these exact three problems the same way: a model layer, validated input, and session storage. Learn the pattern here, and it transfers directly.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 15 : QUIZ INTRO -->
+    <section class="slide" data-file="16_quiz.py">
+      <div class="slide-inner">
+        <div class="eyebrow">16_quiz.py</div>
+        <div class="test-banner">🧪 QUICK QUIZ</div>
+        <h1 class="title">10 Items — Models, Forms &amp; Sessions</h1>
+        <p class="subtitle">Options and questions are shown — answers are on the very last slide.</p>
+        <div class="grid-2">
+          <div class="card"><h3>Part 1</h3><p>5 Multiple Choice questions.</p></div>
+          <div class="card"><h3>Part 2</h3><p>5 Identification — name the command or concept.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 16 : MC 1-3 -->
+    <section class="slide" data-file="quiz/mc_1.py">
+      <div class="slide-inner">
+        <div class="eyebrow">quiz/mc.py · page 1 of 2</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Multiple Choice (1–3)</h1>
+        <div class="q-stack">
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q1</span><p class="q-text">Which class do you inherit from to build a custom Django form?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>forms.Model</div>
+              <div class="opt"><span class="opt-letter">B</span>forms.Form</div>
+              <div class="opt"><span class="opt-letter">C</span>models.Form</div>
+              <div class="opt"><span class="opt-letter">D</span>django.Form</div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q2</span><p class="q-text">Which method runs a bound form's validation and returns True or False?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>form.valid()</div>
+              <div class="opt"><span class="opt-letter">B</span>form.is_valid()</div>
+              <div class="opt"><span class="opt-letter">C</span>form.check()</div>
+              <div class="opt"><span class="opt-letter">D</span>form.validate()</div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q3</span><p class="q-text">After a form validates successfully, where do the cleaned, type-converted values live?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>form.data</div>
+              <div class="opt"><span class="opt-letter">B</span>form.cleaned_data</div>
+              <div class="opt"><span class="opt-letter">C</span>form.valid_data</div>
+              <div class="opt"><span class="opt-letter">D</span>form.fields</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 17 : MC 4-5 -->
+    <section class="slide" data-file="quiz/mc_2.py">
+      <div class="slide-inner">
+        <div class="eyebrow">quiz/mc.py · page 2 of 2</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Multiple Choice (4–5)</h1>
+        <div class="q-stack">
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q4</span><p class="q-text">Which template tag is required inside every POST form to prevent CSRF attacks?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>{% csrf_token %}</div>
+              <div class="opt"><span class="opt-letter">B</span>{% secure_form %}</div>
+              <div class="opt"><span class="opt-letter">C</span>{% token %}</div>
+              <div class="opt"><span class="opt-letter">D</span>{% protect %}</div>
+            </div>
+          </div>
+          <div class="mc-q">
+            <div class="mc-q-head"><span class="q-num">Q5</span><p class="q-text">Which object lets a view store data specific to one visitor, across multiple requests?</p></div>
+            <div class="options">
+              <div class="opt"><span class="opt-letter">A</span>request.GET</div>
+              <div class="opt"><span class="opt-letter">B</span>request.session</div>
+              <div class="opt"><span class="opt-letter">C</span>request.COOKIES</div>
+              <div class="opt"><span class="opt-letter">D</span>request.user_data</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 18 : IDENTIFICATION 1-3 -->
+    <section class="slide" data-file="quiz/id_1.py">
+      <div class="slide-inner">
+        <div class="eyebrow">quiz/identification.py · page 1 of 2</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Identification (1–3)</h1>
+        <div class="q-stack">
+          <div class="scenario-q">
+            <p class="q-text"><b>1.</b> The Django base class used to define a database table as a Python class.</p>
+            <div class="answer-blank">Answer: ____________</div>
+          </div>
+          <div class="scenario-q">
+            <p class="q-text"><b>2.</b> The command that generates migration files describing your model changes.</p>
+            <div class="answer-blank">Answer: ____________</div>
+          </div>
+          <div class="scenario-q">
+            <p class="q-text"><b>3.</b> The command that actually applies those migration files to the real database.</p>
+            <div class="answer-blank">Answer: ____________</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 19 : IDENTIFICATION 4-5 -->
+    <section class="slide" data-file="quiz/id_2.py">
+      <div class="slide-inner">
+        <div class="eyebrow">quiz/identification.py · page 2 of 2</div>
+        <h1 class="title" style="font-size:clamp(26px,2.6vw,36px);">Identification (4–5)</h1>
+        <div class="q-stack">
+          <div class="scenario-q">
+            <p class="q-text"><b>4.</b> The special form class that builds its fields directly from a model, and can save straight back into the database.</p>
+            <div class="answer-blank">Answer: ____________</div>
+          </div>
+          <div class="scenario-q">
+            <p class="q-text"><b>5.</b> The dictionary-like object used to store per-visitor data between separate requests.</p>
+            <div class="answer-blank">Answer: ____________</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 20 : RECAP -->
+    <section class="slide" data-file="recap.py">
+      <div class="slide-inner">
+        <div class="eyebrow">recap.py</div>
+        <h1 class="title">Recap Before You Go</h1>
+        <p class="subtitle">The essentials worth remembering.</p>
+        <div class="recap-list">
+          <div class="recap-item"><span class="tick">✓</span>A model = one Python class = one database table. <span class="inline">makemigrations</span> writes the plan, <span class="inline">migrate</span> applies it.</div>
+          <div class="recap-item"><span class="tick">✓</span>Never trust <span class="inline">request.POST</span> directly — always validate through a form first.</div>
+          <div class="recap-item"><span class="tick">✓</span><span class="inline">is_valid()</span> must return True before <span class="inline">cleaned_data</span> (or <span class="inline">save()</span>) can be trusted.</div>
+          <div class="recap-item"><span class="tick">✓</span><span class="inline">{% csrf_token %}</span> is non-negotiable in every POST form — no exceptions.</div>
+          <div class="recap-item"><span class="tick">✓</span><span class="inline">ModelForm</span> removes the duplication between a model's fields and a form's fields.</div>
+          <div class="recap-item"><span class="tick">✓</span><span class="inline">request.session</span> is per-visitor memory — a global variable is not.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 21 : ANSWERS -->
+    <section class="slide tall" data-file="answers.py">
+      <div class="slide-inner">
+        <div class="eyebrow">answers.py</div>
+        <h1 class="title" style="font-size:clamp(26px,3vw,40px);">Answer Key</h1>
+        <div class="answers-grid">
+          <div class="answers-col">
+            <h3>Multiple Choice</h3>
+            <div class="ans-row"><b>1. B</b> — forms.Form is the base class for custom forms.</div>
+            <div class="ans-row"><b>2. B</b> — is_valid() runs validation and returns a boolean.</div>
+            <div class="ans-row"><b>3. B</b> — cleaned_data holds the validated, converted values.</div>
+            <div class="ans-row"><b>4. A</b> — {% csrf_token %} is required in every POST form.</div>
+            <div class="ans-row"><b>5. B</b> — request.session stores per-visitor data.</div>
+          </div>
+          <div class="answers-col">
+            <h3>Identification</h3>
+            <div class="ans-row"><b>1. models.Model</b> — the base class every model inherits from.</div>
+            <div class="ans-row"><b>2. makemigrations</b> — generates the migration files.</div>
+            <div class="ans-row"><b>3. migrate</b> — applies migrations to the real database.</div>
+            <div class="ans-row"><b>4. ModelForm</b> — builds form fields directly from a model.</div>
+            <div class="ans-row"><b>5. request.session</b> — per-visitor storage across requests.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="chrome-bottom">
+    <div class="seg"><span>Models, Forms, CSRF &amp; Sessions</span></div>
+    <div class="seg"><span>Right-click / <kbd>→</kbd> next</span><span><kbd>?</kbd> shortcuts</span></div>
+  </div>
+
+  <div class="modal-overlay" id="shortcutsModal">
+    <div class="modal">
+      <h2>Keyboard &amp; Mouse Shortcuts</h2>
+      <div class="row"><span>Next slide</span><span><kbd>→</kbd> / <kbd>Right-click</kbd> / <kbd>Mouse btn 4</kbd></span></div>
+      <div class="row"><span>Previous slide</span><span><kbd>←</kbd> / <kbd>Mouse btn 3</kbd></span></div>
+      <div class="row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+      <div class="row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+      <div class="row"><span>Show/hide this panel</span><span><kbd>?</kbd></span></div>
+      <div class="row"><span>Close panel</span><span><kbd>Esc</kbd></span></div>
+      <div class="row"><span>Swipe (mobile)</span><span>Left = next · Right = prev</span></div>
+      <div class="close-hint">Click outside this box, or press Esc, to close.</div>
+    </div>
+  </div>
+
+  <textarea id="raw-codeBad" hidden># views.py -- the bad way
+def add_task(request):
+    if request.method == "POST":
+        # reading raw POST data, no validation at all
+        title = request.POST["title"]
+        is_done = request.POST.get("is_done", False)
+
+        Task.objects.create(title=title, is_done=is_done)
+        return redirect("task_list")
+
+    # nothing stops an empty title, a 5000-character title,
+    # or a request forged from another site -- there's no
+    # {% csrf_token %} check here at all
+    return render(request, "tasks/add_task.html")</textarea>
+
+  <textarea id="raw-codeGood" hidden># views.py -- the django way
+def add_task(request):
+    if request.method == "POST":
+        form = TaskModelForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("task_list")
+    else:
+        form = TaskModelForm()
+    return render(request, "tasks/add_task.html", {"form": form})
+
+
+&lt;!-- tasks/add_task.html --&gt;
+&lt;form method="post"&gt;
+  {% csrf_token %}
+  {{ form.as_p }}
+  &lt;button type="submit"&gt;Save&lt;/button&gt;
+&lt;/form&gt;</textarea>
+
+  <textarea id="raw-codeStart" hidden># from your project root
+python manage.py startapp tasks
+
+
+# core/settings.py -- register the new app
+INSTALLED_APPS = [
+    # ...
+    "django.contrib.sessions",
+    "tasks",
+]
+
+
+# core/urls.py -- project-level routing
+from django.contrib import admin
+from django.urls import path, include
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("tasks/", include("tasks.urls")),
+]
+
+
+# tasks/urls.py -- app-level routing (new file, create it yourself)
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path("", views.task_list, name="task_list"),
+]</textarea>
+
+  <textarea id="raw-code0" hidden># settings.py — already present by default from startproject,
+# but confirm all four before relying on forms/CSRF/sessions
+
+INSTALLED_APPS = [
+    # ...
+    "django.contrib.sessions",   # owns the session database table
+]
+
+MIDDLEWARE = [
+    # ...
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    # ...
+]</textarea>
+
+  <textarea id="raw-code1" hidden># models.py
+from django.db import models
+
+class Task(models.Model):
+    title = models.CharField(max_length=200)
+    is_done = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+
+
+# terminal
+python manage.py makemigrations
+python manage.py migrate</textarea>
+
+  <textarea id="raw-code2" hidden># forms.py
+from django import forms
+
+class TaskForm(forms.Form):
+    title = forms.CharField(max_length=200)
+    is_done = forms.BooleanField(required=False)
+
+
+# views.py
+def add_task(request):
+    if request.method == "POST":
+        form = TaskForm(request.POST)
+        if form.is_valid():
+            data = form.cleaned_data
+            Task.objects.create(title=data["title"], is_done=data["is_done"])
+            return redirect("task_list")
+    else:
+        form = TaskForm()
+    return render(request, "tasks/add_task.html", {"form": form})
+
+
+&lt;!-- tasks/add_task.html --&gt;
+&lt;form method="post"&gt;
+  {% csrf_token %}
+  {{ form.as_p }}
+  &lt;button type="submit"&gt;Save&lt;/button&gt;
+&lt;/form&gt;</textarea>
+
+  <textarea id="raw-code3" hidden># forms.py
+from django import forms
+from .models import Task
+
+class TaskModelForm(forms.ModelForm):
+    class Meta:
+        model = Task
+        fields = ["title", "is_done"]
+
+
+# views.py
+def add_task(request):
+    if request.method == "POST":
+        form = TaskModelForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("task_list")
+    else:
+        form = TaskModelForm()
+    return render(request, "tasks/add_task.html", {"form": form})</textarea>
+
+  <textarea id="raw-code4" hidden># views.py
+def homepage(request):
+    visits = request.session.get("visits", 0)
+    visits += 1
+    request.session["visits"] = visits
+    return render(request, "home.html", {"visits": visits})</textarea>
+
+  <textarea id="raw-codeSessionBad" hidden># views.py -- the bad way
+visit_count = 0  # a module-level global variable
+
+def homepage(request):
+    global visit_count
+    visit_count += 1
+    return render(request, "home.html", {"visits": visit_count})
+
+# every single visitor increments the SAME counter --
+# there's no such thing as "your" count here</textarea>
+
+  <textarea id="raw-codeSessionGood" hidden># views.py -- the django way
+def homepage(request):
+    visits = request.session.get("visits", 0)
+    visits += 1
+    request.session["visits"] = visits
+    return render(request, "home.html", {"visits": visits})
+
+# each visitor's browser gets its own session --
+# their counter is theirs alone</textarea>
+
+  <textarea id="raw-fileFormsPy" hidden># tasks/forms.py  (new file)
+from django import forms
+from .models import Task
+
+class TaskModelForm(forms.ModelForm):
+    class Meta:
+        model = Task
+        fields = ["title", "is_done"]</textarea>
+
+  <textarea id="raw-fileViewsPy" hidden># tasks/views.py  (add this function)
+from django.shortcuts import render, redirect
+from .forms import TaskModelForm
+
+def add_task(request):
+    if request.method == "POST":
+        form = TaskModelForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("task_list")
+    else:
+        form = TaskModelForm()
+    return render(request, "tasks/add_task.html", {"form": form})</textarea>
+
+  <textarea id="raw-fileTemplateUrls" hidden>&lt;!-- tasks/templates/tasks/add_task.html  (new file) --&gt;
+&lt;form method="post"&gt;
+  {% csrf_token %}
+  {{ form.as_p }}
+  &lt;button type="submit"&gt;Save&lt;/button&gt;
+&lt;/form&gt;
+
+
+# tasks/urls.py  (updated -- one new line)
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path("", views.task_list, name="task_list"),
+    path("add/", views.add_task, name="add_task"),
+]</textarea>
+
+  <textarea id="raw-fileUrlsSession" hidden># tasks/urls.py  (updated -- one new line)
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path("", views.task_list, name="task_list"),
+    path("add/", views.add_task, name="add_task"),
+    path("visits/", views.homepage, name="homepage"),
+]</textarea>
+
+  <textarea id="raw-fileHomeHtml" hidden>&lt;!-- home.html  (new file) --&gt;
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;body&gt;
+  &lt;h1&gt;You've visited this page {{ visits }} time(s).&lt;/h1&gt;
+&lt;/body&gt;
+&lt;/html&gt;</textarea>
+
+  <textarea id="raw-codeFullDemo" hidden># tasks/models.py
+from django.db import models
+
+class Task(models.Model):
+    title = models.CharField(max_length=200)
+    is_done = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+
+
+# tasks/forms.py
+from django import forms
+from .models import Task
+
+class TaskModelForm(forms.ModelForm):
+    class Meta:
+        model = Task
+        fields = ["title", "is_done"]
+
+
+# tasks/views.py
+from django.shortcuts import render, redirect
+from .models import Task
+from .forms import TaskModelForm
+
+def task_list(request):
+    tasks = Task.objects.all()
+    return render(request, "tasks/task_list.html", {"tasks": tasks})
+
+def add_task(request):
+    if request.method == "POST":
+        form = TaskModelForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("task_list")
+    else:
+        form = TaskModelForm()
+    return render(request, "tasks/add_task.html", {"form": form})
+
+def homepage(request):
+    visits = request.session.get("visits", 0)
+    visits += 1
+    request.session["visits"] = visits
+    return render(request, "home.html", {"visits": visits})
+
+
+# tasks/urls.py
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path("", views.task_list, name="task_list"),
+    path("add/", views.add_task, name="add_task"),
+    path("visits/", views.homepage, name="homepage"),
+]
+
+
+&lt;!-- tasks/templates/tasks/task_list.html --&gt;
+&lt;ul&gt;
+  {% for task in tasks %}
+    &lt;li&gt;{{ task.title }} {% if task.is_done %}&amp;#10003;{% endif %}&lt;/li&gt;
+  {% endfor %}
+&lt;/ul&gt;
+&lt;a href="{% url 'add_task' %}"&gt;Add a task&lt;/a&gt;
+
+
+&lt;!-- tasks/templates/tasks/add_task.html --&gt;
+&lt;form method="post"&gt;
+  {% csrf_token %}
+  {{ form.as_p }}
+  &lt;button type="submit"&gt;Save&lt;/button&gt;
+&lt;/form&gt;
+
+
+&lt;!-- home.html --&gt;
+&lt;h1&gt;You've visited this page {{ visits }} time(s).&lt;/h1&gt;</textarea>
+
+<script>
+(function(){
+  "use strict";
+
+  function escapeHtml(s){
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  function highlightPython(code){
+    var keywords = ["def","return","if","else","elif","for","while","in","import","from","class",
+      "pass","None","True","False","and","or","not","is","as","with","try","except","finally",
+      "raise","yield","lambda","global","assert","break","continue"];
+    var kwPattern = keywords.join("|");
+    var tokenRe = new RegExp(
+      "(#[^\\n]*)" +
+      "|(\"\"\"[\\s\\S]*?\"\"\"|'''[\\s\\S]*?'''|\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*')" +
+      "|(@[A-Za-z_][A-Za-z0-9_.]*)" +
+      "|\\b(" + kwPattern + ")\\b" +
+      "|\\b([A-Za-z_][A-Za-z0-9_]*)(?=\\()" +
+      "|\\b(\\d+\\.?\\d*)\\b",
+      "g"
+    );
+    var result = "", lastIndex = 0, m;
+    while ((m = tokenRe.exec(code))) {
+      result += escapeHtml(code.slice(lastIndex, m.index));
+      if (m[1]) result += '<span class="tok-comment">' + escapeHtml(m[1]) + '</span>';
+      else if (m[2]) result += '<span class="tok-string">' + escapeHtml(m[2]) + '</span>';
+      else if (m[3]) result += '<span class="tok-decorator">' + escapeHtml(m[3]) + '</span>';
+      else if (m[4]) result += '<span class="tok-keyword">' + escapeHtml(m[4]) + '</span>';
+      else if (m[5]) result += '<span class="tok-func">' + escapeHtml(m[5]) + '</span>';
+      else if (m[6]) result += '<span class="tok-number">' + escapeHtml(m[6]) + '</span>';
+      lastIndex = tokenRe.lastIndex;
+    }
+    result += escapeHtml(code.slice(lastIndex));
+    return result;
+  }
+
+  function highlightTemplate(code){
+    var tokenRe = /(#[^\n]*)|(\{#[\s\S]*?#\})|(\{%[\s\S]*?%\})|(\{\{[\s\S]*?\}\})|(<\/?[a-zA-Z][a-zA-Z0-9-]*(?:\s+[a-zA-Z-]+(?:="[^"]*")?)*\s*\/?>)/g;
+    var result = "", lastIndex = 0, m;
+    while((m = tokenRe.exec(code))){
+      result += escapeHtml(code.slice(lastIndex, m.index));
+      if (m[1]) result += '<span class="tok-comment">' + escapeHtml(m[1]) + '</span>';
+      else if (m[2]) result += '<span class="tok-comment">' + escapeHtml(m[2]) + '</span>';
+      else if (m[3]) result += '<span class="tok-decorator">' + escapeHtml(m[3]) + '</span>';
+      else if (m[4]) result += '<span class="tok-string">' + escapeHtml(m[4]) + '</span>';
+      else if (m[5]) result += '<span class="tok-keyword">' + escapeHtml(m[5]) + '</span>';
+      lastIndex = tokenRe.lastIndex;
+    }
+    result += escapeHtml(code.slice(lastIndex));
+    return result;
+  }
+
+  document.querySelectorAll(".code-content[data-raw-id]").forEach(function(el){
+    var rawId = el.getAttribute("data-raw-id");
+    var rawEl = document.getElementById("raw-" + rawId);
+    if (!rawEl) return;
+    var raw = rawEl.value;
+    var lang = el.getAttribute("data-lang");
+    el.innerHTML = (lang === "python") ? highlightPython(raw) : highlightTemplate(raw);
+    el.setAttribute("data-raw", raw);
+  });
+
+  document.querySelectorAll(".copy-btn").forEach(function(btn){
+    btn.addEventListener("click", function(e){
+      e.stopPropagation();
+      var block = btn.closest(".code-block");
+      var contentEl = block ? block.querySelector(".code-content") : null;
+      var text = contentEl ? (contentEl.getAttribute("data-raw") || contentEl.textContent) : "";
+      var done = function(){
+        var original = btn.textContent;
+        btn.textContent = "Copied!";
+        btn.classList.add("copied");
+        setTimeout(function(){ btn.textContent = original; btn.classList.remove("copied"); }, 1400);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(done);
+      } else {
+        var ta = document.createElement("textarea");
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand("copy"); } catch(err){}
+        document.body.removeChild(ta);
+        done();
+      }
+    });
+  });
+
+  var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var total = slides.length;
+  var current = 0;
+  var deckEl = document.getElementById("deck");
+  var progressFill = document.getElementById("progressFill");
+  var slideCounter = document.getElementById("slideCounter");
+  var tabName = document.getElementById("tabName");
+  var shortcutsModal = document.getElementById("shortcutsModal");
+
+  function reduceMotion(){
+    return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  function render(direction){
+    slides.forEach(function(s, i){ s.classList.toggle("active", i === current); });
+    deckEl.classList.toggle("reverse", direction === -1);
+    progressFill.style.width = ((current + 1) / total * 100) + "%";
+    slideCounter.textContent = (current + 1) + " / " + total;
+    var file = slides[current].getAttribute("data-file") || "slide.py";
+    tabName.textContent = file;
+    slides[current].scrollTop = 0;
+  }
+
+  function goTo(index, direction){
+    if (index < 0 || index >= total || index === current) return;
+    current = index;
+    render(direction);
+  }
+  function next(){ goTo(current + 1, 1); }
+  function prev(){ goTo(current - 1, -1); }
+  function first(){ goTo(0, -1); }
+  function last(){ goTo(total - 1, 1); }
+
+  function isInteractive(target){
+    return !!target.closest("button, a, input, textarea, select, [contenteditable], .copy-btn, .modal");
+  }
+
+  document.addEventListener("mousedown", function(e){
+    if (e.button === 2) {
+      if (isInteractive(e.target)) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    } else if (e.button === 3) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      prev();
+    } else if (e.button === 4) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    }
+  }, true);
+
+  document.addEventListener("mouseup", function(e){
+    if (e.button === 3 || e.button === 4) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, true);
+
+  document.addEventListener("contextmenu", function(e){
+    if (isInteractive(e.target)) return;
+    e.preventDefault();
+  }, true);
+
+  document.addEventListener("auxclick", function(e){
+    if (e.button === 1 || e.button === 3 || e.button === 4) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, true);
+
+  document.addEventListener("keydown", function(e){
+    if (shortcutsModal.classList.contains("open")) {
+      if (e.key === "Escape" || e.key === "?") { closeModal(); e.preventDefault(); }
+      return;
+    }
+    switch(e.key){
+      case "ArrowRight": case "ArrowDown": case "PageDown": next(); e.preventDefault(); break;
+      case "ArrowLeft": case "ArrowUp": case "PageUp": prev(); e.preventDefault(); break;
+      case "Home": first(); e.preventDefault(); break;
+      case "End": last(); e.preventDefault(); break;
+      case "?": openModal(); e.preventDefault(); break;
+    }
+  });
+
+  function openModal(){ shortcutsModal.classList.add("open"); }
+  function closeModal(){ shortcutsModal.classList.remove("open"); }
+  shortcutsModal.addEventListener("mousedown", function(e){
+    if (e.target === shortcutsModal) closeModal();
+  });
+
+  var touchStartX = null, touchStartY = null;
+  document.addEventListener("touchstart", function(e){
+    if (e.touches.length !== 1) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, {passive:true});
+  document.addEventListener("touchend", function(e){
+    if (touchStartX === null) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) next(); else prev();
+    }
+    touchStartX = null; touchStartY = null;
+  }, {passive:true});
+
+  if (reduceMotion()) document.body.classList.add("no-motion");
+
+  render(1);
+})();
+</script>
+</body>
+</html>

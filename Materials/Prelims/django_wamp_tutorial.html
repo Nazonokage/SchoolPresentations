@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Django + WAMP — User Accounts Demo</title>
+<style>
+  :root{
+    --bg: #1e1e1e;
+    --bg-alt: #252526;
+    --panel: #2a2b2c;
+    --border: #3a3b3c;
+    --text: #d4d4d4;
+    --text-dim: #8a8d90;
+    --accent: #4fc1ff;
+    --accent2: #c586c0;
+    --green: #6a9955;
+    --orange: #ce9178;
+    --yellow: #dcdcaa;
+    --red-soft: #f48771;
+    --tab-red: #ff5f56;
+    --tab-yellow: #ffbd2e;
+    --tab-green: #27c93f;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--bg); color:var(--text);
+    font-family:var(--sans);
+    overflow:hidden;
+  }
+  #progress-track{
+    position:fixed; top:0; left:0; width:100%; height:3px;
+    background:var(--border); z-index:50;
+  }
+  #progress-bar{
+    height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent2));
+    transition:width .35s ease;
+  }
+  #counter{
+    position:fixed; bottom:16px; right:20px; z-index:50;
+    font-family:var(--mono); font-size:12.5px; color:var(--text-dim);
+    background:var(--bg-alt); border:1px solid var(--border);
+    padding:5px 10px; border-radius:6px; letter-spacing:.03em;
+  }
+  #hint{
+    position:fixed; bottom:16px; left:20px; z-index:50;
+    font-family:var(--mono); font-size:11.5px; color:var(--text-dim);
+    opacity:.75;
+  }
+  #stage{
+    position:relative; width:100%; height:100%;
+    cursor:pointer;
+  }
+  .slide{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    padding:56px 8vw 60px;
+    opacity:0;
+    transform:translateX(40px) scale(.985);
+    transition:opacity .38s ease, transform .38s ease;
+    pointer-events:none;
+    overflow-y:auto;
+  }
+  .slide.active{
+    opacity:1; transform:translateX(0) scale(1);
+    pointer-events:auto;
+  }
+  .slide.leaving-left{ transform:translateX(-40px) scale(.985); opacity:0; }
+  .slide.leaving-right{ transform:translateX(40px) scale(.985); opacity:0; }
+
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition:opacity .25s linear; transform:none !important; }
+  }
+
+  .slide-inner{
+    max-width:1080px; width:100%; margin:auto;
+  }
+  .editor-frame{
+    background:var(--bg-alt);
+    border:1px solid var(--border);
+    border-radius:10px;
+    box-shadow:0 20px 60px rgba(0,0,0,.45);
+    overflow:hidden;
+  }
+  .tab-bar{
+    display:flex; align-items:center; gap:8px;
+    padding:10px 14px;
+    background:#232323;
+    border-bottom:1px solid var(--border);
+  }
+  .dot{ width:11px; height:11px; border-radius:50%; }
+  .dot.red{background:var(--tab-red);} .dot.yellow{background:var(--tab-yellow);} .dot.green{background:var(--tab-green);}
+  .tab-label{
+    margin-left:14px;
+    font-family:var(--mono); font-size:12.5px; color:var(--text-dim);
+    padding:4px 10px; background:var(--panel); border-radius:6px 6px 0 0;
+    border:1px solid var(--border); border-bottom:none;
+  }
+  .content-pad{ padding:34px 40px 40px; }
+
+  .eyebrow{
+    font-family:var(--mono); font-size:12.5px; letter-spacing:.14em;
+    color:var(--accent); text-transform:uppercase; margin:0 0 10px;
+    font-weight:600;
+  }
+  h1.title{
+    font-size:clamp(26px,3.4vw,42px); margin:0 0 6px; line-height:1.15;
+    color:#fff; font-weight:700;
+  }
+  .subtitle{ color:var(--text-dim); font-size:16px; margin:0 0 26px; max-width:760px; }
+
+  ul.bullets{ list-style:none; margin:0; padding:0; display:grid; gap:14px; }
+  ul.bullets li{
+    position:relative; padding-left:26px; font-size:16.5px; line-height:1.55; color:var(--text);
+  }
+  ul.bullets li::before{
+    content:"▸"; position:absolute; left:0; color:var(--accent); font-weight:700;
+  }
+  ul.bullets li b, ul.bullets li strong{ color:#fff; }
+  ul.bullets li code{ color:var(--orange); }
+
+  .cols{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; }
+  .cols > *{ min-width:0; }
+  .cols-3{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; }
+  .cols-3 > *{ min-width:0; }
+
+  .card{
+    background:var(--panel); border:1px solid var(--border); border-radius:10px;
+    padding:18px 20px;
+  }
+  .card h3{ margin:0 0 10px; font-size:15px; color:var(--accent); font-family:var(--mono); }
+  .card p{ margin:0; font-size:14.5px; line-height:1.55; color:var(--text-dim); }
+  .card p b{ color:var(--text); }
+
+  .bug-card{ border-left:3px solid var(--red-soft); }
+  .bug-card h3{ color:var(--red-soft); font-size:13.5px; }
+  .bug-card .fix{
+    margin-top:10px; padding-top:10px; border-top:1px dashed var(--border);
+    font-size:13.5px; color:var(--green);
+  }
+  .bug-card .fix b{ color:var(--green); }
+
+  table{ width:100%; border-collapse:collapse; font-size:15px; }
+  table th, table td{
+    text-align:left; padding:10px 14px; border-bottom:1px solid var(--border);
+  }
+  table th{
+    font-family:var(--mono); font-size:12px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--accent); font-weight:600;
+  }
+  table td{ color:var(--text-dim); }
+  table td code, table td b{ color:var(--text); }
+  table tr:last-child td{ border-bottom:none; }
+
+  pre{
+    margin:0; padding:18px 20px; overflow-x:auto;
+    background:#1a1a1a; border-radius:8px; border:1px solid var(--border);
+    font-family:var(--mono); font-size:13.5px; line-height:1.6;
+  }
+  code{ font-family:var(--mono); }
+  .tok-key{ color:var(--accent2); }
+  .tok-str{ color:var(--orange); }
+  .tok-com{ color:var(--green); font-style:italic; }
+  .tok-num{ color:#b5cea8; }
+  .tok-tag{ color:var(--accent); }
+  .tok-tpl{ color:var(--yellow); }
+
+  .tree{
+    font-family:var(--mono); font-size:14px; line-height:1.75; color:var(--text-dim);
+    white-space:pre;
+  }
+  .tree .dir{ color:var(--accent); }
+  .tree .py{ color:var(--yellow); }
+  .tree .html{ color:var(--accent2); }
+  .tree .other{ color:var(--text); }
+
+  .note{
+    margin-top:16px; padding:12px 16px; border-radius:8px;
+    background:rgba(79,193,255,.08); border:1px solid rgba(79,193,255,.25);
+    font-size:14px; color:#cfe8f7; line-height:1.55;
+  }
+  .note.warn{
+    background:rgba(244,135,113,.08); border-color:rgba(244,135,113,.3); color:#f6cabd;
+  }
+  .note b{ color:#fff; }
+
+  .step-tag{
+    display:inline-block; font-family:var(--mono); font-size:11.5px;
+    color:#111; background:var(--accent); padding:3px 9px; border-radius:5px;
+    font-weight:700; margin-bottom:10px; letter-spacing:.03em;
+  }
+
+  .center-slide .slide-inner{ text-align:center; }
+  .center-slide h1.title{ font-size:clamp(34px,5vw,58px); }
+  .big-logo{
+    font-family:var(--mono); font-size:15px; color:var(--accent);
+    letter-spacing:.2em; text-transform:uppercase; margin-bottom:18px;
+  }
+
+  ::-webkit-scrollbar{ width:10px; height:10px; }
+  ::-webkit-scrollbar-thumb{ background:var(--border); border-radius:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+</style>
+</head>
+<body>
+
+<div id="progress-track"><div id="progress-bar"></div></div>
+<div id="counter">1 / 1</div>
+<div id="hint">click / → ← / Home / End</div>
+<div id="stage"><div id="slide-root"></div></div>
+
+<script>
+(function(){
+
+  // ---------- single-pass syntax tokenizer ----------
+  function highlight(raw){
+    const escaped = raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const tokenRe = /("""[\s\S]*?"""|'''[\s\S]*?'''|"[^"\n]*"|'[^'\n]*')|(#.*$)|(&lt;!--[\s\S]*?--&gt;)|(\{%[\s\S]*?%\}|\{\{[\s\S]*?\}\})|(&lt;\/?[a-zA-Z][\w-]*)|(\b(?:def|class|import|from|as|return|if|elif|else|for|while|in|not|and|or|is|None|True|False|self|try|except|finally|with|pass|break|continue|global|raise)\b)|(\b\d+\b)/gm;
+    let out = '', last = 0, m;
+    while((m = tokenRe.exec(escaped)) !== null){
+      out += escaped.slice(last, m.index);
+      if(m[1]) out += '<span class="tok-str">'+m[1]+'</span>';
+      else if(m[2]) out += '<span class="tok-com">'+m[2]+'</span>';
+      else if(m[3]) out += '<span class="tok-com">'+m[3]+'</span>';
+      else if(m[4]) out += '<span class="tok-tpl">'+m[4]+'</span>';
+      else if(m[5]) out += '<span class="tok-tag">'+m[5]+'</span>';
+      else if(m[6]) out += '<span class="tok-key">'+m[6]+'</span>';
+      else if(m[7]) out += '<span class="tok-num">'+m[7]+'</span>';
+      last = tokenRe.lastIndex;
+    }
+    out += escaped.slice(last);
+    return out;
+  }
+
+  function code(tab, txt){
+    return '<div class="editor-frame">'
+      + '<div class="tab-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>'
+      + '<span class="tab-label">'+tab+'</span></div>'
+      + '<pre><code>'+highlight(txt.trim())+'</code></pre>'
+      + '</div>';
+  }
+
+  // ---------- slide content ----------
+  const S = [];
+
+  S.push({center:true, body:`
+    <div class="big-logo">Django &nbsp;×&nbsp; WAMP</div>
+    <h1 class="title">User Accounts Demo</h1>
+    <p class="subtitle" style="margin:14px auto 0;max-width:600px;">
+      Register → Login → View all users → Edit only your own profile.<br>
+      Built step by step, bugs and all.
+    </p>
+  `});
+
+  S.push({eyebrow:'OVERVIEW', title:'What We\u2019re Building', body:`
+    <ul class="bullets">
+      <li><b>Registration page</b> — new users create an account, get auto-logged in</li>
+      <li><b>Login page</b> — existing users sign in with Django's built-in auth</li>
+      <li><b>User list</b> — every logged-in user can see everyone who's registered</li>
+      <li><b>Profile page</b> — you can view anyone, but only <b>edit yourself</b> (checked server-side, not just hidden in HTML)</li>
+      <li>Data stored in <b>MySQL via WAMP</b>, styled with a bit of CSS and a logo from <code>static/</code></li>
+    </ul>
+  `});
+
+  S.push({eyebrow:'PLAN 01', title:'Database Structure', body:`
+    <p class="subtitle">We reuse Django's built-in <code>User</code> model — no custom model needed for this scope.</p>
+    <table>
+      <tr><th>Field</th><th>Purpose</th></tr>
+      <tr><td><code>id</code></td><td>Primary key, auto-incremented</td></tr>
+      <tr><td><code>username</code></td><td>Unique login identifier</td></tr>
+      <tr><td><code>password</code></td><td>Stored as a salted hash, never plain text</td></tr>
+      <tr><td><code>email</code></td><td>Optional, editable</td></tr>
+      <tr><td><code>first_name</code> / <code>last_name</code></td><td>Optional, editable</td></tr>
+      <tr><td><code>date_joined</code></td><td>Auto-set on account creation</td></tr>
+    </table>
+    <div class="note">We only reach for a custom <b>Profile</b> model if we need fields <code>User</code> doesn't have (avatar, bio, phone). Not needed here.</div>
+  `});
+
+  S.push({eyebrow:'PLAN 02', title:'File System Layout', body:`
+    <div class="tree">dummyDjango/
+  manage.py
+  <span class="dir">core/</span>
+    __init__.py
+    settings.py
+    urls.py
+  <span class="dir">accounts/</span>
+    views.py
+    urls.py
+    models.py
+  <span class="dir">templates/</span>          <span style="color:#666"># flat, project-root</span>
+    base.html
+    register.html
+    login.html
+    user_list.html
+    user_detail.html
+  <span class="dir">static/</span>
+    <span class="dir">accounts/</span>
+      style.css
+      logo.png
+  <span class="dir">venv/</span></div>
+    <div class="note">Flat <code>templates/</code> + <code>static/</code> at project root — one obvious place to look, no per-app nesting since there's only one app.</div>
+  `});
+
+  S.push({eyebrow:'PLAN 03', title:'DIRS vs APP_DIRS', body:`
+    <table>
+      <tr><th></th><th>APP_DIRS (default, per-app)</th><th>DIRS (project-level)</th></tr>
+      <tr><td>Location</td><td><code>accounts/templates/accounts/*.html</code></td><td><code>templates/*.html</code> at root</td></tr>
+      <tr><td>Naming</td><td>Must nest under app name to avoid clashes</td><td>Flat — no app-name nesting</td></tr>
+      <tr><td>Best for</td><td>Large projects, many reusable apps</td><td>Small/medium, one app, want clarity</td></tr>
+      <tr><td>Gotcha</td><td>Easy to typo folder name / skip nesting</td><td>Manage naming collisions yourself</td></tr>
+    </table>
+    <div class="note"><b>We're using DIRS</b> — clearer for a project this size. Django checks <code>DIRS</code> first, then falls back to each app's own folder, so keep <code>APP_DIRS: True</code> too or <code>/admin/</code> breaks.</div>
+  `});
+
+  S.push({eyebrow:'STEP 01', title:'Project Folder + venv', body:`
+    ${code('terminal', `mkdir django_wamp_app
+cd django_wamp_app
+python -m venv venv
+venv\\Scripts\\activate`)}
+    <div class="note"><b>Why:</b> <code>venv</code> isolates this project's packages from your system Python — each project can use a different Django version without conflicts. Once active, your prompt shows <code>(venv)</code>.</div>
+  `});
+
+  S.push({eyebrow:'STEP 02', title:'Install Django + MySQL Driver', body:`
+    ${code('terminal', `pip install django mysqlclient
+
+# if mysqlclient fails to build on Windows:
+pip install pymysql`)}
+    <div class="note">Django needs a driver to talk to MySQL. <code>mysqlclient</code> is the standard C-based option; <code>pymysql</code> is a pure-Python fallback if build tools are missing.</div>
+  `});
+
+  S.push({eyebrow:'STEP 03', title:'Create Project + App', body:`
+    ${code('terminal', `django-admin startproject core .
+python manage.py startapp accounts`)}
+    <div class="note">The trailing <code>.</code> keeps <code>manage.py</code> at the project root instead of nesting it. <code>accounts</code> is a separate Django app — keeps auth-related views/urls scoped on their own.</div>
+  `});
+
+  S.push({eyebrow:'STEP 04', title:'Create the Database in WAMP', body:`
+    <div class="cols-3">
+      <div class="card"><h3>1. Open phpMyAdmin</h3><p>Go to your WAMP phpMyAdmin URL, e.g. <code>localhost/phpmyadmin&lt;version&gt;/</code></p></div>
+      <div class="card"><h3>2. Databases tab</h3><p>Click <b>Databases</b>, type the exact name <code>django_wamp_db</code></p></div>
+      <div class="card"><h3>3. Create</h3><p>Click <b>Create</b>, then confirm it appears in the list</p></div>
+    </div>
+    <div class="note warn"><b>This bit us before:</b> Django never creates the database itself — <code>migrate</code> only builds tables inside a database that already exists. Skipping this step throws <code>Unknown database</code>.</div>
+  `});
+
+  S.push({eyebrow:'STEP 05', title:'core/__init__.py — pymysql Shim', body:`
+    ${code('core/__init__.py', `import pymysql
+pymysql.install_as_MySQLdb()`)}
+    <div class="note">Only needed if using <code>pymysql</code> instead of <code>mysqlclient</code>. This file runs <i>before</i> <code>settings.py</code> is parsed, so <code>pymysql</code> is already registered as <code>MySQLdb</code> by the time Django reads <code>DATABASES</code>. No need to repeat this in <code>settings.py</code>.</div>
+  `});
+
+  S.push({eyebrow:'STEP 06A', title:'settings.py — Apps &amp; Templates', body:`
+    ${code('core/settings.py', `INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'accounts',
+]
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [BASE_DIR / 'templates'],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]`)}
+  `});
+
+  S.push({eyebrow:'STEP 06B', title:'settings.py — Database, Static, Login', body:`
+    ${code('core/settings.py', `DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'django_wamp_db',
+        'USER': 'root',
+        'PASSWORD': '',
+        'HOST': 'localhost',
+        'PORT': '3306',
+    }
+}
+
+STATIC_URL = 'static/'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'user_list'`)}
+    <div class="note">Without <code>LOGIN_URL</code>, Django defaults to <code>/accounts/login/</code> — which doesn't exist in our urls, causing a 404. Setting it by <b>name</b> (not raw path) means it still works if the URL path ever changes.</div>
+  `});
+
+  S.push({eyebrow:'STEP 07A', title:'views.py — Register &amp; Login', body:`
+    ${code('accounts/views.py', `from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.contrib.auth import views as auth_views, login
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+
+
+def register(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            messages.success(request, "Account created — you're logged in.")
+            return redirect('user_list')
+        else:
+            # form.errors is non-empty here — the template loops over it
+            # and shows exactly which field failed and why.
+            messages.error(request, 'Registration failed. See errors below.')
+    else:
+        form = UserCreationForm()
+    return render(request, 'register.html', {'form': form})
+
+
+class MyLoginView(auth_views.LoginView):
+    template_name = 'login.html'`)}
+    <div class="note">If <code>form.is_valid()</code> fails, Django re-renders with <code>form.errors</code> populated — that's expected control flow, not a crash. The template loops over those errors to show <i>why</i> it failed.</div>
+  `});
+
+  S.push({eyebrow:'STEP 07B', title:'views.py — List &amp; Edit (the security bit)', body:`
+    ${code('accounts/views.py', `@login_required
+def user_list(request):
+    users = User.objects.all()
+    return render(request, 'user_list.html', {'users': users})
+
+
+@login_required
+def user_detail(request, pk):
+    target_user = get_object_or_404(User, pk=pk)
+    is_self = target_user.pk == request.user.pk
+
+    if request.method == 'POST':
+        if not is_self:
+            messages.error(request, 'You can only edit your own profile.')
+            return redirect('user_detail', pk=target_user.pk)
+        form = UserChangeForm(request.POST, instance=target_user)
+        form.fields.pop('password', None)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Profile updated.')
+            return redirect('user_detail', pk=target_user.pk)
+    else:
+        form = UserChangeForm(instance=target_user)
+        form.fields.pop('password', None)
+
+    return render(request, 'user_detail.html',
+        {'target_user': target_user, 'is_self': is_self, 'form': form})`)}
+    <div class="note warn"><b>This is the real permission check.</b> Comparing <code>target_user.pk == request.user.pk</code> server-side is what stops a forged POST from editing someone else's account — hiding the edit button in HTML alone is not enough.</div>
+  `});
+
+  S.push({eyebrow:'STEP 08', title:'Wire Up Routing — Create & Edit', body:`
+    <div class="cols">
+      <div>
+        <p class="subtitle" style="margin:0 0 12px;font-size:14px;"><b style="color:#fff;">Create</b> — brand-new file, doesn't exist yet</p>
+        ${code('accounts/urls.py', `from django.urls import path
+from django.contrib.auth.views import LogoutView
+from . import views
+
+urlpatterns = [
+    path('register/', views.register, name='register'),
+    path('login/', views.MyLoginView.as_view(), name='login'),
+    path('logout/', LogoutView.as_view(next_page='login'), name='logout'),
+    path('users/', views.user_list, name='user_list'),
+    path('users/<int:pk>/', views.user_detail, name='user_detail'),
+]`)}
+      </div>
+      <div>
+        <p class="subtitle" style="margin:0 0 12px;font-size:14px;"><b style="color:#fff;">Edit</b> — already exists from <code>startproject</code></p>
+        ${code('core/urls.py', `from django.contrib import admin
+from django.urls import path, include
+from django.views.generic import RedirectView
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', RedirectView.as_view(url='users/', permanent=False)),
+    path('', include('accounts.urls')),
+]`)}
+      </div>
+    </div>
+    <div class="note"><code>accounts/urls.py</code> doesn't exist after <code>startapp</code> — you create it yourself. <code>core/urls.py</code> already exists with boilerplate <code>admin/</code> routing; you're only adding the last two <code>path()</code> lines to it, not replacing the file.</div>
+  `});
+
+  S.push({eyebrow:'STEP 09', title:'Create Folders', body:`
+    ${code('terminal', `mkdir templates
+mkdir static
+mkdir static\\accounts`)}
+    <div class="note">Drop your logo at <code>static/accounts/logo.png</code>. Static files are namespaced by app-name folder by convention (not automatic like templates), to avoid two apps' CSS files overwriting each other.</div>
+  `});
+
+  S.push({eyebrow:'STEP 10', title:'static/accounts/style.css', body:`
+    ${code('static/accounts/style.css', `body {
+    font-family: Arial, sans-serif;
+    max-width: 500px;
+    margin: 40px auto;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.logo { display: block; margin: 0 auto 20px; width: 80px; }
+
+.link-button {
+    background: none; border: none; color: #2563eb;
+    text-decoration: underline; cursor: pointer; padding: 0; font: inherit;
+}
+
+.field-errors {
+    background: #fdecea; border: 1px solid #f5c2c0;
+    padding: 8px 12px; border-radius: 4px; margin-bottom: 10px;
+}`)}
+  `});
+
+  S.push({eyebrow:'STEP 11', title:'templates/base.html', body:`
+    ${code('templates/base.html', `{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Accounts Demo</title>
+    <link rel="stylesheet" href="{% static 'accounts/style.css' %}">
+</head>
+<body>
+    <img src="{% static 'accounts/logo.png' %}" alt="Logo" class="logo">
+    {% if messages %}
+        {% for message in messages %}
+            <p class="msg-{{ message.tags }}">{{ message }}</p>
+        {% endfor %}
+    {% endif %}
+    {% block content %}{% endblock %}
+</body>
+</html>`)}
+    <div class="note"><code>{% static %}</code> resolves the correct URL from <code>STATIC_URL</code> — hardcoding the path breaks the moment that setting changes.</div>
+  `});
+
+  S.push({eyebrow:'STEP 12', title:'templates/register.html — With Real Error Messages', body:`
+    ${code('templates/register.html', `{% extends 'base.html' %}
+{% block content %}
+<h2>Register</h2>
+
+{% if form.errors %}
+    <div class="field-errors">
+        <strong>Please fix the following:</strong>
+        {% for field in form %}
+            {% for error in field.errors %}
+                <ul><li>{{ field.label }}: {{ error }}</li></ul>
+            {% endfor %}
+        {% endfor %}
+        {% for error in form.non_field_errors %}
+            <ul><li>{{ error }}</li></ul>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Create Account</button>
+</form>
+<p>Already have an account? <a href="{% url 'login' %}">Log in</a></p>
+{% endblock %}`)}
+    <div class="note">Explicitly looping over <code>field.errors</code> puts every rejection reason — username taken, password too common, passwords not matching — in one obvious red box, instead of blending into the form. The <code>non_field_errors</code> loop catches anything not tied to a single field.</div>
+  `});
+
+  S.push({eyebrow:'STEP 13', title:'templates/login.html', body:`
+    ${code('templates/login.html', `{% extends 'base.html' %}
+{% block content %}
+<h2>Login</h2>
+{% if form.errors %}
+    <div class="field-errors">
+        <strong>Login failed:</strong>
+        {% for error in form.non_field_errors %}
+            <ul><li>{{ error }}</li></ul>
+        {% endfor %}
+    </div>
+{% endif %}
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Log in</button>
+</form>
+<p>No account yet? <a href="{% url 'register' %}">Register here</a></p>
+{% endblock %}`)}
+    <div class="note">Django's <code>AuthenticationForm</code> deliberately doesn't say <i>which</i> field was wrong — one combined error, so an attacker can't probe which usernames exist.</div>
+  `});
+
+  S.push({eyebrow:'STEP 14', title:'templates/user_list.html — POST-only Logout', body:`
+    ${code('templates/user_list.html', `{% extends 'base.html' %}
+{% block content %}
+<h2>All Users</h2>
+<p>Logged in as {{ request.user.username }} —
+    <form method="post" action="{% url 'logout' %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="link-button">Logout</button>
+    </form>
+</p>
+
+<ul class="user-list">
+{% for u in users %}
+    <li>
+        <a href="{% url 'user_detail' u.pk %}">{{ u.username }}</a>
+        {% if u.pk == request.user.pk %}<strong> (you)</strong>{% endif %}
+    </li>
+{% endfor %}
+</ul>
+{% endblock %}`)}
+    <div class="note warn">Since Django 5.0, <code>LogoutView</code> only accepts <b>POST</b> — a plain <code>&lt;a href&gt;</code> gives <code>405 Method Not Allowed</code>. A malicious <code>&lt;img&gt;</code> tag could otherwise log people out via a bare GET link.</div>
+  `});
+
+  S.push({eyebrow:'STEP 15', title:'templates/user_detail.html', body:`
+    ${code('templates/user_detail.html', `{% extends 'base.html' %}
+{% block content %}
+<h2>{{ target_user.username }}'s Profile</h2>
+<a href="{% url 'user_list' %}">← Back to user list</a>
+
+{% if is_self %}
+    {% if form.errors %}
+        <div class="field-errors">
+            <strong>Could not save:</strong>
+            {% for field in form %}
+                {% for error in field.errors %}
+                    <ul><li>{{ field.label }}: {{ error }}</li></ul>
+                {% endfor %}
+            {% endfor %}
+        </div>
+    {% endif %}
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Save changes</button>
+    </form>
+{% else %}
+    <p>Email: {{ target_user.email }}</p>
+    <p><em>You can only edit your own profile.</em></p>
+{% endif %}
+{% endblock %}`)}
+    <div class="note">The template check is UX only — hiding a form that would be rejected anyway. The <b>real</b> boundary is the server-side <code>is_self</code> check in the view. The error box mirrors the register/login pages, and the back link makes this page reachable without the browser's back button.</div>
+  `});
+
+  S.push({eyebrow:'STEP 16', title:'Migrate &amp; Run', body:`
+    ${code('terminal', `python manage.py migrate
+python manage.py runserver`)}
+    <div class="note">Open an <b>incognito window</b> and visit <code>http://127.0.0.1:8000/</code> — avoids stale session-cookie issues from earlier test runs. You should land on <code>/login/</code>, with a link through to <b>Register</b>.</div>
+  `});
+
+  S.push({eyebrow:'BUGS WE HIT — 1/2', title:'Setup &amp; Template Errors', body:`
+    <div class="cols">
+      <div class="card bug-card">
+        <h3>OperationalError 1049 — Unknown database</h3>
+        <p>Django connected to MySQL fine, but <code>django_wamp_db</code> didn't exist yet.</p>
+        <div class="fix"><b>Fix:</b> create the exact-named database in phpMyAdmin <i>before</i> running <code>migrate</code> — Django never creates it for you.</div>
+      </div>
+      <div class="card bug-card">
+        <h3>TemplateDoesNotExist: login.html</h3>
+        <p>Folder was named <code>template</code> (singular) instead of <code>templates</code>, or the <code>DIRS</code> setting was missing entirely.</p>
+        <div class="fix"><b>Fix:</b> rename to <code>templates</code> and confirm <code>'DIRS': [BASE_DIR / 'templates']</code> is set in <code>settings.py</code>.</div>
+      </div>
+    </div>
+  `});
+
+  S.push({eyebrow:'BUGS WE HIT — 2/2', title:'Runtime Errors', body:`
+    <div class="cols">
+      <div class="card bug-card">
+        <h3>ModuleNotFoundError: pymysql</h3>
+        <p><code>import pymysql</code> was added to code, but <code>pip install pymysql</code> was never actually run.</p>
+        <div class="fix"><b>Fix:</b> <code>pip install pymysql</code> — the import line only works once the package is actually installed.</div>
+      </div>
+      <div class="card bug-card">
+        <h3>404 Not Found: /accounts/login/</h3>
+        <p>Django's default <code>LOGIN_URL</code> is <code>/accounts/login/</code>, but our route is just <code>/login/</code>.</p>
+        <div class="fix"><b>Fix:</b> set <code>LOGIN_URL = 'login'</code> in <code>settings.py</code> — by name, not raw path.</div>
+      </div>
+      <div class="card bug-card">
+        <h3>405 Method Not Allowed: /logout/</h3>
+        <p>Django 5+ blocks <code>GET</code> requests to <code>LogoutView</code> for CSRF safety.</p>
+        <div class="fix"><b>Fix:</b> use a small <code>&lt;form method="post"&gt;</code> styled as a link instead of an <code>&lt;a href&gt;</code>.</div>
+      </div>
+    </div>
+  `});
+
+  S.push({eyebrow:'RECAP', title:'Lessons Worth Remembering', body:`
+    <ul class="bullets">
+      <li>The <b>database</b> must exist in phpMyAdmin <i>before</i> <code>migrate</code> — Django only builds tables, never the database itself</li>
+      <li><code>templates</code> is spelled exactly that way, and <code>DIRS</code> must point at it if you want a flat, project-root layout</li>
+      <li>A package import line does nothing until you actually <code>pip install</code> it in the active <code>venv</code></li>
+      <li>Django's login redirect defaults to <code>/accounts/login/</code> — override with <code>LOGIN_URL</code> if your route differs</li>
+      <li>Since Django 5, <b>logout requires POST</b> — plain links will 405</li>
+      <li>The real permission check for "edit only yourself" lives in the <b>view</b>, server-side — never trust hidden buttons alone</li>
+      <li>Small UX touches — cross-links between <b>login</b> and <b>register</b>, a back link on the profile page, and a <code>messages.success</code> after every save — make the flow feel finished, not just functional</li>
+    </ul>
+  `});
+
+  S.push({center:true, body:`
+    <div class="big-logo">All Set</div>
+    <h1 class="title">Register → Login → Browse → Edit Yourself</h1>
+    <p class="subtitle" style="margin:14px auto 0;max-width:600px;">
+      Try registering with a weak password first — the red error box should tell you exactly why it was rejected before you do a real signup.
+    </p>
+  `});
+
+  // ---------- render engine ----------
+  const root = document.getElementById('slide-root');
+  const bar = document.getElementById('progress-bar');
+  const counter = document.getElementById('counter');
+  let current = 0;
+  let animating = false;
+
+  function slideHTML(s, idx){
+    if(s.center){
+      return '<div class="slide center-slide" data-i="'+idx+'"><div class="slide-inner">'+s.body+'</div></div>';
+    }
+    return '<div class="slide" data-i="'+idx+'"><div class="slide-inner">'
+      + '<div class="step-tag">'+s.eyebrow+'</div>'
+      + '<h1 class="title">'+s.title+'</h1>'
+      + s.body
+      + '</div></div>';
+  }
+
+  // pre-render all slides into DOM (hidden), toggle active class
+  S.forEach((s,i)=>{ root.insertAdjacentHTML('beforeend', slideHTML(s,i)); });
+  const nodes = Array.from(root.querySelectorAll('.slide'));
+
+  function update(){
+    bar.style.width = ((current+1)/S.length*100)+'%';
+    counter.textContent = (current+1)+' / '+S.length;
+  }
+
+  function goTo(newIndex, dir){
+    if(animating || newIndex===current || newIndex<0 || newIndex>=S.length) return;
+    animating = true;
+    const outNode = nodes[current];
+    const inNode = nodes[newIndex];
+    outNode.classList.remove('active');
+    outNode.classList.add(dir>0 ? 'leaving-left' : 'leaving-right');
+    inNode.style.transform = dir>0 ? 'translateX(40px) scale(.985)' : 'translateX(-40px) scale(.985)';
+    inNode.style.opacity = '0';
+    inNode.style.pointerEvents = 'none';
+    // force reflow then activate
+    requestAnimationFrame(()=>{
+      requestAnimationFrame(()=>{
+        inNode.style.transform = '';
+        inNode.style.opacity = '';
+        inNode.style.pointerEvents = '';
+        inNode.classList.add('active');
+        setTimeout(()=>{
+          outNode.classList.remove('leaving-left','leaving-right');
+          animating = false;
+        }, 400);
+      });
+    });
+    current = newIndex;
+    update();
+  }
+
+  nodes[0].classList.add('active');
+  update();
+
+  function next(){ goTo(current+1, 1); }
+  function prev(){ goTo(current-1, -1); }
+
+  document.getElementById('stage').addEventListener('click', (e)=>{
+    if(window.getSelection().toString().length>0) return;
+    const r = document.getElementById('stage').getBoundingClientRect();
+    const x = e.clientX - r.left;
+    if(x < r.width*0.35) prev(); else next();
+  });
+
+  document.addEventListener('keydown', (e)=>{
+    if(e.key==='ArrowRight'){ next(); }
+    else if(e.key==='ArrowLeft'){ prev(); }
+    else if(e.key==='Home'){ goTo(0, -1); }
+    else if(e.key==='End'){ goTo(S.length-1, 1); }
+  });
+
+})();
+</script>
+</body>
+</html>

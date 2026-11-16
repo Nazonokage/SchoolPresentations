@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Common Backend, API &amp; Server Problems — M15</title>
+<style>
+  :root{
+    --bg:#0e1014;
+    --surface:#161a20;
+    --surface-2:#1c2028;
+    --surface-3:#222730;
+    --shadow-d:#08090b;
+    --shadow-l:#222730;
+    --text:#f0ede8;
+    --text-dim:#c4bfb8;
+    --text-faint:#7a7670;
+    --accent:#f97316;
+    --accent-soft:rgba(249,115,22,0.14);
+    --accent-2:#fbbf24;
+    --accent-2-soft:rgba(251,191,36,0.13);
+    --good:#4ade80;
+    --good-soft:rgba(74,222,128,0.12);
+    --danger:#ef4444;
+    --danger-soft:rgba(239,68,68,0.13);
+    --radius-lg:22px;
+    --radius-md:16px;
+    --radius-sm:11px;
+    --font-body:"Segoe UI",ui-sans-serif,system-ui,-apple-system,sans-serif;
+    --font-mono:ui-monospace,"Cascadia Mono","SFMono-Regular",Consolas,Menlo,monospace;
+  }
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  body{
+    background-image:
+      radial-gradient(900px 500px at 0% 0%, rgba(249,115,22,0.05), transparent 55%),
+      radial-gradient(700px 400px at 100% 100%, rgba(251,191,36,0.04), transparent 55%);
+  }
+  ::selection{ background:var(--accent); color:#0e0a06; }
+
+  /* ── layout ── */
+  #deck{ position:relative; width:100vw; height:100vh; overflow:hidden; }
+  .slide{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    padding:52px 84px 88px;
+    opacity:0; pointer-events:none;
+    transform:translateX(36px);
+    transition:opacity 320ms ease, transform 320ms ease;
+  }
+  .slide.active{ opacity:1; pointer-events:auto; transform:translateX(0); }
+  .slide.exit-left{ transform:translateX(-36px); }
+  .slide.exit-right{ transform:translateX(36px); }
+  @media (prefers-reduced-motion:reduce){
+    .slide{ transition:opacity 1ms linear; transform:none !important; }
+  }
+
+  /* ── type ── */
+  .eyebrow{
+    font-size:13px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--text-faint); font-weight:600; margin:0 0 12px;
+    display:flex; align-items:center; gap:10px; font-family:var(--font-mono);
+  }
+  .eyebrow .emark{ color:var(--accent); font-size:16px; }
+  .title{
+    font-size:38px; line-height:1.15; font-weight:800; margin:0 0 20px;
+    letter-spacing:-.02em; color:var(--text);
+  }
+  .title .hi{ color:var(--accent); }
+  h3.h{ font-size:19px; font-weight:700; margin:0 0 10px; color:var(--text); }
+  p{ font-size:17px; line-height:1.65; color:var(--text-dim); margin:0 0 10px; }
+  strong{ color:var(--text); font-weight:700; }
+  ul.list,ol.list{ margin:0; padding-left:20px; }
+  ul.list li,ol.list li{ font-size:17px; line-height:1.6; color:var(--text-dim); margin-bottom:8px; }
+  ul.list li::marker{ color:var(--accent); }
+  .mono{ font-family:var(--font-mono); font-size:15px; color:var(--accent-2); }
+  .muted{ color:var(--text-faint); font-size:16px; }
+
+  /* ── content container ── */
+  .content{ flex:1; min-height:0; display:flex; flex-direction:column; overflow-y:auto; overflow-x:hidden; padding-right:4px; }
+  .content::-webkit-scrollbar{ width:6px; }
+  .content::-webkit-scrollbar-thumb{ background:var(--surface-2); border-radius:6px; }
+
+  /* ── layout helpers ── */
+  .grid{ display:grid; gap:16px; min-height:0; }
+  .grid-2{ grid-template-columns:1fr 1fr; }
+  .grid-3{ grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
+  .stack{ display:flex; flex-direction:column; gap:14px; min-height:0; }
+  .row{ display:flex; gap:14px; align-items:stretch; min-height:0; }
+
+  /* ── cards ── */
+  .card{
+    background:var(--surface);
+    border-radius:var(--radius-md);
+    box-shadow:8px 8px 16px var(--shadow-d), -4px -4px 10px var(--shadow-l);
+    padding:20px 22px;
+  }
+  .card-border-accent{ border-left:3px solid var(--accent); }
+  .card-border-good{ border-left:3px solid var(--good); }
+  .card-border-danger{ border-left:3px solid var(--danger); }
+  .inset{
+    background:var(--surface);
+    border-radius:var(--radius-sm);
+    box-shadow:inset 5px 5px 10px var(--shadow-d), inset -3px -3px 8px var(--shadow-l);
+    padding:14px 18px;
+  }
+
+  /* ── problem card ── */
+  .prob-header{
+    display:flex; align-items:center; gap:12px; margin-bottom:14px;
+  }
+  .prob-tag{
+    font-family:var(--font-mono); font-size:12px; font-weight:700;
+    letter-spacing:.1em; text-transform:uppercase;
+    padding:4px 10px; border-radius:6px;
+    background:var(--danger-soft); color:var(--danger); flex-shrink:0;
+  }
+  .prob-tag.api{ background:var(--accent-soft); color:var(--accent); }
+  .prob-tag.server{ background:var(--accent-2-soft); color:var(--accent-2); }
+  .prob-name{ font-size:21px; font-weight:800; color:var(--text); letter-spacing:-.01em; }
+
+  /* ── fix vs broken ── */
+  .two-state{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .state-box{ border-radius:var(--radius-sm); padding:14px 16px; }
+  .state-box.broken{ background:rgba(239,68,68,0.07); border:1px solid rgba(239,68,68,0.25); }
+  .state-box.fixed{ background:rgba(74,222,128,0.06); border:1px solid rgba(74,222,128,0.2); }
+  .state-label{ font-family:var(--font-mono); font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; margin-bottom:8px; }
+  .state-label.broken{ color:var(--danger); }
+  .state-label.fixed{ color:var(--good); }
+  .state-box p{ font-size:16px; margin:0; color:var(--text-dim); line-height:1.55; }
+
+  /* ── code block ── */
+  .code-block{
+    background:var(--surface-3); border-radius:var(--radius-sm);
+    border:1px solid rgba(249,115,22,0.15);
+    padding:14px 16px; font-family:var(--font-mono);
+    font-size:14px; line-height:1.7; color:var(--text-dim);
+    overflow-x:auto; white-space:pre;
+  }
+  .code-block .c-bad{ color:var(--danger); }
+  .code-block .c-good{ color:var(--good); }
+  .code-block .c-comment{ color:var(--text-faint); }
+  .code-block .c-key{ color:var(--accent); }
+  .code-block .c-str{ color:var(--accent-2); }
+
+  /* ── glossary table ── */
+  table.tbl{ width:100%; border-collapse:separate; border-spacing:0; font-size:17px; }
+  table.tbl th{
+    text-align:left; color:var(--accent); font-size:14px; letter-spacing:.08em; text-transform:uppercase;
+    padding:10px 14px; font-weight:700; background:var(--surface-2); border-bottom:2px solid var(--bg);
+    font-family:var(--font-mono);
+  }
+  table.tbl th:first-child{ border-top-left-radius:10px; }
+  table.tbl th:last-child{ border-top-right-radius:10px; }
+  table.tbl td{ padding:11px 14px; color:var(--text-dim); border-bottom:1px solid var(--surface-2); vertical-align:top; line-height:1.55; font-size:17px; }
+  table.tbl tr:last-child td{ border-bottom:none; }
+  table.tbl td strong{ color:var(--text); }
+
+  /* ── severity badge ── */
+  .sev{ display:inline-flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px; letter-spacing:.06em; }
+  .sev.critical{ background:var(--danger-soft); color:var(--danger); }
+  .sev.high{ background:var(--accent-soft); color:var(--accent); }
+  .sev.medium{ background:var(--accent-2-soft); color:var(--accent-2); }
+  .sev::before{ content:"●"; font-size:10px; }
+
+  /* ── bucket header ── */
+  .bucket-divider{
+    display:flex; align-items:center; gap:16px; margin-bottom:6px;
+  }
+  .bucket-label{
+    font-family:var(--font-mono); font-size:13px; font-weight:700;
+    letter-spacing:.14em; text-transform:uppercase;
+    padding:5px 14px; border-radius:999px;
+  }
+  .bucket-label.db{ background:var(--danger-soft); color:var(--danger); }
+  .bucket-label.api{ background:var(--accent-soft); color:var(--accent); }
+  .bucket-label.server{ background:var(--accent-2-soft); color:var(--accent-2); }
+
+  /* ── activities ── */
+  .qcard{
+    background:var(--surface); border-radius:var(--radius-md); padding:18px 20px;
+    box-shadow:6px 6px 12px var(--shadow-d), -3px -3px 8px var(--shadow-l);
+  }
+  .qcard .qnum{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:28px; height:28px; border-radius:50%;
+    background:var(--accent-soft); color:var(--accent);
+    font-weight:700; font-size:15px; margin-right:10px; font-family:var(--font-mono);
+  }
+  .qcard .qtext{ font-size:17px; font-weight:600; color:var(--text); display:inline; }
+  .qcard .opts{ margin:12px 0 0 36px; padding:0; list-style:none; }
+  .qcard .opts li{ font-size:17px; color:var(--text-dim); margin-bottom:6px; }
+  .qcard .opts li .optlet{ color:var(--accent); font-weight:700; margin-right:6px; font-family:var(--font-mono); }
+  .qcard.answer{ display:flex; align-items:flex-start; gap:12px; }
+  .qcard .ans-badge{
+    flex-shrink:0; background:var(--accent-soft); color:var(--accent);
+    font-weight:700; font-size:15px; padding:5px 12px;
+    border-radius:8px; white-space:nowrap; font-family:var(--font-mono);
+  }
+
+  /* ── footer chrome ── */
+  .chrome{
+    position:absolute; left:0; right:0; bottom:0;
+    padding:12px 84px 18px; display:flex; flex-direction:column; gap:8px;
+    z-index:20; background:linear-gradient(0deg, var(--bg) 55%, transparent);
+  }
+  .progress-track{
+    width:100%; height:3px; border-radius:3px; background:var(--surface-2); overflow:hidden;
+  }
+  .progress-fill{ height:100%; background:var(--accent); border-radius:3px; transition:width 280ms ease; }
+  .chrome-row{ display:flex; align-items:center; justify-content:space-between; }
+  .counter{ font-size:14px; color:var(--text-faint); font-family:var(--font-mono); }
+  .hint{ font-size:13px; color:var(--text-faint); display:flex; gap:14px; font-family:var(--font-mono); }
+  .hint kbd{
+    background:var(--surface-2); padding:2px 7px; border-radius:5px;
+    font-size:12px; color:var(--text-dim); font-family:var(--font-mono);
+  }
+
+  /* ── shortcuts ── */
+  #shortcuts-overlay{
+    position:fixed; inset:0; background:rgba(6,7,9,0.78); backdrop-filter:blur(3px);
+    display:flex; align-items:center; justify-content:center;
+    z-index:100; opacity:0; pointer-events:none; transition:opacity 200ms ease;
+  }
+  #shortcuts-overlay.show{ opacity:1; pointer-events:auto; }
+  #shortcuts-overlay .panel{
+    background:var(--surface); border-radius:var(--radius-lg); padding:34px 38px;
+    box-shadow:14px 14px 28px var(--shadow-d); max-width:460px; width:90%;
+    border:1px solid var(--surface-3);
+  }
+  #shortcuts-overlay h4{ margin:0 0 16px; font-size:18px; color:var(--text); font-family:var(--font-mono); }
+  #shortcuts-overlay .srow{
+    display:flex; justify-content:space-between; padding:9px 0;
+    border-bottom:1px solid var(--surface-2); font-size:15px; color:var(--text-dim);
+  }
+  #shortcuts-overlay .srow:last-child{ border-bottom:none; }
+
+  @media(max-width:1100px){
+    .slide{ padding:42px 44px 82px; }
+    .title{ font-size:31px; }
+    .two-state{ grid-template-columns:1fr; }
+  }
+  @media(max-width:860px){
+    .slide{ padding:34px 22px 76px; }
+    .title{ font-size:26px; }
+    .grid-2{ grid-template-columns:1fr; }
+    .row{ flex-direction:column; }
+    .chrome{ padding:0 22px 12px; }
+    .hint{ display:none; }
+  }
+  @media(max-height:700px){
+    .slide{ padding-top:30px; padding-bottom:66px; }
+    .title{ font-size:28px; margin-bottom:14px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="deck"></div>
+
+<div class="chrome">
+  <div class="progress-track"><div class="progress-fill" id="pf"></div></div>
+  <div class="chrome-row">
+    <div class="counter" id="ctr">1 / 1</div>
+    <div class="hint">
+      <span><kbd>←</kbd> <kbd>→</kbd> navigate</span>
+      <span><kbd>Home</kbd> <kbd>End</kbd> jump</span>
+      <span><kbd>?</kbd> shortcuts</span>
+    </div>
+  </div>
+</div>
+
+<div id="shortcuts-overlay">
+  <div class="panel">
+    <h4>// shortcuts</h4>
+    <div class="srow"><span>Next slide</span><span>→ / right-click / Mouse4</span></div>
+    <div class="srow"><span>Previous slide</span><span>← / Mouse3</span></div>
+    <div class="srow"><span>First / last</span><span>Home / End</span></div>
+    <div class="srow"><span>Toggle panel</span><span>?</span></div>
+    <div class="srow"><span>Swipe</span><span>left / right on mobile</span></div>
+  </div>
+</div>
+
+<script>
+// ── icons ──
+const IC = {
+  db:     '<svg viewBox="0 0 24 24" fill="none" style="width:22px;height:22px"><ellipse cx="12" cy="5" rx="8" ry="3" stroke="currentColor" stroke-width="1.6"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5" stroke="currentColor" stroke-width="1.6"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3" stroke="currentColor" stroke-width="1.6"/></svg>',
+  api:    '<svg viewBox="0 0 24 24" fill="none" style="width:22px;height:22px"><path d="M8 6H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3M16 6h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-3M12 3v18M8 12h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  server: '<svg viewBox="0 0 24 24" fill="none" style="width:22px;height:22px"><rect x="3" y="3" width="18" height="7" rx="2" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="14" width="18" height="7" rx="2" stroke="currentColor" stroke-width="1.6"/><circle cx="7" cy="6.5" r="1" fill="currentColor"/><circle cx="7" cy="17.5" r="1" fill="currentColor"/></svg>',
+  warn:   '<svg viewBox="0 0 24 24" fill="none" style="width:22px;height:22px"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  check:  '<svg viewBox="0 0 24 24" fill="none" style="width:22px;height:22px"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  fix:    '<svg viewBox="0 0 24 24" fill="none" style="width:22px;height:22px"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  bolt:   '<svg viewBox="0 0 24 24" fill="none" style="width:22px;height:22px"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  clock:  '<svg viewBox="0 0 24 24" fill="none" style="width:22px;height:22px"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  key:    '<svg viewBox="0 0 24 24" fill="none" style="width:22px;height:22px"><circle cx="7.5" cy="15.5" r="5.5" stroke="currentColor" stroke-width="1.6"/><path d="m21 2-9.6 9.6M15 8l2 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  layers: '<svg viewBox="0 0 24 24" fill="none" style="width:22px;height:22px"><path d="M12 2 2 7l10 5 10-5-10-5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M2 12l10 5 10-5M2 17l10 5 10-5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+  quote:  '<svg viewBox="0 0 24 24" fill="none" style="width:28px;height:28px"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1Zm12 0c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1Z" stroke="currentColor" stroke-width="1.6"/></svg>',
+};
+
+function probCard(type, name, sev, whatItIs, symptom, fix, extra){
+  const tagClass = type==='DB'?'':'type==="API"?"api":"server"';
+  const tc = type==='DB'?'':type==='API'?'api':'server';
+  return `
+    <div class="prob-header">
+      <span class="prob-tag ${tc}">${type}</span>
+      <span class="sev ${sev==='CRITICAL'?'critical':sev==='HIGH'?'high':'medium'}">${sev}</span>
+      <span class="prob-name">${name}</span>
+    </div>
+    <div class="two-state" style="margin-bottom:12px">
+      <div class="state-box broken">
+        <div class="state-label broken">// the problem</div>
+        <p>${whatItIs}</p>
+      </div>
+      <div class="state-box broken" style="background:rgba(249,115,22,0.06);border-color:rgba(249,115,22,0.22)">
+        <div class="state-label" style="color:var(--accent)">// symptom in prod</div>
+        <p>${symptom}</p>
+      </div>
+    </div>
+    <div class="state-box fixed">
+      <div class="state-label fixed">// senior fix</div>
+      <p>${fix}</p>
+    </div>
+    ${extra||''}
+  `;
+}
+
+function table(headers, rows){
+  let h = '<table class="tbl"><thead><tr>'+headers.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>';
+  rows.forEach(r=>{ h+='<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>'; });
+  return h+'</tbody></table>';
+}
+
+// ── slides ──
+const slides = [];
+
+// 1 cover
+slides.push({ eyebrow:'Integrative Programming · M15', title:'<span class="hi">Common Problems</span> in Backend, API &amp; Server Design', html:`
+  <div class="stack" style="justify-content:center;flex:1;gap:24px">
+    <p style="max-width:660px;font-size:18px;color:var(--text-dim)">Every production system breaks eventually. The difference between a junior and a senior dev isn't that seniors write bug-free code — it's that they <strong>recognise the pattern</strong>, know the name, and already know the fix.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:12px">
+      <span class="bucket-label db" style="font-size:14px">${IC.db} &nbsp;6 Database Problems</span>
+      <span class="bucket-label api" style="font-size:14px">${IC.api} &nbsp;6 API Problems</span>
+      <span class="bucket-label server" style="font-size:14px">${IC.server} &nbsp;6 Server / Infra Problems</span>
+    </div>
+    <div class="inset" style="max-width:600px">
+      <span class="mono">// format per problem</span><br>
+      <span style="color:var(--text-faint);font-size:16px">What it is &nbsp;→&nbsp; Symptom in prod &nbsp;→&nbsp; Senior fix</span>
+    </div>
+  </div>
+`});
+
+// 2 glossary
+slides.push({ eyebrow:'Before We Start', title:'Glossary', scroll:true, html:`
+  <p class="muted" style="margin-bottom:12px">Terms you'll see throughout this deck.</p>
+  ${table(['Term','What it means'],[
+    ['<strong>Query</strong>','A request sent to a database to read, insert, update, or delete data.'],
+    ['<strong>N+1 problem</strong>','Running 1 query to get a list, then N more queries for each item in that list — instead of one joined query.'],
+    ['<strong>Index (DB)</strong>','A data structure that lets the database find rows fast without scanning the whole table.'],
+    ['<strong>Connection pool</strong>','A set of pre-opened DB connections reused across requests, so the app doesn\'t open a new connection every time.'],
+    ['<strong>Rate limiting</strong>','Restricting how many requests a client can make in a time window to prevent abuse or overload.'],
+    ['<strong>Idempotency</strong>','An operation that produces the same result no matter how many times it\'s called. POST /checkout should not create two orders on retry.'],
+    ['<strong>Pagination</strong>','Returning results in chunks (pages) instead of all at once — critical for large datasets.'],
+    ['<strong>SPOF</strong>','Single Point of Failure — one component whose failure takes down the whole system.'],
+    ['<strong>Graceful shutdown</strong>','Letting in-flight requests finish before a server stops, instead of cutting them off mid-process.'],
+    ['<strong>Thundering herd</strong>','When a cache expires and thousands of requests hit the DB simultaneously before the cache is repopulated.'],
+    ['<strong>Secret</strong>','Sensitive credentials (API keys, DB passwords) that must never be hardcoded or committed to source control.'],
+    ['<strong>Log noise</strong>','Too many low-value log entries that bury the signals you actually need when debugging.'],
+  ])}
+`});
+
+// 3 how seniors think
+slides.push({ eyebrow:'Section 1', title:'How Seniors Think About Problems', html:`
+  <div class="row" style="flex:1;gap:16px">
+    <div class="stack" style="flex:1">
+      <p>Juniors ask <strong>"how do I fix this error?"</strong><br>Seniors ask <strong>"why does this class of error keep happening, and how do we make it impossible?"</strong></p>
+      <div class="card card-border-accent">
+        <h3 class="h">The senior mental model</h3>
+        <ul class="list">
+          <li><strong>Name the problem first.</strong> A named problem has known solutions. "It's slow" is not a named problem. "N+1 query on the user list endpoint" is.</li>
+          <li><strong>Reproduce it deterministically.</strong> If you can't make it happen on demand, you can't confirm it's fixed.</li>
+          <li><strong>Fix the root cause, not the symptom.</strong> Restarting the server every 6 hours is not a fix.</li>
+          <li><strong>Prevent the whole class.</strong> Add a lint rule, a code review checklist item, or a test — not just a patch.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="stack" style="flex:1;gap:12px">
+      <div class="inset">
+        <div style="color:var(--danger);margin-bottom:6px">${IC.warn}</div>
+        <h3 class="h" style="font-size:17px">Junior response</h3>
+        <p style="margin:0;font-size:16px">"The page was loading slow so I added a loading spinner and filed a Jira ticket."</p>
+      </div>
+      <div class="inset" style="background:rgba(74,222,128,0.04);box-shadow:inset 5px 5px 10px var(--shadow-d), inset -3px -3px 8px var(--shadow-l);">
+        <div style="color:var(--good);margin-bottom:6px">${IC.check}</div>
+        <h3 class="h" style="font-size:17px;color:var(--good)">Senior response</h3>
+        <p style="margin:0;font-size:16px">"Profiled the endpoint. Found 47 DB queries for a 10-item list — N+1 on the user→orders relation. Added eager loading, dropped to 2 queries. Added a test to catch regression."</p>
+      </div>
+      <div class="inset">
+        <span class="mono" style="font-size:14px">// the pattern</span>
+        <p style="margin:6px 0 0;font-size:16px">Observe → Name → Root cause → Fix → Prevent recurrence</p>
+      </div>
+    </div>
+  </div>
+`});
+
+// ── DATABASE PROBLEMS ──
+
+// 4 N+1
+slides.push({ eyebrow:'Database Problems · 1 of 6', title:'The N+1 Query Problem', html:`
+  <div class="card" style="flex:1">
+    ${probCard('DB','N+1 Queries','CRITICAL',
+      'Your code fetches a list of 50 users with one query, then loops through them and fires a separate query per user to get their orders. That\'s 1 + 50 = 51 queries instead of 1.',
+      'Endpoint takes 4 seconds. Works fine in dev with 5 test users. Collapses in production with 500.',
+      'Use <strong>eager loading / JOIN queries</strong> to fetch the list and its relations in one or two queries. In ORMs: <code>.include()</code> (Rails), <code>.prefetch_related()</code> (Django), <code>findAll({ include: [...] })</code> (Sequelize).'
+    )}
+    <div class="two-state" style="margin-top:12px">
+      <div class="state-box broken">
+        <div class="state-label broken">// naive (N+1)</div>
+        <div class="code-block"><span class="c-bad">users = User.all</span>
+users.each <span class="c-key">do</span> |u|
+  <span class="c-bad">u.orders.count</span>  <span class="c-comment"># 1 query per user</span>
+<span class="c-key">end</span></div>
+      </div>
+      <div class="state-box fixed">
+        <div class="state-label fixed">// fixed (eager load)</div>
+        <div class="code-block"><span class="c-good">users = User.includes(:orders).all</span>
+users.each <span class="c-key">do</span> |u|
+  u.orders.count  <span class="c-comment"># no extra query</span>
+<span class="c-key">end</span></div>
+      </div>
+    </div>
+  </div>
+`});
+
+// 5 missing indexes
+slides.push({ eyebrow:'Database Problems · 2 of 6', title:'Missing Indexes', html:`
+  <div class="card" style="flex:1">
+    ${probCard('DB','Missing Indexes','CRITICAL',
+      'A table has millions of rows. A query filters by <code>email</code> or <code>user_id</code> but no index exists on those columns — so the database does a full table scan every time.',
+      'Queries run in milliseconds on dev (1,000 rows). Same query takes 8 seconds on prod (2M rows). CPU spikes. Users see timeouts.',
+      'Add indexes on columns used in <strong>WHERE, JOIN, ORDER BY, GROUP BY</strong>. Check with <code>EXPLAIN ANALYZE</code> — look for "Seq Scan" on large tables as a red flag. Add composite indexes for multi-column filters.'
+    )}
+    <div class="two-state" style="margin-top:12px">
+      <div class="state-box broken">
+        <div class="state-label broken">// red flag in EXPLAIN</div>
+        <div class="code-block"><span class="c-bad">Seq Scan on users</span>  <span class="c-comment">(cost=0..180000 rows=2000000)</span>
+Filter: (email = <span class="c-str">'user@example.com'</span>)
+<span class="c-bad">Rows Removed by Filter: 1999999</span></div>
+      </div>
+      <div class="state-box fixed">
+        <div class="state-label fixed">// after index</div>
+        <div class="code-block"><span class="c-good">Index Scan on users_email_idx</span>
+  (cost=0..8.28 rows=1)
+<span class="c-comment">-- from: CREATE INDEX ON users(email);</span></div>
+      </div>
+    </div>
+  </div>
+`});
+
+// 6 connection pool exhaustion
+slides.push({ eyebrow:'Database Problems · 3 of 6', title:'Connection Pool Exhaustion', html:`
+  <div class="card" style="flex:1">
+    ${probCard('DB','Connection Pool Exhaustion','CRITICAL',
+      'Your app has a connection pool limited to 20 DB connections. Under load, 20 requests are all holding connections while waiting on slow queries. The 21st request hangs forever waiting for a free slot.',
+      '<code>Error: connection pool timeout</code> or <code>too many clients already</code>. App freezes under moderate traffic. Restarting the server "fixes" it temporarily.',
+      '<strong>1.</strong> Tune pool size to match your DB server\'s max connections (not just set it high). <strong>2.</strong> Add a connection timeout that fails fast instead of hanging. <strong>3.</strong> Find and fix slow queries holding connections too long. <strong>4.</strong> Use a connection pooler like <strong>PgBouncer</strong> between app and DB.'
+    )}
+    <div class="inset" style="margin-top:12px">
+      <span class="mono" style="font-size:14px">// rule of thumb</span>
+      <p style="margin:6px 0 0;font-size:16px">Pool size ≠ "as big as possible." A DB server with 100 max connections shared across 5 app instances = ~18–20 per instance. More connections = more overhead, not more speed.</p>
+    </div>
+  </div>
+`});
+
+// 7 uncontrolled migrations
+slides.push({ eyebrow:'Database Problems · 4 of 6', title:'Uncontrolled Migrations on Live DBs', html:`
+  <div class="card" style="flex:1">
+    ${probCard('DB','Unsafe Live Migrations','HIGH',
+      'A migration adds a column with <code>NOT NULL</code> and no default to a 10M-row table, or renames a column while the old code is still running. Postgres locks the table; the app stalls.',
+      'Deploy causes 5-minute downtime. Or worse: the migration succeeds but old app code referencing the old column name starts throwing 500 errors until rollback.',
+      '<strong>Expand-contract pattern:</strong> (1) Add new column as nullable. (2) Deploy code that writes to both old and new. (3) Backfill existing rows. (4) Make column NOT NULL. (5) Remove old column in a later deploy. Never rename — add new, migrate, drop old.'
+    )}
+    <div class="two-state" style="margin-top:12px">
+      <div class="state-box broken">
+        <div class="state-label broken">// dangerous</div>
+        <div class="code-block"><span class="c-comment">-- locks table for minutes on large datasets</span>
+ALTER TABLE orders
+  <span class="c-bad">ADD COLUMN status VARCHAR NOT NULL DEFAULT 'pending'</span>,
+  <span class="c-bad">RENAME COLUMN user_id TO customer_id</span>;</div>
+      </div>
+      <div class="state-box fixed">
+        <div class="state-label fixed">// safe</div>
+        <div class="code-block"><span class="c-comment">-- Step 1: nullable, no lock</span>
+<span class="c-good">ALTER TABLE orders ADD COLUMN status VARCHAR;</span>
+<span class="c-comment">-- Step 2: backfill async</span>
+<span class="c-good">UPDATE orders SET status='pending' WHERE status IS NULL;</span>
+<span class="c-comment">-- Step 3: later, add constraint</span>
+<span class="c-good">ALTER TABLE orders ALTER COLUMN status SET NOT NULL;</span></div>
+      </div>
+    </div>
+  </div>
+`});
+
+// 8 god objects
+slides.push({ eyebrow:'Database Problems · 5 of 6', title:'God Objects / Fat Models', html:`
+  <div class="card" style="flex:1">
+    ${probCard('DB','God Objects &amp; Fat Models','MEDIUM',
+      'One model or class accumulates every business rule in the app. The <code>User</code> model handles authentication, billing, notifications, profile management, and reporting — thousands of lines, impossible to test in isolation.',
+      'Every feature touches the same file. Merge conflicts constantly. A bug fix in billing breaks authentication. New developers take weeks to understand any of it.',
+      'Apply <strong>Single Responsibility Principle</strong> — each class/module does one thing. Extract service objects (<code>UserBillingService</code>, <code>UserNotifier</code>). Use domain-driven design to find natural boundaries. Refactor incrementally, not all at once.'
+    )}
+    <div class="two-state" style="margin-top:12px">
+      <div class="state-box broken">
+        <div class="state-label broken">// the god model</div>
+        <div class="code-block"><span class="c-key">class</span> <span class="c-bad">User</span>
+  <span class="c-comment"># auth, billing, notifications,</span>
+  <span class="c-comment"># profile, reporting, search...</span>
+  <span class="c-bad">3,400 lines</span>
+<span class="c-key">end</span></div>
+      </div>
+      <div class="state-box fixed">
+        <div class="state-label fixed">// extracted</div>
+        <div class="code-block"><span class="c-good">User</span>          <span class="c-comment"># identity only</span>
+<span class="c-good">UserAuthService</span>    <span class="c-comment"># login / tokens</span>
+<span class="c-good">UserBillingService</span> <span class="c-comment"># payments</span>
+<span class="c-good">UserNotifier</span>       <span class="c-comment"># emails / push</span></div>
+      </div>
+    </div>
+  </div>
+`});
+
+// 9 connection leaks
+slides.push({ eyebrow:'Database Problems · 6 of 6', title:'Connection Leaks', html:`
+  <div class="card" style="flex:1">
+    ${probCard('DB','Connection Leaks','HIGH',
+      'Code opens a DB connection inside a try block but the catch/finally never closes it on error. Over time, the pool fills with abandoned connections that never return.',
+      'App runs fine for hours, then grinds to a halt. Restarting fixes it — until the next time. Memory and connection counts slowly climb on monitoring dashboards.',
+      'Always use <strong>connection management patterns</strong> that guarantee cleanup: <code>with</code> blocks (Python), <code>try-with-resources</code> (Java), or ORM transaction helpers. Use a connection pool monitor (PgBouncer metrics, Datadog) to catch leaks before they cause outages.'
+    )}
+    <div class="two-state" style="margin-top:12px">
+      <div class="state-box broken">
+        <div class="state-label broken">// leaks on error</div>
+        <div class="code-block"><span class="c-key">conn</span> = db.connect()
+<span class="c-key">try</span>:
+    do_something(conn)
+<span class="c-key">except</span> Exception:
+    <span class="c-bad">pass</span>  <span class="c-comment"># conn never closed!</span></div>
+      </div>
+      <div class="state-box fixed">
+        <div class="state-label fixed">// always closes</div>
+        <div class="code-block"><span class="c-key">with</span> db.connect() <span class="c-key">as</span> <span class="c-good">conn</span>:
+    do_something(conn)
+<span class="c-comment"># auto-closed on exit or error</span></div>
+      </div>
+    </div>
+  </div>
+`});
+
+// ── API PROBLEMS ──
+
+// 10 no rate limiting
+slides.push({ eyebrow:'API Problems · 1 of 6', title:'No Rate Limiting', html:`
+  <div class="card" style="flex:1">
+    ${probCard('API','No Rate Limiting','CRITICAL',
+      'Your public API has no limit on how many requests a single client can make. One bad actor, a runaway script, or a misconfigured frontend can send thousands of requests per second.',
+      'API goes down for all users because one client is hammering it. Or a scrapers extracts your entire database overnight. Or a retry loop with no backoff amplifies a bug into a DDoS.',
+      'Add a <strong>rate limiter at the API gateway or reverse proxy layer</strong> (Nginx, AWS API Gateway, Cloudflare). Common strategies: fixed window (100 req/min per IP), sliding window, or token bucket. Return <code>429 Too Many Requests</code> with a <code>Retry-After</code> header. Differentiate limits per user tier.'
+    )}
+    <div class="inset" style="margin-top:12px">
+      <span class="mono" style="font-size:14px">// 429 response headers</span>
+      <div class="code-block" style="margin-top:8px">HTTP/1.1 <span class="c-good">429 Too Many Requests</span>
+<span class="c-key">X-RateLimit-Limit:</span> <span class="c-str">100</span>
+<span class="c-key">X-RateLimit-Remaining:</span> <span class="c-str">0</span>
+<span class="c-key">Retry-After:</span> <span class="c-str">60</span></div>
+    </div>
+  </div>
+`});
+
+// 11 inconsistent errors
+slides.push({ eyebrow:'API Problems · 2 of 6', title:'Inconsistent Error Responses', html:`
+  <div class="card" style="flex:1">
+    ${probCard('API','Inconsistent Error Responses','HIGH',
+      'Different endpoints return errors in different formats. One returns <code>{"error": "not found"}</code>, another returns <code>{"message": "User does not exist", "code": 404}</code>, another returns a plain string.',
+      'Frontend developers write different error-handling logic for every endpoint. Mobile apps crash on unexpected shapes. Error monitoring is noisy and hard to parse.',
+      'Define a <strong>single error response contract</strong> for the entire API and enforce it through a central error handler/middleware. Document it. Never let individual endpoints invent their own error shapes.'
+    )}
+    <div class="two-state" style="margin-top:12px">
+      <div class="state-box broken">
+        <div class="state-label broken">// inconsistent</div>
+        <div class="code-block"><span class="c-comment">// endpoint A</span>
+{ <span class="c-bad">"error"</span>: <span class="c-str">"not found"</span> }
+<span class="c-comment">// endpoint B</span>
+{ <span class="c-bad">"msg"</span>: <span class="c-str">"oops"</span>, <span class="c-bad">"status"</span>: 500 }
+<span class="c-comment">// endpoint C</span>
+<span class="c-bad">"Unauthorized"</span></div>
+      </div>
+      <div class="state-box fixed">
+        <div class="state-label fixed">// standardised</div>
+        <div class="code-block">{
+  <span class="c-good">"error"</span>: {
+    <span class="c-good">"code"</span>: <span class="c-str">"NOT_FOUND"</span>,
+    <span class="c-good">"message"</span>: <span class="c-str">"User not found"</span>,
+    <span class="c-good">"requestId"</span>: <span class="c-str">"abc123"</span>
+  }
+}</div>
+      </div>
+    </div>
+  </div>
+`});
+
+// 12 no versioning
+slides.push({ eyebrow:'API Problems · 3 of 6', title:'No API Versioning', html:`
+  <div class="card" style="flex:1">
+    ${probCard('API','No API Versioning','HIGH',
+      'You change a field name, remove an endpoint, or alter a response shape directly on the live API. Existing consumers — mobile apps, third-party integrations, partner systems — break immediately with no warning.',
+      'Mobile app crashes for users who haven\'t updated yet. Partner integrations go down. Support tickets flood in. Emergency rollback needed.',
+      'Version your API from day one. Common strategies: <strong>URL path versioning</strong> (<code>/v1/users</code>, <code>/v2/users</code>) is the most explicit and easiest to route. Use <strong>semantic versioning</strong> — only bump the major version for breaking changes. Maintain old versions long enough for consumers to migrate and communicate deprecation timelines clearly.'
+    )}
+    <div class="two-state" style="margin-top:12px">
+      <div class="state-box broken">
+        <div class="state-label broken">// no versioning</div>
+        <div class="code-block"><span class="c-bad">GET /api/users</span>
+<span class="c-comment">-- change field name --</span>
+<span class="c-bad">-- all consumers break instantly</span></div>
+      </div>
+      <div class="state-box fixed">
+        <div class="state-label fixed">// versioned</div>
+        <div class="code-block"><span class="c-good">GET /api/v1/users</span>  <span class="c-comment"># stable</span>
+<span class="c-good">GET /api/v2/users</span>  <span class="c-comment"># new shape</span>
+<span class="c-comment"># v1 kept alive during migration</span></div>
+      </div>
+    </div>
+  </div>
+`});
+
+// 13 no idempotency
+slides.push({ eyebrow:'API Problems · 4 of 6', title:'Missing Idempotency on Mutations', html:`
+  <div class="card" style="flex:1">
+    ${probCard('API','Missing Idempotency','CRITICAL',
+      'A user clicks "Pay Now." The request times out after 3 seconds. The frontend retries. The backend creates a second order and charges the card twice — even though the first request actually succeeded.',
+      'Duplicate orders, double charges, duplicate emails sent. Users call support furious. Refunds are manual and painful.',
+      'Assign an <strong>idempotency key</strong> to every mutation — a unique token generated client-side. The server stores it and, if the same key arrives again, returns the original result instead of re-executing. Stripe, most payment APIs, and modern REST APIs all implement this. Also: use database unique constraints as a safety net.'
+    )}
+    <div class="inset" style="margin-top:12px">
+      <span class="mono" style="font-size:14px">// idempotency key pattern</span>
+      <div class="code-block" style="margin-top:8px">POST /api/orders
+<span class="c-key">Idempotency-Key:</span> <span class="c-str">a3f9c2d1-4b8e-...</span>
+
+<span class="c-comment">-- server checks key in cache/DB first</span>
+<span class="c-comment">-- if seen: return cached response</span>
+<span class="c-comment">-- if new: process and store key + response</span></div>
+    </div>
+  </div>
+`});
+
+// 14 over/under-fetching
+slides.push({ eyebrow:'API Problems · 5 of 6', title:'Over-fetching &amp; Under-fetching', html:`
+  <div class="card" style="flex:1">
+    ${probCard('API','Over / Under-fetching','MEDIUM',
+      '<strong>Over-fetching:</strong> <code>GET /users</code> returns 80 fields per user but the UI only needs name and avatar — wasting bandwidth and DB load. <strong>Under-fetching:</strong> the UI needs user + orders + latest invoice but has to make 3 separate API calls to assemble it.',
+      'Slow page loads from large payloads. Multiple round-trips add up on mobile. API is hard to use because every screen needs a different combination.',
+      '<strong>Short term:</strong> add sparse fieldsets (<code>?fields=id,name,avatar</code>) and compound endpoints for common combos. <strong>Long term:</strong> consider <strong>GraphQL</strong> for UIs with complex, variable data needs — the client specifies exactly what it needs in one request. Alternatively, use a BFF (Backend For Frontend) pattern — a thin API layer that assembles exactly what each UI needs.'
+    )}
+    <div class="two-state" style="margin-top:12px">
+      <div class="state-box broken">
+        <div class="state-label broken">// over-fetch</div>
+        <div class="code-block">GET /users/123
+<span class="c-comment">→ 80 fields returned</span>
+<span class="c-bad">UI uses 3 of them</span></div>
+      </div>
+      <div class="state-box fixed">
+        <div class="state-label fixed">// fix</div>
+        <div class="code-block"><span class="c-good">GET /users/123?fields=id,name,avatar</span>
+<span class="c-comment">→ 3 fields, smaller payload</span></div>
+      </div>
+    </div>
+  </div>
+`});
+
+// 15 missing pagination
+slides.push({ eyebrow:'API Problems · 6 of 6', title:'Missing Pagination', html:`
+  <div class="card" style="flex:1">
+    ${probCard('API','Missing Pagination','CRITICAL',
+      '<code>GET /api/orders</code> returns every order in the database. In dev that\'s 50 rows. In production, 2 years later, that\'s 800,000 rows serialised to JSON in a single response.',
+      'Endpoint takes 45 seconds, times out, or crashes the server. Memory spikes. The client browser or app freezes trying to render it.',
+      'Paginate from day one — even if the dataset is small now. Use <strong>cursor-based pagination</strong> for large datasets (stable under inserts/deletes) or offset-based for simple cases. Always include pagination metadata in the response. Set a hard max page size the server enforces regardless of what the client requests.'
+    )}
+    <div class="two-state" style="margin-top:12px">
+      <div class="state-box broken">
+        <div class="state-label broken">// no pagination</div>
+        <div class="code-block">GET /api/orders
+<span class="c-comment">→ { "data": [ ...800,000 rows... ] }</span>
+<span class="c-bad">→ timeout / OOM crash</span></div>
+      </div>
+      <div class="state-box fixed">
+        <div class="state-label fixed">// paginated</div>
+        <div class="code-block"><span class="c-good">GET /api/orders?cursor=abc&limit=50</span>
+→ {
+  <span class="c-good">"data"</span>: [ <span class="c-comment">...50 rows...</span> ],
+  <span class="c-good">"next_cursor"</span>: <span class="c-str">"xyz"</span>,
+  <span class="c-good">"has_more"</span>: <span class="c-key">true</span>
+}</div>
+      </div>
+    </div>
+  </div>
+`});
+
+// ── SERVER / INFRA PROBLEMS ──
+
+// 16 SPOF
+slides.push({ eyebrow:'Server / Infra Problems · 1 of 6', title:'Single Point of Failure', html:`
+  <div class="card" style="flex:1">
+    ${probCard('SERVER','Single Point of Failure (SPOF)','CRITICAL',
+      'The entire application runs on one server, one database instance, or one load balancer with no redundancy. If that one thing fails — hardware issue, bad deploy, AZ outage — the whole system goes down.',
+      'Full outage. Zero uptime SLA achievable. Recovery time depends on how fast someone can spin up a replacement manually.',
+      'Eliminate SPOFs layer by layer: <strong>multiple app server instances</strong> behind a load balancer; <strong>DB read replicas</strong> with automatic failover (RDS Multi-AZ, Postgres streaming replication); <strong>redundant load balancers</strong>; deploy across <strong>multiple availability zones</strong>. Design assuming any single component will fail.'
+    )}
+    <div class="inset" style="margin-top:12px">
+      <span class="mono" style="font-size:14px">// senior checklist</span>
+      <p style="margin:6px 0 0;font-size:16px">For every component ask: <em>"If this fails at 3am on a Friday, does the system keep running?"</em> If the answer is no — it\'s a SPOF.</p>
+    </div>
+  </div>
+`});
+
+// 17 no graceful shutdown
+slides.push({ eyebrow:'Server / Infra Problems · 2 of 6', title:'No Graceful Shutdown', html:`
+  <div class="card" style="flex:1">
+    ${probCard('SERVER','No Graceful Shutdown','HIGH',
+      'When you deploy or restart a server, it receives SIGTERM and immediately dies — killing in-flight requests mid-execution. Users get 502 errors. Background jobs get orphaned half-done.',
+      'Every deploy causes a brief flood of errors. Long-running background jobs (email sends, file processing, payments) get cut off and leave data in an inconsistent state.',
+      'Handle <strong>SIGTERM gracefully</strong>: (1) Stop accepting new requests. (2) Wait for in-flight requests to complete (with a timeout, e.g. 30s). (3) Flush queues and close DB connections. (4) Exit cleanly. Most frameworks have built-in hooks for this. Pair with a rolling deploy strategy so new instances take over before old ones shut down.'
+    )}
+    <div class="two-state" style="margin-top:12px">
+      <div class="state-box broken">
+        <div class="state-label broken">// abrupt shutdown</div>
+        <div class="code-block">process.on(<span class="c-str">'SIGTERM'</span>, () => {
+  <span class="c-bad">process.exit(1)</span>  <span class="c-comment">// kills mid-request</span>
+})</div>
+      </div>
+      <div class="state-box fixed">
+        <div class="state-label fixed">// graceful</div>
+        <div class="code-block">process.on(<span class="c-str">'SIGTERM'</span>, async () => {
+  <span class="c-good">server.close()</span>          <span class="c-comment">// stop new reqs</span>
+  await <span class="c-good">drainQueue()</span>     <span class="c-comment">// finish jobs</span>
+  await <span class="c-good">db.disconnect()</span>  <span class="c-comment">// clean close</span>
+  process.exit(0)
+})</div>
+      </div>
+    </div>
+  </div>
+`});
+
+// 18 hardcoded secrets
+slides.push({ eyebrow:'Server / Infra Problems · 3 of 6', title:'Hardcoded Secrets in Code', html:`
+  <div class="card" style="flex:1">
+    ${probCard('SERVER','Hardcoded Secrets','CRITICAL',
+      'API keys, database passwords, JWT secrets, and OAuth tokens are written directly into source code or config files — and committed to the repository.',
+      'A public GitHub repo exposes your prod DB password. A disgruntled ex-employee still has your Stripe secret key in a repo they cloned. Bots scrape GitHub for secrets constantly — within minutes of a push.',
+      'Use <strong>environment variables</strong> for all secrets. Store them in a <strong>secrets manager</strong> (AWS Secrets Manager, HashiCorp Vault, Doppler) in production. Add <code>.env</code> to <code>.gitignore</code> immediately. Use <strong>git-secrets</strong> or <strong>truffleHog</strong> as a pre-commit hook to block accidental commits. Rotate any secret that may have been exposed.'
+    )}
+    <div class="two-state" style="margin-top:12px">
+      <div class="state-box broken">
+        <div class="state-label broken">// disaster</div>
+        <div class="code-block"><span class="c-key">const</span> stripe = Stripe(<span class="c-bad">"sk_live_abc123..."</span>)
+<span class="c-key">const</span> db = pg.connect(<span class="c-bad">"postgres://admin:password123@..."</span>)
+<span class="c-comment">// ↑ committed to GitHub. Already scraped.</span></div>
+      </div>
+      <div class="state-box fixed">
+        <div class="state-label fixed">// safe</div>
+        <div class="code-block"><span class="c-key">const</span> stripe = Stripe(<span class="c-good">process.env.STRIPE_SECRET</span>)
+<span class="c-key">const</span> db = pg.connect(<span class="c-good">process.env.DATABASE_URL</span>)
+<span class="c-comment">// values live in .env (gitignored) or vault</span></div>
+      </div>
+    </div>
+  </div>
+`});
+
+// 19 thundering herd
+slides.push({ eyebrow:'Server / Infra Problems · 4 of 6', title:'The Thundering Herd Problem', html:`
+  <div class="card" style="flex:1">
+    ${probCard('SERVER','Thundering Herd','HIGH',
+      'A popular cached result expires. At that exact moment, 5,000 concurrent requests all find an empty cache and simultaneously fire the same expensive DB query to repopulate it — multiplying your DB load by 5,000x.',
+      'DB CPU hits 100%. Response times spike from 50ms to 30 seconds. Cache repopulation queries compete with each other and slow each other down. May cascade into a full outage.',
+      '<strong>Cache locking / mutex:</strong> only one request regenerates the cache; others wait for it. <strong>Probabilistic early revalidation (PER):</strong> proactively refresh the cache slightly before it expires, not after. <strong>Stale-while-revalidate:</strong> serve the stale value while refreshing in the background. <strong>Jitter on TTLs:</strong> add a random ±10% to cache expiry so they don\'t all expire at the same time.'
+    )}
+    <div class="inset" style="margin-top:12px">
+      <span class="mono" style="font-size:14px">// jitter pattern</span>
+      <p style="margin:6px 0 0;font-size:16px">Instead of <code>TTL = 300s</code> for every key, use <code>TTL = 300 + random(0, 30)</code> — spreads cache expiry across 30 seconds, preventing the simultaneous stampede.</p>
+    </div>
+  </div>
+`});
+
+// 20 no timeouts
+slides.push({ eyebrow:'Server / Infra Problems · 5 of 6', title:'No Request Timeouts', html:`
+  <div class="card" style="flex:1">
+    ${probCard('SERVER','Missing Request Timeouts','HIGH',
+      'Your API calls a third-party service (payment gateway, email provider, mapping API) with no timeout set. That service goes slow or unresponsive. Your server thread sits waiting indefinitely. All threads fill up waiting. New requests queue. Everything stops.',
+      'App appears "frozen." No errors in logs — just requests hanging. Load balancer eventually gives up and returns 504. All users affected even though only one dependency is slow.',
+      'Set <strong>explicit timeouts on every outbound call</strong> — HTTP clients, DB queries, queue consumers, everything. Fail fast with a clear error rather than waiting forever. Add a <strong>circuit breaker</strong> (e.g. Netflix Hystrix pattern) — if a dependency fails X times in Y seconds, stop calling it and return a fallback immediately until it recovers.'
+    )}
+    <div class="two-state" style="margin-top:12px">
+      <div class="state-box broken">
+        <div class="state-label broken">// no timeout</div>
+        <div class="code-block">response = requests.get(
+  <span class="c-str">"https://api.payment.com/charge"</span>
+  <span class="c-bad">// no timeout — hangs forever</span>
+)</div>
+      </div>
+      <div class="state-box fixed">
+        <div class="state-label fixed">// with timeout</div>
+        <div class="code-block">response = requests.get(
+  <span class="c-str">"https://api.payment.com/charge"</span>,
+  <span class="c-good">timeout=(3, 10)</span>  <span class="c-comment"># connect, read</span>
+)</div>
+      </div>
+    </div>
+  </div>
+`});
+
+// 21 log noise
+slides.push({ eyebrow:'Server / Infra Problems · 6 of 6', title:'Log Noise', html:`
+  <div class="card" style="flex:1">
+    ${probCard('SERVER','Log Noise','MEDIUM',
+      'The app either logs nothing useful (silent failures are undetectable) or logs everything — every request, every SQL query, every heartbeat — drowning out the signals that matter when something breaks.',
+      'An incident happens. Engineers spend 3 hours searching through 50GB of log files. The actual error is there — buried under thousands of <code>GET /health 200</code> lines. Or worse: the error was never logged at all.',
+      '<strong>Log the right things at the right level:</strong> ERROR for failures needing immediate attention; WARN for degraded-but-recoverable states; INFO for significant events (login, order placed); DEBUG for dev only (never in prod). Always include a <code>requestId</code> / <code>traceId</code> so you can follow a single request across services. Use structured logging (JSON) so logs are machine-parseable.'
+    )}
+    <div class="inset" style="margin-top:12px">
+      <span class="mono" style="font-size:14px">// structured log example</span>
+      <div class="code-block" style="margin-top:8px">{
+  <span class="c-good">"level"</span>: <span class="c-str">"ERROR"</span>,
+  <span class="c-good">"requestId"</span>: <span class="c-str">"8f3a-..."</span>,
+  <span class="c-good">"message"</span>: <span class="c-str">"Payment charge failed"</span>,
+  <span class="c-good">"userId"</span>: <span class="c-str">"u_123"</span>,
+  <span class="c-good">"error"</span>: <span class="c-str">"stripe: card_declined"</span>,
+  <span class="c-good">"durationMs"</span>: <span class="c-key">342</span>
+}</div>
+    </div>
+  </div>
+`});
+
+// 22 recap
+slides.push({ eyebrow:'Recap · Section 4', title:'The 18 Problems at a Glance', scroll:true, html:`
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;align-items:start">
+    <div class="stack" style="gap:8px">
+      <div class="bucket-label db" style="margin-bottom:4px">${IC.db} &nbsp;Database</div>
+      ${['N+1 Queries — eager load, don\'t loop','Missing Indexes — check EXPLAIN, add indexes','Connection Pool Exhaustion — tune pool + PgBouncer','Unsafe Migrations — expand-contract pattern','God Objects — single responsibility, extract services','Connection Leaks — always use context managers'].map((t,i)=>`<div class="inset" style="padding:10px 14px;font-size:16px"><span style="color:var(--danger);font-family:var(--font-mono);font-size:13px">DB-${i+1}</span>&nbsp; ${t}</div>`).join('')}
+    </div>
+    <div class="stack" style="gap:8px">
+      <div class="bucket-label api" style="margin-bottom:4px">${IC.api} &nbsp;API</div>
+      ${['No Rate Limiting — 429 + Retry-After','Inconsistent Errors — one error contract','No API Versioning — /v1/, /v2/ from day one','Missing Idempotency — idempotency keys on mutations','Over/Under-fetching — sparse fields, GraphQL, BFF','Missing Pagination — cursor-based, enforce max limit'].map((t,i)=>`<div class="inset" style="padding:10px 14px;font-size:16px"><span style="color:var(--accent);font-family:var(--font-mono);font-size:13px">API-${i+1}</span>&nbsp; ${t}</div>`).join('')}
+    </div>
+    <div class="stack" style="gap:8px">
+      <div class="bucket-label server" style="margin-bottom:4px">${IC.server} &nbsp;Server</div>
+      ${['SPOF — redundancy at every layer','No Graceful Shutdown — drain before exit','Hardcoded Secrets — env vars + secrets manager','Thundering Herd — locking, jitter, stale-while-revalidate','No Timeouts — explicit timeouts + circuit breakers','Log Noise — structured logs, right levels, trace IDs'].map((t,i)=>`<div class="inset" style="padding:10px 14px;font-size:16px"><span style="color:var(--accent-2);font-family:var(--font-mono);font-size:13px">SRV-${i+1}</span>&nbsp; ${t}</div>`).join('')}
+    </div>
+  </div>
+`});
+
+// 23 MCQ
+slides.push({ eyebrow:'Activities — Multiple Choice', title:'Check Your Understanding', html:`
+  <div class="grid grid-2" style="flex:1">
+    <div class="qcard"><span class="qnum">1</span><span class="qtext">Your app fetches 100 posts, then runs a separate query per post to get its author. What is this called?</span>
+      <ul class="opts"><li><span class="optlet">A.</span>Connection pool exhaustion</li><li><span class="optlet">B.</span>The N+1 query problem</li><li><span class="optlet">C.</span>Over-fetching</li><li><span class="optlet">D.</span>Missing pagination</li></ul></div>
+    <div class="qcard"><span class="qnum">2</span><span class="qtext">A user clicks "Checkout" twice due to a slow connection. The server creates two orders. What property was missing?</span>
+      <ul class="opts"><li><span class="optlet">A.</span>Rate limiting</li><li><span class="optlet">B.</span>Pagination</li><li><span class="optlet">C.</span>Idempotency</li><li><span class="optlet">D.</span>API versioning</li></ul></div>
+    <div class="qcard"><span class="qnum">3</span><span class="qtext">A cached result expires and 8,000 requests simultaneously hit the database. What problem is this?</span>
+      <ul class="opts"><li><span class="optlet">A.</span>Connection leak</li><li><span class="optlet">B.</span>Thundering herd</li><li><span class="optlet">C.</span>Missing index</li><li><span class="optlet">D.</span>Log noise</li></ul></div>
+    <div class="qcard"><span class="qnum">4</span><span class="qtext">Which HTTP status code should a rate limiter return when a client exceeds the allowed request limit?</span>
+      <ul class="opts"><li><span class="optlet">A.</span>400 Bad Request</li><li><span class="optlet">B.</span>401 Unauthorized</li><li><span class="optlet">C.</span>404 Not Found</li><li><span class="optlet">D.</span>429 Too Many Requests</li></ul></div>
+    <div class="qcard" style="grid-column:1/-1;max-width:calc(50% - 8px);margin:0 auto"><span class="qnum">5</span><span class="qtext">What pattern ensures database migrations don't lock large tables and break running app code?</span>
+      <ul class="opts"><li><span class="optlet">A.</span>God object pattern</li><li><span class="optlet">B.</span>Expand-contract pattern</li><li><span class="optlet">C.</span>Circuit breaker pattern</li><li><span class="optlet">D.</span>Cursor-based pagination</li></ul></div>
+  </div>
+`});
+
+// 24 identification
+slides.push({ eyebrow:'Activities — Identification', title:'Name the Problem', html:`
+  <p class="muted" style="margin-bottom:14px">Read the description and name the problem being described.</p>
+  <div class="grid grid-2">
+    <div class="qcard"><span class="qnum">1</span><span class="qtext">A query runs in 50ms on a dev machine with 1,000 rows. The same query takes 12 seconds on production with 3 million rows. The database is reading every row to find matches.</span></div>
+    <div class="qcard"><span class="qnum">2</span><span class="qtext">The app server calls a third-party SMS provider with no timeout. The SMS provider goes down. Within minutes, all server threads are stuck waiting. The entire app stops responding.</span></div>
+    <div class="qcard"><span class="qnum">3</span><span class="qtext">A developer finds a database password inside a JavaScript file pushed to the company's public GitHub repository three months ago.</span></div>
+    <div class="qcard"><span class="qnum">4</span><span class="qtext">The app is running on a single server. A hard drive fails. The system goes down completely. There is no automatic recovery — someone has to manually spin up a replacement.</span></div>
+    <div class="qcard" style="grid-column:1/-1;max-width:calc(50% - 8px);margin:0 auto"><span class="qnum">5</span><span class="qtext">Over 48 hours, the app slows down and eventually stops responding. Engineers find the DB connection pool is full of connections that were never returned after an exception was thrown in the request handler.</span></div>
+  </div>
+`});
+
+// 25 scenario
+slides.push({ eyebrow:'Activities — Scenario Identification', title:'What Would a Senior Do?', html:`
+  <p class="muted" style="margin-bottom:14px">Read the scenario and identify both the problem and the senior-level fix.</p>
+  <div class="grid grid-2" style="flex:1">
+    <div class="qcard"><span class="qnum">6</span><span class="qtext">An e-commerce API's <code>GET /products</code> endpoint returns every product in the database — including description, metadata, tags, reviews, and stock history — even though the product listing page only shows name, price, and image.</span><div style="margin-top:10px;font-size:16px;color:var(--text-faint)">What's the problem? What are two fixes?</div></div>
+    <div class="qcard"><span class="qnum">7</span><span class="qtext">A SaaS company updates their REST API and renames <code>user_id</code> to <code>customer_id</code> across all endpoints simultaneously. Their mobile app (which they don't control — users must update it) starts crashing for all users on the old version.</span><div style="margin-top:10px;font-size:16px;color:var(--text-faint)">What should have been in place to prevent this?</div></div>
+    <div class="qcard"><span class="qnum">8</span><span class="qtext">Every time the team deploys, monitoring shows a spike of 502 errors lasting about 15 seconds while the old server process is killed and the new one starts accepting traffic. Users notice the blip.</span><div style="margin-top:10px;font-size:16px;color:var(--text-faint)">What two things need to be implemented?</div></div>
+    <div class="qcard"><span class="qnum">9</span><span class="qtext">A startup's app runs fine for months. Then they run a marketing campaign. Traffic goes from 500 to 50,000 users. The single app server and single database instance can't cope. The site goes down.</span><div style="margin-top:10px;font-size:16px;color:var(--text-faint)">Name the architectural problem and two immediate fixes.</div></div>
+    <div class="qcard" style="grid-column:1/-1;max-width:calc(50% - 8px);margin:0 auto"><span class="qnum">10</span><span class="qtext">During a production incident, engineers check the logs and find millions of lines like <code>GET /health 200 OK</code> every second. The actual error causing the incident is impossible to locate. The on-call engineer takes 2 hours to find the root cause.</span><div style="margin-top:10px;font-size:16px;color:var(--text-faint)">What's the logging problem, and what does a senior implement instead?</div></div>
+  </div>
+`});
+
+// 26 answer key
+slides.push({ eyebrow:'Answer Key', title:'Answers &amp; Explanations', scroll:true, html:`
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:14px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);padding:4px 0 6px;border-bottom:2px solid var(--accent-soft);font-family:var(--font-mono)">Multiple Choice</div>
+      <div class="qcard answer"><span class="ans-badge">MCQ 1 — B</span><span style="font-size:16px;color:var(--text-dim)"><strong style="color:var(--text)">N+1 query problem</strong> — 1 query for the list + 1 per item = N+1 total.</span></div>
+      <div class="qcard answer"><span class="ans-badge">MCQ 2 — C</span><span style="font-size:16px;color:var(--text-dim)"><strong style="color:var(--text)">Idempotency</strong> — the same operation should produce the same result on retry.</span></div>
+      <div class="qcard answer"><span class="ans-badge">MCQ 3 — B</span><span style="font-size:16px;color:var(--text-dim)"><strong style="color:var(--text)">Thundering herd</strong> — simultaneous cache miss stampede to the DB.</span></div>
+      <div class="qcard answer"><span class="ans-badge">MCQ 4 — D</span><span style="font-size:16px;color:var(--text-dim)"><strong style="color:var(--text)">429 Too Many Requests</strong> — with a <code>Retry-After</code> header.</span></div>
+      <div class="qcard answer"><span class="ans-badge">MCQ 5 — B</span><span style="font-size:16px;color:var(--text-dim)"><strong style="color:var(--text)">Expand-contract</strong> — add nullable, backfill, constrain, then drop old column across multiple deploys.</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:14px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-2);padding:4px 0 6px;border-bottom:2px solid var(--accent-2-soft);font-family:var(--font-mono)">Identification</div>
+      <div class="qcard answer"><span class="ans-badge" style="background:var(--accent-2-soft);color:var(--accent-2)">ID 1</span><span style="font-size:16px;color:var(--text-dim)"><strong style="color:var(--text)">Missing index</strong> — full table scan at scale. Fix: <code>CREATE INDEX ON table(column)</code>, confirm with <code>EXPLAIN ANALYZE</code>.</span></div>
+      <div class="qcard answer"><span class="ans-badge" style="background:var(--accent-2-soft);color:var(--accent-2)">ID 2</span><span style="font-size:16px;color:var(--text-dim)"><strong style="color:var(--text)">No request timeout</strong> — hung threads fill the pool. Fix: explicit timeouts + circuit breaker.</span></div>
+      <div class="qcard answer"><span class="ans-badge" style="background:var(--accent-2-soft);color:var(--accent-2)">ID 3</span><span style="font-size:16px;color:var(--text-dim)"><strong style="color:var(--text)">Hardcoded secret in source code</strong> — must rotate immediately, use env vars + secrets manager going forward.</span></div>
+      <div class="qcard answer"><span class="ans-badge" style="background:var(--accent-2-soft);color:var(--accent-2)">ID 4</span><span style="font-size:16px;color:var(--text-dim)"><strong style="color:var(--text)">Single point of failure (SPOF)</strong> — no redundancy. Fix: multiple instances, multi-AZ, automatic failover.</span></div>
+      <div class="qcard answer"><span class="ans-badge" style="background:var(--accent-2-soft);color:var(--accent-2)">ID 5</span><span style="font-size:16px;color:var(--text-dim)"><strong style="color:var(--text)">Connection leak</strong> — connections not returned to pool on error. Fix: <code>with</code> / <code>try-finally</code> context managers.</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:14px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--good);padding:4px 0 6px;border-bottom:2px solid var(--good-soft);font-family:var(--font-mono)">Scenario ID</div>
+      <div class="qcard answer"><span class="ans-badge" style="background:var(--good-soft);color:var(--good)">SC 6</span><span style="font-size:16px;color:var(--text-dim)"><strong style="color:var(--text)">Over-fetching.</strong> Fix: sparse fieldsets (<code>?fields=name,price,image</code>) or GraphQL so the client requests only what it needs.</span></div>
+      <div class="qcard answer"><span class="ans-badge" style="background:var(--good-soft);color:var(--good)">SC 7</span><span style="font-size:16px;color:var(--text-dim)"><strong style="color:var(--text)">No API versioning.</strong> Should have kept <code>/v1/</code> stable and released the rename on <code>/v2/</code> only.</span></div>
+      <div class="qcard answer"><span class="ans-badge" style="background:var(--good-soft);color:var(--good)">SC 8</span><span style="font-size:16px;color:var(--text-dim)"><strong style="color:var(--text)">No graceful shutdown + no rolling deploy.</strong> Handle SIGTERM to drain requests before exit; deploy new instances before killing old ones.</span></div>
+      <div class="qcard answer"><span class="ans-badge" style="background:var(--good-soft);color:var(--good)">SC 9</span><span style="font-size:16px;color:var(--text-dim)"><strong style="color:var(--text)">SPOF / no horizontal scaling.</strong> Immediate: add app server instances behind a load balancer + read replica for the DB.</span></div>
+      <div class="qcard answer"><span class="ans-badge" style="background:var(--good-soft);color:var(--good)">SC 10</span><span style="font-size:16px;color:var(--text-dim)"><strong style="color:var(--text)">Log noise.</strong> Senior fix: structured JSON logs, suppress health checks, use log levels correctly, add requestId for tracing.</span></div>
+    </div>
+  </div>
+`});
+
+// 27 closing
+slides.push({ eyebrow:'Closing', title:'Senior Devs Don\'t Write Less Bugs.<br>They Recognise Them Faster.', html:`
+  <div class="stack" style="flex:1;justify-content:center;align-items:center;text-align:center;gap:22px">
+    <div style="color:var(--accent)">${IC.quote}</div>
+    <div class="card" style="max-width:640px;padding:30px 38px;border:1px solid rgba(249,115,22,0.2)">
+      <p style="font-size:20px;color:var(--text);line-height:1.55;margin-bottom:14px">"The first time you see a production outage caused by a missing index, it's a crisis. The second time, it's a checklist item you handle in 10 minutes."</p>
+      <p class="muted" style="margin:0">That's what experience buys — pattern recognition. You now have the patterns.</p>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">
+      <span class="sev critical">N+1 · Missing Index · Pool Exhaustion</span>
+      <span class="sev high">SPOF · Secrets · No Timeouts · Idempotency</span>
+      <span class="sev medium">God Objects · Log Noise · Over-fetching</span>
+    </div>
+  </div>
+`});
+
+// ── render ──
+const deck = document.getElementById('deck');
+let current = 0;
+
+function renderSlide(s){
+  const el = document.createElement('div');
+  el.className = 'slide';
+  const emark = s.eyebrow.includes('Database')?'<span class="emark">⬛</span>':
+                s.eyebrow.includes('API')?'<span class="emark">▶</span>':
+                s.eyebrow.includes('Server')?'<span class="emark">◆</span>':'<span class="emark">//</span>';
+  el.innerHTML =
+    `<div class="eyebrow">${emark} ${s.eyebrow}</div>`+
+    `<h2 class="title">${s.title}</h2>`+
+    `<div class="content${s.scroll?' scrollable':''}">${s.html}</div>`;
+  return el;
+}
+
+const slideEls = slides.map(renderSlide);
+slideEls.forEach(el => deck.appendChild(el));
+
+function updateChrome(){
+  document.getElementById('ctr').textContent = (current+1)+' / '+slides.length;
+  document.getElementById('pf').style.width = ((current+1)/slides.length*100)+'%';
+}
+
+function goTo(idx, dir){
+  if(idx<0||idx>=slides.length||idx===current) return;
+  const prev=slideEls[current], next=slideEls[idx];
+  prev.classList.remove('active');
+  prev.classList.add(dir==='next'?'exit-left':'exit-right');
+  next.classList.remove('exit-left','exit-right');
+  void next.offsetWidth;
+  next.classList.add('active');
+  setTimeout(()=>{ prev.classList.remove('exit-left','exit-right'); }, 350);
+  current=idx;
+  updateChrome();
+}
+
+slideEls[0].classList.add('active');
+updateChrome();
+
+const next=()=>goTo(current+1,'next');
+const prev=()=>goTo(current-1,'prev');
+
+window.addEventListener('keydown', e=>{
+  const ov=document.getElementById('shortcuts-overlay');
+  if(e.key==='?'){ ov.classList.toggle('show'); return; }
+  if(ov.classList.contains('show')){ if(e.key==='Escape') ov.classList.remove('show'); return; }
+  if(e.key==='ArrowRight'||e.key==='PageDown') next();
+  else if(e.key==='ArrowLeft'||e.key==='PageUp') prev();
+  else if(e.key==='Home') goTo(0,'prev');
+  else if(e.key==='End') goTo(slides.length-1,'next');
+});
+
+deck.addEventListener('contextmenu', e=>{ e.preventDefault(); next(); });
+window.addEventListener('mousedown', e=>{
+  if(e.button===3||e.button===4){ e.preventDefault(); e.stopImmediatePropagation(); }
+},true);
+window.addEventListener('mouseup', e=>{
+  if(e.button===3){ e.preventDefault(); prev(); }
+  else if(e.button===4){ e.preventDefault(); next(); }
+},true);
+window.addEventListener('popstate',()=>{ history.pushState(null,'',location.href); });
+history.pushState(null,'',location.href);
+
+let tx=null;
+deck.addEventListener('touchstart', e=>{ tx=e.changedTouches[0].clientX; },{passive:true});
+deck.addEventListener('touchend', e=>{
+  if(tx===null) return;
+  const dx=e.changedTouches[0].clientX-tx;
+  if(Math.abs(dx)>50){ dx<0?next():prev(); }
+  tx=null;
+},{passive:true});
+
+document.getElementById('shortcuts-overlay').addEventListener('click', e=>{
+  if(e.target.id==='shortcuts-overlay') e.target.classList.remove('show');
+});
+</script>
+</body>
+</html>
