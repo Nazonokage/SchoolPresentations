@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Big O Notation — A Java Beginner's Field Guide</title>
+<style>
+  :root{
+    --ink: #0d121c;
+    --panel: #151d2b;
+    --panel-2: #1b2536;
+    --line: #2a3547;
+    --text: #edeff4;
+    --muted: #8f9ab0;
+    --amber: #f2b705;
+    --amber-dim: #7a6421;
+    --teal: #4fd1c5;
+    --coral: #ef6f6c;
+    --violet: #9d8cff;
+    --radius: 16px;
+    --dur: 350ms;
+  }
+  @media (prefers-reduced-motion: reduce){
+    :root{ --dur: 1ms; }
+  }
+  *,*::before,*::after{ box-sizing: border-box; }
+  html,body{
+    margin:0; padding:0; height:100%;
+    background: var(--ink);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow: hidden;
+  }
+  body.no-scroll-lock{ overflow:auto; }
+  .mono{ font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace; }
+
+  /* background texture: faint grid, like graph paper for "growth" theme */
+  #deck{
+    position: fixed; inset:0;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 42px 42px;
+    background-position: -1px -1px;
+    opacity: 1;
+  }
+  #deck::before{
+    content:"";
+    position:absolute; inset:0;
+    background: radial-gradient(1200px 700px at 15% -10%, rgba(242,183,5,0.08), transparent 60%),
+                radial-gradient(900px 600px at 100% 110%, rgba(79,209,197,0.07), transparent 60%),
+                var(--ink);
+    opacity: 0.96;
+  }
+
+  /* ===== Progress + counter ===== */
+  #progress-track{
+    position: fixed; top:0; left:0; right:0; height:3px;
+    background: rgba(255,255,255,0.06); z-index: 50;
+  }
+  #progress-bar{
+    height:100%; width:0%;
+    background: linear-gradient(90deg, var(--amber), var(--teal));
+    transition: width var(--dur) ease;
+  }
+  #counter{
+    position: fixed; bottom: 18px; right: 22px; z-index: 50;
+    font-size: 13px; letter-spacing: 0.03em;
+    color: var(--muted);
+    background: rgba(21,29,43,0.85);
+    border: 1px solid var(--line);
+    padding: 6px 12px; border-radius: 999px;
+    backdrop-filter: blur(6px);
+  }
+  #counter b{ color: var(--text); font-weight: 600; }
+
+  #hint-btn{
+    position: fixed; bottom: 18px; left: 22px; z-index: 50;
+    width: 34px; height:34px; border-radius: 50%;
+    background: rgba(21,29,43,0.85); border: 1px solid var(--line);
+    color: var(--muted); font-size: 15px; cursor: pointer;
+    display:flex; align-items:center; justify-content:center;
+    font-weight: 700;
+  }
+  #hint-btn:hover{ color: var(--amber); border-color: var(--amber-dim); }
+
+  .arrow-nav{
+    position: fixed; top:50%; transform: translateY(-50%);
+    z-index: 45; width:44px; height:44px; border-radius:50%;
+    background: rgba(21,29,43,0.7); border:1px solid var(--line);
+    color: var(--muted); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:18px; user-select:none;
+  }
+  .arrow-nav:hover{ color:var(--text); border-color: var(--amber-dim); }
+  #prev-arrow{ left: 18px; }
+  #next-arrow{ right: 18px; }
+
+  /* ===== Slides ===== */
+  .stage{ position: fixed; inset:0; z-index: 10; }
+  .slide{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    padding: 6vh 7vw;
+    opacity:0; visibility: hidden;
+    transform: translateX(24px);
+    transition: opacity var(--dur) ease, transform var(--dur) ease;
+    pointer-events: none;
+  }
+  .slide.active{
+    opacity:1; visibility: visible; transform: translateX(0);
+    pointer-events: auto;
+  }
+  .slide.prev-dir{ transform: translateX(-24px); }
+
+  .slide-inner{
+    width:100%; max-width: 1180px; max-height: 88vh;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .slide-inner::-webkit-scrollbar{ width:6px; }
+  .slide-inner::-webkit-scrollbar-thumb{ background: var(--line); border-radius:3px; }
+
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
+    font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--amber); font-weight: 600;
+    margin-bottom: 18px;
+  }
+  .eyebrow .dash{ width:22px; height:1px; background: var(--amber); opacity:0.6; }
+
+  h1.title{
+    font-size: clamp(32px, 4.4vw, 54px);
+    line-height: 1.08;
+    margin: 0 0 16px 0;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  h2.title{
+    font-size: clamp(26px, 3vw, 38px);
+    line-height: 1.15;
+    margin: 0 0 14px 0;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  p.lede{
+    font-size: clamp(15px, 1.3vw, 19px);
+    color: var(--muted);
+    max-width: 760px;
+    line-height: 1.6;
+    margin: 0 0 22px 0;
+  }
+  .accent-amber{ color: var(--amber); }
+  .accent-teal{ color: var(--teal); }
+  .accent-coral{ color: var(--coral); }
+  .accent-violet{ color: var(--violet); }
+
+  /* Cards / grids */
+  .grid-2{ display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 22px; }
+  .grid-3{ display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; }
+  .card{
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    min-width: 0;
+  }
+  .card h3{ margin:0 0 8px 0; font-size:16px; font-weight:700; }
+  .card p{ margin:0; color: var(--muted); font-size: 14.5px; line-height:1.55; }
+
+  .analogy-card{
+    background: linear-gradient(160deg, rgba(242,183,5,0.09), rgba(242,183,5,0.02));
+    border: 1px solid rgba(242,183,5,0.28);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+  }
+  .analogy-card .tag{
+    font-size:11.5px; text-transform:uppercase; letter-spacing:0.1em;
+    color: var(--amber); font-weight:700; margin-bottom:8px; display:block;
+  }
+  .analogy-card p{ margin:0; font-size:14.5px; line-height:1.65; color: var(--text); }
+
+  .hint-box{
+    display:flex; gap:10px; align-items:flex-start;
+    background: rgba(79,209,197,0.08);
+    border: 1px solid rgba(79,209,197,0.3);
+    border-radius: 12px; padding: 12px 16px; margin-top: 14px;
+    font-size: 14px; color: var(--text); line-height:1.5;
+  }
+  .hint-box .bulb{ font-size:16px; flex-shrink:0; }
+
+  ul.clean{ margin:0; padding-left: 20px; color: var(--text); }
+  ul.clean li{ margin-bottom:9px; font-size:14.5px; line-height:1.55; }
+  ul.clean li::marker{ color: var(--amber); }
+
+  table.tbl{ width:100%; border-collapse: collapse; font-size: 14.5px; }
+  table.tbl th, table.tbl td{
+    text-align:left; padding: 10px 12px; border-bottom: 1px solid var(--line);
+  }
+  table.tbl th{ color: var(--amber); font-size:12.5px; text-transform:uppercase; letter-spacing:0.06em; }
+  table.tbl td{ color: var(--text); }
+  table.tbl code{ color: var(--teal); }
+
+  /* SVG sparkline icon */
+  .spark{ width:64px; height:26px; flex-shrink:0; }
+  .spark path{ fill:none; stroke-width:3; stroke-linecap:round; }
+
+  /* ===== Code blocks ===== */
+  .code-window{
+    background: #0b0f18;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 14px;
+  }
+  .code-tab{
+    display:flex; align-items:center; justify-content:space-between;
+    background: var(--panel-2);
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .code-tab .filename{
+    font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px; color: var(--muted);
+    display:flex; align-items:center; gap:8px;
+  }
+  .code-tab .filename .dot{ width:8px; height:8px; border-radius:50%; background: var(--amber); }
+  .copy-btn{
+    font-family: ui-monospace, monospace;
+    font-size: 11.5px;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .copy-btn:hover{ color: var(--text); border-color: var(--teal); }
+  .copy-btn.copied{ color: var(--ink); background: var(--teal); border-color: var(--teal); }
+  pre.code{
+    margin:0; padding: 16px 18px;
+    font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
+    font-size: 13.5px; line-height:1.6;
+    overflow-x:auto; white-space:pre;
+    color: var(--text);
+  }
+  .tok-keyword{ color: var(--violet); font-weight:600; }
+  .tok-string{ color: var(--teal); }
+  .tok-comment{ color: var(--muted); font-style: italic; }
+  .tok-number{ color: var(--amber); }
+  .tok-plain{ color: var(--text); }
+  .tok-punct{ color: #6d7891; }
+
+  .out-window{
+    background: #060a12; border: 1px dashed var(--line);
+    border-radius: 10px; padding: 12px 16px; margin-top: 10px;
+    font-family: ui-monospace, monospace; font-size: 13px;
+    color: var(--teal); line-height:1.6;
+  }
+  .out-window .label{ color: var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:0.08em; display:block; margin-bottom:6px; }
+
+  /* Quotes slide */
+  .quote-card{
+    background: var(--panel); border:1px solid var(--line);
+    border-radius: var(--radius); padding: 22px 24px;
+    position: relative;
+  }
+  .quote-card::before{
+    content:"“"; position:absolute; top:2px; left:14px;
+    font-size:52px; color: var(--amber); opacity:0.35; font-family: Georgia, serif;
+  }
+  .quote-card p{ margin: 14px 0 10px 22px; font-size:15px; line-height:1.55; color:var(--text); font-style: italic; }
+  .quote-card span.who{ margin-left:22px; color: var(--muted); font-size:13px; }
+
+  /* Activities */
+  .q-block{ margin-bottom: 18px; }
+  .q-block .q-num{ color: var(--amber); font-weight:700; font-family: ui-monospace, monospace; margin-right:6px; }
+  .q-block .q-text{ font-size:15px; font-weight:600; margin-bottom:8px; }
+  .opts{ display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap:8px 14px; }
+  .opt{
+    background: var(--panel-2); border:1px solid var(--line); border-radius:9px;
+    padding: 8px 12px; font-size:13.5px; color: var(--text);
+    display:flex; gap:8px;
+  }
+  .opt b{ color: var(--muted); font-weight:700; }
+
+  .id-list{ display:grid; grid-template-columns: minmax(0,1fr); gap:12px; }
+  .id-item{
+    background: var(--panel-2); border:1px solid var(--line); border-radius:10px;
+    padding: 12px 16px; display:flex; align-items:center; gap:14px;
+  }
+  .id-item .id-num{ color:var(--amber); font-weight:700; font-family: ui-monospace, monospace; }
+  .id-item .id-q{ font-size:14.5px; flex:1; min-width:0; }
+  .id-item .id-blank{
+    font-family: ui-monospace, monospace; color: var(--muted);
+    border-bottom: 1px dashed var(--line); min-width:100px; text-align:center; padding-bottom:2px;
+  }
+
+  .answer-grid{ display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 22px; }
+  .answer-col h3{ font-size:14px; text-transform:uppercase; letter-spacing:0.08em; color:var(--teal); margin: 0 0 12px 0; }
+  .answer-row{ font-size:13.5px; line-height:1.5; margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid var(--line); color: var(--muted); }
+  .answer-row b{ color: var(--text); }
+  .answer-row .ans{ color: var(--amber); font-weight:700; }
+
+  /* Chart slide */
+  .chart-wrap{ display:flex; gap: 28px; align-items:center; flex-wrap: wrap; }
+  .legend{ display:flex; flex-direction:column; gap:10px; }
+  .legend-item{ display:flex; align-items:center; gap:10px; font-size:13.5px; }
+  .legend-swatch{ width:14px; height:14px; border-radius:4px; }
+
+  /* Shortcuts modal */
+  #shortcuts-modal{
+    position: fixed; inset:0; z-index: 100;
+    background: rgba(6,9,14,0.72);
+    display:none; align-items:center; justify-content:center;
+    backdrop-filter: blur(3px);
+  }
+  #shortcuts-modal.open{ display:flex; }
+  .modal-card{
+    background: var(--panel); border:1px solid var(--line); border-radius:16px;
+    padding: 28px 32px; max-width: 420px; width:90%;
+  }
+  .modal-card h3{ margin:0 0 16px 0; font-size:18px; }
+  .modal-card .row{ display:flex; justify-content:space-between; margin-bottom:10px; font-size:13.5px; color:var(--muted); }
+  .modal-card kbd{
+    background: var(--panel-2); border:1px solid var(--line); border-radius:5px;
+    padding:2px 8px; font-family: ui-monospace, monospace; color: var(--text); font-size:12.5px;
+  }
+  .modal-close{
+    margin-top:18px; width:100%; padding:10px; border-radius:9px; border:1px solid var(--line);
+    background:transparent; color:var(--muted); cursor:pointer; font-size:13px;
+  }
+  .modal-close:hover{ color:var(--text); border-color:var(--amber-dim); }
+
+  .badge-row{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom: 20px; }
+  .badge{
+    font-family: ui-monospace, monospace; font-size:12px; padding:5px 12px;
+    border-radius:999px; border:1px solid var(--line); color: var(--muted);
+  }
+
+  .cover-mark{
+    display:flex; align-items:center; justify-content:center; gap: 26px; flex-wrap: wrap;
+  }
+  .cover-mark .spark-big{ width:120px; height:52px; }
+
+  @media (max-width: 860px){
+    .grid-2, .grid-3, .opts, .answer-grid{ grid-template-columns: minmax(0,1fr); }
+    .slide{ padding: 5vh 5vw; }
+    .arrow-nav{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="deck"></div>
+<div id="progress-track"><div id="progress-bar"></div></div>
+<div id="counter"><b id="cur">1</b> / <span id="tot">21</span></div>
+<button id="hint-btn" title="Keyboard shortcuts (press ?)">?</button>
+<div class="arrow-nav" id="prev-arrow">‹</div>
+<div class="arrow-nav" id="next-arrow">›</div>
+
+<div class="stage" id="stage">
+  <!-- 1: COVER -->
+  <section class="slide">
+    <div class="slide-inner" style="text-align:center;">
+      <div class="eyebrow" style="justify-content:center;"><span class="dash"></span>ITE 031 · Module 4<span class="dash"></span></div>
+      <h1 class="title">Big O Notation<br><span class="accent-amber">for people brand-new to Java</span></h1>
+      <p class="lede" style="margin:0 auto 28px auto; text-align:center;">
+        A friendly field guide to understanding how your code's speed changes as your data grows —
+        explained with everyday analogies, not just math symbols.
+      </p>
+      <div class="cover-mark">
+        <svg class="spark-big" viewBox="0 0 100 40"><path d="M0,20 L100,20" stroke="#f2b705"/></svg>
+        <svg class="spark-big" viewBox="0 0 100 40"><path d="M0,35 Q20,4 100,2" stroke="#4fd1c5"/></svg>
+        <svg class="spark-big" viewBox="0 0 100 40"><path d="M0,38 L100,2" stroke="#9d8cff"/></svg>
+        <svg class="spark-big" viewBox="0 0 100 40"><path d="M0,38 C40,38 70,18 100,0" stroke="#ef6f6c"/></svg>
+      </div>
+      <p style="color:var(--muted); font-size:13px; margin-top:26px;">Click anywhere, or press → to begin</p>
+    </div>
+  </section>
+  <!-- 2: LESSON PREVIEW -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow"><span class="dash"></span>A. Lesson Preview</div>
+      <h2 class="title">Have you heard about Big O?</h2>
+      <p class="lede">If not — don't worry. By the end of this deck, you'll be able to look at a loop and immediately guess how it will behave as its input grows.</p>
+      <div class="grid-3">
+        <div class="card">
+          <h3>🧠 The Big Idea</h3>
+          <p>Big O is a way to describe how an algorithm's speed changes as the amount of data (<code class="mono">n</code>) grows — without getting lost in exact seconds.</p>
+        </div>
+        <div class="card">
+          <h3>📈 Growth Families</h3>
+          <p>We'll cover the four you'll meet constantly as a new Java developer: <b>O(1)</b>, <b>O(log n)</b>, <b>O(n)</b>, and a peek at <b>O(n²)</b>.</p>
+        </div>
+        <div class="card">
+          <h3>🛠️ Hands-on Java</h3>
+          <p>Every idea is paired with real, runnable Java code — plus a coding drill you can try yourself in any IDE.</p>
+        </div>
+      </div>
+      <div class="hint-box">
+        <span class="bulb">💡</span>
+        <span><b>Hint for beginners:</b> An <b>algorithm</b> is just a set of steps to solve a problem — like a recipe. Big O tells you whether that recipe gets a little slower, or a LOT slower, as you cook for more guests.</span>
+      </div>
+    </div>
+  </section>
+  <!-- 3: THE BIG IDEA / ANALOGY -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow"><span class="dash"></span>B. Main Lesson</div>
+      <h2 class="title">What is Big O, really?</h2>
+      <div class="grid-2">
+        <div>
+          <p class="lede" style="margin-bottom:14px;">In plain English:</p>
+          <p style="font-size:17px; line-height:1.6; margin-bottom:18px;"><b class="accent-amber">Big O notation describes the complexity of your code using algebraic terms</b> — it's a label for how fast the workload grows, not a stopwatch reading.</p>
+          <ul class="clean">
+            <li><code class="mono">n</code> = the <b>input size</b> (how many items you're working with)</li>
+            <li><code class="mono">g(n)</code> = the function inside <code class="mono">O()</code> that estimates the workload relative to <code class="mono">n</code></li>
+            <li>Example: <code class="mono">O(n²)</code> is read "Big O squared" — if you double the input, the work roughly quadruples</li>
+          </ul>
+        </div>
+        <div class="analogy-card">
+          <span class="tag">🍽️ Real-life analogy</span>
+          <p>Imagine you're a waiter. Instead of timing every table with a stopwatch (exact seconds), you just ask: <i>"If the restaurant fills up with twice as many guests, does my workload stay the same, double, or explode?"</i></p>
+          <p style="margin-top:12px;">That question — <b>"how does effort scale as things grow?"</b> — is exactly what Big O answers for code.</p>
+        </div>
+      </div>
+      <div class="hint-box">
+        <span class="bulb">💡</span>
+        <span><b>Hint:</b> Big O studies fall under <b>algorithm analysis</b> — the field that asks how much time or memory a program needs. Rule of thumb: the less it needs as data grows, the better.</span>
+      </div>
+    </div>
+  </section>
+  <!-- 4: READING THE NOTATION -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow"><span class="dash"></span>B. Main Lesson</div>
+      <h2 class="title">Decoding the symbols</h2>
+      <p class="lede">Before jumping into code, let's break apart the notation itself so it stops looking like alien math.</p>
+      <table class="tbl">
+        <thead><tr><th>Symbol</th><th>What it means</th><th>Everyday translation</th></tr></thead>
+        <tbody>
+          <tr><td><code>n</code></td><td>The input size</td><td>"How many things am I dealing with?" (e.g. items in a list)</td></tr>
+          <tr><td><code>g(n)</code></td><td>Function describing workload vs. <code>n</code></td><td>"The recipe for how the effort grows"</td></tr>
+          <tr><td><code>O( )</code></td><td>"Order of" — the growth family</td><td>The category label, like Small / Medium / Large / XL</td></tr>
+          <tr><td><code>O(n²)</code></td><td><code>g(n) = n²</code></td><td>Double the input → roughly 4x the work</td></tr>
+        </tbody>
+      </table>
+      <div class="hint-box">
+        <span class="bulb">💡</span>
+        <span><b>Beginner tip:</b> You'll almost never need to calculate Big O with a formula by hand as a student. Instead, look at your <b>loops</b> — they're the biggest clue. One loop over <code class="mono">n</code> items is usually O(n); a loop nested inside another is usually O(n²).</span>
+      </div>
+    </div>
+  </section>
+  <!-- 5: O(1) CONSTANT TIME -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow"><svg class="spark" viewBox="0 0 100 26"><path d="M0,13 L100,13" stroke="#f2b705"/></svg>Constant Time — O(1)</div>
+      <h2 class="title">The vending machine</h2>
+      <div class="grid-2">
+        <div class="analogy-card">
+          <span class="tag">🥤 Real-life analogy</span>
+          <p>Press <b>B4</b> on a vending machine and your chips drop out. It doesn't matter if the machine has <b>10 snacks</b> or <b>10,000 snacks</b> loaded inside — pressing B4 always takes the same amount of time.</p>
+          <p style="margin-top:10px;">That's <b>O(1)</b>: the work doesn't grow, no matter how big the "inventory" (input) gets.</p>
+        </div>
+        <div>
+          <div class="code-window">
+            <div class="code-tab">
+              <span class="filename"><span class="dot"></span>BigODataExample.java</span>
+              <button class="copy-btn" data-copy-target="code1">Copy</button>
+            </div>
+            <pre class="code" id="code1"></pre>
+          </div>
+          <div class="hint-box">
+            <span class="bulb">💡</span>
+            <span>No matter what number you put in <code class="mono">n</code>, this only ever prints <b>one line</b>. That's the fingerprint of O(1).</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- 6: O(1) part 2 -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow"><svg class="spark" viewBox="0 0 100 26"><path d="M0,13 L100,13" stroke="#f2b705"/></svg>Constant Time — O(1), continued</div>
+      <h2 class="title">More lines ≠ more complexity</h2>
+      <p class="lede">A common beginner trap: assuming "more code = slower growth." Let's bust that myth.</p>
+      <div class="code-window">
+        <div class="code-tab">
+          <span class="filename"><span class="dot"></span>Snippet.java</span>
+          <button class="copy-btn" data-copy-target="code2">Copy</button>
+        </div>
+        <pre class="code" id="code2"></pre>
+      </div>
+      <div class="grid-2" style="margin-top:16px;">
+        <div class="card">
+          <h3>Why it's still O(1)</h3>
+          <p>It runs <b>3 print statements</b> instead of 1 — but that number never changes, no matter what <code class="mono">n</code> is. Fixed work is fixed work.</p>
+        </div>
+        <div class="card">
+          <h3>Golden rule</h3>
+          <p><code>O(1)</code>, <code>O(2)</code>, and even <code>O(1000)</code> all mean the <b>exact same thing</b>: constant time. Big O ignores the exact count — it only cares whether it changes with <code class="mono">n</code>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- 7: O(log n) -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow"><svg class="spark" viewBox="0 0 100 26"><path d="M0,20 Q20,3 100,1" stroke="#4fd1c5"/></svg>Logarithmic Time — O(log n)</div>
+      <h2 class="title">The old-school phone book</h2>
+      <div class="grid-2">
+        <div class="analogy-card">
+          <span class="tag">📖 Real-life analogy</span>
+          <p>Looking for "Rodriguez" in a phone book, you don't start from page 1. You flip to the <b>middle</b>, see you're too early or too late, and jump to the middle of the correct half — again, and again.</p>
+          <p style="margin-top:10px;">Each step cuts the remaining pages in <b>half</b>. That halving pattern is exactly <b>O(log n)</b>.</p>
+        </div>
+        <div>
+          <div class="code-window">
+            <div class="code-tab">
+              <span class="filename"><span class="dot"></span>BigOSample.java</span>
+              <button class="copy-btn" data-copy-target="code3">Copy</button>
+            </div>
+            <pre class="code" id="code3"></pre>
+          </div>
+          <div class="out-window">
+            <span class="label">Console output (n = 8)</span>
+            Opps-I am busy, grinding this thing: 1<br>
+            Opps-I am busy, grinding this thing: 2<br>
+            Opps-I am busy, grinding this thing: 4
+          </div>
+        </div>
+      </div>
+      <div class="hint-box">
+        <span class="bulb">💡</span>
+        <span><b>Hint:</b> The loop condition is <code class="mono">i = i * 2</code> — the counter <b>doubles</b> instead of adding one. With <code class="mono">n = 8</code>, it only takes <b>3 steps</b> because <code class="mono">log₂(8) = 3</code>. Spot doubling/halving in a loop → suspect O(log n).</span>
+      </div>
+    </div>
+  </section>
+  <!-- 8: O(n) -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow"><svg class="spark" viewBox="0 0 100 26"><path d="M0,22 L100,2" stroke="#9d8cff"/></svg>Linear Time — O(n)</div>
+      <h2 class="title">Checking every pocket</h2>
+      <div class="grid-2">
+        <div class="analogy-card">
+          <span class="tag">🔑 Real-life analogy</span>
+          <p>You lost your keys and check your pockets <b>one at a time</b> — jacket, jeans, backpack — until you find them (or run out of pockets).</p>
+          <p style="margin-top:10px;">If you have 4 pockets, that's 4 checks. 8 pockets, 8 checks. The effort grows <b>directly in proportion</b> to how many pockets (items) exist. That's <b>O(n)</b>.</p>
+        </div>
+        <div>
+          <div class="code-window">
+            <div class="code-tab">
+              <span class="filename"><span class="dot"></span>LinearExample.java</span>
+              <button class="copy-btn" data-copy-target="code4">Copy</button>
+            </div>
+            <pre class="code" id="code4"></pre>
+          </div>
+        </div>
+      </div>
+      <div class="hint-box">
+        <span class="bulb">💡</span>
+        <span><b>Hint:</b> "Ilang beses ang loop nag-run?" (How many times does the loop run?) — the answer here is simply <b><code class="mono">n</code> times</b>. That single-loop-over-everything shape is the classic sign of O(n).</span>
+      </div>
+    </div>
+  </section>
+  <!-- 9: O(n) part 2 -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow"><svg class="spark" viewBox="0 0 100 26"><path d="M0,22 L100,2" stroke="#9d8cff"/></svg>Linear Time — O(n), continued</div>
+      <h2 class="title">Extra work per lap still doesn't change the family</h2>
+      <div class="code-window">
+        <div class="code-tab">
+          <span class="filename"><span class="dot"></span>LinearExample2.java</span>
+          <button class="copy-btn" data-copy-target="code5">Copy</button>
+        </div>
+        <pre class="code" id="code5"></pre>
+      </div>
+      <div class="grid-2" style="margin-top:16px;">
+        <div class="card">
+          <h3>Still O(n)</h3>
+          <p>Now each lap of the loop prints <b>3 lines</b> instead of 1. That's more total work — but it still scales directly with <code class="mono">n</code>, so it's still <b>linear</b>.</p>
+        </div>
+        <div class="card">
+          <h3>Golden rule</h3>
+          <p>We'd prefer <code>0.1n</code> over <code>1000n + 1000</code>, but both are still linear. Big O simplifies: <code>O(2n + 1)</code> is treated exactly the same as <code>O(n)</code>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- 10: COMPARISON CHART -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow"><span class="dash"></span>B. Main Lesson</div>
+      <h2 class="title">Putting the growth curves side by side</h2>
+      <p class="lede">As <code class="mono">n</code> gets bigger (moving right), watch how differently each family behaves.</p>
+      <div class="chart-wrap">
+        <svg viewBox="0 0 420 260" style="width:100%; max-width:480px; height:auto;">
+          <line x1="30" y1="230" x2="410" y2="230" stroke="#2a3547" stroke-width="1"/>
+          <line x1="30" y1="10" x2="30" y2="230" stroke="#2a3547" stroke-width="1"/>
+          <text x="410" y="248" fill="#8f9ab0" font-size="11" text-anchor="end">input size (n) →</text>
+          <text x="14" y="20" fill="#8f9ab0" font-size="11">effort</text>
+          <!-- O(1) flat -->
+          <path d="M30,205 L410,205" fill="none" stroke="#f2b705" stroke-width="3"/>
+          <!-- O(log n) -->
+          <path d="M30,220 C90,140 200,90 410,60" fill="none" stroke="#4fd1c5" stroke-width="3"/>
+          <!-- O(n) -->
+          <path d="M30,225 L410,20" fill="none" stroke="#9d8cff" stroke-width="3"/>
+          <!-- O(n^2) -->
+          <path d="M30,229 C220,229 260,120 410,10" fill="none" stroke="#ef6f6c" stroke-width="3"/>
+        </svg>
+        <div class="legend">
+          <div class="legend-item"><span class="legend-swatch" style="background:#f2b705;"></span>O(1) — constant, flat forever</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#4fd1c5;"></span>O(log n) — climbs fast, then levels off</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#9d8cff;"></span>O(n) — steady, straight diagonal</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#ef6f6c;"></span>O(n²) — starts calm, then explodes</div>
+        </div>
+      </div>
+      <div class="hint-box">
+        <span class="bulb">💡</span>
+        <span><b>Hint:</b> When comparing algorithms for the same job, lower on this chart is better as <code class="mono">n</code> grows. A vending machine (O(1)) will always beat checking every pocket (O(n)) once there are enough items.</span>
+      </div>
+    </div>
+  </section>
+  <!-- 11: KEY QUOTES -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow"><span class="dash"></span>Key Quotes</div>
+      <h2 class="title">Words worth remembering</h2>
+      <div class="grid-2">
+        <div class="quote-card">
+          <p>"Not all roots are buried down in the ground — some are at the top of a tree."</p>
+          <span class="who">— Jinvirle, Productivity Tip</span>
+        </div>
+        <div class="quote-card">
+          <p>"Big O notation is a mathematical notation that describes the limiting behavior of a function when the argument tends towards a particular value or infinity."</p>
+          <span class="who">— Wikipedia, "Big O notation"</span>
+        </div>
+      </div>
+      <div class="analogy-card" style="margin-top:20px;">
+        <span class="tag">🎯 Takeaway</span>
+        <p>Both quotes point at the same idea: what matters isn't the small details up close — it's the <b>overall shape</b> once things scale up.</p>
+      </div>
+    </div>
+  </section>
+  <!-- 15: RECAP -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow"><span class="dash"></span>C. Recap</div>
+      <h2 class="title">What to remember before you move on</h2>
+      <div class="grid-3">
+        <div class="card">
+          <h3><svg class="spark" viewBox="0 0 100 26" style="vertical-align:-4px; margin-right:6px;"><path d="M0,13 L100,13" stroke="#f2b705"/></svg>O(1)</h3>
+          <p>Vending machine. Work stays fixed no matter how much data exists.</p>
+        </div>
+        <div class="card">
+          <h3><svg class="spark" viewBox="0 0 100 26" style="vertical-align:-4px; margin-right:6px;"><path d="M0,20 Q20,3 100,1" stroke="#4fd1c5"/></svg>O(log n)</h3>
+          <p>Phone book. Halving the problem each step keeps growth very slow.</p>
+        </div>
+        <div class="card">
+          <h3><svg class="spark" viewBox="0 0 100 26" style="vertical-align:-4px; margin-right:6px;"><path d="M0,22 L100,2" stroke="#9d8cff"/></svg>O(n)</h3>
+          <p>Checking every pocket. Effort scales directly and steadily with n.</p>
+        </div>
+      </div>
+      <div class="analogy-card" style="margin-top:18px;">
+        <span class="tag">🧠 The one-sentence version</span>
+        <p>Big O ignores exact seconds and constants — it only cares about the <b>shape</b> of how your code's workload grows as the input grows. Spot the loop pattern, and you've usually spotted the Big O class.</p>
+      </div>
+    </div>
+  </section>
+  <!-- 17: FAQ -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow"><span class="dash"></span>D. Wrap-Up · FAQs</div>
+      <h2 class="title">A few common questions</h2>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Why is Big O commonly used?</h3>
+          <p>It classifies algorithms by how their time or space needs grow as input size increases — letting developers predict how well code will perform before running it at scale.</p>
+        </div>
+        <div class="card">
+          <h3>Should I learn Big O notation as a beginner?</h3>
+          <p>Yes. It's a core tool for analyzing the cost of an algorithm, and most software engineers — even ones outside pure computer science — are expected to have a working understanding of it.</p>
+        </div>
+      </div>
+      <div class="hint-box">
+        <span class="bulb">💡</span>
+        <span><b>Encouragement:</b> You don't need to master formal proofs on day one. Just get comfortable spotting loop patterns — the formulas come naturally with practice.</span>
+      </div>
+    </div>
+  </section>
+  <!-- H: HOW TO CALCULATE BIG O — STEP-BY-STEP -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow"><span class="dash"></span>H. Calculation Guide</div>
+      <h2 class="title">How to figure out Big O — step by step</h2>
+      <p class="lede">Follow these four steps every time you look at a piece of Java code:</p>
+      <div class="id-list">
+        <div class="id-item">
+          <span class="id-num">① Count</span>
+          <span class="id-q">Count each distinct block of work — a single statement, a loop, or a nested loop. Don't add them yet; just list them.</span>
+        </div>
+        <div class="id-item">
+          <span class="id-num">② Label</span>
+          <span class="id-q"><b>Single statement / fixed block</b> → O(1). &nbsp;<b>One loop over n</b> → O(n). &nbsp;<b>Loop counter doubles each step</b> → O(log n). &nbsp;<b>Loop inside a loop over n</b> → O(n²).</span>
+        </div>
+        <div class="id-item">
+          <span class="id-num">③ Add</span>
+          <span class="id-q">If blocks run <i>one after another</i>, add their labels: O(1) + O(n) + O(n) = O(2n + 1). The rule: keep the <b>dominant (biggest) term</b> only, since smaller terms become negligible as n grows.</span>
+        </div>
+        <div class="id-item">
+          <span class="id-num">④ Simplify</span>
+          <span class="id-q">Drop constants and lower-order terms. O(2n + 1) → <b>O(n)</b>. O(5n² + 3n + 10) → <b>O(n²)</b>. O(4) → <b>O(1)</b>. Big O only cares about growth shape, not exact numbers.</span>
+        </div>
+      </div>
+      <div class="hint-box">
+        <span class="bulb">💡</span>
+        <span><b>Quick heuristic:</b> Ask yourself — "as n doubles, does the work stay the same, roughly double, or roughly quadruple?" Same = O(1). Doubles = O(n). Quadruples = O(n²). Grows much slower than n = O(log n).</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- H: BIG O WORKED EXAMPLES -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow"><span class="dash"></span>H. Calculation Guide · Worked Examples</div>
+      <h2 class="title">Read the code — guess the class</h2>
+      <p class="lede">Apply the four steps to each snippet below. Cover the answer column and try first!</p>
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Code pattern</th>
+            <th>What to notice</th>
+            <th>Big O result</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code class="mono">System.out.println(n);</code></td>
+            <td>One fixed statement, no loop</td>
+            <td><span class="accent-amber">O(1)</span></td>
+          </tr>
+          <tr>
+            <td><code class="mono">for (int i=0; i&lt;n; i++)</code></td>
+            <td>Counter goes 0 → n one step at a time, runs <b>n</b> times</td>
+            <td><span class="accent-violet">O(n)</span></td>
+          </tr>
+          <tr>
+            <td><code class="mono">for (int i=1; i&lt;n; i=i*2)</code></td>
+            <td>Counter <b>doubles</b> each lap → half the work remains each time → log₂(n) steps</td>
+            <td><span class="accent-teal">O(log n)</span></td>
+          </tr>
+          <tr>
+            <td>Loop inside a loop, both 0→n</td>
+            <td>Outer runs n times; for each lap, inner also runs n times → n × n</td>
+            <td><span class="accent-coral">O(n²)</span></td>
+          </tr>
+          <tr>
+            <td><code class="mono">O(1) block, then O(n) loop</code></td>
+            <td>Add: O(1) + O(n) = O(n+1) → drop constant → dominant term wins</td>
+            <td><span class="accent-violet">O(n)</span></td>
+          </tr>
+          <tr>
+            <td><code class="mono">O(2n + 1000n + 5)</code></td>
+            <td>Both terms are linear; combine coefficients, then drop them: 1002n + 5</td>
+            <td><span class="accent-violet">O(n)</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="analogy-card" style="margin-top:18px;">
+        <span class="tag">🧠 Pattern cheat-sheet</span>
+        <p>
+          <span class="accent-amber">O(1)</span> → no loop, or loop with fixed count &nbsp;|&nbsp;
+          <span class="accent-teal">O(log n)</span> → counter multiplies/divides each step &nbsp;|&nbsp;
+          <span class="accent-violet">O(n)</span> → single loop 0→n &nbsp;|&nbsp;
+          <span class="accent-coral">O(n²)</span> → nested loops both 0→n
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14: CODING DRILL -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow"><span class="dash"></span>F. Coding Drill</div>
+      <h2 class="title">Your turn: write it yourself</h2>
+      <p class="lede">Open any Java IDE (JDoodle, IntelliJ, Eclipse — whatever you have) and try this before peeking at the code.</p>
+      <div class="grid-2">
+        <div class="card">
+          <h3>🧩 Your mission</h3>
+          <p>Write a program that loops <b>10 times</b> using a <code>for</code> loop, following the constant-time growth pattern.</p>
+          <ul class="clean" style="margin-top:10px;">
+            <li>Input value of <code>n</code> is <code>10</code></li>
+            <li>Display: <code>"Grinding this work: "</code> + the current loop count</li>
+          </ul>
+          <div class="hint-box">
+            <span class="bulb">💡</span>
+            <span>Ask yourself: does this loop's length depend on <code class="mono">n</code>, or is it something else? That question is the heart of every Big O classification.</span>
+          </div>
+        </div>
+        <div class="code-window">
+          <div class="code-tab">
+            <span class="filename"><span class="dot"></span>BigODataDrill.java</span>
+            <button class="copy-btn" data-copy-target="code6">Copy</button>
+          </div>
+          <pre class="code" id="code6"></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12: MULTIPLE CHOICE -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow"><span class="dash"></span>E. Skill-Building Check · Multiple Choice</div>
+      <h2 class="title">Test yourself — pick one answer</h2>
+
+      <div class="q-block">
+        <div class="q-text"><span class="q-num">1.</span>What does O(n) represent?</div>
+        <div class="opts">
+          <div class="opt"><b>A.</b> Constant time complexity</div>
+          <div class="opt"><b>B.</b> Linear time complexity</div>
+          <div class="opt"><b>C.</b> Logarithmic time complexity</div>
+          <div class="opt"><b>D.</b> Exponential time complexity</div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <div class="q-text"><span class="q-num">2.</span>A loop that runs a fixed number of times, no matter the size of <code class="mono">n</code>, is:</div>
+        <div class="opts">
+          <div class="opt"><b>A.</b> O(1)</div>
+          <div class="opt"><b>B.</b> O(n)</div>
+          <div class="opt"><b>C.</b> O(n²)</div>
+          <div class="opt"><b>D.</b> O(log n)</div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <div class="q-text"><span class="q-num">3.</span>In <code class="mono">for (int i = 1; i < n; i = i * 2)</code>, why is this logarithmic?</div>
+        <div class="opts">
+          <div class="opt"><b>A.</b> The loop runs n times</div>
+          <div class="opt"><b>B.</b> The counter doubles each time, so steps grow much slower than n</div>
+          <div class="opt"><b>C.</b> The loop never ends</div>
+          <div class="opt"><b>D.</b> It always runs a constant number of times</div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <div class="q-text"><span class="q-num">4.</span>Is O(1000n + 1000) a different complexity class than O(n)?</div>
+        <div class="opts">
+          <div class="opt"><b>A.</b> True — the constants change the class</div>
+          <div class="opt"><b>B.</b> False — both are linear, O(n)</div>
+        </div>
+      </div>
+
+      <div class="q-block" style="margin-bottom:0;">
+        <div class="q-text"><span class="q-num">5.</span>A vending machine dispensing a snack in the same time, regardless of stock, illustrates:</div>
+        <div class="opts">
+          <div class="opt"><b>A.</b> O(1)</div>
+          <div class="opt"><b>B.</b> O(n)</div>
+          <div class="opt"><b>C.</b> O(log n)</div>
+          <div class="opt"><b>D.</b> O(n²)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- 13: IDENTIFICATION -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow"><span class="dash"></span>E. Skill-Building Check · Identification</div>
+      <h2 class="title">Fill in the blank</h2>
+      <div class="id-list">
+        <div class="id-item"><span class="id-num">1.</span><span class="id-q">The letter that represents input size in Big O notation is _____.</span><span class="id-blank">?</span></div>
+        <div class="id-item"><span class="id-num">2.</span><span class="id-q">Notation like O(n²), invented by Bachmann and Landau, is collectively called _____ notation.</span><span class="id-blank">?</span></div>
+        <div class="id-item"><span class="id-num">3.</span><span class="id-q">A loop whose counter doubles each iteration (e.g. <code class="mono">i = i * 2</code>) has this complexity: _____.</span><span class="id-blank">?</span></div>
+        <div class="id-item"><span class="id-num">4.</span><span class="id-q">O(1000n + 1000) simplifies down to this Big O class: _____.</span><span class="id-blank">?</span></div>
+        <div class="id-item"><span class="id-num">5.</span><span class="id-q">The field that studies how many resources (time/space) an algorithm consumes is called _____.</span><span class="id-blank">?</span></div>
+      </div>
+      <div class="hint-box">
+        <span class="bulb">💡</span>
+        <span>Answers are collected on the final "Answers" slide — try recalling them from memory first before jumping ahead!</span>
+      </div>
+    </div>
+  </section>
+  <!-- 16: ANSWERS -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow"><span class="dash"></span>G. Answer Key</div>
+      <h2 class="title">Check your work</h2>
+      <div class="answer-grid">
+        <div class="answer-col">
+          <h3>Multiple Choice</h3>
+          <div class="answer-row"><b>1.</b> <span class="ans">B — Linear time.</span> Runtime grows proportionally to input size.</div>
+          <div class="answer-row"><b>2.</b> <span class="ans">A — O(1).</span> A fixed-count loop never depends on n's size.</div>
+          <div class="answer-row"><b>3.</b> <span class="ans">B.</span> Doubling the counter each pass makes steps grow far slower than n.</div>
+          <div class="answer-row"><b>4.</b> <span class="ans">B — False.</span> Big O drops constants; it's still O(n).</div>
+          <div class="answer-row"><b>5.</b> <span class="ans">A — O(1).</span> Same dispense time regardless of stock size.</div>
+        </div>
+        <div class="answer-col">
+          <h3>Identification</h3>
+          <div class="answer-row"><b>1.</b> <span class="ans">n</span> — represents input size.</div>
+          <div class="answer-row"><b>2.</b> <span class="ans">Bachmann–Landau (asymptotic) notation</span> — the family Big O belongs to.</div>
+          <div class="answer-row"><b>3.</b> <span class="ans">O(log n)</span> — logarithmic time.</div>
+          <div class="answer-row"><b>4.</b> <span class="ans">O(n)</span> — linear time, constants ignored.</div>
+          <div class="answer-row"><b>5.</b> <span class="ans">Algorithm analysis</span> — the study of resource usage as input grows.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- 21: FURTHER READING / CLOSE -->
+  <section class="slide">
+    <div class="slide-inner" style="text-align:center;">
+      <div class="eyebrow" style="justify-content:center;"><span class="dash"></span>Further Reading<span class="dash"></span></div>
+      <h2 class="title">Keep grinding — one loop at a time 💪</h2>
+      <p class="lede" style="margin:0 auto 24px auto;">
+        Big-O Notation: Why It Matters and Why It Doesn't — <span class="accent-teal">freeCodeCamp</span>
+      </p>
+      <div class="badge-row" style="justify-content:center;">
+        <span class="badge">O(1) vending machine</span>
+        <span class="badge">O(log n) phone book</span>
+        <span class="badge">O(n) checking pockets</span>
+        <span class="badge">O(n²) group handshakes</span>
+      </div>
+      <p style="color:var(--muted); font-size:13px;">Press Home to jump back to the start, or ? for keyboard shortcuts.</p>
+    </div>
+  </section>
+
+</div>
+
+<div id="shortcuts-modal">
+  <div class="modal-card">
+    <h3>Keyboard shortcuts</h3>
+    <div class="row"><span>Next slide</span><span><kbd>→</kbd> / <kbd>Space</kbd></span></div>
+    <div class="row"><span>Previous slide</span><span><kbd>←</kbd></span></div>
+    <div class="row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="row"><span>This menu</span><span><kbd>?</kbd></span></div>
+    <div class="row"><span>Navigate (mobile)</span><span>Swipe left / right</span></div>
+    <button class="modal-close" id="modal-close-btn">Close</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- Java single-pass syntax highlighter ---------- */
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  var KEYWORDS = ["public","class","static","void","int","for","if","else","new",
+    "String","System","out","println","return","private","double","boolean",
+    "true","false","import","package","this","final","char","long","float"];
+
+  function highlightJava(code){
+    var tokenRegex = /(\/\/.*$)|(\/\*[\s\S]*?\*\/)|("(?:[^"\\]|\\.)*")|(\b\d+\b)|(\b[A-Za-z_]\w*\b)|([{}()\[\];,.])/gm;
+    var result = "";
+    var lastIndex = 0;
+    var match;
+    while ((match = tokenRegex.exec(code)) !== null) {
+      result += escapeHtml(code.slice(lastIndex, match.index));
+      lastIndex = tokenRegex.lastIndex;
+      var full = match[0], comment = match[1], blockComment = match[2],
+          str = match[3], num = match[4], word = match[5], punct = match[6];
+      if (comment || blockComment) {
+        result += '<span class="tok-comment">' + escapeHtml(full) + '</span>';
+      } else if (str) {
+        result += '<span class="tok-string">' + escapeHtml(full) + '</span>';
+      } else if (num) {
+        result += '<span class="tok-number">' + escapeHtml(full) + '</span>';
+      } else if (word) {
+        if (KEYWORDS.indexOf(word) !== -1) {
+          result += '<span class="tok-keyword">' + escapeHtml(full) + '</span>';
+        } else {
+          result += '<span class="tok-plain">' + escapeHtml(full) + '</span>';
+        }
+      } else if (punct) {
+        result += '<span class="tok-punct">' + escapeHtml(full) + '</span>';
+      }
+    }
+    result += escapeHtml(code.slice(lastIndex));
+    return result;
+  }
+
+  var SNIPPETS = {
+    code1: 'public class BigODataExample {\n' +
+           '    public static void main(String[] args) {\n' +
+           '        int n = 1000;\n' +
+           '        System.out.println("Your input is: " + n);\n' +
+           '    }\n' +
+           '}',
+    code2: 'int n = 1000;\n' +
+           'System.out.println("Hey - your input is: " + n);\n' +
+           'System.out.println("Hmm.. I am doing more stuff with: " + n);\n' +
+           'System.out.println("And more: " + n);',
+    code3: 'public class BigOSample {\n' +
+           '    public static void main(String[] args) {\n' +
+           '        int n = 8;\n' +
+           '        for (int i = 1; i < n; i = i * 2) {\n' +
+           '            System.out.println("Opps-I am busy, grinding this thing: " + i);\n' +
+           '        }\n' +
+           '    }\n' +
+           '}',
+    code4: 'for (int i = 0; i < n; i++) {\n' +
+           '    System.out.println("Oops - I am busy, grinding this thing: " + i);\n' +
+           '}',
+    code5: 'for (int i = 0; i < n; i++) {\n' +
+           '    System.out.println("Hey - I am busy grinding this thing: " + i);\n' +
+           '    System.out.println("Hmm.. Let us have another grind of this thing: " + i);\n' +
+           '    System.out.println("And another grind: " + i);\n' +
+           '}',
+    code6: 'public class BigODataDrill {\n' +
+           '    public static void main(String[] args) {\n' +
+           '        int n = 10;\n' +
+           '        for (int i = 0; i < n; i++) {\n' +
+           '            System.out.println("Grinding this work: " + i);\n' +
+           '        }\n' +
+           '    }\n' +
+           '}'
+  };
+
+  Object.keys(SNIPPETS).forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.innerHTML = highlightJava(SNIPPETS[id]);
+  });
+
+  /* ---------- Copy buttons ---------- */
+  document.querySelectorAll(".copy-btn").forEach(function(btn){
+    btn.addEventListener("click", function(e){
+      e.stopPropagation();
+      var targetId = btn.getAttribute("data-copy-target");
+      var text = SNIPPETS[targetId] || "";
+      var done = function(){
+        var original = btn.textContent;
+        btn.textContent = "Copied!";
+        btn.classList.add("copied");
+        setTimeout(function(){
+          btn.textContent = original === "Copied!" ? "Copy" : original;
+          btn.classList.remove("copied");
+        }, 1400);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(function(){
+          fallbackCopy(text); done();
+        });
+      } else {
+        fallbackCopy(text); done();
+      }
+    });
+  });
+  function fallbackCopy(text){
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); } catch(err){}
+    document.body.removeChild(ta);
+  }
+
+  /* ---------- Slide navigation ---------- */
+  var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var total = slides.length;
+  var current = 0;
+  document.getElementById("tot").textContent = total;
+
+  function render(prevIndex){
+    slides.forEach(function(s, i){
+      s.classList.remove("active", "prev-dir");
+      if (i === current) {
+        s.classList.add("active");
+      }
+    });
+    document.getElementById("cur").textContent = current + 1;
+    document.getElementById("progress-bar").style.width = ((current + 1) / total * 100) + "%";
+  }
+
+  function goTo(index){
+    if (index < 0) index = 0;
+    if (index > total - 1) index = total - 1;
+    if (index === current) return;
+    current = index;
+    render();
+  }
+  function next(){ goTo(current + 1); }
+  function prev(){ goTo(current - 1); }
+
+  render();
+
+  document.getElementById("next-arrow").addEventListener("click", function(e){
+    e.stopPropagation(); next();
+  });
+  document.getElementById("prev-arrow").addEventListener("click", function(e){
+    e.stopPropagation(); prev();
+  });
+
+  /* Click-anywhere navigation (left = prev, right = next), ignoring interactive elements */
+  document.getElementById("stage").addEventListener("click", function(e){
+    var interactive = e.target.closest("button, a, .copy-btn, .arrow-nav, input, textarea, select, .code-window");
+    if (interactive) return;
+    var x = e.clientX;
+    var w = window.innerWidth;
+    if (x < w * 0.4) { prev(); } else { next(); }
+  });
+
+  /* Keyboard */
+  document.addEventListener("keydown", function(e){
+    if (e.key === "?" ) {
+      toggleShortcuts();
+      return;
+    }
+    if (document.getElementById("shortcuts-modal").classList.contains("open")) {
+      if (e.key === "Escape") toggleShortcuts(false);
+      return;
+    }
+    switch(e.key){
+      case "ArrowRight":
+      case "ArrowDown":
+      case " ":
+        e.preventDefault(); next(); break;
+      case "ArrowLeft":
+      case "ArrowUp":
+        e.preventDefault(); prev(); break;
+      case "Home":
+        e.preventDefault(); goTo(0); break;
+      case "End":
+        e.preventDefault(); goTo(total - 1); break;
+    }
+  });
+
+  /* Shortcuts modal */
+  var modal = document.getElementById("shortcuts-modal");
+  function toggleShortcuts(force){
+    var open = typeof force === "boolean" ? force : !modal.classList.contains("open");
+    modal.classList.toggle("open", open);
+  }
+  document.getElementById("hint-btn").addEventListener("click", function(e){
+    e.stopPropagation();
+    toggleShortcuts();
+  });
+  document.getElementById("modal-close-btn").addEventListener("click", function(e){
+    e.stopPropagation();
+    toggleShortcuts(false);
+  });
+  modal.addEventListener("click", function(e){
+    if (e.target === modal) toggleShortcuts(false);
+  });
+
+  /* Swipe gestures */
+  var touchStartX = null;
+  document.addEventListener("touchstart", function(e){
+    touchStartX = e.changedTouches[0].clientX;
+  }, {passive:true});
+  document.addEventListener("touchend", function(e){
+    if (touchStartX === null) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 50) {
+      if (dx < 0) next(); else prev();
+    }
+    touchStartX = null;
+  }, {passive:true});
+
+})();
+</script>
+</body>
+</html>

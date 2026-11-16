@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>DSA — Summative Exam Prep</title>
+<style>
+:root{
+  --bg:#07080d;
+  --surface:#0f1218;
+  --surface2:#161c26;
+  --border:#232d3f;
+  --text:#e8edf5;
+  --muted:#6b7a96;
+  --accent:#6ee7b7;   /* mint-green — data */
+  --accent2:#818cf8;  /* indigo — pointers / logic */
+  --accent3:#fb923c;  /* amber — stacks */
+  --accent4:#38bdf8;  /* sky — queues */
+  --accent5:#f472b6;  /* pink — ID questions */
+  --accent6:#facc15;  /* yellow — Big O */
+  --red:#fb7185;
+  --radius:14px;
+  --mono:'SF Mono','Cascadia Code','Consolas',monospace;
+  --sans:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --dur:350ms;
+}
+@media(prefers-reduced-motion:reduce){:root{--dur:1ms;}}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hidden;}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 900px 600px at 10% 0%,rgba(110,231,183,.055),transparent 60%),
+    radial-gradient(ellipse 700px 500px at 90% 100%,rgba(129,140,248,.05),transparent 60%);
+}
+/* grid bg */
+#deck{
+  position:fixed;inset:0;z-index:1;
+  background-image:linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+/* progress */
+#prog-track{position:fixed;top:0;left:0;right:0;height:4px;background:rgba(255,255,255,.05);z-index:200;}
+#prog-bar{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width var(--dur) ease;}
+#counter{
+  position:fixed;bottom:18px;right:22px;z-index:200;
+  font-family:var(--mono);font-size:17px;color:var(--accent);
+  background:rgba(15,18,24,.9);border:1px solid var(--border);
+  padding:7px 14px;border-radius:8px;letter-spacing:.03em;
+}
+#counter b{color:var(--text);}
+#hint-btn{
+  position:fixed;bottom:18px;left:22px;z-index:200;
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(15,18,24,.9);border:1px solid var(--border);
+  color:var(--muted);font-size:17px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-weight:700;
+  transition:color .2s,border-color .2s;
+}
+#hint-btn:hover{color:var(--accent6);border-color:var(--accent6);}
+/* overlay */
+#overlay{
+  position:fixed;inset:0;z-index:300;
+  background:rgba(0,0,0,.82);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;
+}
+#overlay.show{display:flex;}
+#overlay-box{
+  background:var(--surface2);border:1px solid var(--border);border-radius:20px;
+  padding:38px 44px;max-width:480px;width:90%;
+}
+#overlay-box h3{font-size:22px;margin-bottom:22px;color:var(--accent);}
+#overlay-box .row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);}
+#overlay-box .row:last-child{border:none;}
+#overlay-box .key{
+  font-family:var(--mono);font-size:16px;
+  background:var(--surface);border:1px solid var(--border);border-radius:6px;
+  padding:5px 11px;color:var(--accent2);
+}
+#overlay-box .desc{font-size:17px;color:var(--muted);}
+#overlay-close{
+  margin-top:24px;width:100%;padding:11px;
+  background:rgba(110,231,183,.12);border:1px solid rgba(110,231,183,.3);
+  color:var(--accent);border-radius:10px;font-size:17px;cursor:pointer;font-family:var(--sans);
+  transition:background .2s;
+}
+#overlay-close:hover{background:rgba(110,231,183,.2);}
+/* slides */
+.stage{position:fixed;inset:0;z-index:10;}
+.slide{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  padding:5vh 7vw;
+  opacity:0;visibility:hidden;transform:translateX(28px);
+  transition:opacity var(--dur) ease,transform var(--dur) ease;
+  pointer-events:none;
+}
+.slide.active{opacity:1;visibility:visible;transform:translateX(0);pointer-events:auto;}
+.slide.prev-dir{transform:translateX(-28px);}
+.slide-inner{width:100%;max-width:1200px;max-height:90vh;overflow-y:auto;padding-right:4px;}
+.slide-inner::-webkit-scrollbar{width:5px;}
+.slide-inner::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+/* typography */
+.eyebrow{
+  display:inline-flex;align-items:center;gap:10px;
+  font-family:var(--mono);font-size:13px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);font-weight:600;margin-bottom:16px;
+}
+.eyebrow .dash{width:20px;height:1px;background:var(--accent);opacity:.6;}
+h1.title{font-size:clamp(30px,4.5vw,56px);line-height:1.08;font-weight:900;letter-spacing:-.02em;margin-bottom:14px;}
+h2.title{font-size:clamp(24px,3vw,40px);line-height:1.12;font-weight:800;letter-spacing:-.015em;margin-bottom:14px;}
+.lede{font-size:clamp(16px,1.3vw,20px);color:var(--muted);line-height:1.65;margin-bottom:22px;}
+/* grid helpers */
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;}
+/* cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;}
+.card h3{font-size:18px;font-weight:700;margin-bottom:8px;}
+.card p,.card li{font-size:16px;color:var(--muted);line-height:1.6;}
+.card ul{padding-left:18px;margin-top:6px;}
+.card li{margin-bottom:6px;}
+.card li::marker{color:var(--accent);}
+/* colored borders */
+.c-green{border-color:rgba(110,231,183,.35);}
+.c-indigo{border-color:rgba(129,140,248,.35);}
+.c-amber{border-color:rgba(251,146,60,.35);}
+.c-sky{border-color:rgba(56,189,248,.35);}
+.c-pink{border-color:rgba(244,114,182,.35);}
+.c-yellow{border-color:rgba(250,204,21,.35);}
+/* accent text */
+.a1{color:var(--accent);}
+.a2{color:var(--accent2);}
+.a3{color:var(--accent3);}
+.a4{color:var(--accent4);}
+.a5{color:var(--accent5);}
+.a6{color:var(--accent6);}
+.ar{color:var(--red);}
+/* badge */
+.badge{
+  display:inline-block;font-family:var(--mono);font-size:13px;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;
+  padding:4px 11px;border-radius:999px;line-height:1;margin-bottom:10px;
+}
+.badge-green{background:rgba(110,231,183,.12);color:var(--accent);border:1px solid rgba(110,231,183,.3);}
+.badge-indigo{background:rgba(129,140,248,.12);color:var(--accent2);border:1px solid rgba(129,140,248,.3);}
+.badge-amber{background:rgba(251,146,60,.12);color:var(--accent3);border:1px solid rgba(251,146,60,.3);}
+.badge-sky{background:rgba(56,189,248,.12);color:var(--accent4);border:1px solid rgba(56,189,248,.3);}
+.badge-pink{background:rgba(244,114,182,.12);color:var(--accent5);border:1px solid rgba(244,114,182,.3);}
+.badge-yellow{background:rgba(250,204,21,.12);color:var(--accent6);border:1px solid rgba(250,204,21,.3);}
+.badge-red{background:rgba(251,113,133,.12);color:var(--red);border:1px solid rgba(251,113,133,.3);}
+/* table */
+table.tbl{width:100%;border-collapse:collapse;font-size:16px;}
+table.tbl th,table.tbl td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--border);}
+table.tbl th{color:var(--accent);font-size:13px;text-transform:uppercase;letter-spacing:.08em;font-family:var(--mono);}
+table.tbl td{color:var(--text);}
+table.tbl code{color:var(--accent4);font-family:var(--mono);font-size:15px;}
+/* code */
+.code-wrap{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.code-header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 16px;border-bottom:1px solid var(--border);
+  font-family:var(--mono);font-size:14px;color:var(--muted);
+}
+.copy-btn{
+  font-family:var(--mono);font-size:13px;
+  background:var(--surface);border:1px solid var(--border);
+  color:var(--muted);border-radius:6px;padding:5px 12px;cursor:pointer;
+  transition:all .2s;box-shadow:2px 2px 4px rgba(0,0,0,.3),-1px -1px 3px rgba(255,255,255,.04);
+}
+.copy-btn.copied{
+  color:var(--accent);border-color:rgba(110,231,183,.4);
+  box-shadow:inset 1px 1px 3px rgba(0,0,0,.3),inset -1px -1px 2px rgba(255,255,255,.04);
+  background:rgba(110,231,183,.08);
+}
+.copy-btn:hover:not(.copied){color:var(--text);border-color:rgba(255,255,255,.2);}
+pre.code-body{
+  padding:18px 20px;overflow-x:auto;font-family:var(--mono);font-size:15px;
+  line-height:1.65;color:var(--text);margin:0;
+  max-height:340px;overflow-y:auto;
+}
+pre.code-body::-webkit-scrollbar{height:5px;width:5px;}
+pre.code-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+/* syntax highlight */
+.kw{color:var(--accent2);}
+.ty{color:var(--accent4);}
+.st{color:var(--accent);}
+.cm{color:var(--muted);font-style:italic;}
+.nu{color:var(--accent3);}
+.fn{color:var(--accent6);}
+/* MCQ options */
+.opt{
+  display:flex;align-items:flex-start;gap:12px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+  padding:12px 16px;margin-bottom:8px;font-size:17px;line-height:1.5;
+}
+.opt-key{
+  font-family:var(--mono);font-size:15px;font-weight:700;
+  color:var(--accent2);flex-shrink:0;min-width:22px;
+}
+/* ID blank */
+.id-item{
+  display:flex;align-items:center;gap:14px;
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:12px 18px;margin-bottom:10px;font-size:17px;
+}
+.id-num{
+  font-family:var(--mono);font-size:14px;font-weight:700;
+  color:var(--accent5);flex-shrink:0;min-width:28px;
+}
+.id-blank{
+  flex:1;border-bottom:1px dashed var(--border);
+  color:var(--text);font-size:16px;
+}
+/* output box */
+.out-box{
+  background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:10px;
+  padding:16px 20px;font-family:var(--mono);font-size:16px;line-height:1.8;
+  color:var(--accent4);margin-top:10px;min-height:70px;
+}
+/* divider */
+.divider{height:1px;background:var(--border);margin:18px 0;}
+/* icon row */
+.icon-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:24px;}
+.chip{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:8px 16px;font-size:16px;font-weight:600;
+}
+/* answer key highlight */
+.ans{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(110,231,183,.1);border:1px solid rgba(110,231,183,.3);
+  border-radius:8px;padding:5px 14px;font-family:var(--mono);font-size:16px;color:var(--accent);font-weight:700;
+}
+.ans-row{margin-bottom:12px;font-size:16px;line-height:1.6;}
+.ans-row small{color:var(--muted);font-size:15px;}
+/* hero svg wrap */
+.hero-svg{display:flex;justify-content:center;margin-bottom:28px;}
+/* big num */
+.big-num{font-size:clamp(48px,6vw,80px);font-weight:900;line-height:1;font-family:var(--mono);}
+/* recap section label */
+.sec-label{
+  font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:12px;display:block;
+}
+</style>
+</head>
+<body>
+<div id="prog-track"><div id="prog-bar"></div></div>
+<span id="counter"><b id="cur">1</b> / <b id="tot">1</b></span>
+<button id="hint-btn" title="Shortcuts">?</button>
+<div id="overlay">
+  <div id="overlay-box">
+    <h3>⌨ Keyboard Shortcuts</h3>
+    <div class="row"><span class="key">→ / Mouse4</span><span class="desc">Next slide</span></div>
+    <div class="row"><span class="key">← / Mouse3</span><span class="desc">Previous slide</span></div>
+    <div class="row"><span class="key">Home</span><span class="desc">First slide</span></div>
+    <div class="row"><span class="key">End</span><span class="desc">Last slide</span></div>
+    <div class="row"><span class="key">?</span><span class="desc">Toggle this overlay</span></div>
+    <div class="row"><span class="key">Swipe</span><span class="desc">Navigate on mobile</span></div>
+    <button id="overlay-close">Close</button>
+  </div>
+</div>
+<div id="deck">
+<div class="stage" id="stage"></div>
+</div>
+<script>
+const slides = [
+
+// ============================================================
+// SLIDE 1 — TITLE
+// ============================================================
+`<div class="slide-inner">
+  <div class="hero-svg">
+    <svg width="320" height="90" viewBox="0 0 320 90" role="img" xmlns="http://www.w3.org/2000/svg">
+      <title>DSA Data Structures & Algorithms logo</title>
+      <!-- Linked list nodes -->
+      <rect x="10" y="30" width="56" height="30" rx="8" fill="none" stroke="#6ee7b7" stroke-width="2"/>
+      <text x="38" y="50" text-anchor="middle" font-family="monospace" font-size="13" fill="#6ee7b7">Node</text>
+      <line x1="66" y1="45" x2="88" y2="45" stroke="#818cf8" stroke-width="2" marker-end="url(#arr)"/>
+      <rect x="88" y="30" width="56" height="30" rx="8" fill="none" stroke="#818cf8" stroke-width="2"/>
+      <text x="116" y="50" text-anchor="middle" font-family="monospace" font-size="13" fill="#818cf8">Node</text>
+      <line x1="144" y1="45" x2="166" y2="45" stroke="#fb923c" stroke-width="2" marker-end="url(#arr2)"/>
+      <rect x="166" y="30" width="56" height="30" rx="8" fill="none" stroke="#fb923c" stroke-width="2"/>
+      <text x="194" y="50" text-anchor="middle" font-family="monospace" font-size="13" fill="#fb923c">Node</text>
+      <line x1="222" y1="45" x2="244" y2="45" stroke="#38bdf8" stroke-width="2" marker-end="url(#arr3)"/>
+      <rect x="244" y="30" width="56" height="30" rx="8" fill="none" stroke="#38bdf8" stroke-width="2"/>
+      <text x="272" y="50" text-anchor="middle" font-family="monospace" font-size="13" fill="#38bdf8">null</text>
+      <!-- O() badge top right -->
+      <text x="290" y="22" font-family="monospace" font-size="18" fill="#facc15" font-weight="900">O(n)</text>
+      <defs>
+        <marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill="#818cf8"/>
+        </marker>
+        <marker id="arr2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill="#fb923c"/>
+        </marker>
+        <marker id="arr3" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill="#38bdf8"/>
+        </marker>
+      </defs>
+    </svg>
+  </div>
+  <div class="eyebrow"><div class="dash"></div>DSA Periodical Exam Prep<div class="dash"></div></div>
+  <h1 class="title"><span class="a1">Summative</span> Review &amp; <span class="a2">Exam Simulator</span></h1>
+  <p class="lede">30-item summative covering Big O Notation, Linked Lists, Stacks, and Queues — with a comprehensive recap before the exam questions.</p>
+  <div class="icon-row">
+    <span class="chip"><span class="a6">⊛</span> Big O Notation</span>
+    <span class="chip"><span class="a1">⬡</span> Linked Lists</span>
+    <span class="chip"><span class="a3">▣</span> Stacks</span>
+    <span class="chip"><span class="a4">⬤</span> Queues</span>
+  </div>
+  <div class="g4">
+    <div class="card c-yellow" style="text-align:center;padding:16px;">
+      <div class="big-num a6">10</div>
+      <div style="font-size:16px;color:var(--muted);margin-top:6px;">Multiple Choice</div>
+    </div>
+    <div class="card c-pink" style="text-align:center;padding:16px;">
+      <div class="big-num a5">15</div>
+      <div style="font-size:16px;color:var(--muted);margin-top:6px;">Identification</div>
+    </div>
+    <div class="card c-sky" style="text-align:center;padding:16px;">
+      <div class="big-num a4">5</div>
+      <div style="font-size:16px;color:var(--muted);margin-top:6px;">Guess the Output</div>
+    </div>
+    <div class="card c-green" style="text-align:center;padding:16px;">
+      <div class="big-num a1">30</div>
+      <div style="font-size:16px;color:var(--muted);margin-top:6px;">Total Items</div>
+    </div>
+  </div>
+</div>`,
+
+// ============================================================
+// SLIDE 2 — RECAP: BIG O NOTATION
+// ============================================================
+`<div class="slide-inner">
+  <div class="eyebrow"><div class="dash"></div>Recap — Topic 1<div class="dash"></div></div>
+  <h2 class="title"><span class="a6">Big O Notation</span> — How Algorithms Scale</h2>
+  <p class="lede">Big O describes <em>how the work grows</em> as input <code style="color:var(--accent4);">n</code> increases — not the exact runtime.</p>
+  <div class="g2" style="margin-bottom:18px;">
+    <div class="card c-yellow">
+      <div class="badge badge-yellow">O(1) — Constant</div>
+      <p>Work stays the same regardless of input size. <strong style="color:var(--text);">Vending machine analogy</strong> — press B4, always takes the same time.</p>
+      <p style="margin-top:8px;font-family:var(--mono);font-size:15px;color:var(--accent4);">arr[0] → always one lookup</p>
+    </div>
+    <div class="card c-green">
+      <div class="badge badge-green">O(log n) — Logarithmic</div>
+      <p>Each step <strong style="color:var(--text);">halves</strong> the remaining problem. <strong style="color:var(--text);">Phone book analogy</strong> — flip to middle, discard half, repeat.</p>
+      <p style="margin-top:8px;font-family:var(--mono);font-size:15px;color:var(--accent4);">i = i * 2 in a loop</p>
+    </div>
+    <div class="card c-indigo">
+      <div class="badge badge-indigo">O(n) — Linear</div>
+      <p>Effort grows <strong style="color:var(--text);">proportionally</strong> with input. <strong style="color:var(--text);">Pocket-checking analogy</strong> — more pockets, more checks.</p>
+      <p style="margin-top:8px;font-family:var(--mono);font-size:15px;color:var(--accent4);">for(i=0;i&lt;n;i++)</p>
+    </div>
+    <div class="card c-amber">
+      <div class="badge badge-amber">O(n²) — Quadratic</div>
+      <p>A <strong style="color:var(--text);">nested loop</strong>. Double input → roughly 4x the work. Common in brute-force sorts like bubble sort.</p>
+      <p style="margin-top:8px;font-family:var(--mono);font-size:15px;color:var(--accent4);">for i: for j → n²</p>
+    </div>
+  </div>
+  <div class="card" style="background:var(--surface2);">
+    <table class="tbl">
+      <tr><th>Notation</th><th>Name</th><th>n=10</th><th>n=1,000</th><th>n=1,000,000</th><th>Loop Pattern</th></tr>
+      <tr><td class="a6">O(1)</td><td>Constant</td><td>1</td><td>1</td><td>1</td><td>No loop / single statement</td></tr>
+      <tr><td class="a1">O(log n)</td><td>Logarithmic</td><td>3</td><td>10</td><td>20</td><td>i = i*2 (doubles)</td></tr>
+      <tr><td class="a2">O(n)</td><td>Linear</td><td>10</td><td>1,000</td><td>1,000,000</td><td>Single loop over n</td></tr>
+      <tr><td class="a3">O(n²)</td><td>Quadratic</td><td>100</td><td>1,000,000</td><td>10¹²</td><td>Loop inside loop</td></tr>
+    </table>
+  </div>
+</div>`,
+
+// ============================================================
+// SLIDE 3 — RECAP: LINKED LISTS
+// ============================================================
+`<div class="slide-inner">
+  <div class="eyebrow"><div class="dash"></div>Recap — Topic 2<div class="dash"></div></div>
+  <h2 class="title"><span class="a1">Linked Lists</span> — Nodes, Pointers &amp; Traversal</h2>
+  <div class="hero-svg">
+    <svg width="580" height="72" viewBox="0 0 580 72" role="img" xmlns="http://www.w3.org/2000/svg">
+      <title>Singly linked list diagram: head → [data|next] → [data|next] → null</title>
+      <text x="10" y="40" font-family="monospace" font-size="14" fill="#6b7a96">head</text>
+      <line x1="52" y1="38" x2="70" y2="38" stroke="#6ee7b7" stroke-width="2" marker-end="url(#ga)"/>
+      <defs><marker id="ga" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#6ee7b7"/></marker>
+      <marker id="gb" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#818cf8"/></marker>
+      <marker id="gc" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#fb923c"/></marker></defs>
+      <!-- Node 1 -->
+      <rect x="72" y="16" width="50" height="44" rx="6" fill="none" stroke="#6ee7b7" stroke-width="2"/>
+      <rect x="122" y="16" width="38" height="44" rx="0" fill="none" stroke="#818cf8" stroke-width="2"/>
+      <text x="97" y="42" text-anchor="middle" font-family="monospace" font-size="13" fill="#6ee7b7">42</text>
+      <text x="141" y="42" text-anchor="middle" font-family="monospace" font-size="12" fill="#818cf8">next</text>
+      <line x1="160" y1="38" x2="178" y2="38" stroke="#818cf8" stroke-width="2" marker-end="url(#gb)"/>
+      <!-- Node 2 -->
+      <rect x="180" y="16" width="50" height="44" rx="6" fill="none" stroke="#6ee7b7" stroke-width="2"/>
+      <rect x="230" y="16" width="38" height="44" fill="none" stroke="#818cf8" stroke-width="2"/>
+      <text x="205" y="42" text-anchor="middle" font-family="monospace" font-size="13" fill="#6ee7b7">17</text>
+      <text x="249" y="42" text-anchor="middle" font-family="monospace" font-size="12" fill="#818cf8">next</text>
+      <line x1="268" y1="38" x2="286" y2="38" stroke="#818cf8" stroke-width="2" marker-end="url(#gb)"/>
+      <!-- Node 3 -->
+      <rect x="288" y="16" width="50" height="44" rx="6" fill="none" stroke="#6ee7b7" stroke-width="2"/>
+      <rect x="338" y="16" width="38" height="44" fill="none" stroke="#818cf8" stroke-width="2"/>
+      <text x="313" y="42" text-anchor="middle" font-family="monospace" font-size="13" fill="#6ee7b7">91</text>
+      <text x="357" y="42" text-anchor="middle" font-family="monospace" font-size="12" fill="#818cf8">next</text>
+      <line x1="376" y1="38" x2="394" y2="38" stroke="#818cf8" stroke-width="2" marker-end="url(#gb)"/>
+      <!-- null -->
+      <rect x="396" y="22" width="48" height="32" rx="6" fill="rgba(251,113,133,.1)" stroke="#fb7185" stroke-width="2"/>
+      <text x="420" y="42" text-anchor="middle" font-family="monospace" font-size="13" fill="#fb7185">null</text>
+    </svg>
+  </div>
+  <div class="g2" style="margin-bottom:16px;">
+    <div>
+      <div class="card c-green" style="margin-bottom:14px;">
+        <div class="badge badge-green">Singly Linked List</div>
+        <ul class="card"><li>Each node: <span class="a1">data</span> + <span class="a2">next</span> pointer</li><li>Traversal is <strong style="color:var(--text);">one-direction only</strong></li><li>Head = first node; last node points to <span class="ar">null</span></li><li>Insert at head: <span class="a1">O(1)</span> — Insert at position: <span class="a3">O(n)</span></li></ul>
+      </div>
+      <div class="card c-indigo">
+        <div class="badge badge-indigo">Doubly Linked List</div>
+        <ul class="card"><li>Each node: <span class="a6">prev</span> + <span class="a1">data</span> + <span class="a2">next</span></li><li>Can traverse <strong style="color:var(--text);">forward AND backward</strong></li><li>Used in: browser history, music player prev/next</li></ul>
+      </div>
+    </div>
+    <div>
+      <div class="card c-amber" style="margin-bottom:14px;">
+        <div class="badge badge-amber">vs. Arrays</div>
+        <table class="tbl"><tr><th></th><th>Array</th><th>Linked List</th></tr>
+        <tr><td>Access</td><td class="a1">O(1)</td><td class="ar">O(n)</td></tr>
+        <tr><td>Insert head</td><td class="ar">O(n)</td><td class="a1">O(1)</td></tr>
+        <tr><td>Size</td><td class="ar">Fixed</td><td class="a1">Dynamic</td></tr>
+        <tr><td>Memory</td><td class="a1">Less</td><td class="ar">More</td></tr></table>
+      </div>
+      <div class="card c-sky">
+        <div class="badge badge-sky">Java Usage</div>
+        <p style="font-family:var(--mono);font-size:15px;color:var(--accent4);">LinkedList&lt;String&gt; list = new LinkedList&lt;&gt;();<br>list.add("A"); // addLast<br>list.addFirst("Z");<br>list.remove(); // removeFirst</p>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+// ============================================================
+// SLIDE 4 — RECAP: STACKS
+// ============================================================
+`<div class="slide-inner">
+  <div class="eyebrow"><div class="dash"></div>Recap — Topic 3<div class="dash"></div></div>
+  <h2 class="title"><span class="a3">Stacks</span> — LIFO, Peek &amp; Underflow</h2>
+  <div class="g2">
+    <div>
+      <div class="hero-svg" style="justify-content:flex-start;margin-bottom:18px;">
+        <svg width="170" height="200" viewBox="0 0 170 200" role="img" xmlns="http://www.w3.org/2000/svg">
+          <title>Stack diagram showing LIFO order: TOP = C</title>
+          <text x="85" y="20" text-anchor="middle" font-family="monospace" font-size="13" fill="#6b7a96">↓ push / ↑ pop</text>
+          <!-- stack frames -->
+          <rect x="20" y="30" width="130" height="40" rx="6" fill="rgba(251,146,60,.15)" stroke="#fb923c" stroke-width="2"/>
+          <text x="85" y="56" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#fb923c" font-weight="700">C  ← TOP</text>
+          <rect x="20" y="75" width="130" height="40" rx="6" fill="rgba(129,140,248,.12)" stroke="#818cf8" stroke-width="2"/>
+          <text x="85" y="101" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#818cf8">B</text>
+          <rect x="20" y="120" width="130" height="40" rx="6" fill="rgba(110,231,183,.1)" stroke="#6ee7b7" stroke-width="2"/>
+          <text x="85" y="146" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#6ee7b7">A</text>
+          <!-- bottom -->
+          <line x1="20" y1="165" x2="150" y2="165" stroke="#6b7a96" stroke-width="3"/>
+          <text x="85" y="185" text-anchor="middle" font-family="monospace" font-size="13" fill="#6b7a96">BOTTOM</text>
+        </svg>
+      </div>
+      <div class="card c-amber">
+        <div class="badge badge-amber">LIFO — Last In, First Out</div>
+        <ul class="card">
+          <li><strong class="a3">push(x)</strong> — add item to top</li>
+          <li><strong class="a3">pop()</strong> — remove &amp; return top item</li>
+          <li><strong class="a6">peek()</strong> — view top item <em>without removing</em></li>
+          <li><strong class="ar">isEmpty()</strong> — check if stack has no items</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="card c-pink" style="margin-bottom:14px;">
+        <div class="badge badge-pink">Stack Underflow</div>
+        <p>Calling <strong class="a3">pop()</strong> or <strong class="a3">peek()</strong> on an <strong style="color:var(--text);">empty stack</strong>. Java throws <span class="ar">EmptyStackException</span>. Always guard with <span class="a1">isEmpty()</span>.</p>
+      </div>
+      <div class="card c-green" style="margin-bottom:14px;">
+        <div class="badge badge-green">Real-World Applications</div>
+        <ul class="card">
+          <li>✦ <strong style="color:var(--text);">Browser back button</strong> — page history</li>
+          <li>✦ <strong style="color:var(--text);">Undo/Redo</strong> in text editors</li>
+          <li>✦ <strong style="color:var(--text);">Balanced brackets</strong> validation ( { [ ] } )</li>
+          <li>✦ <strong style="color:var(--text);">Call stack</strong> — function calls in any program</li>
+          <li>✦ <strong style="color:var(--text);">Backtracking</strong> — maze solving, recursion</li>
+        </ul>
+      </div>
+      <div class="card c-sky">
+        <div class="badge badge-sky">Java Stack Usage</div>
+        <p style="font-family:var(--mono);font-size:15px;color:var(--accent4);">Stack&lt;Integer&gt; s = new Stack&lt;&gt;();<br>s.push(10); s.push(20);<br>s.peek(); // 20, still there<br>s.pop();  // returns 20</p>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+// ============================================================
+// SLIDE 5 — RECAP: QUEUES
+// ============================================================
+`<div class="slide-inner">
+  <div class="eyebrow"><div class="dash"></div>Recap — Topic 4<div class="dash"></div></div>
+  <h2 class="title"><span class="a4">Queues</span> — FIFO, Circular &amp; Peek</h2>
+  <div class="g2">
+    <div>
+      <div class="hero-svg" style="justify-content:flex-start;margin-bottom:14px;">
+        <svg width="380" height="90" viewBox="0 0 380 90" role="img" xmlns="http://www.w3.org/2000/svg">
+          <title>Queue diagram: FRONT → A → B → C → REAR, enqueue at rear dequeue at front</title>
+          <text x="10" y="52" font-family="monospace" font-size="12" fill="#2dd4bf">FRONT</text>
+          <text x="8" y="65" font-family="monospace" font-size="11" fill="#6b7a96">dequeue</text>
+          <line x1="62" y1="50" x2="78" y2="50" stroke="#2dd4bf" stroke-width="2" marker-end="url(#qa)"/>
+          <defs><marker id="qa" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#2dd4bf"/></marker></defs>
+          <rect x="80" y="28" width="54" height="44" rx="6" fill="rgba(45,212,191,.12)" stroke="#2dd4bf" stroke-width="2"/>
+          <text x="107" y="54" text-anchor="middle" font-family="monospace" font-size="15" fill="#2dd4bf">A</text>
+          <rect x="140" y="28" width="54" height="44" rx="6" fill="rgba(129,140,248,.1)" stroke="#818cf8" stroke-width="2"/>
+          <text x="167" y="54" text-anchor="middle" font-family="monospace" font-size="15" fill="#818cf8">B</text>
+          <rect x="200" y="28" width="54" height="44" rx="6" fill="rgba(251,113,133,.1)" stroke="#fb7185" stroke-width="2"/>
+          <text x="227" y="54" text-anchor="middle" font-family="monospace" font-size="15" fill="#fb7185">C</text>
+          <text x="268" y="52" font-family="monospace" font-size="12" fill="#fb7185">REAR</text>
+          <text x="265" y="65" font-family="monospace" font-size="11" fill="#6b7a96">enqueue</text>
+        </svg>
+      </div>
+      <div class="card c-sky" style="margin-bottom:14px;">
+        <div class="badge badge-sky">FIFO — First In, First Out</div>
+        <ul class="card">
+          <li><strong class="a4">enqueue(x)</strong> — add to REAR</li>
+          <li><strong class="a4">dequeue()</strong> — remove from FRONT</li>
+          <li><strong class="a6">peek() / element()</strong> — view front item only</li>
+          <li><strong class="a1">isEmpty()</strong> — check if queue is empty</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="card c-amber" style="margin-bottom:14px;">
+        <div class="badge badge-amber">Linear vs. Circular Queue</div>
+        <p><strong style="color:var(--text);">Linear Queue:</strong> rear advances forward. Once rear hits the end, you can't enqueue even if front slots are free — <em>wasted space problem.</em></p>
+        <div class="divider"></div>
+        <p><strong style="color:var(--text);">Circular Queue:</strong> rear wraps back to index 0 using <strong class="a4">modulo %</strong>. Formula: <span style="font-family:var(--mono);color:var(--accent4);">rear = (rear+1) % capacity</span></p>
+      </div>
+      <div class="card c-green" style="margin-bottom:14px;">
+        <div class="badge badge-green">Real-World Applications</div>
+        <ul class="card">
+          <li>✦ <strong style="color:var(--text);">Printer spooling</strong> — jobs print in order</li>
+          <li>✦ <strong style="color:var(--text);">Ticket counter</strong> — first in, first served</li>
+          <li>✦ <strong style="color:var(--text);">CPU scheduling</strong> — round robin</li>
+          <li>✦ <strong style="color:var(--text);">BFS traversal</strong> — graph algorithms</li>
+        </ul>
+      </div>
+      <div class="card c-indigo">
+        <p style="font-family:var(--mono);font-size:15px;color:var(--accent4);">Queue&lt;String&gt; q = new LinkedList&lt;&gt;();<br>q.add("Job1");  // enqueue<br>q.peek();       // "Job1", stays<br>q.poll();       // removes "Job1"</p>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+// ============================================================
+// SLIDE 6 — RECAP: BIG PICTURE SUMMARY
+// ============================================================
+`<div class="slide-inner">
+  <div class="eyebrow"><div class="dash"></div>Recap — Summary<div class="dash"></div></div>
+  <h2 class="title">All Topics at a Glance</h2>
+  <div class="card" style="margin-bottom:18px;">
+    <table class="tbl">
+      <tr><th>Topic</th><th>Key Concept</th><th>Order</th><th>Real-Life</th><th>Java Class</th></tr>
+      <tr><td class="a6">Big O</td><td>Growth rate of algorithms</td><td>O(1) best → O(n²) heavy</td><td>Recipe complexity</td><td>—</td></tr>
+      <tr><td class="a1">Linked List</td><td>Nodes + pointers, dynamic</td><td>Insert head O(1), access O(n)</td><td>Treasure hunt chain</td><td><code>LinkedList</code></td></tr>
+      <tr><td class="a3">Stack</td><td>LIFO — top in, top out</td><td>push/pop O(1)</td><td>Plate stack, undo</td><td><code>Stack</code></td></tr>
+      <tr><td class="a4">Queue</td><td>FIFO — front out, rear in</td><td>enqueue/dequeue O(1)</td><td>Ticket line, printer</td><td><code>LinkedList</code></td></tr>
+    </table>
+  </div>
+  <div class="g3">
+    <div class="card c-yellow">
+      <h3 class="a6">Big O Quick Pick</h3>
+      <ul class="card">
+        <li>No loop → <strong class="a1">O(1)</strong></li>
+        <li>One loop → <strong class="a2">O(n)</strong></li>
+        <li>Loop i*=2 → <strong class="a6">O(log n)</strong></li>
+        <li>Nested loops → <strong class="a3">O(n²)</strong></li>
+      </ul>
+    </div>
+    <div class="card c-green">
+      <h3 class="a1">Linked List Quick Pick</h3>
+      <ul class="card">
+        <li>Singly = data + next</li>
+        <li>Doubly = prev + data + next</li>
+        <li>Head → first node</li>
+        <li>Tail → null (singly)</li>
+      </ul>
+    </div>
+    <div class="card c-sky">
+      <h3 class="a4">Stack vs Queue</h3>
+      <ul class="card">
+        <li>Stack: <strong class="a3">LIFO</strong> — last in, first out</li>
+        <li>Queue: <strong class="a4">FIFO</strong> — first in, first out</li>
+        <li>Underflow = pop empty stack</li>
+        <li>Circular = modulo wrapping</li>
+      </ul>
+    </div>
+  </div>
+</div>`,
+
+// ============================================================
+// SLIDE 7 — SECTION BREAK: EXAM STARTS
+// ============================================================
+`<div class="slide-inner" style="text-align:center;">
+  <div class="hero-svg">
+    <svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img">
+      <title>Exam start icon</title>
+      <circle cx="60" cy="60" r="55" fill="rgba(129,140,248,.1)" stroke="#818cf8" stroke-width="2"/>
+      <text x="60" y="78" text-anchor="middle" font-size="52" font-family="sans-serif">📋</text>
+    </svg>
+  </div>
+  <div class="eyebrow" style="justify-content:center;"><div class="dash"></div>Summative Exam<div class="dash"></div></div>
+  <h1 class="title">Let's Begin!</h1>
+  <p class="lede" style="max-width:560px;margin:0 auto 28px;">30 questions across three sections. Take your time — the answer key is at the end of the deck.</p>
+  <div class="g3" style="max-width:640px;margin:0 auto;">
+    <div class="card c-yellow" style="text-align:center;">
+      <div style="font-size:28px;margin-bottom:8px;">①</div>
+      <div class="badge badge-yellow">Section A</div>
+      <div style="font-size:16px;color:var(--muted);">Multiple Choice<br><strong style="color:var(--text);">10 items</strong></div>
+    </div>
+    <div class="card c-pink" style="text-align:center;">
+      <div style="font-size:28px;margin-bottom:8px;">②</div>
+      <div class="badge badge-pink">Section B</div>
+      <div style="font-size:16px;color:var(--muted);">Identification<br><strong style="color:var(--text);">15 items</strong></div>
+    </div>
+    <div class="card c-sky" style="text-align:center;">
+      <div style="font-size:28px;margin-bottom:8px;">③</div>
+      <div class="badge badge-sky">Section C</div>
+      <div style="font-size:16px;color:var(--muted);">Guess the Output<br><strong style="color:var(--text);">5 items</strong></div>
+    </div>
+  </div>
+</div>`,
+
+// ============================================================
+// SLIDE 8 — MCQ 1–4
+// ============================================================
+`<div class="slide-inner">
+  <div class="eyebrow"><div class="dash"></div>Section A — Multiple Choice<div class="dash"></div></div>
+  <h2 class="title">Questions <span class="a6">1 – 4</span></h2>
+  <div class="g2">
+    <div>
+      <div class="card c-yellow" style="margin-bottom:16px;">
+        <div class="badge badge-yellow">Question 1</div>
+        <p style="font-size:17px;color:var(--text);margin-bottom:12px;">What is the Big O complexity of accessing the first element of a Java <code style="color:var(--accent4);">LinkedList</code>?</p>
+        <div class="opt"><span class="opt-key">A</span>O(log n)</div>
+        <div class="opt"><span class="opt-key">B</span>O(n)</div>
+        <div class="opt"><span class="opt-key">C</span>O(1)</div>
+        <div class="opt"><span class="opt-key">D</span>O(n²)</div>
+      </div>
+      <div class="card c-yellow">
+        <div class="badge badge-yellow">Question 2</div>
+        <p style="font-size:17px;color:var(--text);margin-bottom:12px;">Which loop pattern typically indicates <strong>O(log n)</strong> complexity?</p>
+        <div class="opt"><span class="opt-key">A</span><code>for(int i=0; i&lt;n; i++)</code></div>
+        <div class="opt"><span class="opt-key">B</span><code>for(int i=1; i&lt;n; i*=2)</code></div>
+        <div class="opt"><span class="opt-key">C</span>Two nested loops over n</div>
+        <div class="opt"><span class="opt-key">D</span>A single assignment statement</div>
+      </div>
+    </div>
+    <div>
+      <div class="card c-yellow" style="margin-bottom:16px;">
+        <div class="badge badge-yellow">Question 3</div>
+        <p style="font-size:17px;color:var(--text);margin-bottom:12px;">In a singly linked list, what does the <strong>last node's next pointer</strong> contain?</p>
+        <div class="opt"><span class="opt-key">A</span>The address of the head node</div>
+        <div class="opt"><span class="opt-key">B</span>0</div>
+        <div class="opt"><span class="opt-key">C</span><code>null</code></div>
+        <div class="opt"><span class="opt-key">D</span>The address of the previous node</div>
+      </div>
+      <div class="card c-yellow">
+        <div class="badge badge-yellow">Question 4</div>
+        <p style="font-size:17px;color:var(--text);margin-bottom:12px;">What exception does Java throw when you call <code>pop()</code> on an empty <code>Stack</code>?</p>
+        <div class="opt"><span class="opt-key">A</span>NullPointerException</div>
+        <div class="opt"><span class="opt-key">B</span>IndexOutOfBoundsException</div>
+        <div class="opt"><span class="opt-key">C</span>StackOverflowError</div>
+        <div class="opt"><span class="opt-key">D</span>EmptyStackException</div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+// ============================================================
+// SLIDE 9 — MCQ 5–8
+// ============================================================
+`<div class="slide-inner">
+  <div class="eyebrow"><div class="dash"></div>Section A — Multiple Choice<div class="dash"></div></div>
+  <h2 class="title">Questions <span class="a6">5 – 8</span></h2>
+  <div class="g2">
+    <div>
+      <div class="card c-yellow" style="margin-bottom:16px;">
+        <div class="badge badge-yellow">Question 5</div>
+        <p style="font-size:17px;color:var(--text);margin-bottom:12px;">A doubly linked list differs from a singly linked list because each node has an extra pointer to:</p>
+        <div class="opt"><span class="opt-key">A</span>The head node</div>
+        <div class="opt"><span class="opt-key">B</span>The previous node</div>
+        <div class="opt"><span class="opt-key">C</span>The tail node</div>
+        <div class="opt"><span class="opt-key">D</span>A random node</div>
+      </div>
+      <div class="card c-yellow">
+        <div class="badge badge-yellow">Question 6</div>
+        <p style="font-size:17px;color:var(--text);margin-bottom:12px;">Which formula is used in a <strong>circular queue</strong> to advance the rear pointer without going out of bounds?</p>
+        <div class="opt"><span class="opt-key">A</span><code>rear = rear + 1</code></div>
+        <div class="opt"><span class="opt-key">B</span><code>rear = rear - 1</code></div>
+        <div class="opt"><span class="opt-key">C</span><code>rear = (rear + 1) % capacity</code></div>
+        <div class="opt"><span class="opt-key">D</span><code>rear = rear * 2</code></div>
+      </div>
+    </div>
+    <div>
+      <div class="card c-yellow" style="margin-bottom:16px;">
+        <div class="badge badge-yellow">Question 7</div>
+        <p style="font-size:17px;color:var(--text);margin-bottom:12px;">The <strong>peek()</strong> operation on a Stack:</p>
+        <div class="opt"><span class="opt-key">A</span>Removes and returns the top element</div>
+        <div class="opt"><span class="opt-key">B</span>Adds a new element to the top</div>
+        <div class="opt"><span class="opt-key">C</span>Returns the top element without removing it</div>
+        <div class="opt"><span class="opt-key">D</span>Clears all elements from the stack</div>
+      </div>
+      <div class="card c-yellow">
+        <div class="badge badge-yellow">Question 8</div>
+        <p style="font-size:17px;color:var(--text);margin-bottom:12px;">Which data structure best models a <strong>browser's Back button</strong> history?</p>
+        <div class="opt"><span class="opt-key">A</span>Queue (LinkedList)</div>
+        <div class="opt"><span class="opt-key">B</span>Stack</div>
+        <div class="opt"><span class="opt-key">C</span>Circular Queue</div>
+        <div class="opt"><span class="opt-key">D</span>Singly Linked List</div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+// ============================================================
+// SLIDE 10 — MCQ 9–10
+// ============================================================
+`<div class="slide-inner">
+  <div class="eyebrow"><div class="dash"></div>Section A — Multiple Choice<div class="dash"></div></div>
+  <h2 class="title">Questions <span class="a6">9 – 10</span></h2>
+  <div class="g2">
+    <div>
+      <div class="card c-yellow">
+        <div class="badge badge-yellow">Question 9</div>
+        <p style="font-size:17px;color:var(--text);margin-bottom:12px;">Given code: <code style="color:var(--accent4);font-size:15px;">for(int i=0; i&lt;n; i++) for(int j=0; j&lt;n; j++) count++;</code> What is the Big O complexity?</p>
+        <div class="opt"><span class="opt-key">A</span>O(n)</div>
+        <div class="opt"><span class="opt-key">B</span>O(log n)</div>
+        <div class="opt"><span class="opt-key">C</span>O(n²)</div>
+        <div class="opt"><span class="opt-key">D</span>O(1)</div>
+      </div>
+    </div>
+    <div>
+      <div class="card c-yellow">
+        <div class="badge badge-yellow">Question 10</div>
+        <p style="font-size:17px;color:var(--text);margin-bottom:12px;">In a <strong>linear queue</strong>, what problem arises even when there is free space at the front?</p>
+        <div class="opt"><span class="opt-key">A</span>Stack underflow</div>
+        <div class="opt"><span class="opt-key">B</span>The queue appears full because rear reached the end — wasted space</div>
+        <div class="opt"><span class="opt-key">C</span>Elements lose their order</div>
+        <div class="opt"><span class="opt-key">D</span>The head pointer becomes null</div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:20px;background:rgba(110,231,183,.06);border-color:rgba(110,231,183,.2);">
+    <p style="font-size:17px;color:var(--muted);text-align:center;">✓ Section A complete — 10 Multiple Choice items done. Next: <strong style="color:var(--accent5);">Identification</strong></p>
+  </div>
+</div>`,
+
+// ============================================================
+// SLIDE 11 — IDENTIFICATION 1–8
+// ============================================================
+`<div class="slide-inner">
+  <div class="eyebrow"><div class="dash"></div>Section B — Identification<div class="dash"></div></div>
+  <h2 class="title">Questions <span class="a5">1 – 8</span></h2>
+  <p class="lede" style="margin-bottom:16px;">Write the correct term or keyword being described.</p>
+  <div class="g2">
+    <div>
+      <div class="id-item"><span class="id-num">1</span><span class="id-blank">Big O notation that describes an algorithm whose work does not change regardless of input size.</span></div>
+      <div class="id-item"><span class="id-num">2</span><span class="id-blank">The pointer in a singly linked list that stores the address of the <em>next</em> node.</span></div>
+      <div class="id-item"><span class="id-num">3</span><span class="id-blank">The error condition that occurs when you call pop() on an empty stack.</span></div>
+      <div class="id-item"><span class="id-num">4</span><span class="id-blank">The operation that views the top of a stack <em>without</em> removing it.</span></div>
+    </div>
+    <div>
+      <div class="id-item"><span class="id-num">5</span><span class="id-blank">The pointer in a doubly linked list that points to the <em>previous</em> node.</span></div>
+      <div class="id-item"><span class="id-num">6</span><span class="id-blank">A queue variant that uses the modulo operator to reuse freed-up slots at the front.</span></div>
+      <div class="id-item"><span class="id-num">7</span><span class="id-blank">The end of a linked list is marked by this special value stored in the next pointer.</span></div>
+      <div class="id-item"><span class="id-num">8</span><span class="id-blank">The acronym for the order in which a Stack processes elements (Last In, __ Out).</span></div>
+    </div>
+  </div>
+</div>`,
+
+// ============================================================
+// SLIDE 12 — IDENTIFICATION 9–15
+// ============================================================
+`<div class="slide-inner">
+  <div class="eyebrow"><div class="dash"></div>Section B — Identification<div class="dash"></div></div>
+  <h2 class="title">Questions <span class="a5">9 – 15</span></h2>
+  <p class="lede" style="margin-bottom:16px;">Write the correct term or keyword being described.</p>
+  <div class="g2">
+    <div>
+      <div class="id-item"><span class="id-num">9</span><span class="id-blank">The Big O class where doubling input size roughly <em>quadruples</em> the work — associated with nested loops.</span></div>
+      <div class="id-item"><span class="id-num">10</span><span class="id-blank">In a queue, the <em>removal</em> operation that takes from the FRONT.</span></div>
+      <div class="id-item"><span class="id-num">11</span><span class="id-blank">The special pointer that always references the first node in a linked list.</span></div>
+      <div class="id-item"><span class="id-num">12</span><span class="id-blank">A real-world application of a Stack used in programming to track function calls.</span></div>
+    </div>
+    <div>
+      <div class="id-item"><span class="id-num">13</span><span class="id-blank">The type of linked list that allows traversal in <em>both forward and backward</em> directions.</span></div>
+      <div class="id-item"><span class="id-num">14</span><span class="id-blank">The queue operation that <em>adds</em> an element to the REAR.</span></div>
+      <div class="id-item"><span class="id-num">15</span><span class="id-blank">A Stack application that checks whether brackets like <code>( { [ ] } )</code> are properly paired.</span></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px;background:rgba(244,114,182,.05);border-color:rgba(244,114,182,.2);">
+    <p style="font-size:17px;color:var(--muted);text-align:center;">✓ Section B complete — 15 Identification items done. Next: <strong style="color:var(--accent4);">Guess the Output</strong></p>
+  </div>
+</div>`,
+
+// ============================================================
+// SLIDE 13 — GUESS OUTPUT 1–2
+// ============================================================
+`<div class="slide-inner">
+  <div class="eyebrow"><div class="dash"></div>Section C — Guess the Output<div class="dash"></div></div>
+  <h2 class="title">Questions <span class="a4">1 – 2</span></h2>
+  <p class="lede" style="margin-bottom:14px;">Trace each code snippet and write the exact output.</p>
+  <div class="g2">
+    <div>
+      <div class="badge badge-sky">Output Question 1</div>
+      <div class="code-wrap">
+        <div class="code-header">
+          <span>Java</span>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+        <pre class="code-body" data-code><span class="kw">import</span> java.util.Stack;
+<span class="kw">public class</span> <span class="ty">Q1</span> {
+  <span class="kw">public static void</span> <span class="fn">main</span>(String[] args) {
+    Stack&lt;<span class="ty">Integer</span>&gt; s = <span class="kw">new</span> Stack&lt;&gt;();
+    s.<span class="fn">push</span>(<span class="nu">5</span>);
+    s.<span class="fn">push</span>(<span class="nu">10</span>);
+    s.<span class="fn">push</span>(<span class="nu">15</span>);
+    s.<span class="fn">pop</span>();
+    System.out.<span class="fn">println</span>(s.<span class="fn">peek</span>());
+    System.out.<span class="fn">println</span>(s.<span class="fn">size</span>());
+  }
+}</pre>
+      </div>
+      <div class="out-box">Output: ___________</div>
+    </div>
+    <div>
+      <div class="badge badge-sky">Output Question 2</div>
+      <div class="code-wrap">
+        <div class="code-header">
+          <span>Java</span>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+        <pre class="code-body" data-code><span class="kw">import</span> java.util.LinkedList;
+<span class="kw">import</span> java.util.Queue;
+<span class="kw">public class</span> <span class="ty">Q2</span> {
+  <span class="kw">public static void</span> <span class="fn">main</span>(String[] args) {
+    Queue&lt;<span class="ty">String</span>&gt; q = <span class="kw">new</span> LinkedList&lt;&gt;();
+    q.<span class="fn">add</span>(<span class="st">"Alpha"</span>);
+    q.<span class="fn">add</span>(<span class="st">"Beta"</span>);
+    q.<span class="fn">add</span>(<span class="st">"Gamma"</span>);
+    q.<span class="fn">poll</span>();
+    System.out.<span class="fn">println</span>(q.<span class="fn">peek</span>());
+    System.out.<span class="fn">println</span>(q.<span class="fn">size</span>());
+  }
+}</pre>
+      </div>
+      <div class="out-box">Output: ___________</div>
+    </div>
+  </div>
+</div>`,
+
+// ============================================================
+// SLIDE 14 — GUESS OUTPUT 3–4
+// ============================================================
+`<div class="slide-inner">
+  <div class="eyebrow"><div class="dash"></div>Section C — Guess the Output<div class="dash"></div></div>
+  <h2 class="title">Questions <span class="a4">3 – 4</span></h2>
+  <div class="g2">
+    <div>
+      <div class="badge badge-sky">Output Question 3</div>
+      <div class="code-wrap">
+        <div class="code-header">
+          <span>Java</span>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+        <pre class="code-body" data-code><span class="kw">public class</span> <span class="ty">Q3</span> {
+  <span class="kw">public static void</span> <span class="fn">main</span>(String[] args) {
+    <span class="ty">int</span> count = <span class="nu">0</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="nu">1</span>; i &lt; <span class="nu">32</span>; i = i * <span class="nu">2</span>) {
+      count++;
+    }
+    System.out.<span class="fn">println</span>(count);
+  }
+}</pre>
+      </div>
+      <div class="out-box">Output: ___________</div>
+    </div>
+    <div>
+      <div class="badge badge-sky">Output Question 4</div>
+      <div class="code-wrap">
+        <div class="code-header">
+          <span>Java</span>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+        <pre class="code-body" data-code><span class="kw">public class</span> <span class="ty">Q4</span> {
+  <span class="kw">static</span> <span class="ty">int</span> data = <span class="nu">0</span>;
+  <span class="ty">int</span> next;
+  <span class="kw">public static void</span> <span class="fn">main</span>(String[] args) {
+    <span class="ty">int</span> rear = <span class="nu">4</span>;
+    <span class="ty">int</span> capacity = <span class="nu">5</span>;
+    rear = (rear + <span class="nu">1</span>) % capacity;
+    System.out.<span class="fn">println</span>(rear);
+  }
+}</pre>
+      </div>
+      <div class="out-box">Output: ___________</div>
+    </div>
+  </div>
+</div>`,
+
+// ============================================================
+// SLIDE 15 — GUESS OUTPUT 5
+// ============================================================
+`<div class="slide-inner">
+  <div class="eyebrow"><div class="dash"></div>Section C — Guess the Output<div class="dash"></div></div>
+  <h2 class="title">Question <span class="a4">5</span></h2>
+  <p class="lede" style="margin-bottom:14px;">Trace this linked list traversal and write the exact output.</p>
+  <div class="code-wrap" style="max-width:680px;margin:0 auto 20px;">
+    <div class="code-header">
+      <span>Java — Linked List Traversal</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre class="code-body" data-code><span class="kw">public class</span> <span class="ty">Q5</span> {
+  <span class="kw">static class</span> <span class="ty">Node</span> {
+    <span class="ty">int</span> data;
+    <span class="ty">Node</span> next;
+    <span class="ty">Node</span>(<span class="ty">int</span> d) { data = d; next = <span class="kw">null</span>; }
+  }
+  <span class="kw">public static void</span> <span class="fn">main</span>(String[] args) {
+    <span class="ty">Node</span> head = <span class="kw">new</span> <span class="ty">Node</span>(<span class="nu">10</span>);
+    head.next = <span class="kw">new</span> <span class="ty">Node</span>(<span class="nu">20</span>);
+    head.next.next = <span class="kw">new</span> <span class="ty">Node</span>(<span class="nu">30</span>);
+    <span class="ty">Node</span> curr = head;
+    <span class="kw">while</span> (curr != <span class="kw">null</span>) {
+      System.out.<span class="fn">println</span>(curr.data);
+      curr = curr.next;
+    }
+  }
+}</pre>
+  </div>
+  <div class="g2" style="max-width:680px;margin:0 auto;">
+    <div class="out-box">Output:<br><br>___<br>___<br>___</div>
+    <div class="card c-sky">
+      <h3 class="a4">Hint (think before peeking!)</h3>
+      <p>Trace: curr starts at head (10). Each iteration prints curr.data, then moves to curr.next. How many nodes? What value is in each?</p>
+    </div>
+  </div>
+  <div class="card" style="margin-top:18px;background:rgba(56,189,248,.05);border-color:rgba(56,189,248,.2);">
+    <p style="font-size:17px;color:var(--muted);text-align:center;">✓ Section C complete — all 30 items done! Answer key coming up.</p>
+  </div>
+</div>`,
+
+// ============================================================
+// SLIDE 16 — ANSWER KEY: MCQ
+// ============================================================
+`<div class="slide-inner">
+  <div class="eyebrow"><div class="dash"></div>Answer Key<div class="dash"></div></div>
+  <h2 class="title">Section A — <span class="a6">Multiple Choice</span> Answers</h2>
+  <div class="g2">
+    <div>
+      <div class="ans-row"><span class="ans">Q1 → C: O(1)</span><br><small>Accessing getFirst() on a LinkedList is O(1) — the head reference is maintained directly.</small></div>
+      <div class="ans-row"><span class="ans">Q2 → B: i*=2</span><br><small>When the loop counter doubles each iteration, the number of steps is log₂(n) — classic O(log n).</small></div>
+      <div class="ans-row"><span class="ans">Q3 → C: null</span><br><small>The last node's next pointer is always null to signal the end of the list.</small></div>
+      <div class="ans-row"><span class="ans">Q4 → D: EmptyStackException</span><br><small>Java's Stack class throws EmptyStackException when pop() or peek() is called on an empty stack.</small></div>
+      <div class="ans-row"><span class="ans">Q5 → B: Previous node</span><br><small>A doubly linked list adds a "prev" pointer to each node, enabling backward traversal.</small></div>
+    </div>
+    <div>
+      <div class="ans-row"><span class="ans">Q6 → C: (rear+1)%capacity</span><br><small>Modulo wraps the rear pointer back to index 0, solving the wasted-space problem of linear queues.</small></div>
+      <div class="ans-row"><span class="ans">Q7 → C: Returns top without removing</span><br><small>peek() is a non-destructive read — it does not modify the stack.</small></div>
+      <div class="ans-row"><span class="ans">Q8 → B: Stack</span><br><small>Browser back history is LIFO — the most recently visited page is accessed first.</small></div>
+      <div class="ans-row"><span class="ans">Q9 → C: O(n²)</span><br><small>Two nested loops each running n times = n × n = n² operations.</small></div>
+      <div class="ans-row"><span class="ans">Q10 → B: Wasted space</span><br><small>Linear queue: rear can't wrap around, so front slots freed by dequeue are never reused.</small></div>
+    </div>
+  </div>
+</div>`,
+
+// ============================================================
+// SLIDE 17 — ANSWER KEY: IDENTIFICATION
+// ============================================================
+`<div class="slide-inner">
+  <div class="eyebrow"><div class="dash"></div>Answer Key<div class="dash"></div></div>
+  <h2 class="title">Section B — <span class="a5">Identification</span> Answers</h2>
+  <div class="g2">
+    <div>
+      <div class="ans-row"><span class="ans">1 → O(1) / Constant Time</span><br><small>Work doesn't grow with input size. Vending machine analogy.</small></div>
+      <div class="ans-row"><span class="ans">2 → next (pointer)</span><br><small>Each node stores a "next" field holding the address of the following node.</small></div>
+      <div class="ans-row"><span class="ans">3 → Stack Underflow</span><br><small>Attempting pop/peek on an empty stack — Java throws EmptyStackException.</small></div>
+      <div class="ans-row"><span class="ans">4 → peek()</span><br><small>Returns top element without modifying the stack state.</small></div>
+      <div class="ans-row"><span class="ans">5 → prev (pointer)</span><br><small>The "prev" pointer in a doubly linked list enables backward traversal.</small></div>
+      <div class="ans-row"><span class="ans">6 → Circular Queue</span><br><small>Uses modulo arithmetic to wrap the rear pointer, reusing freed-up slots.</small></div>
+      <div class="ans-row"><span class="ans">7 → null</span><br><small>The last node's next field is set to null to mark the end of the list.</small></div>
+      <div class="ans-row"><span class="ans">8 → LIFO (Last In, First Out)</span><br><small>The defining property of stacks — the last item pushed is the first item popped.</small></div>
+    </div>
+    <div>
+      <div class="ans-row"><span class="ans">9 → O(n²) / Quadratic</span><br><small>Nested loops over n — doubling input quadruples the work.</small></div>
+      <div class="ans-row"><span class="ans">10 → dequeue() / poll()</span><br><small>Removes and returns the front element. In Java: queue.poll().</small></div>
+      <div class="ans-row"><span class="ans">11 → Head (pointer)</span><br><small>The head always points to the first node; losing it means losing the whole list.</small></div>
+      <div class="ans-row"><span class="ans">12 → Call Stack</span><br><small>The runtime tracks function calls using a stack — each call is pushed, each return pops.</small></div>
+      <div class="ans-row"><span class="ans">13 → Doubly Linked List</span><br><small>Has both "next" and "prev" pointers — used in browser history, music players.</small></div>
+      <div class="ans-row"><span class="ans">14 → enqueue() / add()</span><br><small>Adds a new element to the REAR of the queue. In Java: queue.add() or queue.offer().</small></div>
+      <div class="ans-row"><span class="ans">15 → Balanced Brackets (checker)</span><br><small>A stack is used to match opening brackets — if top doesn't match the closing, it's unbalanced.</small></div>
+    </div>
+  </div>
+</div>`,
+
+// ============================================================
+// SLIDE 18 — ANSWER KEY: GUESS THE OUTPUT
+// ============================================================
+`<div class="slide-inner">
+  <div class="eyebrow"><div class="dash"></div>Answer Key<div class="dash"></div></div>
+  <h2 class="title">Section C — <span class="a4">Guess the Output</span> Answers</h2>
+  <div class="g2">
+    <div>
+      <div class="card c-sky" style="margin-bottom:16px;">
+        <div class="badge badge-sky">Output Q1</div>
+        <p style="font-size:16px;color:var(--muted);margin-bottom:10px;">push(5), push(10), push(15) → stack: [5,10,15]. pop() removes 15. peek() = 10. size = 2.</p>
+        <div class="out-box" style="color:var(--accent);">10<br>2</div>
+      </div>
+      <div class="card c-sky" style="margin-bottom:16px;">
+        <div class="badge badge-sky">Output Q2</div>
+        <p style="font-size:16px;color:var(--muted);margin-bottom:10px;">add Alpha, Beta, Gamma. poll() removes Alpha (FRONT). peek() = Beta. size = 2.</p>
+        <div class="out-box" style="color:var(--accent);">Beta<br>2</div>
+      </div>
+    </div>
+    <div>
+      <div class="card c-sky" style="margin-bottom:16px;">
+        <div class="badge badge-sky">Output Q3</div>
+        <p style="font-size:16px;color:var(--muted);margin-bottom:10px;">i doubles: 1→2→4→8→16→32. Loop runs while i&lt;32, so i=1,2,4,8,16 → 5 iterations.</p>
+        <div class="out-box" style="color:var(--accent);">5</div>
+      </div>
+      <div class="card c-sky" style="margin-bottom:16px;">
+        <div class="badge badge-sky">Output Q4</div>
+        <p style="font-size:16px;color:var(--muted);margin-bottom:10px;">rear=4, capacity=5. (4+1)%5 = 5%5 = 0. Circular wrap!</p>
+        <div class="out-box" style="color:var(--accent);">0</div>
+      </div>
+      <div class="card c-sky">
+        <div class="badge badge-sky">Output Q5</div>
+        <p style="font-size:16px;color:var(--muted);margin-bottom:10px;">Traversal: curr=head(10), print 10 → curr=20, print 20 → curr=30, print 30 → curr=null, stop.</p>
+        <div class="out-box" style="color:var(--accent);">10<br>20<br>30</div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+// ============================================================
+// SLIDE 19 — CLOSING
+// ============================================================
+`<div class="slide-inner" style="text-align:center;max-width:780px;margin:0 auto;">
+  <div class="hero-svg">
+    <svg width="110" height="110" viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg" role="img">
+      <title>Celebration trophy icon</title>
+      <circle cx="55" cy="55" r="52" fill="rgba(110,231,183,.1)" stroke="#6ee7b7" stroke-width="2"/>
+      <!-- trophy cup -->
+      <path d="M38 30 h34 v22 q0 16-17 22 q-17-6-17-22 Z" fill="none" stroke="#facc15" stroke-width="2.5" stroke-linejoin="round"/>
+      <line x1="26" y1="38" x2="38" y2="45" stroke="#facc15" stroke-width="2"/>
+      <line x1="84" y1="38" x2="72" y2="45" stroke="#facc15" stroke-width="2"/>
+      <line x1="55" y1="74" x2="55" y2="82" stroke="#facc15" stroke-width="2"/>
+      <rect x="41" y="82" width="28" height="6" rx="3" fill="#facc15"/>
+      <!-- stars -->
+      <text x="22" y="36" font-size="16" fill="#6ee7b7">★</text>
+      <text x="74" y="36" font-size="16" fill="#818cf8">★</text>
+      <text x="48" y="22" font-size="14" fill="#fb923c">★</text>
+    </svg>
+  </div>
+  <div class="eyebrow" style="justify-content:center;"><div class="dash"></div>You're Ready<div class="dash"></div></div>
+  <h1 class="title">Good Luck on the <span class="a1">Periodical Exam</span>!</h1>
+  <div class="card" style="background:rgba(110,231,183,.06);border-color:rgba(110,231,183,.25);margin-bottom:26px;padding:26px 32px;text-align:left;max-width:600px;margin-left:auto;margin-right:auto;">
+    <p style="font-size:20px;font-style:italic;color:var(--text);line-height:1.7;margin-bottom:12px;">"First, solve the problem. Then, write the code."</p>
+    <p style="font-size:16px;color:var(--muted);">— John Johnson</p>
+  </div>
+  <div class="g3" style="max-width:620px;margin:0 auto 24px;">
+    <div class="card c-green" style="text-align:center;padding:16px;">
+      <div style="font-size:24px;margin-bottom:6px;">🔁</div>
+      <div style="font-size:16px;color:var(--muted);">Review loops for Big O patterns</div>
+    </div>
+    <div class="card c-indigo" style="text-align:center;padding:16px;">
+      <div style="font-size:24px;margin-bottom:6px;">⬡</div>
+      <div style="font-size:16px;color:var(--muted);">Trace linked list operations by hand</div>
+    </div>
+    <div class="card c-amber" style="text-align:center;padding:16px;">
+      <div style="font-size:24px;margin-bottom:6px;">📚</div>
+      <div style="font-size:16px;color:var(--muted);">Know LIFO vs FIFO cold</div>
+    </div>
+  </div>
+  <p style="font-size:17px;color:var(--muted);">You've got this. 💪 Now go ace it!</p>
+</div>`
+
+];
+
+// ============================================================
+// DECK ENGINE
+// ============================================================
+const stage = document.getElementById('stage');
+const progBar = document.getElementById('prog-bar');
+const curEl = document.getElementById('cur');
+const totEl = document.getElementById('tot');
+let cur = 0;
+
+totEl.textContent = slides.length;
+
+function buildSlides(){
+  slides.forEach((html, i) => {
+    const div = document.createElement('div');
+    div.className = 'slide' + (i===0?' active':'');
+    div.innerHTML = html;
+    stage.appendChild(div);
+  });
+}
+
+function goTo(n, dir){
+  if(n<0||n>=slides.length||n===cur) return;
+  const all = stage.querySelectorAll('.slide');
+  const outgoing = all[cur];
+  const incoming = all[n];
+
+  // outgoing slide exits toward the opposite side of travel
+  outgoing.classList.remove('active');
+  outgoing.style.transform = dir==='next' ? 'translateX(-28px)' : 'translateX(28px)';
+
+  // incoming slide starts from the side it's arriving from
+  incoming.classList.remove('active');
+  incoming.style.transition = 'none';
+  incoming.style.transform = dir==='next' ? 'translateX(28px)' : 'translateX(-28px)';
+
+  cur = n;
+
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      incoming.style.transition = '';
+      incoming.classList.add('active');
+      incoming.style.transform = '';
+    });
+  });
+
+  setTimeout(()=>{
+    outgoing.style.transform = '';
+  },350);
+
+  curEl.textContent=cur+1;
+  progBar.style.width=(((cur+1)/slides.length)*100)+'%';
+}
+
+buildSlides();
+progBar.style.width=(1/slides.length*100)+'%';
+
+// keyboard
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key==='PageDown') goTo(cur+1,'next');
+  else if(e.key==='ArrowLeft'||e.key==='PageUp') goTo(cur-1,'prev');
+  else if(e.key==='Home') goTo(0,'prev');
+  else if(e.key==='End') goTo(slides.length-1,'next');
+  else if(e.key==='?'){
+    document.getElementById('overlay').classList.toggle('show');
+  }
+});
+
+// mouse side buttons (Mouse3/Mouse4)
+document.addEventListener('mousedown', e=>{
+  if(e.button===3){e.preventDefault();e.stopImmediatePropagation();goTo(cur-1,'prev');}
+  if(e.button===4){e.preventDefault();e.stopImmediatePropagation();goTo(cur+1,'next');}
+},{capture:true});
+
+// context menu block
+document.addEventListener('contextmenu',e=>e.preventDefault());
+
+// touch swipe
+let tx=null;
+document.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;},{passive:true});
+document.addEventListener('touchend',e=>{
+  if(tx===null) return;
+  const dx=e.changedTouches[0].clientX-tx;
+  if(Math.abs(dx)>50){ dx<0?goTo(cur+1,'next'):goTo(cur-1,'prev'); }
+  tx=null;
+},{passive:true});
+
+// overlay
+document.getElementById('hint-btn').addEventListener('click',()=>{
+  document.getElementById('overlay').classList.toggle('show');
+});
+document.getElementById('overlay-close').addEventListener('click',()=>{
+  document.getElementById('overlay').classList.remove('show');
+});
+document.getElementById('overlay').addEventListener('click',e=>{
+  if(e.target===document.getElementById('overlay'))
+    document.getElementById('overlay').classList.remove('show');
+});
+
+// copy buttons
+function copyCode(btn){
+  const pre = btn.closest('.code-wrap').querySelector('pre[data-code]');
+  const text = pre.innerText;
+  navigator.clipboard.writeText(text).then(()=>{
+    btn.textContent='Copied!';
+    btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},2000);
+  });
+}
+</script>
+</body>
+</html>
