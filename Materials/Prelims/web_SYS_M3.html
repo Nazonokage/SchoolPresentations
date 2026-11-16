@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Node.js — Week 3: Event Loop, Process &amp; Error Handling</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    * { box-sizing: border-box; margin:0; padding:0; }
+    html, body { height:100%; overflow:hidden; background:var(--bg); color:var(--ink); font-family:'Space Grotesk', sans-serif; }
+    h1,h2,h3 { font-family:'Space Grotesk', sans-serif; font-weight:600; letter-spacing:-0.02em; }
+    code, pre, .mono { font-family:'JetBrains Mono', 'Courier New', monospace; }
+
+    /* ——— NODE.JS THEME (matches deck series) ——— */
+    :root {
+      --bg: #0D1912;
+      --bg-alt: #14261A;
+      --accent: #83CD29;
+      --accent-soft: #A5DE5C;
+      --accent-strong: #4C8C1E;
+      --card: #17281B;
+      --card-border: rgba(131, 205, 41, 0.18);
+      --shadow: rgba(0, 0, 0, 0.55);
+      --ink: #E9F2E4;
+      --ink-soft: #9CB89A;
+      --eyebrow-ink: #A5DE5C;
+      --card-ink: #E9F2E4;
+      --card-ink-soft: #9CB89A;
+      --card-accent: #83CD29;
+      --step-num-ink: #0D1912;
+      --tick: 300ms;
+      --table-border: rgba(131, 205, 41, 0.15);
+      --danger: #FF7A6E;
+      --danger-soft: rgba(255,122,110,0.12);
+      --ok: #83CD29;
+    }
+
+    #app { position:relative; width:100vw; height:100vh; overflow:hidden; }
+
+    .progress-track { position:fixed; top:0; left:0; right:0; height:4px; background:rgba(131,205,41,0.12); z-index:60; }
+    .progress-fill { height:100%; width:0%; background:linear-gradient(90deg, var(--accent-strong), var(--accent)); transition: width 350ms ease; }
+
+    .node-gauge {
+      position:fixed; top:18px; right:22px; z-index:50;
+      display:flex; flex-direction:column; align-items:center; gap:4px;
+      font-family:'JetBrains Mono', monospace; font-size:10px; letter-spacing:0.14em;
+      color:var(--ink-soft); user-select:none; pointer-events:none;
+      transition: color var(--tick) ease;
+    }
+    .node-gauge svg { width:34px; height:34px; display:block; }
+    .node-gauge .hex { transform-origin:center; }
+    @media (prefers-reduced-motion: no-preference) {
+      .node-gauge .hex { animation: hexPulse 3s ease-in-out infinite; }
+    }
+    @keyframes hexPulse {
+      0% { opacity:0.6; transform:scale(0.95) rotate(-2deg); }
+      50% { opacity:1; transform:scale(1.08) rotate(2deg); }
+      100% { opacity:0.6; transform:scale(0.95) rotate(-2deg); }
+    }
+    .gauge-label { text-transform:uppercase; font-weight:700; letter-spacing:0.08em; }
+
+    .stage { position:absolute; inset:0; }
+    .slide {
+      position:absolute; inset:0;
+      overflow-y:auto; overflow-x:hidden;
+      display:flex; flex-direction:column; align-items:stretch; justify-content:safe center;
+      padding: 76px clamp(28px, 7vw, 120px) 90px;
+      opacity:0; transform:translateX(0) scale(1);
+      will-change: transform, opacity;
+    }
+    .slide.active { opacity:1; transform:translateX(0) scale(1); transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:5; }
+    .slide.enter-fwd { transform:translateX(64px) scale(0.985); opacity:0; }
+    .slide.enter-bwd { transform:translateX(-64px) scale(0.985); opacity:0; }
+    .slide.exit-fwd { transform:translateX(-64px) scale(0.985); opacity:0; transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:4; }
+    .slide.exit-bwd { transform:translateX(64px) scale(0.985); opacity:0; transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:4; }
+    @media (prefers-reduced-motion: reduce) {
+      .slide, .slide.active, .slide.enter-fwd, .slide.enter-bwd, .slide.exit-fwd, .slide.exit-bwd {
+        transition: opacity 120ms linear !important; transform:none !important;
+      }
+    }
+    .slide-inner { max-width:1040px; width:100%; margin:0 auto; }
+
+    .eyebrow {
+      font-family:'JetBrains Mono', monospace; font-size:12px; letter-spacing:0.16em;
+      text-transform:uppercase; font-weight:600; color:var(--eyebrow-ink);
+      display:flex; align-items:center; gap:10px; margin-bottom:14px;
+    }
+    .eyebrow::after { content:''; flex:1; height:0; border-top:2px dashed var(--card-border); }
+    h2.slide-title { font-size:clamp(27px, 3.6vw, 42px); font-weight:700; line-height:1.14; margin-bottom:20px; letter-spacing:-0.02em; }
+    .lede { font-size:16.5px; color:var(--ink-soft); margin:-6px 0 20px; max-width:74ch; line-height:1.55; }
+
+    .card {
+      background:var(--card); border:1px solid var(--card-border); border-radius:12px;
+      padding:16px 18px; min-width:0;
+      box-shadow: 0 4px 20px var(--shadow);
+    }
+    .card h3 { font-size:14.5px; font-weight:600; margin-bottom:6px; color:var(--card-ink); }
+    .card p, .card li { font-size:14px; color:var(--card-ink-soft); line-height:1.5; }
+
+    .card-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(0, 1fr)); gap:14px; min-width:0; }
+    .card-grid.cols-2 { grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .card-grid.cols-3 { grid-template-columns:repeat(3, minmax(0,1fr)); }
+    .card-grid.cols-4 { grid-template-columns:repeat(4, minmax(0,1fr)); }
+    .card-grid.cols-5 { grid-template-columns:repeat(5, minmax(0,1fr)); }
+    @media (max-width:760px){ .card-grid.cols-5{grid-template-columns:repeat(2, minmax(0,1fr));} .card-grid.cols-4{grid-template-columns:repeat(2, minmax(0,1fr));} .card-grid.cols-3{grid-template-columns:repeat(2, minmax(0,1fr));} .card-grid.cols-2{grid-template-columns:minmax(0,1fr);} }
+
+    .two-col { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:24px; align-items:start; min-width:0; }
+    @media (max-width:760px){ .two-col { grid-template-columns:minmax(0,1fr); } }
+    .two-col > * { min-width:0; }
+
+    ul.ticket-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+    ul.ticket-list li { position:relative; padding-left:22px; font-size:15px; line-height:1.5; color:var(--ink); }
+    ul.ticket-list li::before { content:'▹'; position:absolute; left:0; color:var(--accent); font-weight:700; }
+
+    ol.step-list { list-style:none; counter-reset:step; margin:0; padding:0; display:flex; flex-direction:column; gap:11px; }
+    ol.step-list li { position:relative; padding-left:38px; font-size:15px; line-height:1.5; min-width:0; }
+    ol.step-list li::before { counter-increment:step; content:counter(step); position:absolute; left:0; top:-1px; width:25px; height:25px; border-radius:50%; background:var(--card-accent); color:var(--step-num-ink); display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:12.5px; }
+    ol.step-list b { font-family:'JetBrains Mono',monospace; font-size:13px; background:var(--card); padding:1px 6px; border-radius:4px; border:1px solid var(--card-border); }
+
+    .quote-block { font-family:'Space Grotesk', sans-serif; font-weight:500; font-size:18px; line-height:1.5; color:var(--ink); border-left:3px solid var(--accent); padding:4px 0 4px 18px; margin:6px 0 16px; }
+    .note { background:var(--card); border:1px dashed var(--card-border); border-radius:10px; padding:12px 16px; font-size:13.5px; color:var(--card-ink-soft); margin-top:14px; }
+    .note b { color:var(--card-ink); }
+    .note.warn { border-color: rgba(255,122,110,0.4); background: var(--danger-soft); }
+    .note.warn b { color: var(--danger); }
+
+    .code-wrap { position:relative; min-width:0; }
+    .code-cap { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:8px; }
+    pre.code-block {
+      background:#0A150D; color:#D9EBD1; border-radius:12px; padding:18px 20px;
+      font-size:13px; line-height:1.65; overflow-x:auto; margin:0; min-width:0;
+      box-shadow: inset 0 0 0 1px rgba(131,205,41,0.06), 0 6px 18px var(--shadow);
+      border:1px solid rgba(131,205,41,0.06);
+    }
+    pre.code-block code { white-space:pre; }
+    .tok-kw{ color:#FFB86C; font-weight:600; }
+    .tok-str{ color:#A3D9A5; }
+    .tok-com{ color:#6A9273; font-style:italic; }
+    .tok-type{ color:#6AB0D6; }
+    .tok-num{ color:#D99A6C; }
+    .tok-fn{ color:#66D9FF; }
+    .tok-prop{ color:#B5A9E8; }
+
+    .two-col pre.code-block { max-width:100%; overflow-x:auto; white-space:pre-wrap; word-break:break-word; }
+    .two-col .code-block code { white-space:pre-wrap; word-break:break-word; }
+
+    .copy-btn {
+      position:absolute; top:8px; right:8px; z-index:2;
+      font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase;
+      background:rgba(131,205,41,0.12); color:var(--accent-soft); border:1px solid var(--card-border);
+      border-radius:6px; padding:5px 9px; cursor:pointer; transition: background 150ms ease, color 150ms ease, transform 150ms ease;
+    }
+    .code-wrap .code-cap ~ .copy-btn, .code-wrap > .copy-btn { top:8px; }
+    .copy-btn:hover { background:rgba(131,205,41,0.22); }
+    .copy-btn:active { transform:scale(0.96); }
+    .copy-btn.copied { background:var(--accent); color:#0A150D; border-color:var(--accent); }
+    .copy-source { position:absolute; left:-9999px; top:-9999px; opacity:0; height:1px; width:1px; }
+
+    .param-table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    .param-table th, .param-table td { text-align:left; padding:8px 12px; border-bottom:1px solid var(--table-border); }
+    .param-table th { font-family:'JetBrains Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.08em; color:var(--accent); }
+    .param-table td { color:var(--ink-soft); }
+    .param-table td b, .param-table td code { color:var(--ink); }
+
+    .mc-q { background:var(--card); border:1px solid var(--card-border); border-radius:10px; padding:12px 16px; margin-bottom:10px; }
+    .mc-q .qn { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--accent-soft); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:4px; }
+    .mc-q .qtext { font-size:14.5px; color:var(--ink); margin-bottom:8px; line-height:1.4; }
+    .mc-q .opts { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:6px 14px; }
+    @media (max-width:900px){ .mc-q .opts { grid-template-columns:minmax(0,1fr); } }
+    .mc-q .opts div { font-size:13px; color:var(--card-ink-soft); padding-left:18px; position:relative; }
+    .mc-q .opts div::before { content:attr(data-letter); position:absolute; left:0; font-family:'JetBrains Mono',monospace; color:var(--accent); font-weight:700; font-size:12px; }
+
+    .id-q { display:flex; gap:10px; align-items:baseline; padding:9px 0; border-bottom:1px dashed var(--card-border); font-size:14.5px; }
+    .id-q:last-child { border-bottom:none; }
+    .id-q .qn { font-family:'JetBrains Mono',monospace; color:var(--accent-soft); font-size:12px; min-width:26px; }
+
+    .badge { display:inline-block; font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; padding:3px 9px; border-radius:999px; border:1px solid var(--card-border); color:var(--accent-soft); background:rgba(131,205,41,0.08); }
+    .badge.danger { color:var(--danger); border-color:rgba(255,122,110,0.35); background:var(--danger-soft); }
+
+    .hud { position:fixed; bottom:16px; right:20px; z-index:50; display:flex; align-items:center; gap:12px; }
+    .counter { font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:600; background:var(--card); border:1px solid var(--card-border); color:var(--card-ink); padding:8px 16px; border-radius:999px; box-shadow:0 4px 14px var(--shadow); }
+    .hint { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-soft); letter-spacing:0.05em; display:none; }
+    @media (min-width:640px){ .hint { display:block; } }
+
+    .kbd-fab { position:fixed; bottom:16px; left:20px; z-index:50; width:34px; height:34px; border-radius:50%; background:var(--card); border:1px solid var(--card-border); color:var(--card-ink-soft); font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:700; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 14px var(--shadow); }
+    .kbd-fab:hover { color:var(--accent-soft); border-color:var(--accent); }
+
+    .shortcuts-overlay { position:fixed; inset:0; background:rgba(6,12,8,0.72); backdrop-filter: blur(3px); z-index:80; display:none; align-items:center; justify-content:center; }
+    .shortcuts-overlay.show { display:flex; }
+    .shortcuts-panel { background:var(--card); border:1px solid var(--card-border); border-radius:14px; padding:26px 30px; max-width:420px; width:90%; box-shadow:0 20px 60px var(--shadow); }
+    .shortcuts-panel h3 { font-size:17px; margin-bottom:16px; color:var(--ink); }
+    .shortcuts-panel .row { display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px dashed var(--card-border); font-size:13.5px; color:var(--card-ink-soft); }
+    .shortcuts-panel .row:last-child { border-bottom:none; }
+    .shortcuts-panel kbd { font-family:'JetBrains Mono',monospace; background:#0A150D; border:1px solid var(--card-border); border-radius:5px; padding:2px 7px; color:var(--accent-soft); font-size:12px; }
+    .shortcuts-panel .close-hint { margin-top:16px; font-size:11.5px; color:var(--ink-soft); text-align:center; }
+
+    .slide::-webkit-scrollbar { width:6px; }
+    .slide::-webkit-scrollbar-thumb { background:var(--card-border); border-radius:8px; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+  <div class="node-gauge" id="nodeGauge">
+    <svg viewBox="0 0 40 40" fill="none">
+      <path d="M20 4 L34 12 V28 L20 36 L6 28 V12 Z" fill="var(--accent)" opacity="0.85" class="hex" />
+      <path d="M20 6 L32 13 V27 L20 34 L8 27 V13 Z" stroke="var(--bg)" stroke-width="1.6" fill="none" opacity="0.25" />
+      <circle cx="20" cy="20" r="2" fill="var(--bg)" opacity="0.15" />
+    </svg>
+    <span class="gauge-label" id="gaugeLabel">Cold Start</span>
+  </div>
+
+  <div class="stage" id="stage"></div>
+
+  <div class="kbd-fab" id="kbdFab" title="Keyboard shortcuts">?</div>
+
+  <div class="hud">
+    <span class="hint">click / → to continue</span>
+    <div class="counter" id="counter">1 / 25</div>
+  </div>
+
+  <div class="shortcuts-overlay" id="shortcutsOverlay">
+    <div class="shortcuts-panel">
+      <h3>⌨️ Keyboard Shortcuts</h3>
+      <div class="row"><span>Next slide</span><kbd>→</kbd></div>
+      <div class="row"><span>Previous slide</span><kbd>←</kbd></div>
+      <div class="row"><span>First slide</span><kbd>Home</kbd></div>
+      <div class="row"><span>Last slide</span><kbd>End</kbd></div>
+      <div class="row"><span>Toggle this panel</span><kbd>?</kbd></div>
+      <div class="row"><span>Close panel</span><kbd>Esc</kbd></div>
+      <div class="close-hint">Click anywhere outside this box to close.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  var KEYWORDS = ['const','let','var','function','return','if','else','try','catch','finally','throw','new','this','class','extends','super','import','export','default','from','as','async','await','require','module','exports','global','__dirname','__filename','console','log','error','warn','info','process','env','argv','exit','cwd','platform','version','versions','memoryUsage','uptime','nextTick','on','once','emit','off','removeListener','removeAllListeners','EventEmitter','instanceof','typeof','for','while','of','in','break','continue','null','undefined','true','false','Buffer','fs','readFile','writeFile','readFileSync','writeFileSync','path','join','resolve','dotenv','config','setTimeout','setInterval','setImmediate','clearTimeout','clearInterval','clearImmediate','Promise','then','catch','finally','all','JSON','stringify','parse','Error','TypeError','ReferenceError','SyntaxError','RangeError','String','Number','Boolean','Object','Array','Date','RegExp','Map','Set','Symbol'];
+  var KW_RE = new RegExp('\\b(' + KEYWORDS.join('|') + ')\\b');
+  var TOKEN_RE = /(\/\/.*$)|("(?:\\.|[^"\\])*")|('(?:\\.|[^'\\])*')|(`(?:\\.|[^`\\])*`)|\b([A-Za-z_$][A-Za-z0-9_$]*)\b|\b(\d+\.?\d*)\b/gm;
+
+  function highlightJS(src){
+    var esc = escapeHtml(src);
+    return esc.replace(TOKEN_RE, function(match, comment, str, chr, tmpl, word, num){
+      if(comment !== undefined) return '<span class="tok-com">' + comment + '</span>';
+      if(str !== undefined) return '<span class="tok-str">' + str + '</span>';
+      if(chr !== undefined) return '<span class="tok-str">' + chr + '</span>';
+      if(tmpl !== undefined) return '<span class="tok-str">' + tmpl + '</span>';
+      if(word !== undefined){
+        if(KW_RE.test(word)) return '<span class="tok-kw">' + word + '</span>';
+        if(/^[A-Z]/.test(word)) return '<span class="tok-type">' + word + '</span>';
+        return word;
+      }
+      if(num !== undefined) return '<span class="tok-num">' + num + '</span>';
+      return match;
+    });
+  }
+
+  var codeCounter = 0;
+  function code(src, label){
+    var raw = src.replace(/^\n/,'').replace(/\n$/,'');
+    var id = 'code_' + (codeCounter++);
+    var html = highlightJS(raw);
+    return '<div class="code-wrap">' +
+      (label ? '<div class="code-cap">' + label + '</div>' : '') +
+      '<button class="copy-btn" data-for="' + id + '" onclick="window.__copyCode(this)">Copy</button>' +
+      '<pre class="code-block"><code>' + html + '</code></pre>' +
+      '<textarea class="copy-source" id="' + id + '" tabindex="-1" readonly>' + escapeHtml(raw) + '</textarea>' +
+    '</div>';
+  }
+
+  window.__copyCode = function(btn){
+    var ta = document.getElementById(btn.getAttribute('data-for'));
+    if(!ta) return;
+    var text = ta.value;
+    function feedback(){
+      var original = 'Copy';
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(function(){ btn.textContent = original; btn.classList.remove('copied'); }, 1200);
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(feedback, function(){
+        ta.style.left = '0'; ta.style.top='0'; ta.style.opacity='0';
+        ta.select(); document.execCommand('copy');
+        ta.style.left = '-9999px'; ta.style.top='-9999px';
+        feedback();
+      });
+    } else {
+      ta.style.left = '0'; ta.style.top='0'; ta.style.opacity='0';
+      ta.select(); document.execCommand('copy');
+      ta.style.left = '-9999px'; ta.style.top='-9999px';
+      feedback();
+    }
+  };
+
+  var S = [];
+
+  // ——— 1. TITLE ———
+  S.push({
+    eyebrow: 'Prelim · Week 3',
+    title: 'Event Loop Deep Dive, process, &amp; Error Handling',
+    lede: 'Now that Node can read files and talk async, it\'s time to understand what\'s actually happening under the hood — and what happens when things go wrong.',
+    body:
+      '<div class="card-grid cols-3">' +
+        '<div class="card"><h3>🔁 Event Loop</h3><p>Timers, microtasks, and where your callbacks really queue up.</p></div>' +
+        '<div class="card"><h3>⚙️ process</h3><p>argv, env, exit codes — the CLI toolkit every Node script relies on.</p></div>' +
+        '<div class="card"><h3>🛡️ Error Handling</h3><p>Custom errors, try/catch, and the safety nets you should never depend on.</p></div>' +
+      '</div>'
+  });
+
+  // ——— 2. OBJECTIVES ———
+  S.push({
+    eyebrow: 'Session Overview',
+    title: 'Learning Objectives',
+    body:
+      '<ol class="step-list">' +
+        '<li>Explain the phases of the Node.js event loop (timers → pending callbacks → poll → check → close) and where microtasks (Promises) fit in.</li>' +
+        '<li>Use <b>process.argv</b>, <b>process.env</b>, and <b>process.exit()</b> correctly in a CLI context.</li>' +
+        '<li>Load environment variables from a <b>.env</b>-style file and explain why secrets shouldn\'t be hardcoded.</li>' +
+        '<li>Distinguish operational errors (bad input, missing file) from programmer errors (bugs), and handle each appropriately.</li>' +
+        '<li>Write custom <b>Error</b> subclasses and use <b>try/catch</b> around both sync and async code.</li>' +
+        '<li>Explain <b>uncaughtException</b> and <b>unhandledRejection</b>, and why relying on them as a primary strategy is dangerous.</li>' +
+      '</ol>'
+  });
+
+  // ——— 3. RECAP / BRIDGE ———
+  S.push({
+    eyebrow: 'Warm-Up',
+    title: 'Recap & Homework Debrief',
+    lede: 'Last week\'s homework: break your own log parser tool on purpose and bring back the raw error output.',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>🔗 Bridge from Week 2</h3><ul class="ticket-list">' +
+          '<li>You built a working log parser using <b>fs.promises</b>, <b>path</b>, and async/await.</li>' +
+          '<li>Homework: pass a non-existent file path and watch Node fail loudly.</li>' +
+          '<li>That crash — the raw stack trace — is today\'s starting point.</li>' +
+        '</ul></div>' +
+        '<div class="card"><h3>💬 Discussion Prompt</h3>' +
+          '<div class="quote-block">"What did Node do when it didn\'t know how to handle this?"</div>' +
+          '<p>We\'ll turn that uncontrolled crash into something predictable, readable, and recoverable.</p>' +
+        '</div>' +
+      '</div>'
+  });
+
+  // ——— 4. EVENT LOOP PHASES ———
+  S.push({
+    eyebrow: '1. The Event Loop',
+    title: 'The Phases, Revisited',
+    lede: 'One thread, several queues. Each full lap of the loop is called a "tick."',
+    body:
+      '<div class="card-grid cols-5">' +
+        '<div class="card"><h3>① Timers</h3><p>setTimeout / setInterval whose delay has elapsed.</p></div>' +
+        '<div class="card"><h3>② Pending Callbacks</h3><p>Deferred system-level callbacks (e.g. some TCP errors).</p></div>' +
+        '<div class="card"><h3>③ Poll</h3><p>Retrieves new I/O events; runs I/O-related callbacks.</p></div>' +
+        '<div class="card"><h3>④ Check</h3><p>setImmediate() callbacks run here — right after poll.</p></div>' +
+        '<div class="card"><h3>⑤ Close</h3><p>Cleanup callbacks, e.g. socket.on(\'close\', ...).</p></div>' +
+      '</div>' +
+      '<div class="note"><b>💡 Microtasks:</b> Promise <code>.then()</code> callbacks and <code>process.nextTick()</code> don\'t belong to any phase — they drain completely <i>between</i> phases, and nextTick drains before the Promise microtask queue.</div>'
+  });
+
+  // ——— 5. ORDERING DEMO ———
+  S.push({
+    eyebrow: '1. The Event Loop',
+    title: 'setTimeout vs setImmediate vs nextTick',
+    lede: 'Same delay, three very different queues. Try predicting the order before reading the comment.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code(
+          "console.log('start');\n\nsetTimeout(() => console.log('timeout'), 0);\nsetImmediate(() => console.log('immediate'));\nprocess.nextTick(() => console.log('nextTick'));\n\nconsole.log('end');\n\n// Output:\n// start\n// end\n// nextTick\n// timeout\n// immediate"
+        ) + '</div>' +
+        '<div class="card"><h3>🧠 Why this order?</h3><ul class="ticket-list">' +
+          '<li>Synchronous code (<code>start</code>, <code>end</code>) always runs first.</li>' +
+          '<li><code>process.nextTick()</code> drains immediately after the current operation — before any I/O or timer phase.</li>' +
+          '<li><code>setTimeout(fn, 0)</code> still waits for the <b>timers</b> phase.</li>' +
+          '<li><code>setImmediate()</code> is designed to run in the <b>check</b> phase, right after poll — order vs. timers can vary inside I/O callbacks.</li>' +
+        '</ul></div>' +
+      '</div>'
+  });
+
+  // ——— 6. MICROTASKS ———
+  S.push({
+    eyebrow: '1. The Event Loop',
+    title: 'Microtasks: Where Promises Fit',
+    lede: 'Promises don\'t wait for the next phase — they jump the queue.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code(
+          "console.log('A');\n\nsetTimeout(() => console.log('B (timer)'), 0);\n\nPromise.resolve().then(() => console.log('C (microtask)'));\n\nconsole.log('D');\n\n// Output:\n// A\n// D\n// C (microtask)\n// B (timer)"
+        ) + '</div>' +
+        '<div class="card"><h3>📋 Priority order</h3><ol class="step-list">' +
+          '<li>Synchronous code</li>' +
+          '<li><b>process.nextTick()</b> queue</li>' +
+          '<li><b>Promise</b> microtask queue</li>' +
+          '<li>Timers, I/O, setImmediate (macrotasks)</li>' +
+        '</ol></div>' +
+      '</div>'
+  });
+
+  // ——— 7. PROCESS OBJECT ———
+  S.push({
+    eyebrow: '2. The process Object',
+    title: 'Your CLI\'s Control Panel',
+    lede: 'process is a global — no require() needed — that connects your script to the OS and the terminal that launched it.',
+    body:
+      '<table class="param-table">' +
+        '<tr><th>Property / Method</th><th>What it gives you</th></tr>' +
+        '<tr><td><code>process.argv</code></td><td>Array of command-line arguments (index 0 = node path, 1 = script path, 2+ = your args)</td></tr>' +
+        '<tr><td><code>process.env</code></td><td>Object of environment variables available to the script</td></tr>' +
+        '<tr><td><code>process.cwd()</code></td><td>The directory the script was <b>run from</b> (not where the file lives)</td></tr>' +
+        '<tr><td><code>process.exit(code)</code></td><td>Immediately terminates the process with the given exit code</td></tr>' +
+      '</table>' +
+      code("// check-flag.js\nconst args = process.argv.slice(2);\nconst isVerbose = args.includes('--verbose');\n\nconsole.log('Args received:', args);\nconsole.log('Verbose mode:', isVerbose);\n\n// $ node check-flag.js --verbose\n// Args received: [ '--verbose' ]\n// Verbose mode: true")
+  });
+
+  // ——— 8. EXIT CODES ———
+  S.push({
+    eyebrow: '2. The process Object',
+    title: 'Exit Codes Are a Contract',
+    lede: 'Your CLI tool isn\'t just talking to a human — it\'s talking to scripts, CI pipelines, and eventually Docker.',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>✅ 0 — Success</h3><ul class="ticket-list">' +
+          '<li>Task completed as expected.</li>' +
+          '<li>A calling script or CI step can safely continue.</li>' +
+        '</ul></div>' +
+        '<div class="card"><h3>❌ Non-zero — Failure</h3><ul class="ticket-list">' +
+          '<li>1 is a common generic "something failed" code.</li>' +
+          '<li>Different non-zero codes can mean different failure types.</li>' +
+          '<li>CI/CD pipelines and Docker health checks read this number to decide what happens next.</li>' +
+        '</ul></div>' +
+      '</div>' +
+      '<div class="note"><b>Looking ahead:</b> in Week 5 (Docker), a container that exits non-zero is treated as a failed run — this is the exact same mechanism.</div>'
+  });
+
+  // ——— 9. ENV VARIABLES ———
+  S.push({
+    eyebrow: '3. Environment Variables',
+    title: 'Config &amp; Secrets Don\'t Belong in Source Code',
+    lede: 'Hardcoded API keys end up in git history forever. Environment variables keep secrets outside the codebase.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code("// .env  (never committed — add to .gitignore)\nMAX_ORDER_AMOUNT=5000\nAPI_KEY=sk_live_9f8a...\nLOG_LEVEL=info") + '</div>' +
+        '<div>' + code("// reading it (conceptually — dotenv arrives properly in Wk7)\nrequire('dotenv').config();\n\nconsole.log(process.env.MAX_ORDER_AMOUNT);\nconsole.log(process.env.LOG_LEVEL);\n\n// Output:\n// 5000\n// info") + '</div>' +
+      '</div>' +
+      '<div class="note warn"><b>⚠️ Rule of thumb:</b> if a value differs between your machine, a teammate\'s machine, and production — it belongs in <code>.env</code>, not in your <code>.js</code> files.</div>'
+  });
+
+  // ——— 10. OPERATIONAL VS PROGRAMMER ERRORS ———
+  S.push({
+    eyebrow: '4. Error Handling',
+    title: 'Operational Errors vs. Programmer Errors',
+    lede: 'Not all errors are the same — and treating them the same is how apps become unreliable.',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3><span class="badge">Operational</span> Expected failures</h3><ul class="ticket-list">' +
+          '<li>File doesn\'t exist</li>' +
+          '<li>Invalid user input</li>' +
+          '<li>Network timeout / API down</li>' +
+          '<li>Handle these: catch them, respond gracefully, keep running.</li>' +
+        '</ul></div>' +
+        '<div class="card"><h3><span class="badge danger">Programmer</span> Actual bugs</h3><ul class="ticket-list">' +
+          '<li>Calling a function that doesn\'t exist</li>' +
+          '<li><code>undefined</code> is not an object</li>' +
+          '<li>Typos, wrong logic</li>' +
+          '<li>Don\'t "handle" these silently — fix the code. Let the crash surface loudly in dev.</li>' +
+        '</ul></div>' +
+      '</div>'
+  });
+
+  // ——— 11. CUSTOM ERROR CLASSES ———
+  S.push({
+    eyebrow: '4. Error Handling',
+    title: 'Custom Error Classes',
+    lede: 'Extending Error gives you named, structured, catchable failure types instead of generic strings.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code("class ValidationError extends Error {\n    constructor(message, field) {\n        super(message);\n        this.name = 'ValidationError';\n        this.field = field;\n        this.isOperational = true;\n    }\n}\n\nmodule.exports = { ValidationError };") + '</div>' +
+        '<div class="card"><h3>🎯 Why bother?</h3><ul class="ticket-list">' +
+          '<li><code>err.name</code> tells you exactly what kind of failure this is.</li>' +
+          '<li>Extra fields (like <code>field</code>) carry useful context to the catch block.</li>' +
+          '<li><code>isOperational</code> lets you decide: "recover" vs. "this is a bug, crash loudly."</li>' +
+          '<li>You can now do <code>if (err instanceof ValidationError)</code> instead of string-matching messages.</li>' +
+        '</ul></div>' +
+      '</div>'
+  });
+
+  // ——— 12A. SYNC VS ASYNC — CONCEPT ———
+  S.push({
+    eyebrow: 'Concept Deep Dive',
+    title: 'Synchronous vs. Asynchronous, Properly Explained',
+    lede: 'This is the difference that makes Node.js Node.js — and the reason try/catch behaves differently around each.',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>🧍 Synchronous</h3><ul class="ticket-list">' +
+          '<li>Each line waits for the previous one to fully finish.</li>' +
+          '<li>The thread is <b>blocked</b> — nothing else can run in the meantime.</li>' +
+          '<li>Errors can be caught the instant they happen, in the same try/catch.</li>' +
+          '<li>Example: <code>fs.readFileSync()</code>, a plain <code>for</code> loop, math operations.</li>' +
+        '</ul></div>' +
+        '<div class="card"><h3>⚡ Asynchronous</h3><ul class="ticket-list">' +
+          '<li>A task is <b>started</b>, and the rest of the script keeps running immediately.</li>' +
+          '<li>The result arrives later, via a callback, Promise, or <code>await</code>.</li>' +
+          '<li>The thread is <b>never blocked</b> waiting for I/O.</li>' +
+          '<li>Example: <code>fs.readFile()</code>, <code>fetch()</code>, database queries, <code>setTimeout()</code>.</li>' +
+        '</ul></div>' +
+      '</div>' +
+      '<div class="note"><b>🍳 Real-life analogy:</b> Synchronous is cooking one dish at a time on a single stove — you stand and wait for each pan before starting the next. Asynchronous is a restaurant kitchen: you fire five orders at once, and each ticket comes back to the pass whenever it\'s actually ready — you don\'t stand frozen at the stove for one dish.</div>'
+  });
+
+  // ——— 12B. SYNC VS ASYNC — REAL-LIFE CODE ———
+  S.push({
+    eyebrow: 'Concept Deep Dive',
+    title: 'Same Task, Two Ways: Reading a File',
+    lede: 'A realistic example every Node dev hits early: loading a config or data file from disk.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code(
+          "// SYNCHRONOUS — blocking\nconst fs = require('fs');\n\nconsole.log('1. Reading settings.json...');\nconst data = fs.readFileSync('settings.json', 'utf8');\nconsole.log('2. File loaded:', data.length, 'bytes');\nconsole.log('3. Starting server...');\n\n// Output (in order, no surprises):\n// 1. Reading settings.json...\n// 2. File loaded: 842 bytes\n// 3. Starting server...\n//\n// ⚠️ While the file reads, NOTHING else can run —\n// no other requests, no timers, nothing.",
+          'sync-read.js'
+        ) + '</div>' +
+        '<div>' + code(
+          "// ASYNCHRONOUS — non-blocking\nconst fs = require('fs');\n\nconsole.log('1. Reading settings.json...');\nfs.readFile('settings.json', 'utf8', (err, data) => {\n    console.log('3. File loaded:', data.length, 'bytes');\n});\nconsole.log('2. Starting server...');\n\n// Output (notice the order!):\n// 1. Reading settings.json...\n// 2. Starting server...\n// 3. File loaded: 842 bytes\n//\n// The server starts WHILE the file is still\n// being read in the background.",
+          'async-read.js'
+        ) + '</div>' +
+      '</div>' +
+      '<div class="note"><b>Why this matters:</b> imagine settings.json were 2GB, or the "file" were actually a slow database call over the network. The sync version would freeze every user\'s request until it finished. The async version keeps serving other requests the whole time.</div>'
+  });
+
+  // ——— 12. TRY/CATCH ASYNC ———
+  S.push({
+    eyebrow: '4. Error Handling',
+    title: 'try/catch With Sync &amp; Async Code',
+    lede: 'async/await lets you write asynchronous code that reads like — and can be wrapped like — synchronous code.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code("// synchronous\ntry {\n    const parsed = JSON.parse('not valid json');\n} catch (err) {\n    console.error('Bad JSON:', err.message);\n}\n\n// Output:\n// Bad JSON: Unexpected token 'o', ..." ) + '</div>' +
+        '<div>' + code("// asynchronous\nasync function loadUser(id) {\n    try {\n        const user = await db.findUser(id);\n        return user;\n    } catch (err) {\n        console.error('Lookup failed:', err.message);\n        throw err;\n    }\n}") + '</div>' +
+      '</div>' +
+      '<div class="note"><b>Common mistake:</b> forgetting <code>await</code> means the try/catch never sees the rejection — the Promise rejects <i>after</i> the try block has already finished.</div>'
+  });
+
+  // ——— 13. SAFETY NETS ———
+  S.push({
+    eyebrow: '4. Error Handling',
+    title: 'uncaughtException &amp; unhandledRejection',
+    lede: 'A safety net, not a strategy. If you\'re relying on these to "handle" errors, something upstream already went wrong.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code("process.on('uncaughtException', (err) => {\n    console.error('Uncaught Exception:', err.message);\n    process.exit(1);\n});\n\nprocess.on('unhandledRejection', (reason) => {\n    console.error('Unhandled Rejection:', reason);\n    process.exit(1);\n});") + '</div>' +
+        '<div class="card"><h3>🚨 Why not rely on these?</h3><ul class="ticket-list">' +
+          '<li>By the time they fire, the app may be in an unknown, unstable state.</li>' +
+          '<li>They\'re global — you lose the specific context of where things failed.</li>' +
+          '<li>The right fix is catching errors close to where they happen, not catching everything at the top.</li>' +
+          '<li>Use these only as a last-resort net so the process fails loudly instead of hanging silently.</li>' +
+        '</ul></div>' +
+      '</div>'
+  });
+
+  // ——— 14. REAL-LIFE USE CASE INTRO ———
+  S.push({
+    eyebrow: '5. Real-Life Use Case',
+    title: 'Putting It Together: An Order Processing Service',
+    lede: 'A small but realistic backend pattern — the kind of code you\'ll write again once Express and MongoDB enter the picture in Midterm.',
+    body:
+      '<div class="card-grid cols-3">' +
+        '<div class="card"><h3>1️⃣ config.js</h3><p>Reads required settings from <code>process.env</code> and refuses to start if any are missing.</p></div>' +
+        '<div class="card"><h3>2️⃣ errors.js</h3><p>A custom <code>OrderValidationError</code> for expected, recoverable failures.</p></div>' +
+        '<div class="card"><h3>3️⃣ orderService.js</h3><p>Async validation + a simulated payment call, all wrapped in try/catch.</p></div>' +
+      '</div>' +
+      '<div class="note"><b>Scenario:</b> an e-commerce backend needs to validate an order, reject anything over a configurable limit, and gracefully survive a flaky payment gateway — without ever crashing the whole process.</div>'
+  });
+
+  // ——— 15. REAL LIFE CODE PART 1 ———
+  S.push({
+    eyebrow: '5. Real-Life Use Case',
+    title: 'Config &amp; Custom Error',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code("// config.js\nconst REQUIRED_ENV = ['MAX_ORDER_AMOUNT'];\n\nfor (const key of REQUIRED_ENV) {\n    if (!process.env[key]) {\n        console.error(`Missing required env var: ${key}`);\n        process.exit(1);   // non-zero = startup failure\n    }\n}\n\nmodule.exports = {\n    maxOrderAmount: Number(process.env.MAX_ORDER_AMOUNT),\n};\n\n// .env\n// MAX_ORDER_AMOUNT=500", 'config.js') + '</div>' +
+        '<div>' + code("// errors.js\nclass OrderValidationError extends Error {\n    constructor(message, field) {\n        super(message);\n        this.name = 'OrderValidationError';\n        this.field = field;\n        this.isOperational = true;\n    }\n}\n\nmodule.exports = { OrderValidationError };", 'errors.js') + '</div>' +
+      '</div>'
+  });
+
+  // ——— 16. REAL LIFE CODE PART 2 ———
+  S.push({
+    eyebrow: '5. Real-Life Use Case',
+    title: 'Processing an Order Safely',
+    body:
+      code("// orderService.js\nconst { OrderValidationError } = require('./errors');\nconst config = require('./config');\n\nasync function validateOrder(order) {\n    if (!order.amount || order.amount <= 0) {\n        throw new OrderValidationError('Amount must be positive', 'amount');\n    }\n    if (order.amount > config.maxOrderAmount) {\n        throw new OrderValidationError(\n            `Order exceeds max of ${config.maxOrderAmount}`, 'amount'\n        );\n    }\n}\n\nasync function chargePayment(order) {\n    // simulates a flaky payment gateway\n    return new Promise((resolve, reject) => {\n        setTimeout(() => {\n            if (order.amount === 999) reject(new Error('Gateway timeout'));\n            else resolve({ status: 'charged', id: 'txn_001' });\n        }, 100);\n    });\n}\n\nasync function processOrder(order) {\n    try {\n        await validateOrder(order);\n        const receipt = await chargePayment(order);\n        console.log('Order processed:', receipt);\n    } catch (err) {\n        if (err instanceof OrderValidationError) {\n            console.error(`Validation failed on \"${err.field}\": ${err.message}`);\n        } else {\n            console.error('Unexpected error:', err.message);\n        }\n    }\n}\n\nprocessOrder({ amount: -50 });\nprocessOrder({ amount: 999 });\nprocessOrder({ amount: 250 });\n\n// Output:\n// Validation failed on \"amount\": Amount must be positive\n// Unexpected error: Gateway timeout\n// Order processed: { status: 'charged', id: 'txn_001' }", 'orderService.js') +
+      '<div class="note"><b>Notice:</b> three very different outcomes, and the process never crashes — each error is caught exactly where it happens.</div>'
+  });
+
+  // ——— 17. LAB: HARDEN THE LOG PARSER ———
+  S.push({
+    eyebrow: 'Activity · Hands-On Lab',
+    title: 'Harden the Log Parser',
+    lede: 'Take your Week 2 log parser and make it production-grade in terms of error handling and configurability.',
+    body:
+      '<ol class="step-list">' +
+        '<li>Move hardcoded settings (e.g. which keywords count as "errors") into a <b>.env</b> file, read via <code>process.env</code>.</li>' +
+        '<li>Create a custom error class (e.g. <code>InvalidLogFormatError</code>) and throw it when the input file doesn\'t look like a log file.</li>' +
+        '<li>Add a top-level <code>process.on(\'unhandledRejection\', ...)</code> handler that logs a clean message and exits non-zero.</li>' +
+        '<li>Support a <code>--verbose</code> flag (via <code>process.argv</code>) that prints extra debug info only when passed.</li>' +
+        '<li>Document in <b>README.md</b> what exit code the tool returns on success vs. failure, and why that matters.</li>' +
+      '</ol>' +
+      '<div class="note"><b>Deliverable:</b> updated Week 2 repo, plus a short "Error Handling Notes" section in the README.</div>'
+  });
+
+  // ——— 18. CODING ACTIVITY: EVENT LOOP DETECTIVE ———
+  S.push({
+    eyebrow: 'Activity · Coding Exercise 1',
+    title: 'Event Loop Detective',
+    lede: 'Before running this file, write down the exact print order on paper. Then run it and see how close you got.',
+    body:
+      code("console.log('A');\n\nsetTimeout(() => console.log('B'), 0);\n\nsetImmediate(() => console.log('C'));\n\nPromise.resolve().then(() => console.log('D'));\n\nprocess.nextTick(() => console.log('E'));\n\nconsole.log('F');\n\n// Your prediction: __ __ __ __ __ __\n// (Answer key at the end of this deck)") +
+      '<div class="card-grid cols-2" style="margin-top:14px;">' +
+        '<div class="card"><h3>🧩 Hint 1</h3><p>Synchronous lines always print before any queued callback, no matter what.</p></div>' +
+        '<div class="card"><h3>🧩 Hint 2</h3><p>Between the two microtask queues, one always drains before the other.</p></div>' +
+      '</div>'
+  });
+
+  // ——— 19. CODING ACTIVITY: SAFE CLI RUNNER ———
+  S.push({
+    eyebrow: 'Activity · Coding Exercise 2',
+    title: 'Build the "Safe CLI Runner"',
+    lede: 'A slightly bigger challenge that combines everything from today. Fill in the missing pieces — the shape is intentionally left incomplete.',
+    body:
+      code("// runner.js — fill in the TODOs\nclass ConfigError extends Error {\n    constructor(message) {\n        super(message);\n        this.name = 'ConfigError';\n    }\n}\n\nfunction loadThreshold() {\n    // TODO 1: read process.env.MAX_ITEMS\n    // TODO 2: if it's missing, throw a ConfigError\n    // TODO 3: otherwise return it as a Number\n}\n\nasync function run(items) {\n    const limit = loadThreshold();\n    if (items.length > limit) {\n        throw new Error(`Too many items: ${items.length} > ${limit}`);\n    }\n    return items.map(i => i.toUpperCase());\n}\n\nconst verbose = process.argv.includes('--verbose');\n\n// TODO 4: wrap run([...]) in try/catch\n// TODO 5: if verbose, console.log the full error stack; otherwise just err.message\n// TODO 6: add a top-level process.on('unhandledRejection', ...) as a final safety net") +
+      '<div class="note"><b>Goal:</b> when you run <code>node runner.js --verbose</code> without <code>MAX_ITEMS</code> set, your program should exit cleanly with a readable message and a non-zero exit code — never a raw stack trace.</div>'
+  });
+
+  // ——— 20. MULTIPLE CHOICE ———
+  S.push({
+    eyebrow: 'Activity · Multiple Choice',
+    title: 'Check Your Understanding',
+    body:
+      '<div class="mc-q"><div class="qn">Question 1</div><div class="qtext">Which API is guaranteed to run before any timer or I/O callback in the same tick?</div>' +
+        '<div class="opts"><div data-letter="A.">setTimeout(fn, 0)</div><div data-letter="B.">setImmediate(fn)</div><div data-letter="C.">process.nextTick(fn)</div><div data-letter="D.">fs.readFile callback</div></div></div>' +
+      '<div class="mc-q"><div class="qn">Question 2</div><div class="qtext">What best describes the difference between an operational error and a programmer error?</div>' +
+        '<div class="opts"><div data-letter="A.">Operational errors are always fatal</div><div data-letter="B.">Operational errors are expected conditions; programmer errors are bugs</div><div data-letter="C.">Programmer errors can\'t be caught with try/catch</div><div data-letter="D.">There is no real difference</div></div></div>' +
+      '<div class="mc-q"><div class="qn">Question 3</div><div class="qtext">Which exit code conventionally means "success" for a CLI tool?</div>' +
+        '<div class="opts"><div data-letter="A.">-1</div><div data-letter="B.">1</div><div data-letter="C.">0</div><div data-letter="D.">200</div></div></div>' +
+      '<div class="mc-q"><div class="qn">Question 4</div><div class="qtext">Why shouldn\'t process.on(\'uncaughtException\') be your primary error strategy?</div>' +
+        '<div class="opts"><div data-letter="A.">It only works in strict mode</div><div data-letter="B.">It fires before try/catch runs</div><div data-letter="C.">By the time it fires, app state may be unstable</div><div data-letter="D.">It\'s deprecated in modern Node</div></div></div>' +
+      '<div class="mc-q"><div class="qn">Question 5</div><div class="qtext">What\'s the safest way to store an API key used by a Node app?</div>' +
+        '<div class="opts"><div data-letter="A.">Hardcode it in a constants.js file</div><div data-letter="B.">Store it in .env, excluded from git, read via process.env</div><div data-letter="C.">Store it inside package.json</div><div data-letter="D.">Pass it as a URL query parameter</div></div></div>'
+  });
+
+  // ——— 21. IDENTIFICATION ———
+  S.push({
+    eyebrow: 'Activity · Identification',
+    title: 'Name the Concept',
+    body:
+      '<div class="card">' +
+        '<div class="id-q"><span class="qn">Q1</span><span>The global object giving access to argv, env, and exit() in any Node script.</span></div>' +
+        '<div class="id-q"><span class="qn">Q2</span><span>The event loop phase where setImmediate() callbacks specifically run.</span></div>' +
+        '<div class="id-q"><span class="qn">Q3</span><span>The queue that process.nextTick() callbacks are placed into, which drains before Promise callbacks.</span></div>' +
+        '<div class="id-q"><span class="qn">Q4</span><span>A class created by extending the built-in Error to represent an expected, named failure type.</span></div>' +
+        '<div class="id-q"><span class="qn">Q5</span><span>The global event that fires when a Promise rejects with no .catch() or try/catch anywhere.</span></div>' +
+      '</div>'
+  });
+
+  // ——— 22. KEY QUOTES ———
+  S.push({
+    eyebrow: 'Reflection',
+    title: 'Key Quotes From Today',
+    body:
+      '<div class="quote-block">"What did Node do when it didn\'t know how to handle this?"</div>' +
+      '<div class="quote-block">"uncaughtException and unhandledRejection are a safety net, not a strategy."</div>' +
+      '<div class="quote-block">"Config and secrets don\'t belong in source code."</div>' +
+      '<div class="quote-block">"If a value differs between your machine and production, it belongs in .env."</div>'
+  });
+
+  // ——— 23. RECAP ———
+  S.push({
+    eyebrow: 'Wrap-Up',
+    title: 'Recap: What You Should Walk Away With',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>🧠 Concepts</h3><ul class="ticket-list">' +
+          '<li>The event loop has phases; nextTick and Promises jump ahead of all of them.</li>' +
+          '<li>process gives you argv, env, and control over how your script exits.</li>' +
+          '<li>Exit codes are a contract with CI/CD and, soon, Docker.</li>' +
+        '</ul></div>' +
+        '<div class="card"><h3>🛠️ Practical Skills</h3><ul class="ticket-list">' +
+          '<li>Custom Error subclasses for expected, named failure types.</li>' +
+          '<li>try/catch around both sync and async code.</li>' +
+          '<li>Global handlers as a last-resort net, never a first line of defense.</li>' +
+        '</ul></div>' +
+      '</div>' +
+      '<div class="note"><b>Next up:</b> Week 4 takes the large-file slowdown from this week\'s homework and fixes it with the http module, EventEmitter, and Streams.</div>'
+  });
+
+  // ——— 24. ANSWERS ———
+  S.push({
+    eyebrow: 'Answer Key',
+    title: 'Answers &amp; Explanations',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>✅ Multiple Choice</h3><ul class="ticket-list">' +
+          '<li><b>Q1 — C.</b> process.nextTick() drains before timers or I/O.</li>' +
+          '<li><b>Q2 — B.</b> Operational = expected; programmer = a bug to fix.</li>' +
+          '<li><b>Q3 — C.</b> Exit code 0 means success by convention.</li>' +
+          '<li><b>Q4 — C.</b> App state can be unknown/unstable by the time it fires.</li>' +
+          '<li><b>Q5 — B.</b> .env (git-ignored) + process.env keeps secrets out of source.</li>' +
+        '</ul></div>' +
+        '<div class="card"><h3>✅ Identification</h3><ul class="ticket-list">' +
+          '<li><b>Q1</b> — process</li>' +
+          '<li><b>Q2</b> — the check phase</li>' +
+          '<li><b>Q3</b> — the nextTick queue (a microtask queue)</li>' +
+          '<li><b>Q4</b> — a custom Error subclass</li>' +
+          '<li><b>Q5</b> — unhandledRejection</li>' +
+        '</ul></div>' +
+      '</div>' +
+      '<div class="note" style="margin-top:16px;"><b>Event Loop Detective answer:</b> <code>A, F, E, D, B, C</code> — sync code first, then nextTick, then the Promise microtask, then the timer phase, then the check phase.</div>'
+  });
+
+  // ——— 25. ANSWER KEY: SAFE CLI RUNNER SOLUTION ———
+  S.push({
+    eyebrow: 'Answer Key',
+    title: 'Safe CLI Runner — Full Solution',
+    lede: 'The completed version of Coding Exercise 2, with all six TODOs filled in.',
+    body:
+      code("// runner.js — completed\nclass ConfigError extends Error {\n    constructor(message) {\n        super(message);\n        this.name = 'ConfigError';\n    }\n}\n\nfunction loadThreshold() {\n    // TODO 1 + 2: read env var, throw if missing\n    if (!process.env.MAX_ITEMS) {\n        throw new ConfigError('Missing required env var: MAX_ITEMS');\n    }\n    // TODO 3: return it as a Number\n    return Number(process.env.MAX_ITEMS);\n}\n\nasync function run(items) {\n    const limit = loadThreshold();\n    if (items.length > limit) {\n        throw new Error(`Too many items: ${items.length} > ${limit}`);\n    }\n    return items.map(i => i.toUpperCase());\n}\n\nconst verbose = process.argv.includes('--verbose');\n\n// TODO 4 + 5: wrap in try/catch, respect --verbose\n(async () => {\n    try {\n        const result = await run(['apple', 'banana']);\n        console.log('Result:', result);\n    } catch (err) {\n        if (verbose) {\n            console.error(err.stack);\n        } else {\n            console.error(`${err.name || 'Error'}: ${err.message}`);\n        }\n        process.exit(1);\n    }\n})();\n\n// TODO 6: top-level safety net\nprocess.on('unhandledRejection', (reason) => {\n    console.error('Unhandled Rejection:', reason);\n    process.exit(1);\n});\n\n// $ node runner.js\n// (no MAX_ITEMS set)\n// ConfigError: Missing required env var: MAX_ITEMS\n// (exit code 1)\n//\n// $ MAX_ITEMS=5 node runner.js\n// Result: [ 'APPLE', 'BANANA' ]\n// (exit code 0)") +
+      '<div class="note"><b>Key idea:</b> the try/catch around <code>run()</code> is the real error handling. The <code>unhandledRejection</code> listener at the bottom is only a last-resort net — it should ideally never fire.</div>'
+  });
+
+  // ——— GAUGE ———
+  function applyGauge(t){
+    var label = t < 0.4 ? 'Cold Start' : (t < 0.7 ? 'Warming Up' : 'Event Loop');
+    document.getElementById('gaugeLabel').textContent = label;
+  }
+
+  // ——— RENDER & NAV ———
+  var stage = document.getElementById('stage');
+  var counterEl = document.getElementById('counter');
+  var progressFill = document.getElementById('progressFill');
+  var total = S.length;
+  var current = 0;
+  var animating = false;
+
+  function buildSlideEl(idx){
+    var d = S[idx];
+    var el = document.createElement('div');
+    el.className = 'slide';
+    el.innerHTML =
+      '<div class="slide-inner">' +
+        '<div class="eyebrow">' + d.eyebrow + '</div>' +
+        '<h2 class="slide-title">' + d.title + '</h2>' +
+        (d.lede ? '<div class="lede">' + d.lede + '</div>' : '') +
+        d.body +
+      '</div>';
+    return el;
+  }
+
+  function updateHud(){
+    counterEl.textContent = (current+1) + ' / ' + total;
+    progressFill.style.width = ((current) / (total-1) * 100) + '%';
+    applyGauge(current / (total-1));
+  }
+
+  var curEl = buildSlideEl(0);
+  curEl.classList.add('active');
+  stage.appendChild(curEl);
+  updateHud();
+
+  function goTo(idx, dir){
+    if(animating || idx === current || idx < 0 || idx >= total) return;
+    animating = true;
+    var nextEl = buildSlideEl(idx);
+    nextEl.classList.add(dir > 0 ? 'enter-fwd' : 'enter-bwd');
+    stage.appendChild(nextEl);
+    void nextEl.offsetWidth;
+    var oldEl = curEl;
+    requestAnimationFrame(function(){
+      oldEl.classList.remove('active');
+      oldEl.classList.add(dir > 0 ? 'exit-fwd' : 'exit-bwd');
+      nextEl.classList.remove('enter-fwd','enter-bwd');
+      nextEl.classList.add('active');
+    });
+    current = idx;
+    curEl = nextEl;
+    updateHud();
+    setTimeout(function(){
+      if(oldEl && oldEl.parentNode) oldEl.parentNode.removeChild(oldEl);
+      animating = false;
+    }, 420);
+  }
+
+  function next(){ goTo(current+1, 1); }
+  function prev(){ goTo(current-1, -1); }
+
+  // ——— CLICK-ANYWHERE (EXCEPT INTERACTIVE ELEMENTS) ———
+  var INTERACTIVE_SELECTOR = 'button, a, input, textarea, select, .copy-btn, .kbd-fab, .shortcuts-overlay, .shortcuts-panel';
+  document.getElementById('app').addEventListener('click', function(e){
+    if(e.target.closest(INTERACTIVE_SELECTOR)) return;
+    var overlay = document.getElementById('shortcutsOverlay');
+    if(overlay.classList.contains('show')){ overlay.classList.remove('show'); return; }
+    var w = window.innerWidth;
+    if(e.clientX < w * 0.25){ prev(); } else { next(); }
+  });
+
+  document.addEventListener('keydown', function(e){
+    var overlay = document.getElementById('shortcutsOverlay');
+    if(e.key === '?'){ e.preventDefault(); overlay.classList.toggle('show'); return; }
+    if(e.key === 'Escape'){ if(overlay.classList.contains('show')){ overlay.classList.remove('show'); } return; }
+    if(overlay.classList.contains('show')) return;
+    if(e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown'){ e.preventDefault(); next(); }
+    else if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); prev(); }
+    else if(e.key === 'Home'){ e.preventDefault(); goTo(0, -1); }
+    else if(e.key === 'End'){ e.preventDefault(); goTo(total-1, 1); }
+    else if(e.key === 'ArrowUp'){ e.preventDefault(); prev(); }
+    else if(e.key === 'ArrowDown'){ e.preventDefault(); next(); }
+  });
+
+  document.getElementById('kbdFab').addEventListener('click', function(e){
+    e.stopPropagation();
+    document.getElementById('shortcutsOverlay').classList.toggle('show');
+  });
+
+  // ——— SWIPE GESTURES (mobile) ———
+  var touchStartX = 0, touchStartY = 0, touchActive = false;
+  document.getElementById('app').addEventListener('touchstart', function(e){
+    if(e.target.closest(INTERACTIVE_SELECTOR)) { touchActive = false; return; }
+    touchActive = true;
+    touchStartX = e.changedTouches[0].clientX;
+    touchStartY = e.changedTouches[0].clientY;
+  }, {passive:true});
+
+  document.getElementById('app').addEventListener('touchend', function(e){
+    if(!touchActive) return;
+    touchActive = false;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
+    if(Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5){
+      if(dx < 0) next(); else prev();
+    }
+  }, {passive:true});
+})();
+</script>
+</body>
+</html>

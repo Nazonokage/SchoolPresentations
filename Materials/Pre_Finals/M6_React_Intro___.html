@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>M6 — React Fundamentals</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0A1622;
+  --surface:#0F1E2E;
+  --surface2:#15283B;
+  --border:#1D3348;
+  --border2:#2B4A65;
+  --accent:#FF6B4A;
+  --accent2:#5FD8A6;
+  --accent3:#F0B429;
+  --accent4:#9C8CF0;
+  --accent5:#F2789A;
+  --text:#F0F6FC;
+  --text2:#B8D4F0;
+  --text3:#E8F1FA;
+  --card:#0D1C2B;
+  --card2:#112238;
+  --font:'Segoe UI',system-ui,sans-serif;
+  --mono:'Cascadia Code','Fira Code','Consolas',monospace;
+  --r:6px;--r2:10px;
+  --tr:350ms cubic-bezier(.4,0,.2,1);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font)}
+#bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent4));transition:width .3s;z-index:100;border-radius:0 2px 2px 0}
+#ctr{position:fixed;top:10px;right:16px;font-size:16px;color:var(--text2);z-index:100;font-variant-numeric:tabular-nums;letter-spacing:.5px;font-family:var(--mono)}
+#deck{width:100%;height:100vh;position:relative;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;padding:50px 64px 34px;opacity:0;pointer-events:none;transform:translateX(48px);transition:opacity var(--tr),transform var(--tr);overflow-y:auto}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.out-l{opacity:0;transform:translateX(-48px)}
+.slide.out-r{opacity:0;transform:translateX(48px)}
+@media(prefers-reduced-motion:reduce){.slide{transition:opacity .15s;transform:none!important}}
+.eyebrow{font-size:16px;font-weight:700;letter-spacing:1.5px;color:var(--accent);margin-bottom:9px;display:flex;align-items:center;gap:6px;font-family:var(--mono)}
+.eyebrow::before{content:'//';color:var(--border2);font-weight:400}
+.slide-title{font-size:clamp(27px,3.2vw,44px);font-weight:800;line-height:1.1;color:var(--text);margin-bottom:5px;letter-spacing:-.5px}
+.slide-sub{font-size:16px;color:var(--text2);margin-bottom:20px}
+.rule{height:0;border:none;border-top:1px dashed var(--border2);margin-bottom:20px}
+.content{flex:1;display:flex;flex-direction:column;gap:13px;min-height:0}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:13px;min-height:0}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
+.g2>*,.g3>*{min-width:0}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:16px;flex:1;min-height:0}
+.split>*{min-width:0;display:flex;flex-direction:column;gap:10px}
+.col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.card{background:var(--card);border:1px solid var(--border);border-top:2px solid var(--border2);border-radius:0 0 var(--r2) var(--r2);padding:15px 17px;position:relative}
+.card h3{font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1.3px;color:var(--accent);margin-bottom:9px;display:flex;align-items:center;gap:7px}
+.card h3::before{content:'';width:6px;height:6px;background:var(--accent);flex-shrink:0}
+.card p,.card li{font-size:16px;color:var(--text3);line-height:1.55}
+.card ul{padding-left:16px}.card li{margin-bottom:4px}
+/* CODE */
+.cw{position:relative;background:#050D1A;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;flex:1;display:flex;flex-direction:column;min-height:0}
+.cl{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:#090F1E;border-bottom:1px solid var(--border);font-size:16px;color:var(--text2);font-family:var(--mono);flex-shrink:0}
+.cl span{color:var(--accent3)}
+.cw pre{padding:11px 13px;overflow:auto;font-family:var(--mono);font-size:16px;line-height:1.6;white-space:pre;flex:1;min-height:0;max-height:none}
+.cpbtn{padding:4px 11px;font-size:16px;font-family:var(--font);background:var(--surface2);border:1px solid var(--border2);color:var(--text2);border-radius:4px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.cpbtn:hover{background:var(--accent);color:#08101E;border-color:var(--accent)}
+.cpbtn.ok{background:var(--accent2);color:#08101E;border-color:var(--accent2)}
+/* syntax */
+.k{color:#F472B6}.s{color:#86EFAC}.f{color:#C4B5FD}.n{color:#7DD3FC}
+.cm{color:#3D5470;font-style:italic}.t{color:#FCA5A5}.b{color:#FCD34D}
+/* BREAKDOWN */
+.bd{display:flex;flex-direction:column;gap:7px}
+.bdi{display:flex;gap:10px;align-items:flex-start;padding:9px 11px;background:var(--surface);border:1px solid var(--border);border-radius:6px;border-left:3px solid var(--accent)}
+.bdi.g{border-left-color:var(--accent2)}.bdi.o{border-left-color:var(--accent3)}
+.bdi.p{border-left-color:var(--accent4)}.bdi.r{border-left-color:var(--accent5)}
+.bdl{font-family:var(--mono);font-size:16px;color:var(--accent);background:#050D1A;padding:2px 7px;border-radius:3px;white-space:nowrap;min-width:fit-content;align-self:flex-start;margin-top:1px;flex-shrink:0}
+.bdt{font-size:16px;color:var(--text3);line-height:1.5}.bdt strong{color:var(--text);font-weight:600}
+/* TABLES */
+table{width:100%;border-collapse:collapse;font-size:16px}
+th{background:var(--surface2);color:var(--accent);padding:8px 12px;text-align:left;font-weight:700;font-size:16px;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text3);line-height:1.5;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.015)}
+/* PILLS */
+.pill{display:inline-block;padding:4px 12px;border-radius:3px;font-size:16px;font-weight:600;border:1px solid var(--border);color:var(--text2);margin:3px}
+.pill.a{border:1px dashed var(--accent);color:var(--accent);background:rgba(255,107,74,.08)}
+.pill.g{border-color:var(--accent2);color:var(--accent2);background:rgba(95,216,166,.08)}
+.pill.o{border-color:var(--accent3);color:var(--accent3);background:rgba(240,180,41,.08)}
+/* FLOW */
+.flow{display:flex;align-items:center;flex-wrap:wrap;gap:0;margin:8px 0}
+.fb{background:var(--card2);border:1px solid var(--border2);border-radius:4px;padding:7px 13px;font-size:16px;color:var(--text3);font-weight:500}
+.fb.hi{border-color:var(--accent);color:var(--accent)}
+.fa{color:var(--accent);padding:0 8px;font-size:18px}
+/* STEPS */
+.step{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px}
+.snum{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#0A1622;font-weight:900;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.sbody h4{font-size:16px;font-weight:700;color:var(--text);margin-bottom:3px}
+.sbody p{font-size:16px;color:var(--text2);line-height:1.4}
+/* HERO */
+.hero-slide{background:radial-gradient(ellipse at 12% 75%,rgba(255,107,74,.1) 0%,transparent 50%),radial-gradient(ellipse at 85% 15%,rgba(156,140,240,.06) 0%,transparent 45%),var(--bg)}
+.hero-title{font-size:clamp(50px,6vw,78px);font-weight:900;line-height:1.0;letter-spacing:-2px}
+.h1c{color:var(--text)}.h2c{color:var(--accent)}
+.hero-sub{font-size:18px;color:var(--text2);max-width:520px;line-height:1.65;margin:14px 0 20px}
+.dots{position:absolute;inset:0;background-image:linear-gradient(rgba(157,196,240,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(157,196,240,.05) 1px,transparent 1px);background-size:36px 36px;pointer-events:none}
+.crop{position:absolute;width:22px;height:22px;border:1px solid var(--border2);pointer-events:none}
+.crop.tl{top:28px;left:28px;border-right:none;border-bottom:none}
+.crop.tr{top:28px;right:28px;border-left:none;border-bottom:none}
+.crop.bl{bottom:28px;left:28px;border-right:none;border-top:none}
+.crop.br{bottom:28px;right:28px;border-left:none;border-top:none}
+/* COMPARE BOXES */
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1}
+.cmp-box{border-radius:var(--r);padding:14px 16px;border:1px solid var(--border)}
+.cmp-box.old{background:rgba(242,120,154,.05);border-color:rgba(242,120,154,.2)}
+.cmp-box.new{background:rgba(255,107,74,.05);border-color:rgba(255,107,74,.2)}
+.cmp-box h4{font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+.cmp-box.old h4{color:var(--accent5)}
+.cmp-box.new h4{color:var(--accent)}
+.cmp-box p{font-size:16px;color:var(--text3);line-height:1.5}
+/* MC */
+.mc-item{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:13px 15px;flex:1}
+.mc-q{font-size:16px;font-weight:600;color:var(--text);margin-bottom:9px;line-height:1.45}
+.qn{color:var(--accent);margin-right:6px;font-weight:800}
+.mc-opts{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.mc-opt{padding:8px 11px;border-radius:5px;border:1px solid var(--border);font-size:16px;color:var(--text3);cursor:pointer;transition:all .15s;background:var(--surface2);line-height:1.35}
+.mc-opt:hover{border-color:var(--accent);color:var(--text)}
+.mc-opt.sel{border-color:var(--accent);background:rgba(255,107,74,.1);color:var(--accent)}
+/* GTO */
+.gto-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;flex:1;display:flex;gap:13px;align-items:stretch}
+.gto-left{display:flex;flex-direction:column;flex:1;min-width:0;gap:5px}
+.gto-qlabel{font-size:16px;font-weight:700;color:var(--text)}
+.gto-num{color:var(--accent4);font-weight:800;margin-right:6px}
+.gto-pre{background:#050D1A;border:1px solid var(--border);border-radius:5px;padding:8px 10px;font-family:var(--mono);font-size:16px;color:var(--text3);white-space:pre;overflow-x:auto;flex:1;margin:0}
+.gto-right{display:flex;flex-direction:column;min-width:160px;max-width:185px;gap:4px}
+.gto-alabel{font-size:16px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px}
+.gto-ta{width:100%;flex:1;min-height:62px;padding:6px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:16px;font-family:var(--mono);outline:none;resize:none;line-height:1.5;transition:border .2s}
+.gto-ta:focus{border-color:var(--accent4)}
+/* RECAP */
+.rc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.rc{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:15px;text-align:center}
+.rc .ico{font-size:26px;margin-bottom:7px}
+.rc h4{font-size:16px;font-weight:700;color:var(--accent);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.rc p{font-size:16px;color:var(--text2);line-height:1.4}
+/* ANS */
+.ans-block{border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;flex:1}
+.ans-row{display:flex;gap:10px;padding:8px 13px;border-bottom:1px solid var(--border);font-size:16px;align-items:flex-start}
+.ans-row:last-child{border:none}
+.ans-row:nth-child(even){background:rgba(255,255,255,.012)}
+.anum{font-weight:800;color:var(--accent);min-width:28px;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:16px;flex-shrink:0;margin-top:1px}
+.anum.p{color:var(--accent4)}
+.abody{color:var(--text3);line-height:1.5;flex:1;min-width:0}
+.abody strong{color:var(--accent2)}
+/* QUOTE */
+.q-card{background:linear-gradient(135deg,var(--card),var(--surface));border-left:3px solid var(--accent);border-radius:0 var(--r) var(--r) 0;padding:14px 18px;margin-bottom:11px}
+.q-text{font-size:16px;color:var(--text3);line-height:1.7;font-style:italic}
+.q-src{font-size:16px;color:var(--accent);margin-top:7px;font-style:normal;font-weight:700;letter-spacing:.5px}
+/* MODAL */
+#modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center}
+#modal.open{display:flex}
+.mbox{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:26px 30px;min-width:320px}
+.mbox h3{font-size:16px;font-weight:700;color:var(--accent);margin-bottom:14px}
+.shr{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:16px;color:var(--text3)}
+.shr:last-of-type{border:none}
+.shr kbd{background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:2px 7px;font-family:var(--mono);font-size:16px;color:var(--text)}
+.mcl{margin-top:16px;width:100%;padding:9px;background:var(--accent);color:#08101E;border:none;border-radius:6px;cursor:pointer;font-size:16px;font-weight:700;font-family:var(--font)}
+#hint{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);font-size:16px;color:var(--text2);letter-spacing:.5px;pointer-events:none;opacity:.5;font-family:var(--mono)}
+ic{background:var(--surface2);padding:1px 6px;border-radius:4px;font-family:var(--mono);font-size:16px;color:var(--accent4);border:1px solid var(--border)}
+small{font-size:16px}button,input,textarea,select{font-size:16px}
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<div id="ctr"></div>
+<div id="deck"></div>
+<div id="hint">right-click or → to advance &nbsp;·&nbsp; ? for shortcuts</div>
+<div id="modal">
+  <div class="mbox">
+    <h3>⌨ Keyboard Shortcuts</h3>
+    <div class="shr"><span>Next</span><span><kbd>→</kbd> or <kbd>Right-click</kbd></span></div>
+    <div class="shr"><span>Prev</span><span><kbd>←</kbd></span></div>
+    <div class="shr"><span>First / Last</span><span><kbd>Home</kbd> / <kbd>End</kbd></span></div>
+    <div class="shr"><span>Shortcuts</span><span><kbd>?</kbd></span></div>
+    <div class="shr"><span>Close</span><span><kbd>Esc</kbd></span></div>
+    <button class="mcl" onclick="document.getElementById('modal').classList.remove('open')">Close</button>
+  </div>
+</div>
+<script>
+// ── TOKENIZER ──────────────────────────────────────────────────────────
+function hl(code){
+  const KW=/^(const|let|var|function|return|async|await|try|catch|throw|new|class|extends|if|else|for|while|import|export|default|from|of|in|true|false|null|undefined)\b/;
+  const TY=/^(React|ReactDOM|useState|useEffect|console|document|JSON|Array|Object|Math|Promise|Error|module|require|exports)\b/;
+  const NUM=/^\b\d+(\.\d+)?\b/;
+  function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+  let i=0,out='';
+  while(i<code.length){
+    if(code[i]==='/'&&code[i+1]==='/'){
+      const e=code.indexOf('\n',i);const ch=e===-1?code.slice(i):code.slice(i,e);
+      out+='<span class="cm">'+esc(ch)+'</span>';i+=ch.length;continue;
+    }
+    if(code[i]==='`'){
+      let j=i+1;while(j<code.length&&code[j]!=='`'){if(code[j]==='\\')j++;j++;}
+      out+='<span class="s">'+esc(code.slice(i,j+1))+'</span>';i=j+1;continue;
+    }
+    if(code[i]==="'"){
+      let j=i+1;while(j<code.length&&code[j]!=="'"&&code[j]!=='\n'){if(code[j]==='\\')j++;j++;}
+      out+='<span class="s">'+esc(code.slice(i,j+1))+'</span>';i=j+1;continue;
+    }
+    if(code[i]==='"'){
+      let j=i+1;while(j<code.length&&code[j]!=='"'&&code[j]!=='\n'){if(code[j]==='\\')j++;j++;}
+      out+='<span class="s">'+esc(code.slice(i,j+1))+'</span>';i=j+1;continue;
+    }
+    const rest=code.slice(i);let m;
+    if((m=rest.match(KW))){out+='<span class="k">'+m[0]+'</span>';i+=m[0].length;continue;}
+    if((m=rest.match(TY))){out+='<span class="t">'+m[0]+'</span>';i+=m[0].length;continue;}
+    if((m=rest.match(NUM))){out+='<span class="n">'+m[0]+'</span>';i+=m[0].length;continue;}
+    out+=esc(code[i]);i++;
+  }
+  return out;
+}
+function cw(code,lang,label){
+  const id='c'+Math.random().toString(36).slice(2);
+  const body=(lang==='jsx'||lang==='js')?hl(code):code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return '<div class="cw"><div class="cl"><span>'+(label||lang)+'</span><button class="cpbtn" onclick="cp(\''+id+'\',this)">Copy</button></div><pre id="'+id+'">'+body+'</pre></div>';
+}
+function cp(id,btn){
+  navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>{
+    btn.textContent='Copied!';btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('ok');},2000);
+  });
+}
+
+// ── SLIDES ────────────────────────────────────────────────────────────
+const S=[];
+
+// 0 ── TITLE
+S.push({cls:'hero-slide',h:`
+<div class="dots"></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:0;position:relative">
+  <div class="eyebrow" style="margin-bottom:14px">Web Systems · Module 6</div>
+  <div class="hero-title"><div class="h1c">Hello,</div><div class="h2c">React.</div></div>
+  <div class="hero-sub">What React is, why it exists, and how JSX lets you write UI like you think — from the ground up.</div>
+  <div>
+    <span class="pill a">What is React</span>
+    <span class="pill a">Why React</span>
+    <span class="pill a">JSX Syntax</span>
+    <span class="pill a">Components</span>
+    <span class="pill g">Activity: JSON → React UI</span>
+  </div>
+</div>`});
+
+// 1 ── WHERE WE ARE
+S.push({h:`
+<div class="eyebrow">Context</div>
+<div class="slide-title">Where We Are in Web Systems</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="card" style="margin-bottom:0"><h3>🗺 Web Systems Journey So Far</h3>
+    <div class="flow" style="margin:0;flex-wrap:wrap;gap:6px">
+      <div class="fb" style="font-size:16px">M1–M4<br/><small style="color:var(--text2)">Node.js core</small></div><div class="fa">→</div>
+      <div class="fb" style="font-size:16px">M5<br/><small style="color:var(--text2)">JSON + Express</small></div><div class="fa">→</div>
+      <div class="fb hi" style="font-size:16px">M6<br/><small>React basics</small></div><div class="fa" style="color:var(--text2)">→</div>
+      <div class="fb" style="font-size:16px;color:var(--text2)">M7<br/><small>React State + Vite</small></div><div class="fa" style="color:var(--text2)">→</div>
+      <div class="fb" style="font-size:16px;color:var(--text2)">React Apps<br/><small>Hooks + integration</small></div>
+    </div>
+  </div>
+  <div class="g2" style="flex:1">
+    <div class="card"><h3>What we built in M5</h3>
+      <ul>
+        <li>Express server reads a student data file</li>
+        <li>Route builds an HTML string using <ic>.map()</ic> and <ic>.replace()</ic></li>
+        <li>Browser receives fully-built HTML — no interactivity</li>
+        <li>Every change requires a full page reload</li>
+      </ul>
+      <p style="margin-top:10px;font-size:16px;color:var(--accent3)">⚠ The server is doing UI work. That's not scalable.</p>
+    </div>
+    <div class="card"><h3>What React changes</h3>
+      <ul>
+        <li>The <strong style="color:var(--text)">browser</strong> builds and updates the UI</li>
+        <li>The server just sends data (JSON)</li>
+        <li>UI updates <strong style="color:var(--text)">without a page reload</strong></li>
+        <li>UI is described as <strong style="color:var(--text)">components</strong> — reusable pieces</li>
+      </ul>
+      <p style="margin-top:10px;font-size:16px;color:var(--accent2)">✓ Server does data. Browser does UI. Clean separation.</p>
+    </div>
+  </div>
+  <div class="card"><h3>The Bridge</h3>
+    <p style="font-size:16px">In M5 we wrote: <ic>res.send(html)</ic> — Express manually stitched HTML strings together on the server. React flips this: Express sends <ic>res.json(data)</ic> and React turns that data into HTML <em>in the browser</em>, automatically.</p>
+  </div>
+</div>`});
+
+// 2 ── WHAT IS REACT
+S.push({h:`
+<div class="eyebrow">Part 1 — What is React</div>
+<div class="slide-title">React in Plain English</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Official Definition</h3>
+        <p style="font-size:16px;line-height:1.7">React is a <strong style="color:var(--accent)">JavaScript library</strong> for building user interfaces — created by Facebook/Meta in 2013 and open-sourced.</p>
+        <p style="font-size:16px;color:var(--text2);margin-top:10px">It is <em>not</em> a full framework. It only handles the <strong style="color:var(--text)">View</strong> layer — what the user sees and interacts with.</p>
+      </div>
+      <div class="card"><h3>What React Actually Does</h3>
+        <div class="bd" style="gap:6px">
+          <div class="bdi"><div class="bdl">1</div><div class="bdt">You describe <strong>what the UI should look like</strong> for a given state of data.</div></div>
+          <div class="bdi g"><div class="bdl">2</div><div class="bdt">React figures out <strong>what changed</strong> between the old and new UI.</div></div>
+          <div class="bdi o"><div class="bdl">3</div><div class="bdt">React updates <strong>only the parts of the DOM that changed</strong> — nothing else.</div></div>
+        </div>
+      </div>
+      <div class="card"><h3>React is NOT</h3>
+        <ul>
+          <li style="color:var(--accent3)">Not a full MVC framework (no routing built-in)</li>
+          <li style="color:var(--accent3)">Not a back-end technology</li>
+          <li style="color:var(--accent3)">Not a replacement for HTML/CSS</li>
+          <li style="color:var(--accent2)">It works alongside them</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>The Core Idea — Components</h3>
+        <p style="font-size:16px;color:var(--text3);line-height:1.7;margin-bottom:12px">Instead of building one giant HTML page, React lets you build <strong style="color:var(--accent)">components</strong> — small, self-contained pieces of UI that you compose together like LEGO bricks.</p>
+        <div style="background:#050D1A;border:1px solid var(--border);border-radius:8px;padding:14px;font-size:16px;font-family:var(--mono);color:var(--text3);line-height:2">
+          <span style="color:var(--accent4)">&lt;App&gt;</span><br/>
+          &nbsp;&nbsp;<span style="color:var(--accent)">&lt;Navbar /&gt;</span><br/>
+          &nbsp;&nbsp;<span style="color:var(--accent)">&lt;StudentList /&gt;</span><br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--accent2)">&lt;StudentCard /&gt;</span><br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--accent2)">&lt;StudentCard /&gt;</span><br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--accent2)">&lt;StudentCard /&gt;</span><br/>
+          &nbsp;&nbsp;<span style="color:var(--accent)">&lt;Footer /&gt;</span><br/>
+          <span style="color:var(--accent4)">&lt;/App&gt;</span>
+        </div>
+      </div>
+      <div class="card"><h3>React in the MERN Stack</h3>
+        <div class="flow" style="flex-direction:column;gap:5px;align-items:flex-start;margin:0">
+          <div class="fb" style="width:100%">M — <strong style="color:var(--text)">MongoDB</strong> — stores data</div>
+          <div class="fa" style="padding:0 0 0 10px">↕</div>
+          <div class="fb" style="width:100%">E — <strong style="color:var(--text)">Express</strong> — API routes</div>
+          <div class="fa" style="padding:0 0 0 10px">↕</div>
+          <div class="fb" style="width:100%">N — <strong style="color:var(--text)">Node.js</strong> — runtime</div>
+          <div class="fa" style="padding:0 0 0 10px">↕</div>
+          <div class="fb hi" style="width:100%">R — <strong style="color:var(--accent)">React</strong> — the UI you see ← we are here</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 3 ── WHY REACT
+S.push({h:`
+<div class="eyebrow">Part 1 — Why React</div>
+<div class="slide-title">Why Not Just Write Plain HTML?</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="cmp" style="margin-bottom:2px">
+    <div class="cmp-box old">
+      <h4>❌ Without React (M5 approach)</h4>
+      <p style="margin-bottom:8px">Server builds the whole HTML page. Every data change = full page reload.</p>
+      <p style="margin-bottom:8px">To add a student card: re-fetch the page, re-render everything.</p>
+      <p style="margin-bottom:8px">To update one field: rebuild the entire DOM from scratch.</p>
+      <p style="color:rgba(244,114,182,.7);font-size:16px">Slow. Non-interactive. Hard to maintain.</p>
+    </div>
+    <div class="cmp-box new">
+      <h4>✅ With React</h4>
+      <p style="margin-bottom:8px">Browser has the data. UI updates instantly without talking to the server.</p>
+      <p style="margin-bottom:8px">To add a student card: React adds <em>one</em> card to the DOM — nothing else changes.</p>
+      <p style="margin-bottom:8px">To update one field: React updates <em>that one element</em> only.</p>
+      <p style="color:rgba(74,222,128,.7);font-size:16px">Fast. Interactive. Component-based.</p>
+    </div>
+  </div>
+  <div class="g3">
+    <div class="card"><h3>🔁 Reusability</h3>
+      <p>Build a <ic>StudentCard</ic> component once. Render it 100 times by passing different data. No copy-paste.</p>
+    </div>
+    <div class="card"><h3>⚡ Virtual DOM</h3>
+      <p>React keeps a <strong style="color:var(--text)">virtual copy</strong> of the DOM in memory. On change, it diffs old vs new and only updates what changed.</p>
+    </div>
+    <div class="card"><h3>🧩 Ecosystem</h3>
+      <p>React Router (navigation), TanStack Query (data fetching), Tailwind (styling) — huge ecosystem of plug-ins.</p>
+    </div>
+  </div>
+</div>`});
+
+// 4 ── VIRTUAL DOM
+S.push({h:`
+<div class="eyebrow">Part 1 — How React Works</div>
+<div class="slide-title">The Virtual DOM — React's Secret Weapon</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2" style="flex:1">
+    <div class="col">
+      <div class="card flex1"><h3>What is the DOM?</h3>
+        <p style="margin-bottom:10px">The <strong style="color:var(--text)">Document Object Model</strong> is the browser's live tree of every element on the page. Every time you change it, the browser repaints — which is slow.</p>
+        <p>Plain JavaScript's <ic>document.getElementById('x').innerHTML = '...'</ic> touches the real DOM directly — every single call.</p>
+      </div>
+      <div class="card flex1"><h3>React's Approach</h3>
+        <div class="bd" style="gap:6px">
+          <div class="bdi"><div class="bdl">Step 1</div><div class="bdt">React keeps a <strong>Virtual DOM</strong> — a lightweight JS object that mirrors the real DOM.</div></div>
+          <div class="bdi g"><div class="bdl">Step 2</div><div class="bdt">When data changes, React builds a <strong>new Virtual DOM</strong> — just a JS calculation, no repainting yet.</div></div>
+          <div class="bdi o"><div class="bdl">Step 3</div><div class="bdt"><strong>Diffing</strong> — React compares old vs new Virtual DOM and finds the minimal set of changes.</div></div>
+          <div class="bdi p"><div class="bdl">Step 4</div><div class="bdt"><strong>Reconciliation</strong> — only those minimal changes are applied to the real DOM. One repaint.</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card" style="margin-bottom:0"><h3>Visual: Without vs With Virtual DOM</h3></div>
+      <div class="cmp-box old" style="flex:1;border-radius:var(--r)">
+        <h4>❌ Plain DOM manipulation</h4>
+        <div style="font-family:var(--mono);font-size:16px;color:var(--text3);line-height:2">
+          Data changes<br/>
+          <span style="color:var(--accent3)">↓ Update entire list innerHTML</span><br/>
+          <span style="color:var(--accent3)">↓ Browser repaints EVERYTHING</span><br/>
+          <span style="color:var(--accent3)">↓ Even unchanged cards re-render</span>
+        </div>
+      </div>
+      <div class="cmp-box new" style="flex:1;border-radius:var(--r)">
+        <h4>✅ React Virtual DOM</h4>
+        <div style="font-family:var(--mono);font-size:16px;color:var(--text3);line-height:2">
+          Data changes<br/>
+          <span style="color:var(--accent2)">↓ New Virtual DOM built (JS only)</span><br/>
+          <span style="color:var(--accent2)">↓ Diff: only Card #3 changed</span><br/>
+          <span style="color:var(--accent2)">↓ Only Card #3 updates in real DOM</span>
+        </div>
+      </div>
+      <div class="card"><h3>Analogy</h3>
+        <p style="font-size:16px">Think of editing a Word document. Without Virtual DOM: you retype the entire document to fix one word. With Virtual DOM: you use Find &amp; Replace — only that one word changes.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 5 ── JSX INTRO
+S.push({h:`
+<div class="eyebrow">Part 2 — JSX</div>
+<div class="slide-title">What is JSX?</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      ${cw(`// JSX looks like HTML inside JavaScript
+function Greeting() {
+  const name = "Reyes";
+  return (
+    <div className="card">
+      <h1>Hello, {name}!</h1>
+      <p>Welcome to React.</p>
+    </div>
+  );
+}
+
+// But it compiles to plain JS:
+// React.createElement("div", {className:"card"},
+//   React.createElement("h1", null, "Hello, Reyes!"),
+//   React.createElement("p", null, "Welcome to React.")
+// )`,'jsx','JSX example')}
+      <div class="card" style="margin-top:4px"><h3>Key Insight</h3>
+        <p>JSX is <strong style="color:var(--text)">not HTML</strong>. It's syntactic sugar that Babel compiles into <ic>React.createElement()</ic> calls. You write something that <em>looks</em> like HTML; React turns it into actual DOM elements.</p>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>JSX vs Plain HTML — The Differences</h3></div>
+      <table>
+        <tr><th>HTML</th><th>JSX equivalent</th><th>Why</th></tr>
+        <tr><td><ic>class="card"</ic></td><td><ic>className="card"</ic></td><td><ic>class</ic> is a JS keyword</td></tr>
+        <tr><td><ic>for="id"</ic></td><td><ic>htmlFor="id"</ic></td><td><ic>for</ic> is a JS keyword</td></tr>
+        <tr><td><ic>&lt;br&gt;</ic></td><td><ic>&lt;br /&gt;</ic></td><td>JSX requires closing all tags</td></tr>
+        <tr><td><ic>onclick="fn()"</ic></td><td><ic>onClick={fn}</ic></td><td>camelCase events, pass function reference</td></tr>
+        <tr><td><ic>style="color:red"</ic></td><td><ic>style={{'{'}}{'{'}color:'red'{'}'}{'}'}</ic></td><td>Style is a JS object</td></tr>
+        <tr><td>Inline JS not possible</td><td><ic>{expression}</ic></td><td>Curly braces run any JS expression</td></tr>
+      </table>
+      <div class="card" style="margin-top:4px"><h3>The Golden Rule of JSX</h3>
+        <p>Wrap everything in <strong style="color:var(--accent)">one root element</strong>. A component can only return one top-level tag. If you need multiple elements without an extra div, use a Fragment: <ic>&lt;&gt;...&lt;/&gt;</ic></p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 6 ── JSX EXPRESSIONS
+S.push({h:`
+<div class="eyebrow">Part 2 — JSX</div>
+<div class="slide-title">JSX Expressions — Putting JS Inside HTML</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      ${cw(`function StudentCard({ student }) {
+  // Any JS expression goes inside { }
+  const isActive = student.active;
+  const initials = student.name
+    .split(' ')
+    .map(w => w[0])
+    .join('');
+
+  return (
+    <div className="card">
+
+      {/* Comment inside JSX */}
+      <div className="avatar">{initials}</div>
+
+      <h2>{student.name}</h2>
+
+      {/* Conditional rendering */}
+      <span className={isActive ? 'active' : 'inactive'}>
+        {isActive ? 'Active' : 'Inactive'}
+      </span>
+
+      {/* Expression: method call */}
+      <p>GWA: {student.gwa.toFixed(2)}</p>
+
+      {/* Nested property access */}
+      <p>Email: {student.contact.email}</p>
+
+    </div>
+  );
+}`,'jsx','StudentCard.jsx')}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Expression Rules in JSX</h3></div>
+      <div class="bd">
+        <div class="bdi"><div class="bdl">{ value }</div><div class="bdt">Any <strong>JavaScript expression</strong> that returns a value. Variables, arithmetic, method calls, ternaries — all valid.</div></div>
+        <div class="bdi g"><div class="bdl">{ a ? b : c }</div><div class="bdt"><strong>Ternary operator</strong> is the main tool for conditional rendering in JSX. <ic>if</ic> statements don't work directly inside JSX.</div></div>
+        <div class="bdi o"><div class="bdl">{ arr.map() }</div><div class="bdt"><strong>.map()</strong> is how you render lists. It returns an array of JSX elements — React renders them all automatically.</div></div>
+        <div class="bdi p"><div class="bdl">{/* */}</div><div class="bdt">Comments in JSX must be wrapped in curly braces like this. Regular <ic>// comments</ic> don't work inside JSX tags.</div></div>
+        <div class="bdi r"><div class="bdl">⚠ Not allowed</div><div class="bdt"><ic>if</ic>, <ic>for</ic>, <ic>while</ic> — these are <em>statements</em>, not expressions. Move them above the <ic>return</ic> or use ternaries / <ic>&&</ic> inside JSX.</div></div>
+      </div>
+      <div class="card" style="margin-top:6px"><h3>Short-circuit Rendering</h3>
+        ${cw(`{/* Only renders if isActive is true */}
+{isActive && <span>Active Student</span>}
+
+{/* Common pattern: loading state */}
+{isLoading && <p>Loading...</p>}
+{!isLoading && <StudentList />}`,'jsx','')}
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 7 ── JSX LISTS
+S.push({h:`
+<div class="eyebrow">Part 2 — JSX</div>
+<div class="slide-title">Rendering Lists with .map()</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      ${cw(`// students is an array of objects
+const students = [
+  { id: 1, name: "Reyes",   gwa: 1.50 },
+  { id: 2, name: "Santos",  gwa: 1.75 },
+  { id: 3, name: "Aquino",  gwa: 1.25 },
+];
+
+function StudentList() {
+  return (
+    <div className="grid">
+      {students.map(student => (
+        <div key={student.id} className="card">
+          <h2>{student.name}</h2>
+          <p>GWA: {student.gwa}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Each .map() callback returns JSX.
+// The key prop tells React which item
+// is which — must be unique per list.`,'jsx','StudentList.jsx')}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Code Breakdown</h3></div>
+      <div class="bd">
+        <div class="bdi"><div class="bdl">line 12</div><div class="bdt"><strong>students.map(student => (...))</strong> — inside JSX, wrap the .map() in <ic>{ }</ic>. Each call returns a JSX element. React renders all of them in order.</div></div>
+        <div class="bdi r"><div class="bdl">key prop</div><div class="bdt"><strong>key={student.id}</strong> is required on the outermost element of each list item. Without it, React can't track which item changed and will warn you in the console.</div></div>
+        <div class="bdi g"><div class="bdl">key rules</div><div class="bdt">Key must be <strong>unique among siblings</strong>. Use a real ID from your data. Avoid using the array index as a key — it breaks when items are reordered or deleted.</div></div>
+        <div class="bdi o"><div class="bdl">( ) vs { }</div><div class="bdt">The arrow function uses <strong>parentheses ( )</strong> to return multi-line JSX implicitly. Curly braces <ic>{ }</ic> would require an explicit <ic>return</ic> statement.</div></div>
+        <div class="bdi p"><div class="bdl">analogy</div><div class="bdt">In M5 we wrote <ic>students.map(s => &#96;&lt;div&gt;${'{'}s.name{'}'}&lt;/div&gt;&#96;).join('')</ic>. In React it's the same idea — but we return <em>JSX</em> instead of an HTML string, and React handles the DOM.</div></div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 8 ── FIRST COMPONENT
+S.push({h:`
+<div class="eyebrow">Part 2 — JSX</div>
+<div class="slide-title">Your First React Component</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      ${cw(`// App.jsx — the root component
+import React from 'react';
+
+// Inline data (we'll fetch from API later)
+const students = [
+  { id: 1, name: "Reyes",  course: "BSCS",
+    gwa: 1.50, active: true  },
+  { id: 2, name: "Santos", course: "BSIT",
+    gwa: 1.75, active: true  },
+  { id: 3, name: "Aquino", course: "BSCS",
+    gwa: 1.25, active: false },
+];
+
+// Child component — receives data via props
+function StudentCard({ name, course, gwa, active }) {
+  return (
+    <div className="card">
+      <h2>{name}</h2>
+      <p>{course}</p>
+      <span className={active ? 'active' : 'inactive'}>
+        {active ? 'Active' : 'Inactive'}
+      </span>
+      <p>GWA: {gwa.toFixed(2)}</p>
+    </div>
+  );
+}
+
+// Parent component — maps data to cards
+function App() {
+  return (
+    <div className="app">
+      <h1>Student Directory</h1>
+      <div className="grid">
+        {students.map(s => (
+          <StudentCard
+            key={s.id}
+            name={s.name}
+            course={s.course}
+            gwa={s.gwa}
+            active={s.active}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default App;`,'jsx','App.jsx')}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Component Breakdown</h3></div>
+      <div class="bd">
+        <div class="bdi"><div class="bdl">line 16</div><div class="bdt"><strong>function StudentCard({ name, course, ... })</strong> — props are destructured directly in the parameter. This is a <strong>functional component</strong>: a function that returns JSX.</div></div>
+        <div class="bdi g"><div class="bdl">props</div><div class="bdt"><strong>Props</strong> (short for properties) are how a parent passes data to a child. They flow <em>down only</em> — child cannot modify them. Think of them as function arguments.</div></div>
+        <div class="bdi o"><div class="bdl">line 30</div><div class="bdt"><strong>function App()</strong> is the root — the component that contains everything. Rendered once by ReactDOM into <ic>&lt;div id="root"&gt;</ic> in your HTML file.</div></div>
+        <div class="bdi p"><div class="bdl">line 33–41</div><div class="bdt"><strong>Passing props</strong> — each attribute on <ic>&lt;StudentCard ... /&gt;</ic> becomes a prop inside that component. JSX attributes map to the props object.</div></div>
+        <div class="bdi r"><div class="bdl">naming</div><div class="bdt">Component names <strong>must start with a capital letter</strong>. Lowercase tags are treated as native HTML elements. <ic>&lt;studentcard/&gt;</ic> ≠ <ic>&lt;StudentCard/&gt;</ic>.</div></div>
+      </div>
+      <div class="card" style="margin-top:6px"><h3>Mental Model</h3>
+        <p style="font-size:16px;color:var(--text3);line-height:1.65">A React component is just a <strong style="color:var(--text)">function that returns JSX</strong>. You call it by writing it as an HTML-like tag. The props you pass are just the function's arguments.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 9 ── ANALOGIES / REAL WORLD
+S.push({h:`
+<div class="eyebrow">Real-World Analogies</div>
+<div class="slide-title">React Concepts You Already Understand</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2" style="flex:1">
+    <div class="col">
+      <div class="card flex1"><h3>🧱 Components = LEGO Bricks</h3>
+        <p>Each LEGO brick is a reusable piece. You can use the same brick shape dozens of times in different colors. React components are the same — build <ic>StudentCard</ic> once, use it for every student. Change the component's design once; every card updates.</p>
+      </div>
+      <div class="card flex1"><h3>📋 Props = Order Form</h3>
+        <p>When you fill in an order form at a restaurant — name, quantity, notes — the kitchen (component) receives that info and prepares exactly what was requested. Props are the form data. The component is the kitchen. It cannot change the order; it just acts on it.</p>
+      </div>
+      <div class="card flex1"><h3>🏗 Virtual DOM = Blueprint vs Building</h3>
+        <p>A blueprint is cheap to update — you erase a line, redraw it. The actual building is expensive to modify. React works on the blueprint (Virtual DOM) first, figures out the minimal changes, then sends workers to the real building (real DOM). One trip, minimal work.</p>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card flex1"><h3>🔄 JSX = Template Literal, Upgraded</h3>
+        <p>In M5: <ic>&#96;&lt;div&gt;${'{'}s.name{'}'}&lt;/div&gt;&#96;</ic> — you embedded values inside a string.<br/><br/>In React: <ic>&lt;div&gt;{'{'}s.name{'}'}&lt;/div&gt;</ic> — you embed values inside JSX. Same mental model, but now the browser tracks it as a live component, not a dead string.</p>
+      </div>
+      <div class="card flex1"><h3>🎭 Component Tree = Org Chart</h3>
+        <p>An org chart has a CEO at the top, departments in the middle, employees at the leaves. A React app has <ic>App</ic> at the top, layout components in the middle, UI atoms (<ic>Button</ic>, <ic>Card</ic>) at the leaves. Data flows <em>down</em> the chart through props.</p>
+      </div>
+      <div class="card flex1"><h3>🧵 React vs Express — Role Swap</h3>
+        <p>In M5, Express was the tailor — it measured the data and hand-stitched every piece of HTML. In React, Express is just the supplier delivering raw fabric (JSON). React is the tailor now, cutting and stitching the UI in the browser, much faster and with live fit adjustments.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 10 ── KEY QUOTES
+S.push({h:`
+<div class="eyebrow">Key Quotes</div>
+<div class="slide-title">Worth Remembering</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="q-card"><div class="q-text">"React makes it painless to create interactive UIs. Design simple views for each state in your application, and React will efficiently update and render just the right components when your data changes."</div><div class="q-src">— React Official Documentation</div></div>
+  <div class="q-card"><div class="q-text">"With great power comes great responsibility — React gives you the power to build any UI you can imagine. JSX is the language you use to describe that imagination to the browser."</div><div class="q-src">— Common React teaching principle</div></div>
+  <div class="q-card"><div class="q-text">"Don't touch the DOM. Describe what you want, and let React figure out how to get there."</div><div class="q-src">— React philosophy</div></div>
+  <div class="q-card"><div class="q-text">"The key insight in React is that UI is a function of state. Same state in, same UI out. Every time."</div><div class="q-src">— React mental model</div></div>
+</div>`});
+
+// 11 ── RECAP
+S.push({h:`
+<div class="eyebrow">Recap</div>
+<div class="slide-title">Module 6 — What We Covered</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="rc-grid" style="flex:1">
+    <div class="rc"><div class="ico">⚛️</div><h4>What is React</h4><p>A JS library for building UIs. Handles only the View layer. Created by Meta, open-sourced in 2013.</p></div>
+    <div class="rc"><div class="ico">🧩</div><h4>Components</h4><p>Functions that return JSX. Build once, reuse everywhere. Must start with a capital letter.</p></div>
+    <div class="rc"><div class="ico">📦</div><h4>Props</h4><p>Data passed from parent to child via JSX attributes. Read-only. Destructured in function parameters.</p></div>
+    <div class="rc"><div class="ico">🏗</div><h4>Virtual DOM</h4><p>React's in-memory copy of the DOM. Diffs on change, applies only what changed. Faster than direct DOM updates.</p></div>
+    <div class="rc"><div class="ico">🖊</div><h4>JSX</h4><p>HTML-like syntax inside JS. Compiles to React.createElement(). Uses {} for expressions, className not class.</p></div>
+    <div class="rc"><div class="ico">🗺</div><h4>.map() in JSX</h4><p>The way to render lists. Each item needs a unique key prop. Returns JSX, not strings.</p></div>
+  </div>
+  <div class="card" style="margin-top:4px"><h3>The Bridge to useState (Next Session)</h3>
+    <p style="font-size:16px">Right now our data is hardcoded inside the component. Next session: <ic>useState</ic> lets data <em>live inside</em> the component and change over time — the moment data changes, React automatically re-renders only the affected parts.</p>
+  </div>
+</div>`});
+
+// 12 ── ACTIVITY INTRO
+S.push({h:`
+<div class="eyebrow">Activities</div>
+<div class="slide-title">Module 6 — Assessment</div>
+<hr class="rule"/>
+<div class="content" style="justify-content:center">
+  <div class="g2">
+    <div class="card"><h3>🖊 Guess the Output — 10 questions</h3>
+      <ul>
+        <li>Trace the JSX or JS code and write the exact output or rendered result</li>
+        <li>1 pt each</li>
+        <li style="margin-top:6px;color:var(--accent);font-weight:700">10 pts</li>
+      </ul>
+    </div>
+    <div class="card"><h3>💻 Coding Activity — Step-by-Step</h3>
+      <ul>
+        <li>Build a mini React app that reads a JSON file and displays it as cards</li>
+        <li>Every step is copy-paste ready</li>
+        <li>Follow along and run it in your browser</li>
+        <li style="margin-top:6px;color:var(--accent2);font-weight:700">Completion-based</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card" style="text-align:center;padding:22px">
+    <div style="font-size:52px;font-weight:900;color:var(--accent);line-height:1">10</div>
+    <div style="font-size:16px;color:var(--text2);margin-top:4px">Scored Points + Coding Activity</div>
+  </div>
+  <div class="card"><h3>⚠ Note</h3><p>Answer key is on the second-to-last slide. Don't peek until you're done with the GTO!</p></div>
+</div>`});
+
+// 13 ── GTO 1-5
+S.push({init(el){
+  const qs=[
+    {code:`function Hello() {
+  return <h1>Hello, World!</h1>;
+}
+// What does this component render?`},
+    {code:`const name = "Reyes";
+const el = <p>Welcome, {name}!</p>;
+// What does el render as?`},
+    {code:`function Tag({ label }) {
+  return (
+    <span className={label === 'active'
+      ? 'green' : 'red'}>
+      {label}
+    </span>
+  );
+}
+// <Tag label="active" />
+// What class and text are rendered?`},
+    {code:`const items = ['A', 'B', 'C'];
+// Inside JSX:
+{items.map((item, i) => (
+  <li key={i}>{item}</li>
+))}
+// How many <li> elements are rendered?
+// What is the text of the second one?`},
+    {code:`function Card({ title, count }) {
+  return (
+    <div>
+      <h2>{title}</h2>
+      <p>{count * 2}</p>
+    </div>
+  );
+}
+// <Card title="Students" count={5} />
+// What does <p> render?`},
+  ];
+  const pg=el.querySelector('#gto1');
+  qs.forEach((q,i)=>{
+    const w=document.createElement('div');w.className='gto-wrap';
+    const lft=document.createElement('div');lft.className='gto-left';
+    const lbl=document.createElement('div');lbl.className='gto-qlabel';
+    const num=document.createElement('span');num.className='gto-num';
+    num.textContent=(i+1)+'.';lbl.appendChild(num);
+    lbl.appendChild(document.createTextNode(' What is the output / rendered result?'));
+    const pre=document.createElement('pre');pre.className='gto-pre';pre.textContent=q.code;
+    lft.appendChild(lbl);lft.appendChild(pre);
+    const rgt=document.createElement('div');rgt.className='gto-right';
+    const al=document.createElement('div');al.className='gto-alabel';al.textContent='Your answer';
+    const ta=document.createElement('textarea');ta.className='gto-ta';ta.placeholder='Write here...';
+    rgt.appendChild(al);rgt.appendChild(ta);
+    w.appendChild(lft);w.appendChild(rgt);
+    if(i===qs.length-1&&qs.length%2===1){w.style.gridColumn='1 / -1';w.style.maxWidth='calc(50% - 6px)';w.style.margin='0 auto';}
+    pg.appendChild(w);
+  });
+},h:`
+<div class="eyebrow">GTO Activity — Questions 1–5</div>
+<div class="slide-title">Guess the Output <span style="font-size:16px;color:var(--text2);font-weight:400">Trace the code, write the result</span></div>
+<hr class="rule"/>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1;align-content:start" id="gto1"></div>`});
+
+// 14 ── GTO 6-10
+S.push({init(el){
+  const qs=[
+    {code:`function Profile({ user }) {
+  return (
+    <div>
+      <h2>{user.name}</h2>
+      <p>{user.dept.name}</p>
+    </div>
+  );
+}
+const u = {
+  name: "Santos",
+  dept: { name: "Engineering" }
+};
+// <Profile user={u} />
+// What does <p> render?`},
+    {code:`function List() {
+  const nums = [10, 20, 30];
+  return (
+    <ul>
+      {nums.map(n => (
+        <li key={n}>{n * 3}</li>
+      ))}
+    </ul>
+  );
+}
+// What are the three <li> values?`},
+    {code:`function Status({ active }) {
+  return (
+    <p>
+      {active
+        ? 'Enrolled'
+        : 'Not enrolled'}
+    </p>
+  );
+}
+// <Status active={false} />
+// What does <p> render?`},
+    {code:`function App() {
+  const show = false;
+  return (
+    <div>
+      <h1>Dashboard</h1>
+      {show && <p>Secret panel</p>}
+    </div>
+  );
+}
+// Is <p>Secret panel</p> rendered?`},
+    {code:`function Badge({ score }) {
+  return (
+    <span>
+      {score >= 90 ? 'Excellent'
+        : score >= 75 ? 'Good'
+        : 'Needs work'}
+    </span>
+  );
+}
+// <Badge score={82} />
+// What does <span> render?`},
+  ];
+  const pg=el.querySelector('#gto2');
+  qs.forEach((q,i)=>{
+    const w=document.createElement('div');w.className='gto-wrap';
+    const lft=document.createElement('div');lft.className='gto-left';
+    const lbl=document.createElement('div');lbl.className='gto-qlabel';
+    const num=document.createElement('span');num.className='gto-num';
+    num.textContent=(i+6)+'.';lbl.appendChild(num);
+    lbl.appendChild(document.createTextNode(' What is the output / rendered result?'));
+    const pre=document.createElement('pre');pre.className='gto-pre';pre.textContent=q.code;
+    lft.appendChild(lbl);lft.appendChild(pre);
+    const rgt=document.createElement('div');rgt.className='gto-right';
+    const al=document.createElement('div');al.className='gto-alabel';al.textContent='Your answer';
+    const ta=document.createElement('textarea');ta.className='gto-ta';ta.placeholder='Write here...';
+    rgt.appendChild(al);rgt.appendChild(ta);
+    w.appendChild(lft);w.appendChild(rgt);
+    if(i===qs.length-1&&qs.length%2===1){w.style.gridColumn='1 / -1';w.style.maxWidth='calc(50% - 6px)';w.style.margin='0 auto';}
+    pg.appendChild(w);
+  });
+},h:`
+<div class="eyebrow">GTO Activity — Questions 6–10</div>
+<div class="slide-title">Guess the Output <span style="font-size:16px;color:var(--text2);font-weight:400">Trace the code, write the result</span></div>
+<hr class="rule"/>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1;align-content:start" id="gto2"></div>`});
+
+// 15 ── CODING ACTIVITY INTRO
+S.push({h:`
+<div class="eyebrow">Coding Activity</div>
+<div class="slide-title">Show Your JSON Data in React</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="card"><h3>🎯 Goal</h3>
+    <p style="font-size:16px;line-height:1.7">Build a React app that reads student data (the same JSON we used in M5) and renders it as a card grid in the browser — <strong style="color:var(--text)">no server needed</strong>, React handles it all in the browser.</p>
+  </div>
+  <div class="g2" style="flex:1">
+    <div class="card"><h3>📦 What You'll Build</h3>
+      <ul>
+        <li>A <ic>students.js</ic> data file (same as M5)</li>
+        <li>A <ic>StudentCard</ic> component that receives student props</li>
+        <li>An <ic>App</ic> component that maps over the data</li>
+        <li>Styled with inline CSS (no external files needed)</li>
+        <li>Runs in the browser with a single HTML file</li>
+      </ul>
+    </div>
+    <div class="card"><h3>🛠 Setup</h3>
+      <p style="margin-bottom:8px;font-size:16px">We'll use a <strong style="color:var(--text)">single HTML file</strong> approach with CDN React — no build tools, no npm, no Vite. Just open the file in your browser.</p>
+      <p style="font-size:16px;color:var(--text2)">This is the simplest way to experience React before we introduce Vite + npm in the next module.</p>
+      <div style="margin-top:10px;background:#050D1A;border-radius:6px;padding:10px 12px;font-family:var(--mono);font-size:16px;color:var(--accent2)">No terminal needed — just a text editor and a browser.</div>
+    </div>
+  </div>
+  <div class="flow" style="margin:0;gap:8px">
+    <div class="fb" style="font-size:16px">Step 1: HTML shell</div><div class="fa">→</div>
+    <div class="fb" style="font-size:16px">Step 2: Student data</div><div class="fa">→</div>
+    <div class="fb" style="font-size:16px">Step 3: StudentCard component</div><div class="fa">→</div>
+    <div class="fb" style="font-size:16px">Step 4: App component</div><div class="fa">→</div>
+    <div class="fb hi" style="font-size:16px">Step 5: Open in browser</div>
+  </div>
+</div>`});
+
+// 16 ── CODING STEP 1+2
+S.push({h:`
+<div class="eyebrow">Coding Activity — Steps 1 & 2</div>
+<div class="slide-title">HTML Shell + Student Data</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      <div class="step"><div class="snum">1</div><div class="sbody"><h4>Create <ic>react-students.html</ic></h4><p>This is your entire project — one file.</p></div></div>
+      ${cw(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>React Students M6</title>
+</head>
+<body>
+  <!-- React mounts here -->
+  <div id="root"></div>
+
+  <!-- React + Babel from CDN (dev only) -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"><\/script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"><\/script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"><\/script>
+
+  <!-- type="text/babel" lets Babel
+       compile JSX in the browser -->
+  <script type="text/babel">
+
+    // ← All your React code goes here
+
+  <\/script>
+</body>
+</html>`,'text','react-students.html')}
+    </div>
+    <div>
+      <div class="step"><div class="snum">2</div><div class="sbody"><h4>Paste the student data</h4><p>Inside the <ic>text/babel</ic> script, add this first:</p></div></div>
+      ${cw(`// Student data — same shape as M5
+const students = [
+  {
+    id: 1,
+    name: "Maria Reyes",
+    course: "BSCS",
+    year: 2,
+    gwa: 1.50,
+    active: true,
+    contact: {
+      email: "maria@school.edu"
+    }
+  },
+  {
+    id: 2,
+    name: "Juan Santos",
+    course: "BSIT",
+    year: 3,
+    gwa: 1.75,
+    active: true,
+    contact: {
+      email: "juan@school.edu"
+    }
+  },
+  {
+    id: 3,
+    name: "Ana Aquino",
+    course: "BSCS",
+    year: 1,
+    gwa: 1.25,
+    active: false,
+    contact: {
+      email: "ana@school.edu"
+    }
+  },
+  {
+    id: 4,
+    name: "Carlo Mendez",
+    course: "BSIT",
+    year: 4,
+    gwa: 2.00,
+    active: true,
+    contact: {
+      email: "carlo@school.edu"
+    }
+  }
+];`,'jsx','Inside text/babel script')}
+    </div>
+  </div>
+</div>`});
+
+// 17 ── CODING STEP 3+4
+S.push({h:`
+<div class="eyebrow">Coding Activity — Steps 3 & 4</div>
+<div class="slide-title">StudentCard Component + App Component</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      <div class="step"><div class="snum">3</div><div class="sbody"><h4>Add <ic>StudentCard</ic> component</h4><p>Paste this after the data array:</p></div></div>
+      ${cw(`function StudentCard({ student }) {
+  const cardStyle = {
+    background: '#1e293b',
+    border: '1px solid #334155',
+    borderRadius: '10px',
+    padding: '20px',
+  };
+  const badgeStyle = {
+    display: 'inline-block',
+    padding: '2px 10px',
+    borderRadius: '20px',
+    fontSize: '0.75rem',
+    fontWeight: 700,
+    marginBottom: '10px',
+    background: student.active
+      ? '#14532d' : '#450a0a',
+    color: student.active
+      ? '#4ade80' : '#f87171',
+  };
+  const gwaStyle = {
+    display: 'inline-block',
+    marginTop: '10px',
+    padding: '3px 12px',
+    background: '#1e3a5f',
+    color: '#60a5fa',
+    borderRadius: '20px',
+    fontSize: '0.8rem',
+    fontWeight: 700,
+  };
+  return (
+    <div style={cardStyle}>
+      <h2 style={{color:'#f1f5f9',
+        fontSize:'1.1rem',
+        marginBottom:'6px'}}>
+        {student.name}
+      </h2>
+      <span style={badgeStyle}>
+        {student.active ? 'Active' : 'Inactive'}
+      </span>
+      <div style={{fontSize:'.85rem',
+        color:'#94a3b8',lineHeight:1.8}}>
+        <span style={{color:'#e2e8f0'}}>
+          {student.course}
+        </span> · Year {student.year}<br/>
+        {student.contact.email}
+      </div>
+      <div style={gwaStyle}>
+        GWA {student.gwa.toFixed(2)}
+      </div>
+    </div>
+  );
+}`,'jsx','StudentCard component')}
+    </div>
+    <div>
+      <div class="step"><div class="snum">4</div><div class="sbody"><h4>Add <ic>App</ic> component + mount</h4><p>Paste this after StudentCard:</p></div></div>
+      ${cw(`function App() {
+  const appStyle = {
+    fontFamily: "'Segoe UI', sans-serif",
+    background: '#0f172a',
+    minHeight: '100vh',
+    padding: '40px 24px',
+    color: '#e2e8f0',
+  };
+  const gridStyle = {
+    display: 'grid',
+    gridTemplateColumns:
+      'repeat(auto-fill, minmax(260px, 1fr))',
+    gap: '16px',
+    marginTop: '24px',
+  };
+  return (
+    <div style={appStyle}>
+      <h1 style={{color:'#60a5fa',
+        fontSize:'2rem',
+        marginBottom:'4px'}}>
+        📋 Student Directory
+      </h1>
+      <p style={{color:'#94a3b8'}}>
+        M6 Activity — React + JSON data
+      </p>
+
+      <div style={gridStyle}>
+        {students.map(student => (
+          <StudentCard
+            key={student.id}
+            student={student}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Mount React into <div id="root">
+const root = ReactDOM.createRoot(
+  document.getElementById('root')
+);
+root.render(<App />);`,'jsx','App component + mount')}
+    </div>
+  </div>
+</div>`});
+
+// 18 ── CODING STEP 5 + EXPECTED RESULT
+S.push({h:`
+<div class="eyebrow">Coding Activity — Step 5</div>
+<div class="slide-title">Open in Browser &amp; Check the Result</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2" style="flex:1">
+    <div class="col">
+      <div class="step"><div class="snum">5</div><div class="sbody"><h4>Open the file in Chrome / Edge</h4><p>Double-click <ic>react-students.html</ic> or drag it into your browser.</p></div></div>
+      <div class="card"><h3>✅ What You Should See</h3>
+        <div style="background:#0f172a;border-radius:8px;padding:16px;border:1px solid #334155;font-family:var(--mono);font-size:16px;color:#94a3b8;line-height:2">
+          <div style="color:#60a5fa;font-size:1rem;font-weight:700;margin-bottom:4px">📋 Student Directory</div>
+          <div style="color:#64748b;margin-bottom:12px;font-family:sans-serif;font-size:16px">M6 Activity — React + JSON data</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="background:#1e293b;border:1px solid #334155;border-radius:6px;padding:10px"><div style="color:#f1f5f9;font-weight:600;margin-bottom:4px">Maria Reyes</div><div style="background:#14532d;color:#4ade80;border-radius:20px;padding:1px 8px;font-size:16px;display:inline-block;margin-bottom:4px">Active</div><div style="font-size:16px;color:#94a3b8">BSCS · Year 2</div></div>
+            <div style="background:#1e293b;border:1px solid #334155;border-radius:6px;padding:10px"><div style="color:#f1f5f9;font-weight:600;margin-bottom:4px">Juan Santos</div><div style="background:#14532d;color:#4ade80;border-radius:20px;padding:1px 8px;font-size:16px;display:inline-block;margin-bottom:4px">Active</div><div style="font-size:16px;color:#94a3b8">BSIT · Year 3</div></div>
+            <div style="background:#1e293b;border:1px solid #334155;border-radius:6px;padding:10px"><div style="color:#f1f5f9;font-weight:600;margin-bottom:4px">Ana Aquino</div><div style="background:#450a0a;color:#f87171;border-radius:20px;padding:1px 8px;font-size:16px;display:inline-block;margin-bottom:4px">Inactive</div><div style="font-size:16px;color:#94a3b8">BSCS · Year 1</div></div>
+            <div style="background:#1e293b;border:1px solid #334155;border-radius:6px;padding:10px"><div style="color:#f1f5f9;font-weight:600;margin-bottom:4px">Carlo Mendez</div><div style="background:#14532d;color:#4ade80;border-radius:20px;padding:1px 8px;font-size:16px;display:inline-block;margin-bottom:4px">Active</div><div style="font-size:16px;color:#94a3b8">BSIT · Year 4</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card"><h3>🐛 Troubleshooting</h3>
+        <table style="font-size:16px">
+          <tr><th>Problem</th><th>Fix</th></tr>
+          <tr><td>Blank page</td><td>Check the browser Console (F12). Look for a red error.</td></tr>
+          <tr><td>CDN scripts not loading</td><td>You need internet. Or download the scripts locally.</td></tr>
+          <tr><td>JSX not working</td><td>Make sure your script tag has <ic>type="text/babel"</ic></td></tr>
+          <tr><td>Cards show but no style</td><td>Check your style objects — all CSS property names must be camelCase in React.</td></tr>
+          <tr><td>Console: "key" warning</td><td>Each <ic>&lt;StudentCard&gt;</ic> inside .map() needs a unique <ic>key</ic> prop.</td></tr>
+        </table>
+      </div>
+      <div class="card"><h3>🔥 Try These Extensions</h3>
+        <ul>
+          <li>Add a <ic>Course</ic> filter — only show BSCS students</li>
+          <li>Sort cards by GWA (lowest first)</li>
+          <li>Add a counter: "X of Y students active"</li>
+          <li>Add an input field that filters by name</li>
+        </ul>
+        <p style="font-size:16px;color:var(--text2);margin-top:8px">These extensions require <ic>useState</ic> — preview of next module!</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 19 ── ANSWER KEY
+S.push({h:`
+<div class="eyebrow">Answer Key — GTO</div>
+<div class="slide-title">Guess the Output — Answers 1–10</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2" style="flex:1">
+    <div class="col">
+      <div style="font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent4);margin-bottom:7px">Questions 1–5</div>
+      <div class="ans-block">
+        <div class="ans-row"><span class="anum p">1.</span><div class="abody"><strong>Renders: &lt;h1&gt;Hello, World!&lt;/h1&gt;</strong> — the component returns a single h1 element with that text content.</div></div>
+        <div class="ans-row"><span class="anum p">2.</span><div class="abody"><strong>Renders: &lt;p&gt;Welcome, Reyes!&lt;/p&gt;</strong> — the <ic>{name}</ic> expression is replaced by the variable's value.</div></div>
+        <div class="ans-row"><span class="anum p">3.</span><div class="abody"><strong>class="green", text: "active"</strong> — since <ic>label === 'active'</ic> is true, the ternary picks <ic>'green'</ic> and renders the label as-is.</div></div>
+        <div class="ans-row"><span class="anum p">4.</span><div class="abody"><strong>3 &lt;li&gt; elements. Second one: "B"</strong> — .map() creates one &lt;li&gt; per item. Index 1 is 'B'.</div></div>
+        <div class="ans-row"><span class="anum p">5.</span><div class="abody"><strong>&lt;p&gt;10&lt;/p&gt;</strong> — count is 5, count*2 = 10. JSX evaluates the expression and renders the result.</div></div>
+      </div>
+    </div>
+    <div class="col">
+      <div style="font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent4);margin-bottom:7px">Questions 6–10</div>
+      <div class="ans-block">
+        <div class="ans-row"><span class="anum p">6.</span><div class="abody"><strong>&lt;p&gt;Engineering&lt;/p&gt;</strong> — <ic>user.dept.name</ic> chains two levels deep. The prop object has a nested <ic>dept</ic> object.</div></div>
+        <div class="ans-row"><span class="anum p">7.</span><div class="abody"><strong>30, 60, 90</strong> — each number in [10,20,30] is multiplied by 3. Three &lt;li&gt; elements are rendered with those values.</div></div>
+        <div class="ans-row"><span class="anum p">8.</span><div class="abody"><strong>"Not enrolled"</strong> — <ic>active</ic> is <ic>false</ic>, so the ternary evaluates to the second branch.</div></div>
+        <div class="ans-row"><span class="anum p">9.</span><div class="abody"><strong>No, it is not rendered.</strong> — <ic>show && &lt;p&gt;...&lt;/p&gt;</ic> short-circuits when <ic>show</ic> is false. Nothing is added to the DOM.</div></div>
+        <div class="ans-row"><span class="anum p">10.</span><div class="abody"><strong>"Good"</strong> — score 82 is below 90 but above 75, so the chained ternary picks the middle branch.</div></div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 20 ── CLOSING
+S.push({cls:'hero-slide',h:`
+<div class="dots"></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:20px;position:relative;max-width:720px">
+  <div class="eyebrow">Module 6 Complete</div>
+  <div style="font-size:clamp(32px,4vw,52px);font-weight:900;line-height:1.15;letter-spacing:-.5px">
+    <span style="color:var(--text)">You've written your</span><br/>
+    <span style="color:var(--accent)">first React components.</span>
+  </div>
+  <div class="q-card" style="margin:0">
+    <div class="q-text">"Any application that can be written in JavaScript, will eventually be written in JavaScript."</div>
+    <div class="q-src">— Atwood's Law, 2007</div>
+  </div>
+  <div class="card" style="background:rgba(97,218,251,.05);border-color:rgba(97,218,251,.2)">
+    <h3>Coming Up — M7: useState &amp; Data Fetching</h3>
+    <p style="font-size:16px;line-height:1.7">Next session: <ic>useState</ic> makes components remember things. <ic>useEffect</ic> lets them talk to your Express API. By the end, your React app will <strong style="color:var(--text)">fetch live data from your own backend</strong> — the MERN loop closes.</p>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <span class="pill g">React ✓</span>
+    <span class="pill g">JSX ✓</span>
+    <span class="pill g">Components ✓</span>
+    <span class="pill g">Props ✓</span>
+    <span class="pill a">useState → next</span>
+    <span class="pill a">useEffect → next</span>
+  </div>
+</div>`});
+
+// ── ENGINE ────────────────────────────────────────────────────────────
+let cur=0;
+const deck=document.getElementById('deck');
+const bar=document.getElementById('bar');
+const ctr=document.getElementById('ctr');
+
+function build(){
+  S.forEach((s,i)=>{
+    const el=document.createElement('div');
+    el.className='slide'+(s.cls?' '+s.cls:'');
+    el.innerHTML=s.h||'';
+    if(i===0)el.classList.add('active');
+    deck.appendChild(el);
+    if(s.init)s.init(el);
+  });
+}
+
+function go(n){
+  if(n<0||n>=S.length||n===cur)return;
+  const els=deck.querySelectorAll('.slide');
+  const fwd=n>cur;
+  els[cur].classList.remove('active');
+  els[cur].classList.add(fwd?'out-l':'out-r');
+  setTimeout(()=>els[cur].classList.remove('out-l','out-r'),420);
+  cur=n;els[cur].classList.add('active');els[cur].scrollTop=0;tick();
+}
+function tick(){
+  bar.style.width=(S.length>1?(cur/(S.length-1)*100):100)+'%';
+  ctr.textContent=(cur+1)+' / '+S.length;
+}
+document.addEventListener('keydown',e=>{
+  const m=document.getElementById('modal');
+  if(m.classList.contains('open')){if(e.key==='Escape')m.classList.remove('open');return;}
+  const t=document.activeElement.tagName;
+  if(t==='INPUT'||t==='TEXTAREA')return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')go(cur+1);
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(cur-1);
+  else if(e.key==='Home')go(0);
+  else if(e.key==='End')go(S.length-1);
+  else if(e.key==='?')m.classList.add('open');
+  else if(e.key==='Escape')m.classList.remove('open');
+});
+document.addEventListener('mousedown',e=>{
+  if(e.target.closest('button,input,a,.mc-opt,.gto-ta'))return;
+  if(e.button===2){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+  else if(e.button===3){e.preventDefault();e.stopImmediatePropagation();go(cur-1);}
+  else if(e.button===4){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+},true);
+document.addEventListener('contextmenu',e=>{
+  if(e.target.closest('button,input,a'))return;
+  e.preventDefault();e.stopImmediatePropagation();
+},true);
+document.addEventListener('auxclick',e=>{
+  if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation();}
+},true);
+let tx=0;
+document.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+document.addEventListener('touchend',e=>{const d=e.changedTouches[0].clientX-tx;if(Math.abs(d)>50){d<0?go(cur+1):go(cur-1);}},{passive:true});
+build();tick();
+</script>
+</body>
+</html>

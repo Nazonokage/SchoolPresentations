@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>M5 — JSON, Express & Docker</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B0F19;
+  --surface:#111827;
+  --surface2:#1C2536;
+  --border:#253044;
+  --border2:#2D3F58;
+  --accent:#38BDF8;
+  --accent2:#34D399;
+  --accent3:#FB923C;
+  --accent4:#C084FC;
+  --accent5:#F472B6;
+  --text:#FFFFFF;
+  --text2:#B8D4F0;
+  --text3:#E8F1FA;
+  --card:#141E2E;
+  --card2:#172032;
+  --font:'Inter',system-ui,sans-serif;
+  --mono:'JetBrains Mono','Fira Code','Cascadia Code',monospace;
+  --r:8px;--r2:12px;
+  --tr:350ms cubic-bezier(.4,0,.2,1);
+}
+/* Google Fonts removed — system-ui fallback active */
+
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:16px}
+
+/* ── CHROME ────────────────────────────────────────────────────────── */
+#bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent4));transition:width .3s;z-index:100;border-radius:0 2px 2px 0}
+#ctr{position:fixed;top:10px;right:16px;font-size:12px;color:var(--text2);z-index:100;font-variant-numeric:tabular-nums;letter-spacing:.5px;font-family:var(--mono)}
+
+/* ── DECK ──────────────────────────────────────────────────────────── */
+#deck{width:100%;height:100vh;position:relative;overflow:hidden}
+.slide{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  padding:52px 64px 36px;
+  opacity:0;pointer-events:none;
+  transform:translateX(48px);
+  transition:opacity var(--tr),transform var(--tr);
+  overflow-y:auto;
+}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.out-l{opacity:0;transform:translateX(-48px)}
+.slide.out-r{opacity:0;transform:translateX(48px)}
+@media(prefers-reduced-motion:reduce){.slide{transition:opacity .15s;transform:none!important}}
+
+/* ── TYPOGRAPHY ────────────────────────────────────────────────────── */
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:10px}
+.eyebrow::before{content:'';display:inline-block;width:24px;height:2px;background:var(--accent);border-radius:1px}
+.slide-title{font-size:clamp(28px,3.2vw,44px);font-weight:800;line-height:1.1;color:var(--text);margin-bottom:6px;letter-spacing:-.5px}
+.slide-sub{font-size:16px;color:var(--text2);margin-bottom:24px;font-weight:400}
+.rule{height:1px;background:linear-gradient(90deg,var(--border2),transparent);border:none;margin-bottom:22px}
+
+/* ── LAYOUT HELPERS ────────────────────────────────────────────────── */
+.content{flex:1;display:flex;flex-direction:column;gap:14px;min-height:0}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;min-height:0}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.g2>*,.g3>*{min-width:0}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:18px;flex:1;min-height:0}
+.split>*{min-width:0;display:flex;flex-direction:column;gap:10px}
+.col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.flex1{flex:1}
+
+/* ── CARDS ─────────────────────────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:16px 18px}
+.card h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin-bottom:10px}
+.card p,.card li{font-size:14.5px;color:var(--text3);line-height:1.65}
+.card ul{padding-left:17px}.card li{margin-bottom:4px}
+
+/* ── CODE BLOCKS ────────────────────────────────────────────────────── */
+.cw{position:relative;background:#070C15;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;flex:1;display:flex;flex-direction:column}
+.cl{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:#0D1421;border-bottom:1px solid var(--border);font-size:11px;color:var(--text2);font-family:var(--mono);flex-shrink:0}
+.cl span{color:var(--accent3)}
+.cw pre{padding:12px 14px;overflow:auto;font-family:var(--mono);font-size:13px;line-height:1.7;white-space:pre;flex:1;max-height:340px}
+.cpbtn{padding:3px 10px;font-size:11px;font-family:var(--font);background:var(--surface2);border:1px solid var(--border2);color:var(--text2);border-radius:4px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.cpbtn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.cpbtn.ok{background:var(--accent2);color:#fff;border-color:var(--accent2)}
+
+/* syntax */
+.k{color:#F472B6}.s{color:#86EFAC}.f{color:#C4B5FD}.n{color:#7DD3FC}
+.c{color:#4B5563;font-style:italic}.t{color:#FCA5A5}.op{color:#94A3B8}
+.b{color:#FCD34D}
+
+/* ── INLINE CODE ────────────────────────────────────────────────────── */
+ic{background:var(--surface2);padding:1px 6px;border-radius:4px;font-family:var(--mono);font-size:12.5px;color:var(--accent4);border:1px solid var(--border)}
+
+/* ── BREAKDOWN ITEMS ────────────────────────────────────────────────── */
+.bd{display:flex;flex-direction:column;gap:7px}
+.bdi{display:flex;gap:10px;align-items:flex-start;padding:9px 11px;background:var(--surface);border:1px solid var(--border);border-radius:6px;border-left:3px solid var(--accent)}
+.bdi.g{border-left-color:var(--accent2)}.bdi.o{border-left-color:var(--accent3)}
+.bdi.p{border-left-color:var(--accent4)}.bdi.r{border-left-color:var(--accent5)}
+.bdl{font-family:var(--mono);font-size:11px;color:var(--accent);background:#070C15;padding:2px 7px;border-radius:3px;white-space:nowrap;min-width:fit-content;align-self:flex-start;margin-top:1px;flex-shrink:0}
+.bdt{font-size:14px;color:var(--text3);line-height:1.55}
+.bdt strong{color:var(--text);font-weight:600}
+
+/* ── TABLES ─────────────────────────────────────────────────────────── */
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{background:var(--surface2);color:var(--accent);padding:9px 12px;text-align:left;font-weight:700;font-size:11px;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text3);line-height:1.5;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.015)}
+
+/* ── PILLS / BADGES ─────────────────────────────────────────────────── */
+.pill{display:inline-block;padding:3px 11px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid var(--border);color:var(--text2);margin:3px}
+.pill.a{border-color:var(--accent);color:var(--accent);background:rgba(56,189,248,.1)}
+.pill.g{border-color:var(--accent2);color:var(--accent2);background:rgba(52,211,153,.1)}
+.pill.o{border-color:var(--accent3);color:var(--accent3);background:rgba(251,146,60,.1)}
+.badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.bga{background:rgba(56,189,248,.15);color:var(--accent)}
+.bgg{background:rgba(52,211,153,.15);color:var(--accent2)}
+.bgr{background:rgba(244,114,182,.15);color:var(--accent5)}
+
+/* ── STEP BOXES ─────────────────────────────────────────────────────── */
+.step{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px}
+.step-num{width:28px;height:28px;border-radius:50%;background:var(--accent);color:#0B0F19;font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step-body{flex:1;min-width:0}
+.step-body h4{font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px}
+.step-body p{font-size:13px;color:var(--text2);line-height:1.5}
+
+/* ── FLOW ────────────────────────────────────────────────────────────── */
+.flow{display:flex;align-items:center;flex-wrap:wrap;gap:0;margin:8px 0}
+.fb{background:var(--card2);border:1px solid var(--border2);border-radius:6px;padding:8px 14px;font-size:13.5px;color:var(--text3);font-weight:500}
+.fb.hi{border-color:var(--accent);color:var(--accent)}
+.fa{color:var(--accent);padding:0 8px;font-size:18px;font-weight:300}
+
+/* ── HERO ────────────────────────────────────────────────────────────── */
+.hero-slide{background:radial-gradient(ellipse at 15% 60%,rgba(56,189,248,.12) 0%,transparent 55%),radial-gradient(ellipse at 80% 20%,rgba(192,132,252,.08) 0%,transparent 50%),var(--bg)}
+.hero-title{font-size:clamp(48px,5.5vw,76px);font-weight:900;line-height:1.02;letter-spacing:-1.5px}
+.hero-title .h1{color:var(--text)}
+.hero-title .h2{color:var(--accent)}
+.hero-sub{font-size:18px;color:var(--text2);max-width:560px;line-height:1.65;margin:14px 0 20px}
+.dot-grid{position:absolute;inset:0;background-image:radial-gradient(rgba(56,189,248,.06) 1px,transparent 1px);background-size:32px 32px;pointer-events:none}
+
+/* ── MC / QUIZ ───────────────────────────────────────────────────────── */
+.mc-item{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;flex:1}
+.mc-q{font-size:15px;font-weight:600;color:var(--text);margin-bottom:10px;line-height:1.5}
+.qn{color:var(--accent);margin-right:6px;font-weight:800}
+.mc-opts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.mc-opt{padding:7px 11px;border-radius:5px;border:1px solid var(--border);font-size:13.5px;color:var(--text3);cursor:pointer;transition:all .15s;background:var(--surface2);line-height:1.4}
+.mc-opt:hover{border-color:var(--accent);color:var(--text)}
+.mc-opt.sel{border-color:var(--accent);background:rgba(56,189,248,.12);color:var(--accent)}
+.mc-page{display:flex;flex-direction:column;gap:11px;flex:1}
+
+/* ── RECAP ───────────────────────────────────────────────────────────── */
+.rc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.rc{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:16px;text-align:center}
+.rc .ico{font-size:28px;margin-bottom:8px}
+.rc h4{font-size:12px;font-weight:700;color:var(--accent);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.rc p{font-size:13px;color:var(--text2);line-height:1.55}
+
+/* ── ANSWER KEY ──────────────────────────────────────────────────────── */
+.ans-block{border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;flex:1}
+.ans-row{display:flex;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border);font-size:14px;align-items:flex-start}
+.ans-row:last-child{border:none}
+.ans-row:nth-child(even){background:rgba(255,255,255,.012)}
+.anum{font-weight:800;color:var(--accent);min-width:28px;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:13px}
+.abody{color:var(--text3);line-height:1.5;flex:1;min-width:0}
+.abody strong{color:var(--accent2)}
+
+/* ── SHORTCUT MODAL ──────────────────────────────────────────────────── */
+#modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center}
+#modal.open{display:flex}
+.mbox{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:28px 32px;min-width:340px}
+.mbox h3{font-size:16px;font-weight:700;color:var(--accent);margin-bottom:16px}
+.shr{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text3)}
+.shr:last-of-type{border:none}
+.shr kbd{background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-family:var(--mono);font-size:11px;color:var(--text)}
+.mcl{margin-top:18px;width:100%;padding:9px;background:var(--accent);color:#0B0F19;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:700;font-family:var(--font)}
+
+#hint{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--text2);letter-spacing:.5px;pointer-events:none;opacity:.4;font-family:var(--mono)}
+
+/* ── GTO ACTIVITY ──────────────────────────────────────────────────────── */
+.gto-wrap{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;flex:1;display:flex;gap:14px;align-items:stretch}
+.gto-left{display:flex;flex-direction:column;flex:1;min-width:0;gap:6px}
+.gto-qlabel{font-size:13.5px;font-weight:700;color:var(--text)}
+.gto-num{color:var(--accent3);font-weight:800;margin-right:6px}
+.gto-pre{background:#070C15;border:1px solid var(--border);border-radius:5px;padding:8px 10px;font-family:var(--mono);font-size:12.5px;color:var(--text3);white-space:pre;overflow-x:auto;flex:1;margin:0}
+.gto-right{display:flex;flex-direction:column;justify-content:flex-end;min-width:180px;max-width:200px;gap:4px}
+.gto-alabel{font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:1px}
+.gto-ta{width:100%;flex:1;min-height:70px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:13px;font-family:var(--mono);outline:none;resize:none;line-height:1.6;transition:border .2s}
+.gto-ta:focus{border-color:var(--accent3)}
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<div id="ctr"></div>
+<div id="deck"></div>
+<div id="hint">right-click or → to advance &nbsp;·&nbsp; ? for shortcuts</div>
+<div id="modal">
+  <div class="mbox">
+    <h3>⌨ Keyboard Shortcuts</h3>
+    <div class="shr"><span>Next slide</span><span><kbd>→</kbd> or <kbd>Right-click</kbd></span></div>
+    <div class="shr"><span>Prev slide</span><span><kbd>←</kbd></span></div>
+    <div class="shr"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="shr"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="shr"><span>Shortcuts</span><span><kbd>?</kbd></span></div>
+    <div class="shr"><span>Close</span><span><kbd>Esc</kbd></span></div>
+    <button class="mcl" onclick="document.getElementById('modal').classList.remove('open')">Close</button>
+  </div>
+</div>
+<script>
+// ── TOKENIZER ──────────────────────────────────────────────────────────────
+function hl(code){
+  const KW=/^(const|let|var|function|return|async|await|try|catch|throw|new|class|extends|if|else|for|while|of|in|from|import|export|default|module|require|true|false|null|undefined)\b/;
+  const TY=/^(console|process|fs|path|http|express|JSON|Object|Array|Math|Promise|Error|module|exports)\b/;
+  const NUM=/^\b\d+(\.\d+)?\b/;
+  function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+  let i=0,out='';
+  while(i<code.length){
+    // comment
+    if(code[i]==='/'&&code[i+1]==='/'){
+      const e=code.indexOf('\n',i);const ch=e===-1?code.slice(i):code.slice(i,e);
+      out+=`<span class="c">${esc(ch)}</span>`;i+=ch.length;continue;
+    }
+    // template literal
+    if(code[i]==='`'){
+      let j=i+1;while(j<code.length&&code[j]!=='`'){if(code[j]==='\\')j++;j++;}
+      out+=`<span class="s">${esc(code.slice(i,j+1))}</span>`;i=j+1;continue;
+    }
+    // single quote
+    if(code[i]==="'"){
+      let j=i+1;while(j<code.length&&code[j]!=="'"&&code[j]!=='\n'){if(code[j]==='\\')j++;j++;}
+      out+=`<span class="s">${esc(code.slice(i,j+1))}</span>`;i=j+1;continue;
+    }
+    // double quote
+    if(code[i]==='"'){
+      let j=i+1;while(j<code.length&&code[j]!=='"'&&code[j]!=='\n'){if(code[j]==='\\')j++;j++;}
+      out+=`<span class="s">${esc(code.slice(i,j+1))}</span>`;i=j+1;continue;
+    }
+    const rest=code.slice(i);let m;
+    if((m=rest.match(KW)))  {out+=`<span class="k">${m[0]}</span>`;i+=m[0].length;continue;}
+    if((m=rest.match(TY)))  {out+=`<span class="t">${m[0]}</span>`;i+=m[0].length;continue;}
+    if((m=rest.match(NUM))) {out+=`<span class="n">${m[0]}</span>`;i+=m[0].length;continue;}
+    out+=esc(code[i]);i++;
+  }
+  return out;
+}
+
+function cw(code,lang='js',label=''){
+  const id='c'+Math.random().toString(36).slice(2);
+  return `<div class="cw"><div class="cl"><span>${label||lang}</span><button class="cpbtn" onclick="cp('${id}',this)">Copy</button></div><pre id="${id}">${lang==='bash'||lang==='dockerfile'||lang==='text'||lang==='tree'?code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'):hl(code)}</pre></div>`;
+}
+
+function doCopy(id,btn){
+  navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>{btn.textContent='Copied!';btn.classList.add('ok');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('ok');},2000);});
+}
+function cp(id,btn){ doCopy(id,btn); } // alias
+// original function cp(id,btn){
+  navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>{
+    btn.textContent='Copied!';btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('ok');},2000);
+  });
+}
+
+// ── SLIDES ────────────────────────────────────────────────────────────────
+const S=[];
+
+// 0 — TITLE
+S.push({cls:'hero-slide',html:`
+<div class="dot-grid"></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:0;position:relative">
+  <div class="eyebrow" style="margin-bottom:14px">Web Systems · Module 5</div>
+  <div class="hero-title">
+    <div class="h1">JSON, Express</div>
+    <div class="h2">&amp; Docker</div>
+  </div>
+  <div class="hero-sub">From multidimensional arrays to a containerized web app — every code block runs as-is.</div>
+  <div>
+    <span class="pill a">Arrays</span>
+    <span class="pill a">JSON</span>
+    <span class="pill a">Node.js</span>
+    <span class="pill a">Express</span>
+    <span class="pill a">Docker</span>
+  </div>
+</div>`});
+
+// 1 — ROADMAP
+S.push({html:`
+<div class="eyebrow">Session Roadmap</div>
+<div class="slide-title">What We're Building Today</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2" style="flex:1;align-items:start">
+    <div class="col">
+      <div class="card"><h3>🗺 Learning Path</h3>
+        <div class="flow" style="flex-direction:column;align-items:flex-start;gap:6px;margin:0">
+          <div class="fb">① Multidimensional Arrays</div>
+          <div class="fa" style="padding:0 0 0 12px">↓</div>
+          <div class="fb">② Nested Objects → JSON</div>
+          <div class="fa" style="padding:0 0 0 12px">↓</div>
+          <div class="fb">③ Accessing Key Values in Node</div>
+          <div class="fa" style="padding:0 0 0 12px">↓</div>
+          <div class="fb">④ Express Project Setup</div>
+          <div class="fa" style="padding:0 0 0 12px">↓</div>
+          <div class="fb">⑤ Situation 1 — console.log JSON</div>
+          <div class="fa" style="padding:0 0 0 12px">↓</div>
+          <div class="fb">⑥ Situation 2 — Route → HTML page</div>
+          <div class="fa" style="padding:0 0 0 12px">↓</div>
+          <div class="fb hi">⑦ Dockerize the whole thing</div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card"><h3>📦 What We're Building</h3>
+        <p style="font-size:14px;color:var(--text3);line-height:1.7;margin-bottom:10px">A small Express app that reads a <strong style="color:var(--text)">student data file</strong>, serves it as a styled HTML page, exposes a raw JSON endpoint — and runs in a Docker container with one command.</p>
+        <div style="background:#070C15;border-radius:6px;padding:10px 12px;font-family:var(--mono);font-size:12px;color:var(--accent2)">
+          docker run -p 3000:3000 m5-express
+        </div>
+      </div>
+      <div class="card"><h3>🎯 By the End</h3>
+        <ul>
+          <li>Read and access nested JSON data in Node</li>
+          <li>Serve data from Express as HTML &amp; JSON</li>
+          <li>Containerize a Node app from scratch</li>
+          <li>Run the full thing with one docker command</li>
+        </ul>
+      </div>
+      <div class="card"><h3>🔜 Next Session</h3>
+        <p style="font-size:13px;color:var(--text2)">We swap the flat data file for a real <strong style="color:var(--text)">MongoDB database</strong> — same routes, same HTML output, but data persists and can be updated.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 2 — MULTI-DIM ARRAYS: concept
+S.push({html:`
+<div class="eyebrow">Part 1 — Arrays</div>
+<div class="slide-title">Multidimensional Arrays</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>What Is It?</h3>
+        <p>An array that contains other arrays or objects as its elements. Think of it like a <strong style="color:var(--text)">table</strong>, a shelf of boxes, or a grade sheet.</p>
+      </div>
+      <div class="card"><h3>3 Flavours</h3>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <div class="bdi"><div class="bdl">Sample 1</div><div class="bdt"><strong>Array of Arrays</strong> — a grid. Access with <ic>[row][col]</ic></div></div>
+          <div class="bdi g"><div class="bdl">Sample 2</div><div class="bdt"><strong>Array of Objects</strong> — a roster. Access with <ic>.property</ic></div></div>
+          <div class="bdi p"><div class="bdl">Sample 3</div><div class="bdt"><strong>Mixed / Nested</strong> — objects inside objects inside arrays. Chain both notations.</div></div>
+        </div>
+      </div>
+      <div class="card"><h3>Key Access Patterns</h3>
+        <div style="font-family:var(--mono);font-size:12.5px;line-height:2;color:var(--text3)">
+          arr<span style="color:var(--accent)">[0][2]</span>       &nbsp;→ row 0, col 2<br/>
+          arr<span style="color:var(--accent2)">[0].name</span>   &nbsp;→ property on obj at index 0<br/>
+          arr<span style="color:var(--accent4)">[0].specs.brand</span> → nested two levels deep<br/>
+          arr<span style="color:var(--accent3)">[0].tags[1]</span> → array inside object
+        </div>
+      </div>
+    </div>
+    <div>
+      ${cw(`const grades = [
+  ["Alice",   88, 92, 79],
+  ["Bob",     74, 68, 85],
+  ["Charlie", 95, 91, 97]
+];
+
+// Row 0, column 2
+console.log(grades[0][2]); // 79
+
+// Loop every student
+for (let i = 0; i < grades.length; i++) {
+  const name   = grades[i][0];
+  const scores = grades[i].slice(1);
+  const avg    = scores.reduce(
+    (sum, s) => sum + s, 0
+  ) / scores.length;
+  console.log(name + " avg: " + avg.toFixed(1));
+}
+// Output:
+// 79
+// Alice avg: 86.3
+// Bob avg: 75.7
+// Charlie avg: 94.3`,'js','grade-table.js')}
+    </div>
+  </div>
+</div>`});
+
+// 3 — SAMPLE 2: array of objects
+S.push({html:`
+<div class="eyebrow">Part 1 — Arrays · Sample 2</div>
+<div class="slide-title">Array of Objects — Student Roster</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      ${cw(`// roster.js
+const students = [
+  { id: 1, name: "Alice",
+    course: "BSCS", year: 2, active: true  },
+  { id: 2, name: "Bob",
+    course: "BSIT", year: 3, active: false },
+  { id: 3, name: "Charlie",
+    course: "BSCS", year: 1, active: true  }
+];
+
+// Access one field
+console.log(students[1].name); // "Bob"
+
+// Filter only active students
+const active = students.filter(
+  s => s.active === true
+);
+console.log(active.length); // 2
+
+// Map to just the names
+const names = students.map(s => s.name);
+console.log(names);
+// ["Alice", "Bob", "Charlie"]`,'js','roster.js')}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Code Breakdown</h3></div>
+      <div class="bd">
+        <div class="bdi"><div class="bdl">line 2–8</div><div class="bdt"><strong>Array of objects</strong> — each element is a <ic>{}</ic> with named fields. Far more readable than a plain 2D array when data has meaning.</div></div>
+        <div class="bdi g"><div class="bdl">line 11</div><div class="bdt"><strong>students[1].name</strong> — index 1 (Bob), then dot to the <ic>name</ic> key. Combines bracket notation (which item) with dot notation (which field).</div></div>
+        <div class="bdi o"><div class="bdl">line 14–16</div><div class="bdt"><strong>.filter()</strong> — returns a new array keeping only elements where the callback returns <ic>true</ic>. Does not modify the original array.</div></div>
+        <div class="bdi p"><div class="bdl">line 20</div><div class="bdt"><strong>.map()</strong> — transforms each element. Here it extracts just the <ic>name</ic> string from every object, giving us a plain array of strings.</div></div>
+        <div class="bdi r"><div class="bdl">tip</div><div class="bdt">Both <strong>.filter()</strong> and <strong>.map()</strong> return new arrays — the original <ic>students</ic> array is never changed.</div></div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 4 — SAMPLE 3: nested/mixed
+S.push({html:`
+<div class="eyebrow">Part 1 — Arrays · Sample 3</div>
+<div class="slide-title">Mixed &amp; Nested — Product Catalog</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      ${cw(`// catalog.js
+const catalog = [
+  {
+    id: "p01",
+    name: "Mechanical Keyboard",
+    price: 2499.00,
+    inStock: true,
+    tags: ["electronics","peripherals","WFH"],
+    specs: { brand: "Keychron",
+             switches: "Red Linear",
+             wireless: true }
+  },
+  {
+    id: "p02",
+    name: "USB-C Hub",
+    price: 899.50,
+    inStock: false,
+    tags: ["electronics","accessories"],
+    specs: { brand: "Anker",
+             ports: 7, wireless: false }
+  }
+];
+
+// Deep: object → nested object → key
+console.log(catalog[0].specs.switches); // "Red Linear"
+
+// Array inside an object
+console.log(catalog[0].tags[1]);        // "peripherals"
+
+// Boolean field
+console.log(catalog[1].inStock);        // false
+
+catalog.forEach(p => {
+  const s = p.inStock ? "✓ In Stock" : "✗ Out";
+  console.log(\`\${p.name} — ₱\${p.price} — \${s}\`);
+});`,'js','catalog.js')}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Code Breakdown</h3></div>
+      <div class="bd">
+        <div class="bdi"><div class="bdl">lines 8–9</div><div class="bdt"><strong>tags</strong> is an array inside an object. <strong>specs</strong> is an object inside an object. This nesting is exactly what JSON looks like from an API.</div></div>
+        <div class="bdi g"><div class="bdl">line 23</div><div class="bdt"><strong>catalog[0].specs.switches</strong> — three levels deep: index 0 → <ic>.specs</ic> → <ic>.switches</ic>. Each dot step goes one level deeper.</div></div>
+        <div class="bdi o"><div class="bdl">line 26</div><div class="bdt"><strong>catalog[0].tags[1]</strong> — combine dot notation (to reach the array) and bracket notation (to pick the element inside it).</div></div>
+        <div class="bdi p"><div class="bdl">line 31</div><div class="bdt"><strong>Ternary operator</strong> — <ic>condition ? ifTrue : ifFalse</ic>. A concise way to pick a string based on a boolean value.</div></div>
+        <div class="bdi r"><div class="bdl">line 32</div><div class="bdt"><strong>Template literal</strong> — backtick string with <ic>\${expr}</ic> slots. Cleaner than concatenation when mixing text and variables.</div></div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 5 — JSON: stringify / parse
+S.push({html:`
+<div class="eyebrow">Part 2 — JSON</div>
+<div class="slide-title">Objects → JSON: stringify &amp; parse</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      ${cw(`// JS object → JSON string (for saving/sending)
+const obj = { name: "Alice", age: 20 };
+const jsonString = JSON.stringify(obj);
+
+console.log(jsonString);
+// '{"name":"Alice","age":20}'
+
+console.log(typeof jsonString);  // "string"
+
+// Pretty-print (human readable, 2-space indent)
+console.log(JSON.stringify(obj, null, 2));
+// {
+//   "name": "Alice",
+//   "age": 20
+// }
+
+// JSON string → JS object (for reading data)
+const parsed = JSON.parse(jsonString);
+console.log(parsed.name);   // "Alice"
+console.log(typeof parsed); // "object"`,'js','json-basics.js')}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>The Key Insight</h3>
+        <p style="font-size:14px;color:var(--text3);line-height:1.65">A JS object and a JSON string look almost identical. The difference: <strong style="color:var(--text)">JSON is just text</strong> — a string you can send over the internet, save to a file, or store in a database.</p>
+      </div>
+      <div class="bd">
+        <div class="bdi"><div class="bdl">stringify</div><div class="bdt"><strong>JSON.stringify(obj)</strong> — converts a JS object into a JSON-formatted string. Use this before <strong>sending</strong> data or saving it.</div></div>
+        <div class="bdi g"><div class="bdl">null, 2</div><div class="bdt">The second and third arguments of stringify control a <strong>replacer</strong> and <strong>indent level</strong>. <ic>null, 2</ic> = no filtering, indent with 2 spaces.</div></div>
+        <div class="bdi o"><div class="bdl">parse</div><div class="bdt"><strong>JSON.parse(str)</strong> — converts a JSON string back into a live JS object you can access with dot notation. Use this when you <strong>receive</strong> data.</div></div>
+        <div class="bdi p"><div class="bdl">typeof</div><div class="bdt">After <ic>stringify</ic> the result is a <ic>"string"</ic>. After <ic>parse</ic> the result is <ic>"object"</ic>. This is the clearest proof they are different things.</div></div>
+      </div>
+      <div class="card" style="margin-top:4px"><h3>JS Object vs JSON String</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-family:var(--mono);font-size:12px">
+          <div style="background:#070C15;padding:8px;border-radius:6px;border:1px solid var(--border)"><div style="color:var(--text2);margin-bottom:4px">JS Object</div><span style="color:var(--f)">{ name: </span><span style="color:var(--s)">'Alice'</span><span style="color:var(--f)"> }</span><br/><span style="color:var(--text2);font-size:11px">keys have no quotes</span></div>
+          <div style="background:#070C15;padding:8px;border-radius:6px;border:1px solid var(--border)"><div style="color:var(--text2);margin-bottom:4px">JSON String</div><span style="color:var(--s)">'{"name":"Alice"}'</span><br/><span style="color:var(--text2);font-size:11px">everything is quoted text</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 6 — KEY ACCESS A & B
+S.push({html:`
+<div class="eyebrow">Part 2 — JSON · Key Access</div>
+<div class="slide-title">Accessing Key Values — Samples A &amp; B</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2" style="flex:1">
+    <div class="col">
+      <div class="card" style="margin-bottom:0"><h3>Sample A — Flat Object</h3></div>
+      ${cw(`// key-access-a.js
+const student = {
+  name: "Maria Santos",
+  course: "BSCS",
+  year: 2,
+  gwa: 1.5
+};
+
+// Dot notation
+console.log(student.name);   // Maria Santos
+console.log(student.gwa);    // 1.5
+
+// Bracket notation (key as a variable)
+const field = "course";
+console.log(student[field]); // BSCS`,'js','key-access-a.js')}
+      <div class="bdi g" style="margin-top:8px"><div class="bdl">bracket</div><div class="bdt">Use <ic>obj[variable]</ic> when the key is stored in a variable — dot notation can't do that.</div></div>
+    </div>
+    <div class="col">
+      <div class="card" style="margin-bottom:0"><h3>Sample B — Nested Object</h3></div>
+      ${cw(`// key-access-b.js
+const employee = {
+  id: 101,
+  fullName: "Juan dela Cruz",
+  department: {
+    name: "Engineering",
+    floor: 3
+  },
+  skills: ["Node.js", "Docker", "MongoDB"]
+};
+
+// Two levels deep
+console.log(employee.department.name);  // Engineering
+console.log(employee.department.floor); // 3
+
+// Array inside the object
+console.log(employee.skills[0]);        // Node.js
+console.log(employee.skills.length);    // 3`,'js','key-access-b.js')}
+      <div class="bdi p" style="margin-top:8px"><div class="bdl">chaining</div><div class="bdt">Each <ic>.</id> step descends one level. <ic>employee.department.name</ic> = employee → department object → name key.</div></div>
+    </div>
+  </div>
+</div>`});
+
+// 7 — KEY ACCESS C
+S.push({html:`
+<div class="eyebrow">Part 2 — JSON · Key Access</div>
+<div class="slide-title">Sample C — Array of Objects with a Loop</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      ${cw(`// key-access-c.js
+const menu = [
+  { item: "Pancit Canton", price: 45,  available: true  },
+  { item: "Sinangag",      price: 35,  available: true  },
+  { item: "Lugaw",         price: 25,  available: false }
+];
+
+// Access a specific item's key
+console.log(menu[0].item);   // Pancit Canton
+console.log(menu[2].price);  // 25
+
+// Print only available items
+menu.forEach(m => {
+  if (m.available) {
+    console.log(m.item + " — ₱" + m.price);
+  }
+});
+
+// Output:
+// Pancit Canton — ₱45
+// Sinangag — ₱35`,'js','key-access-c.js')}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Code Breakdown</h3></div>
+      <div class="bd">
+        <div class="bdi"><div class="bdl">line 9</div><div class="bdt"><strong>menu[0].item</strong> — index 0 grabs the first object; <ic>.item</ic> reads its item key. This is the core pattern you'll use with every JSON array from an API.</div></div>
+        <div class="bdi g"><div class="bdl">line 14</div><div class="bdt"><strong>.forEach(m => ...)</strong> — iterates every element. The callback receives the current element (here named <ic>m</ic>). No return value — purely for side effects like logging.</div></div>
+        <div class="bdi o"><div class="bdl">line 15</div><div class="bdt"><strong>if (m.available)</strong> — booleans are used directly in conditions. <ic>m.available === true</ic> is redundant; just <ic>m.available</ic> works.</div></div>
+        <div class="bdi p"><div class="bdl">pattern</div><div class="bdt">This three-step pattern appears everywhere in MERN: <strong>1)</strong> get the array, <strong>2)</strong> loop it, <strong>3)</strong> conditionally display each item. React will do step 3 with <ic>.map()</ic> instead of <ic>forEach</ic>.</div></div>
+      </div>
+      <div class="card" style="margin-top:6px"><h3>💡 forEach vs map</h3>
+        <div style="font-size:13px;color:var(--text3);line-height:1.7">
+          <strong style="color:var(--text)">forEach</strong> — loops, no return value. Use for logging, DOM updates.<br/>
+          <strong style="color:var(--text)">map</strong> — loops AND returns a new array. Use when you need a transformed copy.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 8 — EXPRESS SETUP
+S.push({html:`
+<div class="eyebrow">Part 3 — Express</div>
+<div class="slide-title">Project Setup — Copy &amp; Paste</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2" style="flex:1">
+    <div class="col">
+      <div class="card" style="margin-bottom:0"><h3>Folder Structure</h3></div>
+      ${cw(`m5-express/
+├── data/
+│   └── students.js    ← our "database"
+├── views/
+│   └── students.html  ← HTML template
+├── public/            ← static files (CSS)
+├── server.js          ← main Express file
+├── situation1.js      ← Part 1: console demo
+├── package.json
+├── .dockerignore
+└── Dockerfile`,'tree','project structure')}
+      <div class="card" style="margin-top:8px"><h3>Step 1 — Initialize</h3>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:8px">Run these in your terminal:</p>
+        ${cw(`mkdir m5-express
+cd m5-express
+npm init -y
+npm install express`,'bash','terminal')}
+      </div>
+    </div>
+    <div class="col">
+      <div class="card" style="margin-bottom:0"><h3>Step 2 — Create <ic>data/students.js</ic></h3></div>
+      ${cw(`// data/students.js
+const students = [
+  { id: 1, name: "Maria Santos",
+    course: "BSCS", year: 2, gwa: 1.5,
+    active: true,
+    contact: { email: "maria@school.edu",
+               phone: "09171234567" } },
+  { id: 2, name: "Juan dela Cruz",
+    course: "BSIT", year: 3, gwa: 1.75,
+    active: true,
+    contact: { email: "juan@school.edu",
+               phone: "09189876543" } },
+  { id: 3, name: "Ana Reyes",
+    course: "BSCS", year: 1, gwa: 1.25,
+    active: false,
+    contact: { email: "ana@school.edu",
+               phone: "09201112222" } },
+  { id: 4, name: "Carlos Mendoza",
+    course: "BSIT", year: 4, gwa: 2.0,
+    active: true,
+    contact: { email: "carlos@school.edu",
+               phone: "09333334444" } }
+];
+
+module.exports = students;`,'js','data/students.js')}
+    </div>
+  </div>
+</div>`});
+
+// 9 — SITUATION 1
+S.push({html:`
+<div class="eyebrow">Part 3 — Situation 1</div>
+<div class="slide-title">Read JSON Data → console.log It</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      ${cw(`// situation1.js
+const students = require('./data/students');
+
+// 1. Full array as pretty JSON
+console.log("=== All Students ===");
+console.log(JSON.stringify(students, null, 2));
+
+// 2. Access specific key values
+console.log("\\n=== Key Values ===");
+console.log("Name  :", students[0].name);
+console.log("GWA   :", students[2].gwa);
+console.log("Email :", students[1].contact.email);
+
+// 3. Filter active students
+console.log("\\n=== Active Students ===");
+const active = students.filter(s => s.active);
+active.forEach(s => {
+  console.log(
+    \`[\${s.id}] \${s.name} — \${s.course} Y\${s.year}\`
+  );
+});
+
+// 4. Best GWA (lowest number = best)
+const best = students.reduce(
+  (prev, curr) => curr.gwa < prev.gwa ? curr : prev
+);
+console.log("\\n=== Best GWA ===");
+console.log(best.name + " (" + best.gwa + ")");`,'js','situation1.js')}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Run it</h3>
+        ${cw(`node situation1.js`,'bash','')}
+      </div>
+      <div class="card"><h3>Expected Output</h3>
+        ${cw(`=== All Students ===
+[
+  { "id": 1, "name": "Maria Santos", ... },
+  ...
+]
+
+=== Key Values ===
+Name  : Maria Santos
+GWA   : 1.25
+Email : juan@school.edu
+
+=== Active Students ===
+[1] Maria Santos — BSCS Y2
+[2] Juan dela Cruz — BSIT Y3
+[4] Carlos Mendoza — BSIT Y4
+
+=== Best GWA ===
+Ana Reyes (1.25)`,'text','output')}
+      </div>
+      <div class="bd">
+        <div class="bdi g"><div class="bdl">require</div><div class="bdt"><strong>require('./data/students')</strong> loads the JS module and runs it — we get back the exported <ic>students</ic> array.</div></div>
+        <div class="bdi o"><div class="bdl">reduce</div><div class="bdt"><strong>.reduce()</strong> folds the array into a single value. Here it walks every student and keeps whichever has the lower GWA.</div></div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 10 — SITUATION 2: HTML template + server pt1
+S.push({html:`
+<div class="eyebrow">Part 3 — Situation 2</div>
+<div class="slide-title">Express Route → HTML Page (Template)</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>views/students.html</h3></div>
+      ${cw(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Student List</title>
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',sans-serif;
+           background:#0f172a; color:#e2e8f0;
+           padding:40px 24px; }
+    h1 { font-size:2rem; color:#60a5fa; margin-bottom:8px; }
+    p.sub { color:#94a3b8; margin-bottom:32px; }
+    .grid { display:grid;
+            grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+            gap:16px; }
+    .card { background:#1e293b; border:1px solid #334155;
+            border-radius:10px; padding:20px; }
+    .card h2 { font-size:1.1rem; color:#f1f5f9; margin-bottom:6px; }
+    .badge { display:inline-block; padding:2px 10px;
+             border-radius:20px; font-size:.75rem;
+             font-weight:700; margin-bottom:12px; }
+    .active   { background:#14532d; color:#4ade80; }
+    .inactive { background:#450a0a; color:#f87171; }
+    .info { font-size:.85rem; color:#94a3b8; line-height:1.8; }
+    .info span { color:#e2e8f0; }
+    .gwa-badge { display:inline-block; margin-top:10px;
+                 padding:3px 12px; background:#1e3a5f;
+                 color:#60a5fa; border-radius:20px;
+                 font-size:.8rem; font-weight:700; }
+  </style>
+</head>
+<body>
+  <h1>📋 Student Directory</h1>
+  <p class="sub">M5 Demo · {{count}} students loaded</p>
+  <div class="grid">{{cards}}</div>
+</body>
+</html>`,'text','views/students.html')}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>How Template Substitution Works</h3></div>
+      <div class="bd">
+        <div class="bdi"><div class="bdl">{{count}}</div><div class="bdt">A plain text placeholder. In <ic>server.js</ic> we'll read this file as a string and call <ic>.replace('{{count}}', students.length)</ic>.</div></div>
+        <div class="bdi g"><div class="bdl">{{cards}}</div><div class="bdt">Gets replaced with HTML we generate dynamically — one <ic>&lt;div class="card"&gt;</ic> per student, built from the data array.</div></div>
+        <div class="bdi o"><div class="bdl">no framework</div><div class="bdt">We're doing template substitution manually with <ic>String.replace()</ic>. Real projects use Handlebars or EJS — but manual first, so you see what's actually happening.</div></div>
+      </div>
+      <div class="card" style="margin-top:8px"><h3>Flow</h3>
+        <div class="flow" style="gap:6px">
+          <div class="fb" style="font-size:12px">fs.readFileSync<br/>(template)</div>
+          <div class="fa">→</div>
+          <div class="fb" style="font-size:12px">Generate<br/>card HTML</div>
+          <div class="fa">→</div>
+          <div class="fb" style="font-size:12px">.replace()<br/>placeholders</div>
+          <div class="fa">→</div>
+          <div class="fb hi" style="font-size:12px">res.send()<br/>HTML string</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 11 — server.js
+S.push({html:`
+<div class="eyebrow">Part 3 — Situation 2</div>
+<div class="slide-title">server.js — The Express App</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      ${cw(`// server.js
+const express  = require('express');
+const fs       = require('fs');
+const path     = require('path');
+const students = require('./data/students');
+
+const app  = express();
+const PORT = process.env.PORT || 3000;
+
+// Static files from /public
+app.use(express.static(
+  path.join(__dirname, 'public')
+));
+
+// Route 1: GET / → welcome page
+app.get('/', (req, res) => {
+  res.send(\`
+    <html><body style="font-family:sans-serif;
+      padding:40px;background:#0f172a;color:#e2e8f0">
+      <h1 style="color:#60a5fa">M5 Express Demo</h1>
+      <ul style="margin-top:12px;line-height:2.5">
+        <li><a href="/students"
+          style="color:#60a5fa">/students</a>
+          — HTML card grid</li>
+        <li><a href="/api/students"
+          style="color:#60a5fa">/api/students</a>
+          — Raw JSON</li>
+      </ul></body></html>
+  \`);
+});
+
+// Route 2: GET /students → HTML page
+app.get('/students', (req, res) => {
+  const tpl = path.join(
+    __dirname, 'views', 'students.html'
+  );
+  let html = fs.readFileSync(tpl, 'utf8');
+
+  const cards = students.map(s => \`
+    <div class="card">
+      <h2>\${s.name}</h2>
+      <span class="badge \${s.active?'active':'inactive'}">
+        \${s.active ? 'Active' : 'Inactive'}
+      </span>
+      <div class="info">
+        Course : <span>\${s.course}</span><br/>
+        Year   : <span>Year \${s.year}</span><br/>
+        Email  : <span>\${s.contact.email}</span><br/>
+        Phone  : <span>\${s.contact.phone}</span>
+      </div>
+      <div class="gwa-badge">GWA \${s.gwa}</div>
+    </div>\`).join('');
+
+  html = html
+    .replace('{{count}}', students.length)
+    .replace('{{cards}}', cards);
+  res.send(html);
+});
+
+// Route 3: GET /api/students → raw JSON
+app.get('/api/students', (req, res) => {
+  res.json(students);
+});
+
+// 404 fallback
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not found' });
+});
+
+app.listen(PORT, () => {
+  console.log(\`http://localhost:\${PORT}\`);
+});`,'js','server.js')}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Code Breakdown</h3></div>
+      <div class="bd">
+        <div class="bdi"><div class="bdl">line 10–12</div><div class="bdt"><strong>express.static()</strong> — serves every file in <ic>/public</ic> directly (CSS, images) without needing a route. The browser requests <ic>/styles.css</ic> and gets it automatically.</div></div>
+        <div class="bdi g"><div class="bdl">line 35</div><div class="bdt"><strong>fs.readFileSync()</strong> — reads the HTML template as a string synchronously. Fine for a template file on startup; avoid for large files or user uploads.</div></div>
+        <div class="bdi o"><div class="bdl">line 37–48</div><div class="bdt"><strong>students.map()</strong> generates one HTML card string per student. <ic>.join('')</ic> stitches them all into one big HTML block with no separator.</div></div>
+        <div class="bdi p"><div class="bdl">line 50–51</div><div class="bdt"><strong>.replace()</strong> swaps the <ic>&#123;&#123;count&#125;&#125;</ic> and <ic>&#123;&#123;cards&#125;&#125;</ic> placeholders in the template with real content before sending.</div></div>
+        <div class="bdi r"><div class="bdl">line 54</div><div class="bdt"><strong>res.json(students)</strong> — Express serializes the array to JSON and sets <ic>Content-Type: application/json</ic> automatically. No need to call <ic>JSON.stringify</ic> yourself.</div></div>
+      </div>
+      <div class="card" style="margin-top:6px"><h3>Test it</h3>
+        ${cw(`node server.js
+# Open: http://localhost:3000/students`,'bash','')}
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 12 — DOCKER pt1: dockerignore + Dockerfile
+S.push({html:`
+<div class="eyebrow">Part 4 — Docker</div>
+<div class="slide-title">Containerize the App — Step by Step</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2" style="flex:1">
+    <div class="col">
+      <div class="step"><div class="step-num">1</div><div class="step-body"><h4>Create <ic>.dockerignore</ic></h4><p>Tells Docker what NOT to copy into the image.</p></div></div>
+      ${cw(`node_modules
+npm-debug.log
+.env
+.git
+.gitignore`,'text','.dockerignore')}
+      <div class="bdi r" style="margin-top:6px"><div class="bdl">why</div><div class="bdt"><ic>node_modules</ic> is excluded because <ic>npm install</ic> runs <em>inside</em> the container — copying your local one can cause OS/architecture mismatches.</div></div>
+
+      <div class="step" style="margin-top:14px"><div class="step-num">2</div><div class="step-body"><h4>Create <ic>Dockerfile</ic></h4><p>Instructions for building the image.</p></div></div>
+      ${cw(`# Lightweight Node base image
+FROM node:20-alpine
+
+# Working directory inside the container
+WORKDIR /app
+
+# Copy manifests FIRST — caches npm install
+# layer when only source code changes
+COPY package*.json ./
+
+# Install production deps inside container
+RUN npm install --omit=dev
+
+# Copy the rest of the source
+COPY . .
+
+# Document the port
+EXPOSE 3000
+
+# Start command
+CMD ["node", "server.js"]`,'dockerfile','Dockerfile')}
+    </div>
+    <div class="col">
+      <div class="card" style="margin-bottom:0"><h3>Dockerfile Breakdown</h3></div>
+      <div class="bd">
+        <div class="bdi"><div class="bdl">FROM</div><div class="bdt"><strong>node:20-alpine</strong> — uses the official Node 20 image built on Alpine Linux. Alpine is tiny (~5MB) compared to the full Debian image (~900MB).</div></div>
+        <div class="bdi g"><div class="bdl">WORKDIR</div><div class="bdt">Sets <ic>/app</ic> as the working directory inside the container. All subsequent commands run relative to this path.</div></div>
+        <div class="bdi o"><div class="bdl">COPY pkg first</div><div class="bdt">Docker caches each instruction as a layer. If only your source code changes (not <ic>package.json</ic>), Docker reuses the cached <ic>npm install</ic> layer — much faster rebuilds.</div></div>
+        <div class="bdi p"><div class="bdl">RUN</div><div class="bdt"><ic>npm install --omit=dev</ic> installs only production dependencies inside the container. Dev tools (nodemon, jest) are excluded from the image.</div></div>
+        <div class="bdi r"><div class="bdl">CMD</div><div class="bdt">The command that runs when a container starts from this image. Only one CMD is allowed — the last one wins if you write multiple.</div></div>
+      </div>
+      <div class="card" style="margin-top:8px"><h3>Layer Caching Visualized</h3>
+        <div class="flow" style="flex-direction:column;align-items:flex-start;gap:4px;font-size:12px">
+          <div class="fb" style="width:100%">FROM node:20-alpine &nbsp;<span style="color:var(--accent2)">✓ cached</span></div>
+          <div class="fa" style="padding:0 0 0 10px">↓</div>
+          <div class="fb" style="width:100%">COPY package*.json &nbsp;<span style="color:var(--accent2)">✓ cached</span></div>
+          <div class="fa" style="padding:0 0 0 10px">↓</div>
+          <div class="fb" style="width:100%">RUN npm install &nbsp;<span style="color:var(--accent2)">✓ cached (if pkgs unchanged)</span></div>
+          <div class="fa" style="padding:0 0 0 10px">↓</div>
+          <div class="fb hi" style="width:100%">COPY . . &nbsp;<span style="color:var(--accent3)">← only this rebuilds on code change</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 13 — DOCKER pt2: build + run
+S.push({html:`
+<div class="eyebrow">Part 4 — Docker</div>
+<div class="slide-title">Build, Run &amp; Useful Commands</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2" style="flex:1">
+    <div class="col">
+      <div class="step"><div class="step-num">3</div><div class="step-body"><h4>Build the image</h4><p>Reads the Dockerfile and packages your app.</p></div></div>
+      ${cw(`docker build -t m5-express .`,'bash','')}
+      <div class="bd" style="margin-top:6px">
+        <div class="bdi"><div class="bdl">-t</div><div class="bdt"><strong>Tag</strong> — gives the image a human-readable name. <ic>m5-express</ic> is what you'll use in <ic>docker run</ic>.</div></div>
+        <div class="bdi g"><div class="bdl">.</div><div class="bdt">The <strong>build context</strong> — tells Docker to look for the Dockerfile in the current directory and include all files here (minus what's in .dockerignore).</div></div>
+      </div>
+
+      <div class="step" style="margin-top:14px"><div class="step-num">4</div><div class="step-body"><h4>Run the container</h4><p>Creates and starts a container from the image.</p></div></div>
+      ${cw(`docker run -p 3000:3000 m5-express`,'bash','')}
+      <div class="bd" style="margin-top:6px">
+        <div class="bdi o"><div class="bdl">-p 3000:3000</div><div class="bdt"><strong>Port mapping</strong> — <ic>host:container</ic>. Your browser talks to port 3000 on your machine; Docker forwards it to port 3000 inside the container where Node is listening.</div></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card" style="margin-bottom:0"><h3>Useful Commands — Reference</h3></div>
+      ${cw(`# Run in the background (detached mode)
+docker run -d -p 3000:3000 --name m5-app m5-express
+
+# List running containers
+docker ps
+
+# See the server logs
+docker logs m5-app
+
+# Follow logs live
+docker logs -f m5-app
+
+# Stop the container
+docker stop m5-app
+
+# Remove the container
+docker rm m5-app
+
+# Remove the image
+docker rmi m5-express
+
+# Stop + remove in one shot
+docker rm -f m5-app`,'bash','docker commands')}
+      <div class="card" style="margin-top:8px"><h3>URLs After Running</h3>
+        <div style="font-family:var(--mono);font-size:13px;line-height:2.2;color:var(--text3)">
+          <a style="color:var(--accent)" href="#">localhost:3000</a> &nbsp;→ welcome page<br/>
+          <a style="color:var(--accent2)" href="#">localhost:3000/students</a> &nbsp;→ HTML card grid<br/>
+          <a style="color:var(--accent3)" href="#">localhost:3000/api/students</a> &nbsp;→ raw JSON
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 14 — FILE CHECKLIST
+S.push({html:`
+<div class="eyebrow">Part 4 — Docker</div>
+<div class="slide-title">Final File Checklist</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2" style="flex:1;align-items:start">
+    <div class="col">
+      <div class="card" style="margin-bottom:0"><h3>Before You Build — Verify Your Files</h3></div>
+      ${cw(`m5-express/
+├── data/
+│   └── students.js    ✓ array of 4 student objects
+│                         with nested contact
+├── views/
+│   └── students.html  ✓ HTML template
+│                         with {{count}} + {{cards}}
+├── situation1.js      ✓ console.log demo (Situation 1)
+├── server.js          ✓ Express app — 3 routes
+├── package.json       ✓ auto-generated by npm init
+├── package-lock.json  ✓ auto-generated by npm install
+├── .dockerignore      ✓ excludes node_modules, .env, .git
+└── Dockerfile         ✓ FROM node:20-alpine
+                          CMD ["node","server.js"]`,'tree','checklist')}
+    </div>
+    <div class="col">
+      <div class="card" style="margin-bottom:0"><h3>Quick Command Reference</h3></div>
+      ${cw(`# ── Situation 1 ────────────────────────────────
+node situation1.js
+# → pretty JSON + filtered output in terminal
+
+# ── Situation 2 (local) ─────────────────────────
+node server.js
+# → http://localhost:3000/students
+
+# ── Docker ──────────────────────────────────────
+docker build -t m5-express .
+docker run -p 3000:3000 m5-express
+
+# Run in background
+docker run -d -p 3000:3000 --name m5-app m5-express
+docker logs m5-app
+docker stop m5-app && docker rm m5-app`,'bash','all commands')}
+      <div class="card" style="margin-top:8px"><h3>🔜 What's Next</h3>
+        <p style="font-size:14px;color:var(--text3);line-height:1.65">Next session we <strong style="color:var(--text)">swap <ic>data/students.js</ic> for MongoDB</strong>. The same three Express routes (<ic>/</ic>, <ic>/students</ic>, <ic>/api/students</ic>) stay exactly the same — but data now persists across restarts and can be updated live. Docker Compose will run the app <em>and</em> the database together.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 15 — ACTIVITIES INTRO
+S.push({html:`
+<div class="eyebrow">Assessment</div>
+<div class="slide-title">Module 5 — Activities</div>
+<hr class="rule"/>
+<div class="content" style="justify-content:center">
+  <div class="g3">
+    <div class="card"><h3>📋 Multiple Choice</h3>
+      <ul>
+        <li>5 questions</li>
+        <li>1 pt each</li>
+        <li>Choose the best answer</li>
+        <li>Arrays, JSON, Express, Docker</li>
+        <li style="margin-top:6px;color:var(--accent);font-weight:700">5 pts</li>
+      </ul>
+    </div>
+    <div class="card"><h3>🖊 Identification</h3>
+      <ul>
+        <li>5 questions</li>
+        <li>2 pts each</li>
+        <li>Write the correct term or code</li>
+        <li>Key concepts from M5</li>
+        <li style="margin-top:6px;color:var(--accent);font-weight:700">10 pts</li>
+      </ul>
+    </div>
+    <div class="card"><h3>💻 Guess the Output</h3>
+      <ul>
+        <li>5 questions</li>
+        <li>1 pt each</li>
+        <li>Trace the code, write exact output</li>
+        <li>Arrays, JSON, key access</li>
+        <li style="margin-top:6px;color:var(--accent);font-weight:700">5 pts</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card" style="text-align:center;padding:20px;margin-top:4px">
+    <div style="display:flex;justify-content:center;gap:40px;align-items:flex-end">
+      <div><div style="font-size:36px;font-weight:900;color:var(--accent2)">5</div><div style="font-size:12px;color:var(--text2)">MC</div></div>
+      <div style="font-size:24px;color:var(--border2)">+</div>
+      <div><div style="font-size:36px;font-weight:900;color:var(--accent4)">10</div><div style="font-size:12px;color:var(--text2)">ID</div></div>
+      <div style="font-size:24px;color:var(--border2)">+</div>
+      <div><div style="font-size:36px;font-weight:900;color:var(--accent3)">5</div><div style="font-size:12px;color:var(--text2)">GTO</div></div>
+      <div style="font-size:24px;color:var(--border2)">=</div>
+      <div><div style="font-size:52px;font-weight:900;color:var(--accent);line-height:1">20</div><div style="font-size:12px;color:var(--text2)">Total pts</div></div>
+    </div>
+  </div>
+  <div class="card"><h3>⚠ Note</h3><p>Answer key with explanations is on the last slide. Don't peek until you are done!</p></div>
+</div>`});
+
+// 16 — MC
+S.push({init(el){
+  const qs=[
+    {q:"What does JSON.stringify(obj, null, 2) do?",opts:["Converts a JSON string into a JS object","Converts a JS object into a pretty-printed JSON string with 2-space indentation","Parses a JSON file from disk","Sends a JSON response from Express"]},
+    {q:"Given: const catalog = [{id:'p01', specs:{brand:'Keychron'}}]. How do you access 'Keychron'?",opts:["catalog.specs.brand","catalog[0].specs.brand","catalog[0][specs][brand]","catalog.brand"]},
+    {q:"In a Dockerfile, why is COPY package*.json ./ placed BEFORE COPY . . ?",opts:["It is just a style convention with no real effect","Docker executes commands in reverse order, so this runs last","It caches the npm install layer, so rebuilds skip reinstalling deps when only source code changes","It prevents .dockerignore from being applied"]},
+    {q:"What does docker run -p 3000:3000 m5-express do?",opts:["Builds the image from the current directory","Maps host port 3000 to container port 3000 and starts a container from the m5-express image","Exposes port 3000 to the public internet","Restarts a stopped container"]},
+    {q:"Which array method returns a NEW array containing only elements that pass a test?",opts:[".forEach()","reduce()","filter()","map()"]}
+  ];
+  const pg=el.querySelector('#mc-pg');
+  qs.forEach((q,i)=>{
+    const d=document.createElement('div');d.className='mc-item';
+    d.innerHTML=`<div class="mc-q"><span class="qn">${i+1}.</span>${q.q}</div><div class="mc-opts">${q.opts.map(o=>`<div class="mc-opt" onclick="this.closest('.mc-opts').querySelectorAll('.mc-opt').forEach(x=>x.classList.remove('sel'));this.classList.add('sel')">${o}</div>`).join('')}</div>`;
+    pg.appendChild(d);
+  });
+},html:`
+<div class="eyebrow">Activities — Multiple Choice</div>
+<div class="slide-title">Questions 1–5 <span style="font-size:15px;color:var(--text2);font-weight:400">Choose the best answer</span></div>
+<hr class="rule"/>
+<div class="mc-page" id="mc-pg"></div>`});
+
+// 17 — IDENTIFICATION
+S.push({init(el){
+  const qs=[
+    {q:"What Node.js method converts a JavaScript object into a JSON-formatted string?"},
+    {q:"In the array const arr = [{name:'Ana',gwa:1.25},{name:'Ben',gwa:1.75}], write the code to access Ana's GWA."},
+    {q:"What file do you create to tell Docker which files to exclude from the image build context?"},
+    {q:"What does the ./ at the end of docker build -t m5-express . represent?"},
+    {q:"In an Express route, what method do you call to send a JavaScript object as a JSON HTTP response (without calling JSON.stringify yourself)?"}
+  ];
+  const pg=el.querySelector('#id-pg');
+  qs.forEach((q,i)=>{
+    const d=document.createElement('div');
+    d.style.cssText='background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;flex:1;display:flex;flex-direction:column;gap:8px';
+    d.innerHTML=`<div style="font-size:15px;font-weight:600;color:var(--text);line-height:1.5"><span style="color:var(--accent4);font-weight:800;margin-right:6px">${i+1}.</span>${q.q}</div><input style="width:100%;padding:8px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:14px;outline:none;font-family:var(--mono);transition:border .2s" placeholder="Type your answer here..." onfocus="this.style.borderColor='var(--accent4)'" onblur="this.style.borderColor='var(--border)'"/>`;
+    pg.appendChild(d);
+  });
+},html:`
+<div class="eyebrow">Activities — Identification</div>
+<div class="slide-title">Questions 1–5 <span style="font-size:15px;color:var(--text2);font-weight:400">Write the correct term, code, or file name</span></div>
+<hr class="rule"/>
+<div style="display:flex;flex-direction:column;gap:10px;flex:1" id="id-pg"></div>`});
+
+// 18 — GUESS THE OUTPUT
+S.push({init(el){
+  const qs=[
+    {code:`const data = [
+  ["Maria", 1.5],
+  ["Juan",  1.75],
+  ["Ana",   1.25]
+];
+console.log(data[2][0]);
+console.log(data[0][1]);`},
+    {code:`const product = {
+  name: "Keyboard",
+  specs: {
+    brand: "Keychron",
+    wireless: true
+  },
+  tags: ["electronics", "WFH"]
+};
+console.log(product.specs.brand);
+console.log(product.tags[1]);
+console.log(product.specs.wireless);`},
+    {code:`const students = [
+  { name: "Ana",   active: true  },
+  { name: "Ben",   active: false },
+  { name: "Carlo", active: true  }
+];
+const active = students.filter(
+  s => s.active
+);
+console.log(active.length);
+console.log(active[0].name);`},
+    {code:`const obj = { name: "Maria", gwa: 1.5 };
+const json = JSON.stringify(obj);
+const back = JSON.parse(json);
+console.log(typeof json);
+console.log(typeof back);
+console.log(back.name);`},
+    {code:`const menu = [
+  { item: "Pancit", price: 45 },
+  { item: "Lugaw",  price: 25 },
+  { item: "Rice",   price: 15 }
+];
+const names = menu.map(m => m.item);
+console.log(names);
+console.log(menu[1].price);`}
+  ];
+  const pg=el.querySelector('#gto-pg');
+  qs.forEach((q,i)=>{
+    const wrap=document.createElement('div');
+    wrap.className='gto-wrap';
+    // left: question + code
+    const left=document.createElement('div');
+    left.className='gto-left';
+    const label=document.createElement('div');
+    label.className='gto-qlabel';
+    const num=document.createElement('span');
+    num.className='gto-num';
+    num.textContent=(i+1)+'.';
+    label.appendChild(num);
+    label.appendChild(document.createTextNode(' What is the output?'));
+    const pre=document.createElement('pre');
+    pre.className='gto-pre';
+    pre.textContent=q.code;
+    left.appendChild(label);
+    left.appendChild(pre);
+    // right: answer box
+    const right=document.createElement('div');
+    right.className='gto-right';
+    const alabel=document.createElement('div');
+    alabel.className='gto-alabel';
+    alabel.textContent='Your answer';
+    const ta=document.createElement('textarea');
+    ta.className='gto-ta';
+    ta.placeholder='line 1\nline 2\n...';
+    right.appendChild(alabel);
+    right.appendChild(ta);
+    wrap.appendChild(left);
+    wrap.appendChild(right);
+    pg.appendChild(wrap);
+  });
+},html:`
+<div class="eyebrow">Activities — Guess the Output</div>
+<div class="slide-title">Questions 1–5 <span style="font-size:15px;color:var(--text2);font-weight:400">Trace the code — write the exact output</span></div>
+<hr class="rule"/>
+<div style="display:flex;flex-direction:column;gap:9px;flex:1" id="gto-pg"></div>`});
+
+// 19 — RECAP
+S.push({html:`
+<div class="eyebrow">Recap</div>
+<div class="slide-title">Module 5 — What We Learned</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="rc-grid" style="flex:1">
+    <div class="rc"><div class="ico">🗂</div><h4>Multi-dim Arrays</h4><p>Arrays can hold arrays or objects. Access with <ic>[i][j]</ic> or <ic>[i].property</ic> or chained dots for nested objects.</p></div>
+    <div class="rc"><div class="ico">📦</div><h4>JSON</h4><p><ic>JSON.stringify()</ic> → text for sending. <ic>JSON.parse()</ic> → JS object for using. JSON is just a string that looks like an object.</p></div>
+    <div class="rc"><div class="ico">🔑</div><h4>Key Access</h4><p>Dot notation for known keys. Bracket notation when the key is a variable. Chain both to go as deep as needed.</p></div>
+    <div class="rc"><div class="ico">📂</div><h4>module.exports</h4><p>Export a value from one file with <ic>module.exports</ic>. Import it anywhere with <ic>require()</ic>. The foundation of Node's module system.</p></div>
+    <div class="rc"><div class="ico">🌐</div><h4>Express Routes</h4><p>Route by <ic>req.method + req.url</ic>. Read a template file, inject dynamic content with <ic>.replace()</ic>, and send it back with <ic>res.send()</ic>.</p></div>
+    <div class="rc"><div class="ico">🐳</div><h4>Docker</h4><p><ic>Dockerfile</ic> → build instructions. <ic>docker build</ic> → creates the image. <ic>docker run -p</ic> → maps ports and starts the container.</p></div>
+  </div>
+  <div class="card" style="margin-top:4px"><h3>The Throughline</h3><p style="font-size:14px">Data starts as a JS array → becomes JSON → Express reads it and serves it as HTML → Docker packages the whole thing so anyone can run it with one command. Next session: MongoDB replaces the flat file, Docker Compose runs both services.</p></div>
+</div>`});
+
+// 20 — ANSWERS
+S.push({html:`
+<div class="eyebrow">Answer Key</div>
+<div class="slide-title">Module 5 — Answers &amp; Explanations</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g3" style="flex:1">
+    <div class="col">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin-bottom:8px">Multiple Choice</div>
+      <div class="ans-block">
+        <div class="ans-row"><span class="anum">1.</span><div class="abody"><strong>b)</strong> Converts a JS object into a pretty-printed JSON string. <ic>null</ic> = no replacer, <ic>2</ic> = indent spaces.</div></div>
+        <div class="ans-row"><span class="anum">2.</span><div class="abody"><strong>b) catalog[0].specs.brand</strong> — index 0 then chain .specs → .brand through two nested levels.</div></div>
+        <div class="ans-row"><span class="anum">3.</span><div class="abody"><strong>c)</strong> Caches the npm install layer — rebuilds only when package files change, not source code.</div></div>
+        <div class="ans-row"><span class="anum">4.</span><div class="abody"><strong>b)</strong> Maps host:3000 → container:3000 and starts a container from the m5-express image.</div></div>
+        <div class="ans-row"><span class="anum">5.</span><div class="abody"><strong>c) .filter()</strong> — returns a new array of passing elements. .map() transforms, .forEach() loops with no return.</div></div>
+      </div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent4);margin-top:12px;margin-bottom:8px">Identification</div>
+      <div class="ans-block">
+        <div class="ans-row"><span class="anum" style="color:var(--accent4)">1.</span><div class="abody"><strong>JSON.stringify()</strong> — object to string. Use JSON.parse() to go back.</div></div>
+        <div class="ans-row"><span class="anum" style="color:var(--accent4)">2.</span><div class="abody"><strong>arr[0].gwa</strong> — index 0 is Ana's object; .gwa reads her GWA → <ic>1.25</ic>.</div></div>
+        <div class="ans-row"><span class="anum" style="color:var(--accent4)">3.</span><div class="abody"><strong>.dockerignore</strong> — excludes node_modules, .env, .git from the build context.</div></div>
+        <div class="ans-row"><span class="anum" style="color:var(--accent4)">4.</span><div class="abody"><strong>The build context</strong> — the dot means "use the current directory" for Dockerfile and source files.</div></div>
+        <div class="ans-row"><span class="anum" style="color:var(--accent4)">5.</span><div class="abody"><strong>res.json()</strong> — Express serializes to JSON and sets Content-Type automatically.</div></div>
+      </div>
+    </div>
+    <div class="col" style="grid-column:span 2">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent3);margin-bottom:8px">Guess the Output</div>
+      <div class="g2" style="flex:1">
+        <div class="ans-block">
+          <div class="ans-row"><span class="anum" style="color:var(--accent3)">1.</span><div class="abody"><strong>Ana</strong> then <strong>1.5</strong> — <ic>data[2][0]</ic> = row 2, col 0 = "Ana". <ic>data[0][1]</ic> = row 0, col 1 = 1.5.</div></div>
+          <div class="ans-row"><span class="anum" style="color:var(--accent3)">2.</span><div class="abody"><strong>Keychron</strong> then <strong>WFH</strong> then <strong>true</strong> — deep dot access for specs; tags[1] is the second tag; wireless is a boolean.</div></div>
+          <div class="ans-row"><span class="anum" style="color:var(--accent3)">3.</span><div class="abody"><strong>2</strong> then <strong>Ana</strong> — filter keeps the 2 active students. active[0] is Ana (first match in original order).</div></div>
+        </div>
+        <div class="ans-block">
+          <div class="ans-row"><span class="anum" style="color:var(--accent3)">4.</span><div class="abody"><strong>string</strong> then <strong>object</strong> then <strong>Maria</strong> — stringify makes a string; parse makes it an object again; back.name accesses the key.</div></div>
+          <div class="ans-row"><span class="anum" style="color:var(--accent3)">5.</span><div class="abody"><strong>["Pancit","Lugaw","Rice"]</strong> then <strong>25</strong> — map extracts each .item into a new array; menu[1].price is Lugaw's price.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// ── ENGINE ──────────────────────────────────────────────────────────────────
+let cur=0;
+const deck=document.getElementById('deck');
+const bar=document.getElementById('bar');
+const ctr=document.getElementById('ctr');
+
+function build(){
+  S.forEach((s,i)=>{
+    const el=document.createElement('div');
+    el.className='slide'+(s.cls?' '+s.cls:'');
+    el.innerHTML=s.html||'';
+    if(i===0)el.classList.add('active');
+    deck.appendChild(el);
+    if(s.init)s.init(el);
+  });
+}
+
+function go(n){
+  if(n<0||n>=S.length||n===cur)return;
+  const els=deck.querySelectorAll('.slide');
+  const fwd=n>cur;
+  els[cur].classList.remove('active');
+  els[cur].classList.add(fwd?'out-l':'out-r');
+  setTimeout(()=>els[cur].classList.remove('out-l','out-r'),420);
+  cur=n;els[cur].classList.add('active');els[cur].scrollTop=0;
+  tick();
+}
+
+function tick(){
+  bar.style.width=(S.length>1?(cur/(S.length-1)*100):100)+'%';
+  ctr.textContent=(cur+1)+' / '+S.length;
+}
+
+document.addEventListener('keydown',e=>{
+  const m=document.getElementById('modal');
+  if(m.classList.contains('open')){if(e.key==='Escape')m.classList.remove('open');return;}
+  const t=document.activeElement.tagName;
+  if(t==='INPUT'||t==='TEXTAREA')return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')go(cur+1);
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(cur-1);
+  else if(e.key==='Home')go(0);
+  else if(e.key==='End')go(S.length-1);
+  else if(e.key==='?')m.classList.add('open');
+  else if(e.key==='Escape')m.classList.remove('open');
+});
+
+document.addEventListener('mousedown',e=>{
+  if(e.target.closest('button,input,a,.mc-opt'))return;
+  if(e.button===2){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+  else if(e.button===3){e.preventDefault();e.stopImmediatePropagation();go(cur-1);}
+  else if(e.button===4){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+},true);
+document.addEventListener('contextmenu',e=>{
+  if(e.target.closest('button,input,a'))return;
+  e.preventDefault();e.stopImmediatePropagation();
+},true);
+document.addEventListener('auxclick',e=>{
+  if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation();}
+},true);
+
+let tx=0;
+document.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+document.addEventListener('touchend',e=>{const d=e.changedTouches[0].clientX-tx;if(Math.abs(d)>50){d<0?go(cur+1):go(cur-1);}},{passive:true});
+
+build();tick();
+</script>
+</body>
+</html>

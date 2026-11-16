@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Node.js Foundations — Summative Review</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0D1117;--surface:#161B22;--surface2:#1F2937;--border:#374151;
+  --accent:#79B8FF;--accent2:#56D364;--accent3:#FF9070;--accent4:#E0BBFF;
+  --accent5:#FFB966;
+  --text:#F0F6FC;--text2:#B1BAC4;--text3:#E2EAF2;
+  --card:#1C2333;--card2:#21262D;
+  --font-body:'Segoe UI',system-ui,sans-serif;
+  --font-mono:'Cascadia Code','Fira Code','Consolas',monospace;
+  --radius:10px;--radius-sm:6px;
+  --tr:350ms cubic-bezier(.4,0,.2,1);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font-body)}
+
+/* PROGRESS + COUNTER */
+#progress-bar{position:fixed;top:0;left:0;height:3px;background:var(--accent);transition:width .3s ease;z-index:1000;border-radius:0 2px 2px 0}
+#slide-counter{position:fixed;top:10px;right:16px;font-size:12px;color:var(--text2);z-index:1000;font-variant-numeric:tabular-nums;letter-spacing:.5px}
+
+/* DECK */
+#deck{width:100%;height:100vh;position:relative;overflow:hidden}
+.slide{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  padding:48px 60px 32px;
+  opacity:0;pointer-events:none;
+  transform:translateX(40px);
+  transition:opacity var(--tr),transform var(--tr);
+  overflow-y:auto;
+}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.exit-left{opacity:0;transform:translateX(-40px)}
+.slide.exit-right{opacity:0;transform:translateX(40px)}
+@media(prefers-reduced-motion:reduce){.slide{transition:opacity .15s;transform:none!important}}
+
+/* EYEBROW */
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.eyebrow::before{content:'';width:20px;height:2px;background:var(--accent);border-radius:1px;display:inline-block}
+
+/* TITLES */
+.slide-title{font-size:clamp(26px,3.4vw,42px);font-weight:800;line-height:1.15;color:var(--text);margin-bottom:5px}
+.title-rule{height:2px;background:linear-gradient(90deg,var(--accent),transparent);border:none;margin-bottom:20px;border-radius:1px}
+
+/* CONTENT WRAPPER */
+.content{flex:1;display:flex;flex-direction:column;gap:14px;min-height:0}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px}
+.card h3{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin-bottom:10px}
+.card p,.card li{font-size:15.5px;color:var(--text3);line-height:1.65}
+.card ul{padding-left:16px}.card li{margin-bottom:3px}
+
+/* GRIDS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.g2>*,.g3>*{min-width:0}
+
+/* TWO-COL (code + breakdown) */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:16px;flex:1;min-height:0}
+.split>*{min-width:0;display:flex;flex-direction:column;gap:10px}
+
+/* CODE BLOCKS */
+.code-wrap{position:relative;background:#0A0E14;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;flex:1}
+.code-wrap pre{padding:12px 14px;overflow:auto;font-family:var(--font-mono);font-size:14.5px;line-height:1.75;white-space:pre;height:100%}
+.copy-btn{position:absolute;top:7px;right:8px;padding:2px 9px;font-size:11px;font-family:var(--font-body);background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:4px;cursor:pointer;transition:all .2s;z-index:2}
+.copy-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.copy-btn.copied{background:var(--accent2);color:#fff;border-color:var(--accent2)}
+
+/* SYNTAX COLORS */
+.kw{color:#FF9492}.str{color:#C8E6FF}.fn{color:#EAC8FF}.num{color:#9ECEFF}
+.cmt{color:#9198A1;font-style:italic}.type{color:#FFC680}.op{color:#B1BAC4}
+.prop{color:#9ECEFF}
+
+/* CODE BREAKDOWN */
+.breakdown{display:flex;flex-direction:column;gap:8px}
+.bd-item{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;border-left:3px solid var(--accent)}
+.bd-item.green{border-left-color:var(--accent2)}
+.bd-item.orange{border-left-color:var(--accent5)}
+.bd-item.purple{border-left-color:var(--accent4)}
+.bd-item.red{border-left-color:var(--accent3)}
+.bd-line{font-family:var(--font-mono);font-size:12px;color:var(--accent);background:#0A0E14;padding:2px 8px;border-radius:3px;white-space:nowrap;min-width:fit-content;align-self:flex-start;margin-top:1px}
+.bd-text{font-size:14px;color:var(--text3);line-height:1.55}
+.bd-text strong{color:var(--text);font-weight:600}
+
+/* TABLES */
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{background:var(--surface2);color:var(--accent);padding:8px 11px;text-align:left;font-weight:700;font-size:13px;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+td{padding:8px 11px;border-bottom:1px solid var(--border);color:var(--text3);line-height:1.5;vertical-align:top}
+tr:last-child td{border-bottom:none}
+
+/* BADGES / PILLS */
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.b-blue{background:#1C3A5E;color:var(--accent)}
+.b-green{background:#14321C;color:var(--accent2)}
+.b-red{background:#3B1C1C;color:var(--accent3)}
+.b-purple{background:#271B3B;color:var(--accent4)}
+.pill{display:inline-block;padding:4px 12px;border-radius:20px;border:1px solid var(--border);font-size:12px;color:var(--text3)}
+.pill.a{border-color:var(--accent);color:var(--accent);background:#0E2A4A}
+
+/* HERO */
+.hero{flex:1;display:flex;flex-direction:column;justify-content:center;gap:14px}
+.hero-title{font-size:clamp(42px,6vw,70px);font-weight:900;line-height:1.05;letter-spacing:-1px}
+.hero-title span{color:var(--accent)}
+.hero-sub{font-size:19px;color:var(--text2);max-width:540px;line-height:1.6}
+.tag{display:inline-block;padding:5px 13px;border-radius:20px;font-size:14px;font-weight:600;border:1px solid var(--border);color:var(--text2);margin:3px}
+
+/* STATUS CODES */
+.sc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sc-item{background:var(--card);border-radius:6px;padding:8px 12px;display:flex;gap:10px;align-items:flex-start;border:1px solid var(--border)}
+.sc-code{font-family:var(--font-mono);font-size:17px;font-weight:700;min-width:38px}
+.sc-desc{font-size:14.5px;color:var(--text2);line-height:1.4}
+.s2 .sc-code{color:var(--accent2)}.s4 .sc-code{color:var(--accent3)}.s5 .sc-code{color:#FF7B72}
+
+/* FLOW */
+.flow{display:flex;align-items:center;flex-wrap:wrap;gap:0}
+.fb{background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:7px 12px;font-size:14.5px;color:var(--text3)}
+.fa{color:var(--accent);padding:0 7px;font-size:16px}
+
+/* QUOTES */
+.q-card{background:linear-gradient(135deg,var(--card),var(--surface));border-left:3px solid var(--accent);border-radius:0 var(--radius) var(--radius) 0;padding:14px 18px;margin-bottom:10px}
+.q-text{font-size:16px;color:var(--text3);line-height:1.7;font-style:italic}
+.q-src{font-size:13px;color:var(--accent);margin-top:6px;font-style:normal;font-weight:700;letter-spacing:.5px}
+
+/* RECAP */
+.recap-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;flex:1}
+.rc{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center}
+.rc .ico{font-size:26px;margin-bottom:7px}
+.rc h4{font-size:14px;font-weight:700;color:var(--accent);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.rc p{font-size:14px;color:var(--text2);line-height:1.55}
+
+/* MC */
+.mc-item{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;flex:1}
+.mc-q{font-size:16px;font-weight:600;color:var(--text);margin-bottom:10px;line-height:1.5}
+.qnum{color:var(--accent);margin-right:6px;font-weight:700}
+.mc-choices{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.mc-c{padding:7px 11px;border-radius:5px;border:1px solid var(--border);font-size:15px;color:var(--text3);cursor:pointer;transition:all .15s;background:var(--surface2);line-height:1.4}
+.mc-c:hover{border-color:var(--accent);color:var(--text)}
+.mc-c.sel{border-color:var(--accent);background:#1C3A5E;color:var(--accent)}
+
+/* MC 3-per-page layout */
+.mc-page{display:flex;flex-direction:column;gap:12px;flex:1}
+
+/* GTO */
+.gto-page{display:flex;flex-direction:column;gap:10px;flex:1}
+.gto-item{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;flex:1;display:flex;flex-direction:column;gap:6px}
+.gto-q{font-size:15.5px;font-weight:600;color:var(--text);line-height:1.4}
+.qnum2{color:var(--accent4);margin-right:6px;font-weight:700}
+.gto-code{background:#0A0E14;border-radius:4px;padding:8px 10px;font-family:var(--font-mono);font-size:13.5px;color:var(--text3);overflow-x:auto;white-space:pre;flex:1;border:1px solid var(--border)}
+.gto-inp{width:100%;padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:15px;outline:none;transition:border .2s}
+.gto-inp:focus{border-color:var(--accent4)}
+
+/* ANSWER KEY */
+.ans-block{display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;flex:1}
+.ans-row{display:flex;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border);font-size:15px;align-items:flex-start}
+.ans-row:last-child{border:none}
+.ans-row:nth-child(even){background:rgba(255,255,255,.015)}
+.ans-n{font-weight:700;color:var(--accent);min-width:26px;font-variant-numeric:tabular-nums}
+.ans-n2{font-weight:700;color:var(--accent4);min-width:26px;font-variant-numeric:tabular-nums}
+.ans-b{color:var(--text3);line-height:1.5;flex:1;min-width:0}
+.ans-b strong{color:var(--accent2)}
+.ans-b code{background:var(--surface2);padding:1px 5px;border-radius:3px;font-family:var(--font-mono);font-size:13px;color:var(--accent4)}
+
+/* SHORTCUT MODAL */
+#shortcut-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:2000;align-items:center;justify-content:center}
+#shortcut-modal.open{display:flex}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:26px 30px;min-width:320px}
+.modal-box h3{font-size:15px;font-weight:700;color:var(--accent);margin-bottom:14px}
+.sh-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:12.5px;color:var(--text3)}
+.sh-row:last-of-type{border:none}
+.sh-row kbd{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-family:var(--font-mono);font-size:11px;color:var(--text)}
+.modal-close{margin-top:16px;width:100%;padding:8px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
+
+#nav-hint{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--text2);letter-spacing:.5px;pointer-events:none;opacity:.45}
+.title-slide{background:radial-gradient(ellipse at 20% 50%,#0E2A4A 0%,var(--bg) 60%)}
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+<div id="slide-counter"></div>
+<div id="deck"></div>
+<div id="nav-hint">Right-click or → to advance &nbsp;·&nbsp; Press ? for shortcuts</div>
+<div id="shortcut-modal">
+  <div class="modal-box">
+    <h3>⌨ Keyboard Shortcuts</h3>
+    <div class="sh-row"><span>Next slide</span><span><kbd>→</kbd> or <kbd>Right-click</kbd></span></div>
+    <div class="sh-row"><span>Prev slide</span><span><kbd>←</kbd></span></div>
+    <div class="sh-row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="sh-row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="sh-row"><span>Shortcuts</span><span><kbd>?</kbd></span></div>
+    <div class="sh-row"><span>Close</span><span><kbd>Esc</kbd></span></div>
+    <button class="modal-close" onclick="document.getElementById('shortcut-modal').classList.remove('open')">Close</button>
+  </div>
+</div>
+<script>
+// ─── SYNTAX HIGHLIGHT HELPER (single-pass tokenizer) ─────────────────────────
+function hl(code) {
+  const KW  = /^(const|let|var|function|return|async|await|try|catch|throw|new|class|extends|if|else|this|super)\b/;
+  const TYP = /^(require|console|process|fs|path|http|EventEmitter|Error|Promise|JSON|Math)\b/;
+  const NUM = /^\b\d+\b/;
+
+  // Escape a raw string for HTML display
+  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  let i = 0, out = '';
+  while (i < code.length) {
+    // Single-line comment
+    if (code[i]==='/' && code[i+1]==='/') {
+      const end = code.indexOf('\n', i);
+      const chunk = end === -1 ? code.slice(i) : code.slice(i, end);
+      out += '<span class="cmt">' + esc(chunk) + '</span>';
+      i += chunk.length;
+      continue;
+    }
+    // Template literal
+    if (code[i]==='`') {
+      let j = i+1;
+      while (j < code.length && code[j] !== '`') {
+        if (code[j]==='\\') j++;
+        j++;
+      }
+      out += '<span class="str">' + esc(code.slice(i, j+1)) + '</span>';
+      i = j+1;
+      continue;
+    }
+    // Single-quoted string
+    if (code[i]==="'") {
+      let j = i+1;
+      while (j < code.length && code[j] !== "'" && code[j] !== '\n') {
+        if (code[j]==='\\') j++;
+        j++;
+      }
+      out += '<span class="str">' + esc(code.slice(i, j+1)) + '</span>';
+      i = j+1;
+      continue;
+    }
+    // Double-quoted string
+    if (code[i]==='"') {
+      let j = i+1;
+      while (j < code.length && code[j] !== '"' && code[j] !== '\n') {
+        if (code[j]==='\\') j++;
+        j++;
+      }
+      out += '<span class="str">' + esc(code.slice(i, j+1)) + '</span>';
+      i = j+1;
+      continue;
+    }
+    // Keywords, types, numbers — only at word boundaries
+    const rest = code.slice(i);
+    let m;
+    if ((m = rest.match(KW))  !== null) { out += '<span class="kw">'  + m[0] + '</span>'; i += m[0].length; continue; }
+    if ((m = rest.match(TYP)) !== null) { out += '<span class="type">' + m[0] + '</span>'; i += m[0].length; continue; }
+    if ((m = rest.match(NUM)) !== null) { out += '<span class="num">'  + m[0] + '</span>'; i += m[0].length; continue; }
+    // Everything else — escape and emit as-is
+    out += esc(code[i]);
+    i++;
+  }
+  return out;
+}
+
+function codeWrap(code,id){
+  return `<div class="code-wrap"><pre id="${id}">${hl(code)}</pre><button class="copy-btn" onclick="doCopy('${id}',this)">Copy</button></div>`;
+}
+
+function doCopy(id,btn){
+  const txt=document.getElementById(id).textContent;
+  navigator.clipboard.writeText(txt).then(()=>{
+    btn.textContent='Copied!';btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},2000);
+  });
+}
+
+// ─── SLIDES DATA ─────────────────────────────────────────────────────────────
+const SLIDES = [
+
+// 0 — TITLE
+{cls:'title-slide', html:`
+<div class="eyebrow">Web Systems — Node.js</div>
+<div class="hero">
+  <div class="hero-title">Node.js<br><span>Foundations</span></div>
+  <div class="hero-sub">Summative Review &amp; Assessment — Weeks 1–5<br>JS Basics · Core Modules · Async · HTTP · Streams</div>
+  <div style="margin-top:10px">
+    <span class="tag">Week 1 — Node Internals</span>
+    <span class="tag">Week 2 — Core Modules</span>
+    <span class="tag">Week 3 — Error Handling</span>
+    <span class="tag">Week 4 — HTTP &amp; Streams</span>
+  </div>
+</div>`},
+
+// 1 — AGENDA
+{html:`
+<div class="eyebrow">Overview</div>
+<div class="slide-title">What We'll Cover Today</div>
+<hr class="title-rule"/>
+<div class="content">
+  <div class="g2">
+    <div class="card"><h3>📚 Lecture Review</h3><ul>
+      <li>JavaScript Foundations — variables, closures, async</li>
+      <li>Node Internals — V8, Event Loop, npm</li>
+      <li>Core Modules — fs, path, process</li>
+      <li>Error Handling — operational vs programmer errors</li>
+      <li>HTTP Module, EventEmitter, Streams</li>
+      <li style="margin-top:6px;color:var(--accent2)">Each topic includes a code breakdown ↓</li>
+    </ul></div>
+    <div class="card"><h3>📝 Summative Exam</h3><ul>
+      <li>15 Multiple Choice — 1 pt each</li>
+      <li>15 Guess the Output — 2 pts each</li>
+      <li style="margin-top:6px">3 questions per page</li>
+      <li style="margin-top:6px;color:var(--accent);font-weight:600">Total: 45 pts</li>
+      <li>Answer key on the final slides</li>
+    </ul></div>
+  </div>
+  <div class="card"><h3>🗓 Weekly Flow</h3>
+    <div class="flow">
+      <div class="fb">Wk1<br><small style="color:var(--text2)">Internals</small></div><div class="fa">→</div>
+      <div class="fb">Wk2<br><small style="color:var(--text2)">fs &amp; path</small></div><div class="fa">→</div>
+      <div class="fb">Wk3<br><small style="color:var(--text2)">process &amp; errors</small></div><div class="fa">→</div>
+      <div class="fb">Wk4<br><small style="color:var(--text2)">HTTP &amp; Streams</small></div><div class="fa">→</div>
+      <div class="fb" style="border-color:var(--accent);color:var(--accent)">Prelim<br><small>Capstone</small></div>
+    </div>
+  </div>
+</div>`},
+
+// 2 — JS BASICS: Variables + Closures
+{html:`
+<div class="eyebrow">Week 1 — JavaScript Foundations</div>
+<div class="slide-title">Variables, Types &amp; Closures</div>
+<hr class="title-rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Code</h3></div>
+      ${(()=>codeWrap(
+`const greeting = "Hello";
+let count = 0;
+var old = true;   // avoid
+
+function makeCounter(start) {
+  let n = start;
+  return function() {
+    n++;
+    return n;
+  };
+}
+
+const next = makeCounter(0);
+console.log(next()); // 1
+console.log(next()); // 2
+console.log(next()); // 3`,'c-vars'))()}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Breakdown</h3></div>
+      <div class="breakdown">
+        <div class="bd-item"><div class="bd-line">line 1</div><div class="bd-text"><strong>const</strong> — block-scoped, cannot be reassigned. Best for values that don't change.</div></div>
+        <div class="bd-item green"><div class="bd-line">line 2</div><div class="bd-text"><strong>let</strong> — block-scoped, can be reassigned. Use when the value will change (e.g., a counter).</div></div>
+        <div class="bd-item red"><div class="bd-line">line 3</div><div class="bd-text"><strong>var</strong> — function-scoped and hoisted. Avoid it — block-scoping bugs are common.</div></div>
+        <div class="bd-item purple"><div class="bd-line">lines 5–10</div><div class="bd-text"><strong>Closure:</strong> <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">makeCounter</code> returns an inner function. That function <em>remembers</em> <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">n</code> from the outer scope — even after <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">makeCounter</code> has finished running.</div></div>
+        <div class="bd-item orange"><div class="bd-line">lines 13–15</div><div class="bd-text">Each call to <strong>next()</strong> increments the same <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">n</code>. The state persists between calls because of the closure.</div></div>
+      </div>
+    </div>
+  </div>
+</div>`},
+
+// 3 — ASYNC PATTERNS
+{html:`
+<div class="eyebrow">Week 2 — Asynchronous Patterns</div>
+<div class="slide-title">Callbacks → Promises → Async/Await</div>
+<hr class="title-rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Code — All Three Styles</h3></div>
+      ${(()=>codeWrap(
+`// 1. Callback style
+fs.readFile('data.txt', 'utf8',
+  (err, data) => {
+    if (err) throw err;
+    console.log(data);
+  }
+);
+
+// 2. Promise style
+fs.promises.readFile('data.txt','utf8')
+  .then(data => console.log(data))
+  .catch(err => console.error(err));
+
+// 3. Async/Await (preferred)
+async function readIt() {
+  try {
+    const data = await
+      fs.promises.readFile(
+        'data.txt', 'utf8'
+      );
+    console.log(data);
+  } catch (err) {
+    console.error(err);
+  }
+}
+readIt();`,'c-async'))()}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Breakdown</h3></div>
+      <div class="breakdown">
+        <div class="bd-item red"><div class="bd-line">lines 2–7</div><div class="bd-text"><strong>Callbacks</strong> — the original pattern. A function is passed as an argument and called when the async operation completes. Leads to deeply nested "callback hell" when chained.</div></div>
+        <div class="bd-item"><div class="bd-line">lines 10–12</div><div class="bd-text"><strong>Promises</strong> — <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">.then()</code> and <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">.catch()</code> are chainable. Cleaner than callbacks but can still get long horizontally.</div></div>
+        <div class="bd-item green"><div class="bd-line">lines 15–25</div><div class="bd-text"><strong>async/await</strong> — cleanest pattern. The <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">async</code> keyword makes a function return a Promise. <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">await</code> pauses <em>that function only</em> until the Promise settles — the event loop keeps running.</div></div>
+        <div class="bd-item orange"><div class="bd-line">lines 16,22</div><div class="bd-text"><strong>try/catch</strong> wraps async code the same way it wraps sync code — this is why async/await feels natural. Without it, a rejected promise becomes an unhandled rejection.</div></div>
+        <div class="bd-item purple"><div class="bd-line">Key Rule</div><div class="bd-text"><strong>await only works inside an async function.</strong> You cannot use await at the top level (unless in an ES module).</div></div>
+      </div>
+    </div>
+  </div>
+</div>`},
+
+// 4 — NODE INTERNALS: Event Loop
+{html:`
+<div class="eyebrow">Week 1 — Node.js Internals</div>
+<div class="slide-title">V8 Engine &amp; Event Loop</div>
+<hr class="title-rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Code — Execution Order</h3></div>
+      ${(()=>codeWrap(
+`console.log('1 - sync start');
+
+process.nextTick(() => {
+  console.log('2 - nextTick');
+});
+
+Promise.resolve().then(() => {
+  console.log('3 - Promise');
+});
+
+setTimeout(() => {
+  console.log('4 - setTimeout');
+}, 0);
+
+setImmediate(() => {
+  console.log('5 - setImmediate');
+});
+
+console.log('6 - sync end');
+
+// Output order:
+// 1 - sync start
+// 6 - sync end
+// 2 - nextTick
+// 3 - Promise
+// 4 - setTimeout
+// 5 - setImmediate`,'c-loop'))()}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Breakdown</h3></div>
+      <div class="breakdown">
+        <div class="bd-item green"><div class="bd-line">lines 1, 18</div><div class="bd-text"><strong>Synchronous code</strong> always runs first, in order — before anything async. The call stack must be clear before the event loop takes over.</div></div>
+        <div class="bd-item purple"><div class="bd-line">lines 3–5</div><div class="bd-text"><strong>process.nextTick()</strong> queues a callback to run immediately after the current operation, before any I/O or timers. It has the highest priority among async.</div></div>
+        <div class="bd-item"><div class="bd-line">lines 7–9</div><div class="bd-text"><strong>Promise.then()</strong> is a microtask — runs after nextTick callbacks, but before any timer or I/O callbacks. Microtasks drain completely before the loop moves to the next phase.</div></div>
+        <div class="bd-item orange"><div class="bd-line">lines 11–13</div><div class="bd-text"><strong>setTimeout(fn, 0)</strong> — "timers" phase of the event loop. Even with 0ms delay, it waits until the call stack is empty and microtasks are drained.</div></div>
+        <div class="bd-item red"><div class="bd-line">lines 15–17</div><div class="bd-text"><strong>setImmediate()</strong> — "check" phase, runs after I/O callbacks. In practice it often runs after setTimeout(0), but ordering depends on context.</div></div>
+      </div>
+    </div>
+  </div>
+</div>`},
+
+// 5 — FS & PATH
+{html:`
+<div class="eyebrow">Week 2 — Core Modules</div>
+<div class="slide-title">fs &amp; path Modules</div>
+<hr class="title-rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Code</h3></div>
+      ${(()=>codeWrap(
+`const fs   = require('fs');
+const path = require('path');
+
+// Safe cross-platform path building
+const filePath = path.join(
+  __dirname, 'data', 'log.txt'
+);
+
+// Read file — async/await style
+async function processLog() {
+  try {
+    const raw = await
+      fs.promises.readFile(filePath,'utf8');
+
+    const lines = raw.split('\n');
+    const errors = lines.filter(
+      l => l.includes('ERROR')
+    );
+
+    const outPath = path.join(
+      __dirname, 'summary.txt'
+    );
+    await fs.promises.writeFile(
+      outPath,
+      'Total: ' + lines.length
+    );
+  } catch (err) {
+    console.error('File error:', err.message);
+    process.exit(1);
+  }
+}
+
+processLog();`,'c-fs'))()}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Breakdown</h3></div>
+      <div class="breakdown">
+        <div class="bd-item"><div class="bd-line">lines 1–2</div><div class="bd-text"><strong>require()</strong> loads built-in core modules. No <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">npm install</code> needed — <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">fs</code> and <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">path</code> ship with Node.</div></div>
+        <div class="bd-item green"><div class="bd-line">lines 5–7</div><div class="bd-text"><strong>path.join(__dirname, ...)</strong> builds the path using the correct separator for the OS. Windows uses <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">\</code>, Unix uses <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">/</code> — hardcoding either breaks portability.</div></div>
+        <div class="bd-item purple"><div class="bd-line">line 12</div><div class="bd-text"><strong>fs.promises.readFile(path, 'utf8')</strong> — the Promise-based API. Without <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">'utf8'</code>, you get a raw Buffer instead of a string.</div></div>
+        <div class="bd-item orange"><div class="bd-line">lines 15–17</div><div class="bd-text"><strong>.split('\n')</strong> converts the file string into an array of lines. <strong>.filter()</strong> then keeps only lines matching a condition — both are pure JS array methods.</div></div>
+        <div class="bd-item red"><div class="bd-line">lines 27–30</div><div class="bd-text"><strong>catch block</strong> — if the file doesn't exist or can't be read, the error is caught here. <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">process.exit(1)</code> signals failure to the shell (0 = success, non-zero = failure).</div></div>
+      </div>
+    </div>
+  </div>
+</div>`},
+
+// 6 — PROCESS & ERROR HANDLING
+{html:`
+<div class="eyebrow">Week 3 — Process &amp; Errors</div>
+<div class="slide-title">process Object &amp; Error Handling</div>
+<hr class="title-rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Code</h3></div>
+      ${(()=>codeWrap(
+`// Custom error class
+class ValidationError extends Error {
+  constructor(msg) {
+    super(msg);
+    this.name = 'ValidationError';
+  }
+}
+
+// process object usage
+const filePath = process.argv[2];
+const mode     = process.env.MODE;
+
+console.log('CWD:', process.cwd());
+
+async function run(fp) {
+  if (!fp) {
+    throw new ValidationError(
+      'File path required'
+    );
+  }
+  // ... do work ...
+  process.exit(0); // success
+}
+
+// Safety net — NOT primary strategy
+process.on('unhandledRejection',
+  (err) => {
+    console.error('Unhandled:', err);
+    process.exit(1);
+  }
+);
+
+run(filePath).catch(err => {
+  if (err instanceof ValidationError) {
+    console.error('Bad input:', err.message);
+  } else {
+    console.error('Crash:', err);
+  }
+  process.exit(1);
+});`,'c-proc'))()}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Breakdown</h3></div>
+      <div class="breakdown">
+        <div class="bd-item purple"><div class="bd-line">lines 2–7</div><div class="bd-text"><strong>Custom Error class</strong> — extends the built-in <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">Error</code>. Call <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">super(msg)</code> first to set the <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">message</code> property. Setting <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">this.name</code> makes stack traces readable.</div></div>
+        <div class="bd-item"><div class="bd-line">lines 10–11</div><div class="bd-text"><strong>process.argv[2]</strong> — first user-passed CLI argument (argv[0]=node, argv[1]=script, argv[2+]=your args). <strong>process.env.MODE</strong> reads an environment variable.</div></div>
+        <div class="bd-item green"><div class="bd-line">lines 15–21</div><div class="bd-text"><strong>Operational error</strong> — missing file path is an expected failure, not a bug. We validate the input and throw a <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">ValidationError</code>. This is handled gracefully downstream.</div></div>
+        <div class="bd-item red"><div class="bd-line">lines 24–29</div><div class="bd-text"><strong>process.on('unhandledRejection')</strong> — catches any promise rejection that was never caught. This is a <em>safety net</em> only — it does not replace proper try/catch in your code.</div></div>
+        <div class="bd-item orange"><div class="bd-line">lines 31–38</div><div class="bd-text"><strong>instanceof check</strong> — lets you handle different error types differently. ValidationErrors = user's fault; other errors = programmer's fault or system failure.</div></div>
+      </div>
+    </div>
+  </div>
+</div>`},
+
+// 7 — HTTP MODULE
+{html:`
+<div class="eyebrow">Week 4 — HTTP Module</div>
+<div class="slide-title">Raw HTTP Server</div>
+<hr class="title-rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Code</h3></div>
+      ${(()=>codeWrap(
+`const http = require('http');
+const fs   = require('fs');
+
+const server = http.createServer(
+  async (req, res) => {
+
+    // Route: GET /status
+    if (req.method === 'GET' &&
+        req.url === '/status') {
+      res.writeHead(200, {
+        'Content-Type': 'application/json'
+      });
+      return res.end(
+        JSON.stringify({ ok: true })
+      );
+    }
+
+    // Route: GET /raw (stream a file)
+    if (req.method === 'GET' &&
+        req.url === '/raw') {
+      res.writeHead(200, {
+        'Content-Type': 'text/plain'
+      });
+      return fs.createReadStream(
+        'data.txt'
+      ).pipe(res);
+    }
+
+    // Fallback: 404
+    res.writeHead(404, {
+      'Content-Type': 'application/json'
+    });
+    res.end(
+      JSON.stringify({ error: 'Not found' })
+    );
+  }
+);
+
+server.listen(3000, () => {
+  console.log('Server running on :3000');
+});`,'c-http'))()}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Breakdown</h3></div>
+      <div class="breakdown">
+        <div class="bd-item"><div class="bd-line">line 4</div><div class="bd-text"><strong>http.createServer(callback)</strong> — creates a server. The callback receives a <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">req</code> (IncomingMessage) and <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">res</code> (ServerResponse) for every incoming request.</div></div>
+        <div class="bd-item green"><div class="bd-line">lines 8–15</div><div class="bd-text"><strong>Routing</strong> — manual if/else on <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">req.method</code> and <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">req.url</code>. This is exactly what Express's <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">app.get()</code> does internally.</div></div>
+        <div class="bd-item purple"><div class="bd-line">line 10</div><div class="bd-text"><strong>res.writeHead(200, headers)</strong> — sets the HTTP status code and response headers. Must be called before <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">res.end()</code>. Content-Type tells the client how to parse the body.</div></div>
+        <div class="bd-item orange"><div class="bd-line">lines 23–26</div><div class="bd-text"><strong>Streaming the response</strong> — <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">createReadStream().pipe(res)</code> sends the file in chunks. <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">res</code> is a Writable stream, so .pipe() works directly.</div></div>
+        <div class="bd-item red"><div class="bd-line">lines 30–34</div><div class="bd-text"><strong>404 fallback</strong> — always include a default case. Without it, requests that don't match any route hang forever — <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">res.end()</code> is never called.</div></div>
+        <div class="bd-item"><div class="bd-line">line 38</div><div class="bd-text"><strong>server.listen(3000)</strong> — binds the server to port 3000. The callback fires once it's ready. Without this line, the server is created but never starts.</div></div>
+      </div>
+    </div>
+  </div>
+</div>`},
+
+// 8 — EVENTEMITTER & STREAMS
+{html:`
+<div class="eyebrow">Week 4 — EventEmitter &amp; Streams</div>
+<div class="slide-title">Events &amp; Stream Pipeline</div>
+<hr class="title-rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Code</h3></div>
+      ${(()=>codeWrap(
+`const { EventEmitter } = require('events');
+const fs = require('fs');
+const { Transform } = require('stream');
+
+// Custom EventEmitter
+class RequestLogger extends EventEmitter {
+  log(method, url) {
+    this.emit('request', { method, url });
+  }
+}
+
+const logger = new RequestLogger();
+logger.on('request', (info) => {
+  console.log(
+    info.method + ' ' + info.url
+  );
+});
+
+// Usage
+logger.log('GET', '/status');
+// → GET /status
+
+// Transform stream: uppercase converter
+const upper = new Transform({
+  transform(chunk, enc, callback) {
+    callback(
+      null,
+      chunk.toString().toUpperCase()
+    );
+  }
+});
+
+// Pipeline: read → transform → write
+fs.createReadStream('input.txt')
+  .pipe(upper)
+  .pipe(
+    fs.createWriteStream('output.txt')
+  );`,'c-emitter'))()}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Breakdown</h3></div>
+      <div class="breakdown">
+        <div class="bd-item"><div class="bd-line">lines 6–10</div><div class="bd-text"><strong>Extending EventEmitter</strong> — any class can become an event emitter. <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">this.emit('request', data)</code> fires the named event and passes data to all listeners.</div></div>
+        <div class="bd-item green"><div class="bd-line">lines 12–16</div><div class="bd-text"><strong>.on('event', callback)</strong> — registers a listener. You can register multiple listeners for the same event — they all fire in registration order. Use <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">.once()</code> to fire only the first time.</div></div>
+        <div class="bd-item purple"><div class="bd-line">lines 22–29</div><div class="bd-text"><strong>Transform stream</strong> — the most powerful stream type. Receives chunks from upstream, modifies them (uppercase here), and passes them downstream via <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">callback(null, result)</code>.</div></div>
+        <div class="bd-item orange"><div class="bd-line">lines 32–35</div><div class="bd-text"><strong>.pipe() chain</strong> — connects streams together. Data flows: ReadStream → Transform → WriteStream. Memory stays flat because only one chunk exists in RAM at a time, regardless of file size.</div></div>
+        <div class="bd-item red"><div class="bd-line">Key Point</div><div class="bd-text"><strong>http.Server is itself an EventEmitter</strong> — that's why <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">server.on('request', ...)</code> and <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent4)">server.on('error', ...)</code> work. Everything event-driven in Node extends this pattern.</div></div>
+      </div>
+    </div>
+  </div>
+</div>`},
+
+// 9 — GET vs POST + STATUS CODES
+{html:`
+<div class="eyebrow">Week 4 — HTTP Methods &amp; Status Codes</div>
+<div class="slide-title">GET vs POST &amp; When to Use Each Status</div>
+<hr class="title-rule"/>
+<div class="content">
+  <div class="g2" style="flex:1">
+    <div>
+      <table style="margin-bottom:12px">
+        <tr><th></th><th>GET</th><th>POST</th></tr>
+        <tr><td><strong style="color:var(--text)">Purpose</strong></td><td>Read / fetch data</td><td>Create / submit data</td></tr>
+        <tr><td><strong style="color:var(--text)">Data location</strong></td><td>URL query string</td><td>Request body</td></tr>
+        <tr><td><strong style="color:var(--text)">Visible in URL?</strong></td><td style="color:var(--accent3)">Yes</td><td style="color:var(--accent2)">No</td></tr>
+        <tr><td><strong style="color:var(--text)">Idempotent?</strong></td><td style="color:var(--accent2)">Yes</td><td style="color:var(--accent3)">No</td></tr>
+        <tr><td><strong style="color:var(--text)">Cacheable?</strong></td><td style="color:var(--accent2)">Yes</td><td style="color:var(--accent3)">No</td></tr>
+      </table>
+      <div class="card"><h3>Rule of Thumb</h3><p style="font-size:13px">If the action <em>changes something</em> on the server — it must <strong style="color:var(--accent3)">not</strong> be a GET. Browsers and crawlers can pre-fetch GETs. A GET that deletes records is a disaster waiting to happen.</p></div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:10px"><h3>Status Codes</h3>
+        <div class="sc-grid">
+          <div class="sc-item s2"><div class="sc-code">200</div><div class="sc-desc">OK — success</div></div>
+          <div class="sc-item s2"><div class="sc-code">201</div><div class="sc-desc">Created</div></div>
+          <div class="sc-item s2"><div class="sc-code">204</div><div class="sc-desc">No Content</div></div>
+          <div class="sc-item s4"><div class="sc-code">400</div><div class="sc-desc">Bad Request</div></div>
+          <div class="sc-item s4"><div class="sc-code">401</div><div class="sc-desc">Unauthorized</div></div>
+          <div class="sc-item s4"><div class="sc-code">403</div><div class="sc-desc">Forbidden</div></div>
+          <div class="sc-item s4"><div class="sc-code">404</div><div class="sc-desc">Not Found</div></div>
+          <div class="sc-item s4"><div class="sc-code">422</div><div class="sc-desc">Unprocessable</div></div>
+          <div class="sc-item s5"><div class="sc-code">500</div><div class="sc-desc">Server Error</div></div>
+        </div>
+      </div>
+      <div class="card"><h3>Memory Trick</h3><p style="font-size:13px"><strong style="color:var(--accent2)">2xx = good</strong> &nbsp;·&nbsp; <strong style="color:var(--accent3)">4xx = your fault</strong> &nbsp;·&nbsp; <strong style="color:#FF7B72">5xx = server's fault</strong></p></div>
+    </div>
+  </div>
+</div>`},
+
+// 10 — KEY QUOTES
+{html:`
+<div class="eyebrow">Key Principles</div>
+<div class="slide-title">Concepts Worth Memorizing</div>
+<hr class="title-rule"/>
+<div class="content">
+  <div class="q-card"><div class="q-text">"Node is single-threaded but non-blocking — I/O is handed off, and callbacks are queued to run when ready. This is why Node is fast at handling many concurrent connections without spawning threads per request."</div><div class="q-src">Node Internals — Week 1</div></div>
+  <div class="q-card"><div class="q-text">"process.on('uncaughtException') and process.on('unhandledRejection') are a safety net, never a primary strategy — don't rely on them to handle errors."</div><div class="q-src">Error Handling — Week 3</div></div>
+  <div class="q-card"><div class="q-text">"Loading a huge file with readFile loads it entirely into memory. Streams process it in small chunks — memory stays flat regardless of file size."</div><div class="q-src">Streams — Week 4</div></div>
+  <div class="q-card"><div class="q-text">"Everything you just did manually — writing routes by hand, wiring up one container — Express exists to make that less painful at scale."</div><div class="q-src">Bridge to Midterm — Week 6</div></div>
+</div>`},
+
+// 11 — EXAM INTRO
+{html:`
+<div class="eyebrow">Summative Assessment</div>
+<div class="slide-title">Exam Starts Now</div>
+<hr class="title-rule"/>
+<div class="content">
+  <div class="g2">
+    <div class="card"><h3>📋 Part 1 — Multiple Choice</h3><ul>
+      <li>15 questions &nbsp;·&nbsp; 1 pt each</li>
+      <li>Choose the single best answer</li>
+      <li>3 questions per page</li>
+      <li style="margin-top:6px;color:var(--accent)">Subtotal: 15 pts</li>
+    </ul></div>
+    <div class="card"><h3>💻 Part 2 — Guess the Output</h3><ul>
+      <li>15 questions &nbsp;·&nbsp; 2 pts each</li>
+      <li>Trace the code, write exact output</li>
+      <li>3 questions per page</li>
+      <li style="margin-top:6px;color:var(--accent)">Subtotal: 30 pts</li>
+    </ul></div>
+  </div>
+  <div class="card" style="text-align:center;padding:28px 20px;flex:1;display:flex;flex-direction:column;justify-content:center">
+    <div style="font-size:60px;font-weight:900;color:var(--accent);line-height:1">45</div>
+    <div style="font-size:14px;color:var(--text2);margin-top:4px">Total Points</div>
+  </div>
+  <div class="card"><h3>⚠ Note</h3><p>Answer key with explanations is on the slides after the recap. Don't peek until you're done!</p></div>
+</div>`},
+
+];
+
+// ─── MC QUESTIONS ─────────────────────────────────────────────────────────────
+const MC_ALL = [
+  {q:"Which JavaScript keyword is block-scoped AND cannot be reassigned?", c:["a) var","b) let","c) const","d) static"]},
+  {q:"What does typeof null return in JavaScript?", c:["a) \"null\"","b) \"undefined\"","c) \"object\"","d) \"boolean\""]},
+  {q:"What is a closure in JavaScript?", c:["a) A function that calls itself recursively","b) A function that remembers variables from its outer scope after that scope has closed","c) A method for closing file streams","d) An error thrown when a variable is out of scope"]},
+  {q:"Which of the following is a falsy value in JavaScript?", c:["a) \"0\"","b) []","c) NaN","d) {}"]},
+  {q:"Which async pattern is considered the cleanest, built on top of Promises?", c:["a) Callbacks","b) .then()/.catch() chains","c) async/await","d) process.nextTick"]},
+  {q:"What does path.basename(\"/home/user/app/index.js\") return?", c:["a) /home/user/app/","b) index","c) index.js","d) .js"]},
+  {q:"In the Node.js event loop, microtasks (Promises, nextTick) run:", c:["a) Only after all timers finish","b) Between each phase, before the next phase starts","c) During the poll phase only","d) After close callbacks"]},
+  {q:"Which runs first among the three?", c:["a) setTimeout(fn, 0)","b) setImmediate(fn)","c) process.nextTick(fn)","d) They all run simultaneously"]},
+  {q:"What does process.argv[0] contain in a Node.js CLI script?", c:["a) The first argument you passed","b) Path to the script file","c) Path to the node executable","d) The package name"]},
+  {q:"An operational error is best defined as:", c:["a) A bug introduced by the programmer","b) An expected failure such as a missing file or invalid user input","c) A crash in the V8 engine","d) An error that always kills the process"]},
+  {q:"What HTTP status code means the client is authenticated but NOT permitted to access the resource?", c:["a) 401","b) 403","c) 404","d) 422"]},
+  {q:"A request has valid syntax but its data fails validation rules. Which status code fits best?", c:["a) 400","b) 401","c) 422","d) 500"]},
+  {q:"What problem do Streams solve that fs.readFile does not?", c:["a) Streams allow file renaming","b) Streams process data in chunks — memory stays flat regardless of file size","c) Streams use threads for speed","d) fs.readFile lacks UTF-8 encoding support"]},
+  {q:"Which stream type reads input, transforms it, and passes the result downstream?", c:["a) Readable","b) Writable","c) Duplex","d) Transform"]},
+  {q:"Why should secrets and config NOT be hardcoded in source code?", c:["a) Node cannot read hardcoded strings","b) They get committed to version control and become exposed to anyone with access","c) Hardcoded values are slower to read","d) npm disallows them in package scripts"]},
+];
+
+// ─── GTO QUESTIONS ────────────────────────────────────────────────────────────
+const GTO_ALL = [
+  {code:`let x = 5;
+const fn = () => x * 2;
+x = 10;
+console.log(fn());`},
+  {code:`const add = (a, b) => a + b;
+console.log(add(3, 4));
+console.log(typeof add(3, 4));`},
+  {code:`function outer(x) {
+  return function(y) {
+    return x + y;
+  };
+}
+const add5 = outer(5);
+console.log(add5(3));`},
+  {code:`console.log(Boolean(0));
+console.log(Boolean(""));
+console.log(Boolean([]));`},
+  {code:`async function getValue() {
+  const v = await Promise.resolve(42);
+  console.log(v);
+}
+getValue();`},
+  {code:`process.nextTick(() => console.log('A'));
+Promise.resolve().then(() => console.log('B'));
+console.log('C');`},
+  {code:`const arr = [1, 2, 3, 4];
+const result = arr
+  .filter(n => n % 2 === 0)
+  .map(n => n * 10);
+console.log(result);`},
+  {code:`const obj = { a: 1, b: 2 };
+const { a, ...rest } = obj;
+console.log(a);
+console.log(rest);`},
+  {code:`const { EventEmitter } = require('events');
+const e = new EventEmitter();
+e.on('ping', (msg) => {
+  console.log('Received:', msg);
+});
+e.emit('ping', 'hello');
+e.emit('ping', 'world');`},
+  {code:`async function fetchData() {
+  try {
+    const r = await Promise.reject(
+      new Error('Network error')
+    );
+    console.log(r);
+  } catch(err) {
+    console.log('Caught:', err.message);
+  }
+}
+fetchData();`},
+  {code:`function makeCounter(start) {
+  let count = start;
+  return {
+    inc: () => ++count,
+    get: () => count
+  };
+}
+const c = makeCounter(0);
+c.inc(); c.inc(); c.inc();
+console.log(c.get());`},
+  {code:`const nums = [1, 2, 3, 4, 5];
+const sum = nums.reduce(
+  (acc, n) => acc + n, 0
+);
+console.log(sum);`},
+  {code:`async function run() {
+  const p1 = Promise.resolve('first');
+  const p2 = Promise.resolve('second');
+  const [a, b] = await Promise.all([p1,p2]);
+  console.log(a, b);
+}
+run();`},
+  {code:`class AppError extends Error {
+  constructor(msg, code) {
+    super(msg);
+    this.name = 'AppError';
+    this.code = code;
+  }
+}
+try {
+  throw new AppError('Oops', 404);
+} catch(e) {
+  console.log(e.name + ': ' + e.message);
+  console.log(e.code);
+}`},
+  {code:`// Assume POST /data is received.
+const http = require('http');
+const server = http.createServer(
+  (req, res) => {
+    if (req.method === 'POST' &&
+        req.url === '/data') {
+      res.writeHead(201, {
+        'Content-Type':'application/json'
+      });
+      res.end(
+        JSON.stringify({created: true})
+      );
+    }
+  }
+);
+// What does the client receive?`},
+];
+
+// ─── MC SLIDES: 3 per page ───────────────────────────────────────────────────
+for(let i=0;i<MC_ALL.length;i+=3){
+  const chunk=MC_ALL.slice(i,i+3);
+  const pageNum=Math.floor(i/3)+1;
+  const totalPages=Math.ceil(MC_ALL.length/3);
+  SLIDES.push({
+    isMC: true,
+    startIdx: i,
+    html:`<div class="eyebrow">Part 1 — Multiple Choice &nbsp;·&nbsp; Page ${pageNum} of ${totalPages}</div>
+<div class="slide-title">Questions ${i+1}–${Math.min(i+3,MC_ALL.length)} <span style="font-size:15px;color:var(--text2);font-weight:400">Choose the best answer</span></div>
+<hr class="title-rule"/>
+<div class="mc-page" id="mc-page-${i}"></div>`,
+    init(el){
+      const container=el.querySelector('#mc-page-'+this.startIdx);
+      chunk.forEach((q,j)=>{
+        const n=this.startIdx+j+1;
+        const div=document.createElement('div');
+        div.className='mc-item';
+        div.innerHTML=`<div class="mc-q"><span class="qnum">${n}.</span>${q.q}</div><div class="mc-choices">${q.c.map(c=>`<div class="mc-c" onclick="this.closest('.mc-choices').querySelectorAll('.mc-c').forEach(x=>x.classList.remove('sel'));this.classList.add('sel')">${c}</div>`).join('')}</div>`;
+        container.appendChild(div);
+      });
+    }
+  });
+}
+
+// ─── GTO SLIDES: 3 per page ──────────────────────────────────────────────────
+for(let i=0;i<GTO_ALL.length;i+=3){
+  const chunk=GTO_ALL.slice(i,i+3);
+  const pageNum=Math.floor(i/3)+1;
+  const totalPages=Math.ceil(GTO_ALL.length/3);
+  SLIDES.push({
+    isGTO: true,
+    startIdx: i,
+    html:`<div class="eyebrow">Part 2 — Guess the Output &nbsp;·&nbsp; Page ${pageNum} of ${totalPages}</div>
+<div class="slide-title">Questions ${i+1}–${Math.min(i+3,GTO_ALL.length)} <span style="font-size:15px;color:var(--text2);font-weight:400">Trace the code — write the exact output</span></div>
+<hr class="title-rule"/>
+<div class="gto-page" id="gto-page-${i}"></div>`,
+    init(el){
+      const container=el.querySelector('#gto-page-'+this.startIdx);
+      chunk.forEach((q,j)=>{
+        const n=this.startIdx+j+1;
+        const div=document.createElement('div');
+        div.className='gto-item';
+        div.innerHTML=`<div class="gto-q"><span class="qnum2">${n}.</span>What is the output?</div><pre class="gto-code">${q.code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre><input class="gto-inp" placeholder="Type your answer here..." />`;
+        container.appendChild(div);
+      });
+    }
+  });
+}
+
+// ─── RECAP ───────────────────────────────────────────────────────────────────
+SLIDES.push({html:`
+<div class="eyebrow">Exam Complete</div>
+<div class="slide-title">Core Concepts Recap</div>
+<hr class="title-rule"/>
+<div class="content">
+  <div class="recap-grid">
+    <div class="rc"><div class="ico">⚙️</div><h4>V8 + Event Loop</h4><p>V8 compiles JS to machine code. The event loop keeps Node non-blocking — I/O is handed off, callbacks queued.</p></div>
+    <div class="rc"><div class="ico">🔄</div><h4>Async Patterns</h4><p>Callbacks → Promises → async/await. <code style="font-family:var(--font-mono);font-size:11px">await</code> pauses the function only, not the event loop.</p></div>
+    <div class="rc"><div class="ico">📁</div><h4>fs &amp; path</h4><p>Always use <code style="font-family:var(--font-mono);font-size:11px">fs.promises</code> + async/await. Always use <code style="font-family:var(--font-mono);font-size:11px">path.join()</code> — never hardcode slashes.</p></div>
+    <div class="rc"><div class="ico">🛡️</div><h4>Error Handling</h4><p>Operational vs programmer errors. Custom error classes. <code style="font-family:var(--font-mono);font-size:11px">uncaughtException</code> is a safety net, never a strategy.</p></div>
+    <div class="rc"><div class="ico">🌐</div><h4>HTTP Module</h4><p>Check <code style="font-family:var(--font-mono);font-size:11px">req.method</code> + <code style="font-family:var(--font-mono);font-size:11px">req.url</code> to route. Always call <code style="font-family:var(--font-mono);font-size:11px">res.end()</code>. 2xx good, 4xx you, 5xx server.</p></div>
+    <div class="rc"><div class="ico">🌊</div><h4>Streams &amp; Events</h4><p>Pipe streams for large files — flat memory. EventEmitter is the backbone of all async Node patterns.</p></div>
+  </div>
+  <div class="card" style="margin-top:4px"><h3>The Big Picture</h3><p style="font-size:13px">Everything you built manually — routing, streaming, error boundaries — is exactly what frameworks abstract away. Knowing the raw layer means you can reason about and debug any framework built on top of it.</p></div>
+</div>`});
+
+// ─── ANSWER KEY MC ───────────────────────────────────────────────────────────
+SLIDES.push({html:`
+<div class="eyebrow">Answer Key — Part 1</div>
+<div class="slide-title">Multiple Choice Answers 1–15</div>
+<hr class="title-rule"/>
+<div class="content">
+  <div class="g2" style="flex:1">
+    <div class="ans-block">
+      <div class="ans-row"><span class="ans-n">1.</span><div class="ans-b"><strong>c) const</strong> — block-scoped and cannot be reassigned. <code>let</code> can be reassigned; <code>var</code> is function-scoped.</div></div>
+      <div class="ans-row"><span class="ans-n">2.</span><div class="ans-b"><strong>c) "object"</strong> — a historical JS bug. <code>typeof null === "object"</code> despite null not being an object.</div></div>
+      <div class="ans-row"><span class="ans-n">3.</span><div class="ans-b"><strong>b)</strong> A function that remembers variables from its outer scope after that scope has closed — the definition of a closure.</div></div>
+      <div class="ans-row"><span class="ans-n">4.</span><div class="ans-b"><strong>c) NaN</strong> — <code>"0"</code>, <code>[]</code>, and <code>{}</code> are all truthy. Only <code>false,0,"",null,undefined,NaN</code> are falsy.</div></div>
+      <div class="ans-row"><span class="ans-n">5.</span><div class="ans-b"><strong>c) async/await</strong> — reads like sync code, built on Promises, cleanest error handling with try/catch.</div></div>
+      <div class="ans-row"><span class="ans-n">6.</span><div class="ans-b"><strong>c) index.js</strong> — <code>path.basename()</code> returns the last segment of a path, including the extension.</div></div>
+      <div class="ans-row"><span class="ans-n">7.</span><div class="ans-b"><strong>b)</strong> Between each phase, before the next — microtasks always drain completely before the loop advances.</div></div>
+      <div class="ans-row"><span class="ans-n">8.</span><div class="ans-b"><strong>c) process.nextTick(fn)</strong> — runs before all microtasks and timers. Order: nextTick → Promise → setTimeout → setImmediate.</div></div>
+    </div>
+    <div class="ans-block">
+      <div class="ans-row"><span class="ans-n">9.</span><div class="ans-b"><strong>c) Path to the node executable</strong> — argv[0]=node, argv[1]=script, argv[2+]=your arguments.</div></div>
+      <div class="ans-row"><span class="ans-n">10.</span><div class="ans-b"><strong>b)</strong> An expected failure — missing file, bad input. Programmer errors are bugs to be fixed, not caught.</div></div>
+      <div class="ans-row"><span class="ans-n">11.</span><div class="ans-b"><strong>b) 403</strong> — 401 means not authenticated at all. 403 means authenticated but not authorized. Key distinction.</div></div>
+      <div class="ans-row"><span class="ans-n">12.</span><div class="ans-b"><strong>c) 422</strong> — 400 is malformed request. 422 is syntactically valid but semantically invalid (fails business rules).</div></div>
+      <div class="ans-row"><span class="ans-n">13.</span><div class="ans-b"><strong>b)</strong> Streams process data in chunks — memory stays flat. <code>readFile</code> loads the entire file into RAM first.</div></div>
+      <div class="ans-row"><span class="ans-n">14.</span><div class="ans-b"><strong>d) Transform</strong> — reads, modifies, and writes. Readable reads only; Writable writes only; Duplex does both without transformation.</div></div>
+      <div class="ans-row"><span class="ans-n">15.</span><div class="ans-b"><strong>b)</strong> Committed to version control = permanently exposed. Use <code>process.env</code> + <code>.env</code> files (in .gitignore).</div></div>
+    </div>
+  </div>
+</div>`});
+
+// ─── ANSWER KEY GTO ──────────────────────────────────────────────────────────
+SLIDES.push({html:`
+<div class="eyebrow">Answer Key — Part 2</div>
+<div class="slide-title">Guess the Output Answers 1–15</div>
+<hr class="title-rule"/>
+<div class="content">
+  <div class="g2" style="flex:1">
+    <div class="ans-block">
+      <div class="ans-row"><span class="ans-n2">1.</span><div class="ans-b"><strong><code>20</code></strong> — arrow fn captures <code>x</code> by reference. When called, x is already 10. 10×2=20.</div></div>
+      <div class="ans-row"><span class="ans-n2">2.</span><div class="ans-b"><strong><code>7</code></strong> then <strong><code>"number"</code></strong> — 3+4=7; typeof 7 === "number".</div></div>
+      <div class="ans-row"><span class="ans-n2">3.</span><div class="ans-b"><strong><code>8</code></strong> — closure: outer(5) captures x=5. add5(3) returns 5+3=8.</div></div>
+      <div class="ans-row"><span class="ans-n2">4.</span><div class="ans-b"><strong><code>false</code>, <code>false</code>, <code>true</code></strong> — 0 and "" are falsy; [] (even empty) is truthy.</div></div>
+      <div class="ans-row"><span class="ans-n2">5.</span><div class="ans-b"><strong><code>42</code></strong> — Promise.resolve(42) immediately resolves; await unwraps to 42.</div></div>
+      <div class="ans-row"><span class="ans-n2">6.</span><div class="ans-b"><strong><code>C</code>, <code>A</code>, <code>B</code></strong> — sync first, then nextTick (microtask), then Promise.then.</div></div>
+      <div class="ans-row"><span class="ans-n2">7.</span><div class="ans-b"><strong><code>[20, 40]</code></strong> — filter keeps 2,4 (even); map × 10 → [20,40].</div></div>
+      <div class="ans-row"><span class="ans-n2">8.</span><div class="ans-b"><strong><code>1</code></strong> then <strong><code>{ b: 2 }</code></strong> — destructuring extracts a; rest operator gathers remaining properties.</div></div>
+    </div>
+    <div class="ans-block">
+      <div class="ans-row"><span class="ans-n2">9.</span><div class="ans-b"><strong><code>Received: hello</code></strong> then <strong><code>Received: world</code></strong> — listener fires once per emit, in order.</div></div>
+      <div class="ans-row"><span class="ans-n2">10.</span><div class="ans-b"><strong><code>Caught: Network error</code></strong> — rejected promise hits catch; err.message is "Network error".</div></div>
+      <div class="ans-row"><span class="ans-n2">11.</span><div class="ans-b"><strong><code>3</code></strong> — closure over count. Three inc() calls: 0→1→2→3. get() returns 3.</div></div>
+      <div class="ans-row"><span class="ans-n2">12.</span><div class="ans-b"><strong><code>15</code></strong> — reduce: 0+1+2+3+4+5=15.</div></div>
+      <div class="ans-row"><span class="ans-n2">13.</span><div class="ans-b"><strong><code>first second</code></strong> — Promise.all resolves both; destructures to a="first", b="second".</div></div>
+      <div class="ans-row"><span class="ans-n2">14.</span><div class="ans-b"><strong><code>AppError: Oops</code></strong> then <strong><code>404</code></strong> — custom error name + message + code property all set in constructor.</div></div>
+      <div class="ans-row"><span class="ans-n2">15.</span><div class="ans-b"><strong><code>{"created":true}</code></strong> with status 201 — POST /data matches; server responds 201 Created with JSON body.</div></div>
+    </div>
+  </div>
+</div>`});
+
+// ─── ENGINE ───────────────────────────────────────────────────────────────────
+let cur=0;
+const deck=document.getElementById('deck');
+const bar=document.getElementById('progress-bar');
+const ctr=document.getElementById('slide-counter');
+
+function buildSlides(){
+  SLIDES.forEach((s,i)=>{
+    const el=document.createElement('div');
+    el.className='slide'+(s.cls?' '+s.cls:'');
+    el.innerHTML=s.html||'';
+    if(i===0)el.classList.add('active');
+    deck.appendChild(el);
+    if(s.init)s.init(el);
+  });
+}
+
+function go(n){
+  if(n<0||n>=SLIDES.length||n===cur)return;
+  const els=deck.querySelectorAll('.slide');
+  const dir=n>cur?1:-1;
+  els[cur].classList.remove('active');
+  els[cur].classList.add(dir>0?'exit-left':'exit-right');
+  setTimeout(()=>els[cur].classList.remove('exit-left','exit-right'),400);
+  cur=n;els[cur].classList.add('active');els[cur].scrollTop=0;
+  update();
+}
+
+function update(){
+  const pct=SLIDES.length>1?((cur/(SLIDES.length-1))*100):100;
+  bar.style.width=pct+'%';
+  ctr.textContent=(cur+1)+' / '+SLIDES.length;
+}
+
+document.addEventListener('keydown',e=>{
+  const modal=document.getElementById('shortcut-modal');
+  if(modal.classList.contains('open')){if(e.key==='Escape')modal.classList.remove('open');return;}
+  const tag=document.activeElement.tagName;
+  if(tag==='INPUT'||tag==='TEXTAREA')return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')go(cur+1);
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(cur-1);
+  else if(e.key==='Home')go(0);
+  else if(e.key==='End')go(SLIDES.length-1);
+  else if(e.key==='?')modal.classList.add('open');
+  else if(e.key==='Escape')modal.classList.remove('open');
+});
+
+document.addEventListener('mousedown',e=>{
+  if(e.target.closest('button,input,a,.mc-c,.gto-inp'))return;
+  if(e.button===2){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+  else if(e.button===3){e.preventDefault();e.stopImmediatePropagation();go(cur-1);}
+  else if(e.button===4){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+},true);
+document.addEventListener('contextmenu',e=>{
+  if(e.target.closest('button,input,a'))return;
+  e.preventDefault();e.stopImmediatePropagation();
+},true);
+document.addEventListener('auxclick',e=>{
+  if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation();}
+},true);
+
+let tx=0;
+document.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+document.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50){dx<0?go(cur+1):go(cur-1);}},{passive:true});
+
+buildSlides();
+update();
+</script>
+</body>
+</html>

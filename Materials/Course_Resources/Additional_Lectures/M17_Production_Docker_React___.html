@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>M17 — Production Docker & Nginx for React</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07111F;--surface:#0C1A2E;--surface2:#132236;--border:#1A3050;--border2:#224070;
+  --accent:#61DAFB;--accent2:#4ADE80;--accent3:#FB923C;--accent4:#C084FC;--accent5:#F472B6;
+  --text:#FFFFFF;--text2:#B8D4F0;--text3:#E8F1FA;--card:#0B1828;--card2:#0F1F35;
+  --mono:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;
+  --sans:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --r:10px;--r2:14px;--tr:350ms cubic-bezier(.4,0,.2,1);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16px;-webkit-font-smoothing:antialiased}
+#bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent3),var(--accent2));transition:width .3s;z-index:100;border-radius:0 2px 2px 0}
+#ctr{position:fixed;top:12px;right:18px;font-size:16px;color:var(--text2);z-index:100;font-variant-numeric:tabular-nums;letter-spacing:.5px;font-family:var(--mono)}
+#deck{width:100%;height:100vh;position:relative;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;padding:48px 62px 36px;opacity:0;pointer-events:none;transform:translateX(48px);transition:opacity var(--tr),transform var(--tr);overflow-y:auto}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.out-l{opacity:0;transform:translateX(-48px)}
+.slide.out-r{opacity:0;transform:translateX(48px)}
+@media(prefers-reduced-motion:reduce){.slide{transition:opacity .15s;transform:none!important}}
+.eyebrow{font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--accent3);margin-bottom:10px;display:flex;align-items:center;gap:10px}
+.eyebrow::before{content:'';width:22px;height:2px;background:var(--accent3);border-radius:1px;display:inline-block}
+.slide-title{font-size:clamp(26px,3.2vw,42px);font-weight:800;line-height:1.15;color:var(--text);margin-bottom:6px;letter-spacing:-.4px}
+.slide-sub{font-size:17px;color:var(--text2);margin-bottom:16px}
+.rule{height:1px;background:linear-gradient(90deg,var(--border2),transparent);border:none;margin-bottom:16px}
+.content{flex:1;display:flex;flex-direction:column;gap:14px;min-height:0}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.g2>*,.g3>*{min-width:0}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;flex:1;min-height:0}
+.split>*{min-width:0;display:flex;flex-direction:column;gap:10px}
+.col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.flex1{flex:1}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:16px 18px}
+.card h3{font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1.1px;color:var(--accent);margin-bottom:10px}
+.card p,.card li{font-size:16px;color:var(--text3);line-height:1.65}
+.card ul{padding-left:18px}.card li{margin-bottom:5px}
+.cw{position:relative;background:#040C18;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;flex:1;display:flex;flex-direction:column;min-height:0}
+.cl{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#080F1C;border-bottom:1px solid var(--border);font-size:16px;color:var(--text2);font-family:var(--mono);flex-shrink:0}
+.cl span{color:var(--accent3)}
+.cw pre{padding:14px 16px;overflow:auto;font-family:var(--mono);font-size:16px;line-height:1.7;white-space:pre;flex:1;min-height:0}
+.cpbtn{padding:5px 14px;font-size:16px;font-family:var(--sans);background:var(--surface2);border:1px solid var(--border2);color:var(--text2);border-radius:6px;cursor:pointer;transition:all .2s;white-space:nowrap;box-shadow:2px 2px 0 rgba(0,0,0,.25)}
+.cpbtn:hover{background:var(--accent);color:#07111F;border-color:var(--accent)}
+.cpbtn.ok{background:var(--accent2);color:#07111F;border-color:var(--accent2);box-shadow:inset 2px 2px 4px rgba(0,0,0,.3)}
+.k{color:#F472B6}.s{color:#86EFAC}.f{color:#C4B5FD}.n{color:#7DD3FC}
+.cm{color:#2E4A65;font-style:italic}.t{color:#FCA5A5}.b{color:#FCD34D}
+.bd{display:flex;flex-direction:column;gap:8px}
+.bdi{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;border-left:3px solid var(--accent)}
+.bdi.g{border-left-color:var(--accent2)}.bdi.o{border-left-color:var(--accent3)}
+.bdi.p{border-left-color:var(--accent4)}.bdi.r{border-left-color:var(--accent5)}
+.bdl{font-family:var(--mono);font-size:16px;color:var(--accent);background:#040C18;padding:4px 10px;border-radius:4px;white-space:nowrap;min-width:fit-content;align-self:flex-start;margin-top:1px;flex-shrink:0}
+.bdt{font-size:16px;color:var(--text3);line-height:1.55}.bdt strong{color:var(--text);font-weight:600}
+.step{display:flex;gap:14px;align-items:flex-start;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--r)}
+.snum{width:30px;height:30px;border-radius:50%;background:var(--accent3);color:#07111F;font-weight:900;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.sbody h4{font-size:17px;font-weight:700;color:var(--text);margin-bottom:4px}
+.sbody p{font-size:16px;color:var(--text2);line-height:1.5}
+table{width:100%;border-collapse:collapse;font-size:16px}
+th{background:var(--surface2);color:var(--accent3);padding:11px 14px;text-align:left;font-weight:700;font-size:16px;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+td{padding:11px 14px;border-bottom:1px solid var(--border);color:var(--text3);line-height:1.5;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.013)}
+.pill{display:inline-block;padding:6px 15px;border-radius:20px;font-size:16px;font-weight:600;border:1px solid var(--border);color:var(--text2);margin:3px}
+.pill.a{border-color:var(--accent);color:var(--accent);background:rgba(97,218,251,.08)}
+.pill.g{border-color:var(--accent2);color:var(--accent2);background:rgba(74,222,128,.08)}
+.pill.o{border-color:var(--accent3);color:var(--accent3);background:rgba(251,146,60,.08)}
+.hero-bg{background:radial-gradient(ellipse at 12% 60%,rgba(251,146,60,.1) 0%,transparent 52%),radial-gradient(ellipse at 85% 18%,rgba(74,222,128,.07) 0%,transparent 48%),var(--bg)}
+.hero-title{font-size:clamp(40px,5.2vw,68px);font-weight:900;line-height:1.05;letter-spacing:-1.4px}
+.h1c{color:var(--text)}.h2c{color:var(--accent3)}
+.hero-sub{font-size:18px;color:var(--text2);max-width:600px;line-height:1.65;margin:14px 0 22px}
+.dots{position:absolute;inset:0;background-image:radial-gradient(rgba(251,146,60,.045) 1px,transparent 1px);background-size:30px 30px;pointer-events:none}
+.ba{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;flex:1}
+.ba-box{border-radius:var(--r);padding:16px 18px;border:1px solid var(--border)}
+.ba-box.bad{background:rgba(244,114,182,.05);border-color:rgba(244,114,182,.22)}
+.ba-box.good{background:rgba(251,146,60,.05);border-color:rgba(251,146,60,.22)}
+.ba-box h4{font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+.ba-box.bad h4{color:var(--accent5)}.ba-box.good h4{color:var(--accent3)}
+.ba-box p,.ba-box li{font-size:16px;color:var(--text3);line-height:1.65}
+.ba-box ul{padding-left:18px}
+.rc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.rc{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:18px;text-align:center}
+.rc .ico{font-size:28px;margin-bottom:8px}
+.rc h4{font-size:16px;font-weight:700;color:var(--accent3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.rc p{font-size:16px;color:var(--text2);line-height:1.55}
+.mc-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;flex:1;min-height:0}
+.mc-item{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;min-height:0}
+.mc-q{font-size:16px;font-weight:600;color:var(--text);margin-bottom:10px;line-height:1.45}
+.qn{color:var(--accent3);margin-right:7px;font-weight:800}
+.mc-opts{display:grid;grid-template-columns:minmax(0,1fr);gap:5px;flex:1}
+.mc-opt{padding:8px 12px;border-radius:6px;border:1px solid var(--border);font-size:16px;color:var(--text3);cursor:pointer;transition:all .15s;background:var(--surface2);line-height:1.35}
+.mc-opt:hover{border-color:var(--accent3);color:var(--text)}
+.mc-opt.sel{border-color:var(--accent3);background:rgba(251,146,60,.12);color:var(--accent3)}
+.hard-card{background:var(--card);border:1px solid var(--border2);border-radius:var(--r2);padding:18px 20px;flex:1;display:flex;flex-direction:column;gap:12px;min-height:0}
+.hard-card h3{font-size:17px;font-weight:700;color:var(--accent3);margin-bottom:2px}
+.hard-card .hint{font-size:16px;color:var(--text2);background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.2);border-radius:6px;padding:8px 12px;line-height:1.5}
+.hard-card .hint strong{color:var(--accent3)}
+.hard-card textarea{width:100%;flex:1;min-height:90px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;font-family:var(--mono);outline:none;resize:vertical;line-height:1.55}
+.hard-card textarea:focus{border-color:var(--accent3)}
+.id-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;flex:1;min-height:0}
+.id-item{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.id-num{font-weight:800;color:var(--accent4);font-family:var(--mono);font-size:16px}
+.id-q{font-size:16px;color:var(--text3);line-height:1.45;flex:1}
+.id-ans{width:100%;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:16px;font-family:var(--mono);outline:none}
+.id-ans:focus{border-color:var(--accent4)}
+.gto-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;flex:1;min-height:0}
+.gto-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-height:0}
+.gto-qlabel{font-size:16px;font-weight:700;color:var(--text)}
+.gto-num{color:var(--accent4);font-weight:800;margin-right:6px}
+.gto-pre{background:#040C18;border:1px solid var(--border);border-radius:6px;padding:9px 11px;font-family:var(--mono);font-size:16px;color:var(--text3);white-space:pre;overflow-x:auto;flex:1;margin:0;min-height:60px}
+.gto-ta{width:100%;min-height:48px;padding:8px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:16px;font-family:var(--mono);outline:none;resize:none;line-height:1.45;transition:border .2s}
+.gto-ta:focus{border-color:var(--accent4)}
+.gto-alabel{font-size:16px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.ans-block{border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;flex:1}
+.ans-row{display:flex;gap:12px;padding:11px 14px;border-bottom:1px solid var(--border);font-size:16px;align-items:flex-start}
+.ans-row:last-child{border:none}
+.ans-row:nth-child(even){background:rgba(255,255,255,.012)}
+.anum{font-weight:800;min-width:26px;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:16px;flex-shrink:0;margin-top:1px}
+.anum.o{color:var(--accent3)}.anum.p{color:var(--accent4)}
+.abody{color:var(--text3);line-height:1.5;flex:1;min-width:0}
+.abody strong{color:var(--accent2)}
+#modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center}
+#modal.open{display:flex}
+.mbox{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:28px 32px;min-width:340px}
+.mbox h3{font-size:17px;font-weight:700;color:var(--accent3);margin-bottom:16px}
+.shr{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:16px;color:var(--text3)}
+.shr:last-of-type{border:none}
+.shr kbd{background:var(--surface2);border:1px solid var(--border2);border-radius:5px;padding:3px 9px;font-family:var(--mono);font-size:16px;color:var(--text)}
+.mcl{margin-top:18px;width:100%;padding:11px;background:var(--accent3);color:#07111F;border:none;border-radius:7px;cursor:pointer;font-size:16px;font-weight:700;font-family:var(--sans)}
+#hint{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);font-size:16px;color:var(--text2);letter-spacing:.4px;pointer-events:none;opacity:.55;font-family:var(--mono)}
+ic{background:var(--surface2);padding:2px 8px;border-radius:4px;font-family:var(--mono);font-size:16px;color:var(--accent3);border:1px solid var(--border)}
+small{font-size:16px}button,input,textarea,select{font-size:16px}
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<div id="ctr"></div>
+<div id="deck"></div>
+<div id="hint">right-click or → to advance · ? for shortcuts</div>
+<div id="modal">
+  <div class="mbox">
+    <h3>⌨ Keyboard Shortcuts</h3>
+    <div class="shr"><span>Next</span><span><kbd>→</kbd> or <kbd>Right-click</kbd></span></div>
+    <div class="shr"><span>Prev</span><span><kbd>←</kbd></span></div>
+    <div class="shr"><span>First / Last</span><span><kbd>Home</kbd> / <kbd>End</kbd></span></div>
+    <div class="shr"><span>Shortcuts</span><span><kbd>?</kbd></span></div>
+    <div class="shr"><span>Close</span><span><kbd>Esc</kbd></span></div>
+    <button class="mcl" onclick="document.getElementById('modal').classList.remove('open')">Close</button>
+  </div>
+</div>
+<script>
+function hl(raw){
+  const KW=/^(const|let|var|function|return|async|await|try|catch|throw|new|class|extends|if|else|for|while|import|export|default|from|of|in|true|false|null|undefined|void|FROM|AS|WORKDIR|COPY|RUN|EXPOSE|CMD|ARG|ENV)\b/;
+  const TY=/^(React|ReactDOM|console|document|JSON|Array|Object|Math|Promise|Error)\b/;
+  const NUM=/^\b\d+(\.\d+)?\b/;
+  function e(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+  let i=0,o='';
+  while(i<raw.length){
+    if(raw[i]==='/'&&raw[i+1]==='/'){const end=raw.indexOf('\n',i);const ch=end<0?raw.slice(i):raw.slice(i,end);o+='<span class="cm">'+e(ch)+'</span>';i+=ch.length;continue;}
+    if(raw[i]==='#'){const end=raw.indexOf('\n',i);const ch=end<0?raw.slice(i):raw.slice(i,end);o+='<span class="cm">'+e(ch)+'</span>';i+=ch.length;continue;}
+    if(raw[i]==='`'){let j=i+1;while(j<raw.length&&raw[j]!=='`'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    if(raw[i]==="'"){let j=i+1;while(j<raw.length&&raw[j]!=="'"&&raw[j]!=='\n'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    if(raw[i]==='"'){let j=i+1;while(j<raw.length&&raw[j]!=='"'&&raw[j]!=='\n'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    const rest=raw.slice(i);let m;
+    if((m=rest.match(KW))){o+='<span class="k">'+m[0]+'</span>';i+=m[0].length;continue;}
+    if((m=rest.match(TY))){o+='<span class="t">'+m[0]+'</span>';i+=m[0].length;continue;}
+    if((m=rest.match(NUM))){o+='<span class="n">'+m[0]+'</span>';i+=m[0].length;continue;}
+    o+=e(raw[i]);i++;
+  }
+  return o;
+}
+function cw(code,lang,label){
+  const id='c'+Math.random().toString(36).slice(2);
+  const body=(lang==='dockerfile'||lang==='nginx'||lang==='jsx'||lang==='js')?hl(code):code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return '<div class="cw"><div class="cl"><span>'+(label||lang)+'</span><button class="cpbtn" onclick="doCopy(\''+id+'\',this)">Copy</button></div><pre id="'+id+'">'+body+'</pre></div>';
+}
+function doCopy(id,btn){
+  navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>{
+    btn.textContent='Copied!';btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('ok');},1800);
+  });
+}
+
+const S=[];
+
+// 0 HERO
+S.push({cls:'hero-bg',h:`
+<div class="dots"></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;position:relative">
+  <div class="eyebrow" style="margin-bottom:16px">Web Systems · Module 17</div>
+  <div class="hero-title"><div class="h1c">Production Docker &amp;</div><div class="h2c">Nginx for React</div></div>
+  <div class="hero-sub">Containerizing compiled React applications for production — multi-stage Docker builds, Nginx web server integration, and SPA fallback routing.</div>
+  <div>
+    <span class="pill o">Multi-Stage Dockerfile</span>
+    <span class="pill g">Nginx Alpine Server</span>
+    <span class="pill o">try_files $uri /index.html</span>
+    <span class="pill a">Image Size Optimization</span>
+  </div>
+</div>`});
+
+// 1 BRIDGE
+S.push({h:`
+<div class="eyebrow">Where We Left Off</div>
+<div class="slide-title">M16 → M17: From Dev Servers to Production Containers</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="ba">
+    <div class="ba-box bad">
+      <h4>❌ Running Dev Servers in Production</h4>
+      <ul>
+        <li>Running <ic>vite</ic> or <ic>npm run dev</ic> in production containers</li>
+        <li>Bloated Docker images (~900MB) containing Node runtime &amp; dev dependencies</li>
+        <li>Unoptimized JS bundles without production minification</li>
+        <li>High memory usage &amp; vulnerability to Node security exploits</li>
+      </ul>
+      <p style="margin-top:12px;font-size:16px;color:rgba(244,114,182,.75)">Bloated 900MB dev images in production.</p>
+    </div>
+    <div class="ba-box good">
+      <h4>✅ Multi-Stage Nginx Production Containers</h4>
+      <ul>
+        <li>Stage 1 compiles JSX to static HTML/CSS/JS via <ic>npm run build</ic></li>
+        <li>Stage 2 discards Node &amp; <ic>node_modules</ic>, copying only static files to Nginx</li>
+        <li>Lightweight final container image (~25MB Nginx Alpine)</li>
+        <li>High-throughput static file serving with Nginx <ic>try_files</ic> SPA fallback</li>
+      </ul>
+      <p style="margin-top:12px;font-size:16px;color:rgba(251,146,60,.75)">25MB production image with zero Node runtime vulnerability.</p>
+    </div>
+  </div>
+  <div class="card"><h3>The Throughline</h3>
+    <p>Browsers do not execute JSX or Node.js code; they only read static HTML, CSS, and JS files. Production Docker builds compile React assets into static files during the build stage and serve them with lightweight Nginx web servers.</p>
+  </div>
+</div>`});
+
+// 2 CORE CONCEPT
+S.push({h:`
+<div class="eyebrow">Core Concept &amp; System Analogy</div>
+<div class="slide-title">The Architectural Blueprint vs. Prefabricated House</div>
+<hr class="rule"/>
+<div class="content split">
+  <div class="col">
+    <div class="card flex1" style="border-left:3px solid var(--accent3)">
+      <h3 style="color:var(--accent3)">The Blueprint vs. Factory Analogy</h3>
+      <p>Imagine your React dev environment is an architectural workshop full of heavy cranes, saws, and timber (Node.js, Vite, Babel, npm dependencies).</p>
+      <ul style="margin-top:10px">
+        <li><strong>Dev Server (Workshop):</strong> Shipping the entire heavy factory with cranes to the customer just so they can sit in the house!</li>
+        <li><strong>Multi-Stage Docker (Prefabricated House):</strong> The factory builds the house (<ic>npm run build</ic>), puts the finished structure on a small flatbed truck (Nginx Alpine), and discards the factory cranes!</li>
+      </ul>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card flex1" style="border-left:3px solid var(--accent2)">
+      <h3 style="color:var(--accent2)">Why Nginx Replaces Node in Production</h3>
+      <p>Nginx is written in C and optimized specifically for serving static files over HTTP at maximum speed with minimal CPU &amp; RAM footprint.</p>
+      <p style="margin-top:12px">A production React app is just static files. There is no reason to keep a full Node.js runtime running just to serve them.</p>
+    </div>
+  </div>
+</div>`});
+
+// 3 WHAT / HOW / WHY
+S.push({h:`
+<div class="eyebrow">What / How / Why</div>
+<div class="slide-title">Multi-Stage Docker Build Architecture</div>
+<hr class="rule"/>
+<div class="content g3">
+  <div class="card">
+    <h3>What It Is</h3>
+    <p>A Dockerfile strategy using multiple <ic>FROM</ic> statements to isolate build-time tools from the final production runtime container.</p>
+  </div>
+  <div class="card">
+    <h3>How It Works</h3>
+    <p>1. <ic>FROM node:20-alpine AS build</ic> → runs <ic>npm run build</ic>.<br/>2. <ic>FROM nginx:alpine</ic>.<br/>3. <ic>COPY --from=build /app/dist /usr/share/nginx/html</ic>.</p>
+  </div>
+  <div class="card">
+    <h3>Why It Matters</h3>
+    <p>Shrinks image sizes by over 95% (900MB → 25MB), drastically reduces container attack surfaces, and accelerates CI/CD deployment pipelines.</p>
+  </div>
+</div>`});
+
+// 4 NGINX SPA ROUTING
+S.push({h:`
+<div class="eyebrow">Nginx Configuration</div>
+<div class="slide-title">Solving SPA Page Refresh 404s with try_files</div>
+<hr class="rule"/>
+<div class="content split">
+  <div class="col">
+    <div class="card flex1" style="border-left:3px solid var(--accent5)">
+      <h3 style="color:var(--accent5)">The Refresh 404 Problem</h3>
+      <p>When a user refreshes their browser on path <ic>http://app.com/dashboard</ic>, Nginx searches its file system for a folder named <ic>/dashboard/index.html</ic>. Since React is an SPA with only one physical <ic>index.html</ic> file, Nginx returns a <strong>404 Not Found</strong> error.</p>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card flex1" style="border-left:3px solid var(--accent2)">
+      <h3 style="color:var(--accent2)">The try_files Solution</h3>
+      <p>The Nginx directive <ic>try_files $uri /index.html;</ic> tells Nginx: "Check if the requested file exists. If not, fallback and return <ic>/index.html</ic> so React Router can handle the client path."</p>
+    </div>
+  </div>
+</div>`});
+
+// 5 MULTI-STAGE ANATOMY
+S.push({h:`
+<div class="eyebrow">Container Architecture</div>
+<div class="slide-title">Anatomy of a Multi-Stage Dockerfile</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="card">
+    <h3>Two Independent Execution Stages</h3>
+    <div class="bd" style="margin-top:10px">
+      <div class="bdi o">
+        <span class="bdl">STAGE 1: BUILD (node:20-alpine)</span>
+        <div class="bdt">Installs Node.js, runs <ic>npm ci</ic>, and executes <ic>npm run build</ic> to compile JSX into minified HTML/CSS/JS assets inside the <ic>/app/dist</ic> folder.</div>
+      </div>
+      <div class="bdi g">
+        <span class="bdl">STAGE 2: RUNTIME (nginx:alpine)</span>
+        <div class="bdt">Starts with a fresh, tiny Nginx Alpine base image. Copies ONLY compiled assets from <ic>--from=build /app/dist</ic> into Nginx's web root (<ic>/usr/share/nginx/html</ic>). Discards Node completely.</div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 6 DOCKERFILE CODE
+S.push({h:`
+<div class="eyebrow">Code Implementation</div>
+<div class="slide-title">The Complete Production Multi-Stage Dockerfile</div>
+<hr class="rule"/>
+<div class="content">
+  ${cw(`# Stage 1: Compile React App
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# Stage 2: Serve compiled static assets with Nginx
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]`, 'dockerfile', 'Dockerfile')}
+</div>`});
+
+// 7 NGINX CONF
+S.push({h:`
+<div class="eyebrow">Code Implementation</div>
+<div class="slide-title">Configuring nginx.conf for SPA Fallback</div>
+<hr class="rule"/>
+<div class="content">
+  ${cw(`# nginx.conf (Custom Nginx Server Configuration)
+server {
+    listen 80;
+    server_name localhost;
+
+    location / {
+        root /usr/share/nginx/html;
+        index index.html index.htm;
+        # Crucial directive: Fallback unhandled URL paths to index.html for React Router
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Optional: Cache static assets aggressively
+    location ~* \\.(?:css|js|png|jpg|jpeg|gif|ico|svg)$ {
+        root /usr/share/nginx/html;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}`, 'nginx', 'nginx.conf')}
+</div>`});
+
+// 8 DOCKERIGNORE
+S.push({h:`
+<div class="eyebrow">Optimization</div>
+<div class="slide-title">Excluding Unnecessary Build Context with .dockerignore</div>
+<hr class="rule"/>
+<div class="content split">
+  <div class="col">
+    <div class="card flex1">
+      <h3>The .dockerignore File</h3>
+      <p>Prevent local development junk from uploading into the Docker daemon context during build:</p>
+      ${cw(`node_modules
+.git
+.env
+dist
+npm-debug.log`, 'dockerfile', '.dockerignore')}
+    </div>
+  </div>
+  <div class="col">
+    <div class="card flex1" style="border-left:3px solid var(--accent2)">
+      <h3 style="color:var(--accent2)">Build Speed &amp; Security Impact</h3>
+      <p>Excluding local <ic>node_modules</ic> ensures a clean, reproducible <ic>npm ci</ic> build inside Linux containers while keeping Docker build contexts tiny and free of host-specific artifacts.</p>
+    </div>
+  </div>
+</div>`});
+
+// 9 COMMON PITFALLS
+S.push({h:`
+<div class="eyebrow">Common Pitfalls</div>
+<div class="slide-title">Watch Out: Production Docker Mistakes</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="ba">
+    <div class="ba-box bad">
+      <h4>❌ Bad: Single-Stage Node Container</h4>
+      ${cw(`FROM node:20
+WORKDIR /app
+COPY . .
+CMD ["npm", "run", "dev"]`, 'dockerfile', 'Bloated Single Stage')}
+      <p style="margin-top:8px;font-size:16px;color:rgba(244,114,182,.8)">Creates a ~950MB image running a dev server. Insecure, slow, and memory-hungry.</p>
+    </div>
+    <div class="ba-box good">
+      <h4>✅ Good: Multi-Stage Nginx Container</h4>
+      ${cw(`FROM node:20-alpine AS build
+# ... build steps ...
+FROM nginx:alpine
+# ... copy dist only ...`, 'dockerfile', 'Multi-Stage Production')}
+      <p style="margin-top:8px;font-size:16px;color:rgba(251,146,60,.8)">Creates a ~25MB container serving static files at maximum throughput.</p>
+    </div>
+  </div>
+</div>`});
+
+// 10 BUILD ARGS
+S.push({h:`
+<div class="eyebrow">Production Patterns</div>
+<div class="slide-title">Injecting Build-Time API URLs</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="card" style="margin-bottom:12px">
+    <h3>Passing Docker --build-arg to Vite</h3>
+    <p>Vite environment variables are baked into static JS bundles at build time. Pass them via Docker build arguments:</p>
+  </div>
+  ${cw(`ARG VITE_API_URL
+ENV VITE_API_URL=\${VITE_API_URL}
+RUN npm run build
+
+# Terminal build command:
+# docker build --build-arg VITE_API_URL=https://api.myapp.com -t my-react-app .`, 'dockerfile', 'Build Arg Injection')}
+</div>`});
+
+// 11 HANDS-ON
+S.push({h:`
+<div class="eyebrow">Hands-On Activity</div>
+<div class="slide-title">Build a Multi-Stage Nginx Container</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="step">
+    <div class="snum">1</div>
+    <div class="sbody">
+      <h4>Create nginx.conf Shell</h4>
+      <p>Build <ic>nginx.conf</ic> with <ic>try_files $uri /index.html;</ic> to support React Router SPA navigation.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="snum">2</div>
+    <div class="sbody">
+      <h4>Write Multi-Stage Dockerfile</h4>
+      <p>Configure Stage 1 Node build and Stage 2 Nginx Alpine copy directives.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="snum">3</div>
+    <div class="sbody">
+      <h4>Build &amp; Run Container</h4>
+      <p>Run <ic>docker build -t react-prod .</ic> and launch on port 80 with <ic>docker run -p 80:80 react-prod</ic>.</p>
+    </div>
+  </div>
+</div>`});
+
+// 12 RECAP
+S.push({h:`
+<div class="eyebrow">Module Summary</div>
+<div class="slide-title">Recap Grid: Key Takeaways</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="rc-grid">
+    <div class="rc">
+      <div class="ico">📦</div>
+      <h4>Multi-Stage Build</h4>
+      <p>Compiles JSX in Node build stage, then copies static assets to a tiny Nginx runtime image (~25MB).</p>
+    </div>
+    <div class="rc">
+      <div class="ico">🌐</div>
+      <h4>Nginx Web Server</h4>
+      <p>Replaces Node.js in production for high-throughput, low-memory static file serving.</p>
+    </div>
+    <div class="rc">
+      <div class="ico">🔄</div>
+      <h4>try_files Directive</h4>
+      <p><ic>try_files $uri /index.html;</ic> redirects unhandled client paths to index.html, solving 404 refresh bugs.</p>
+    </div>
+  </div>
+</div>`});
+
+// 13 QUIZ INTRO
+S.push({cls:'hero-bg',h:`
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:22px;max-width:820px">
+  <div class="eyebrow">Module 17 Assessment</div>
+  <div style="font-size:clamp(30px,3.8vw,48px);font-weight:900">
+    <span style="color:var(--text)">Module 17 Quiz</span><br/>
+    <span style="color:var(--accent3)">15 Items Assessment</span>
+  </div>
+  <div>
+    <span class="pill o">5 Multiple Choice</span>
+    <span class="pill g">5 Identification</span>
+    <span class="pill o">5 Guess the Output</span>
+  </div>
+</div>`});
+
+// 14 MCQs (2x2 + harder 5th)
+S.push({init(el){
+  const qs=[
+    {q:"Why use a multi-stage Dockerfile for React client builds?",opts:["To speed up CSS rendering","To compile JSX with Node then serve static files with Nginx in a tiny final image","To run MongoDB in the same container","To enable Vite hot module reloading"]},
+    {q:"What Nginx directive prevents 404 errors on React Router page refreshes?",opts:["proxy_pass","try_files $uri /index.html","fastcgi_param","error_page 500"]},
+    {q:"Which web server image is commonly used in Stage 2 of React Docker builds?",opts:["node:20","nginx:alpine","python:3.11","mongo:latest"]},
+    {q:"What command produces static production assets in Vite React apps?",opts:["npm run dev","npm run build","npm start","npm test"]}
+  ];
+  const pg=el.querySelector('#mc-pg');
+  qs.forEach((q,i)=>{
+    const d=document.createElement('div');d.className='mc-item';
+    d.innerHTML='<div class="mc-q"><span class="qn">'+(i+1)+'.</span>'+q.q+'</div><div class="mc-opts">'+q.opts.map(o=>'<div class="mc-opt" onclick="this.closest(\'.mc-opts\').querySelectorAll(\'.mc-opt\').forEach(x=>x.classList.remove(\'sel\'));this.classList.add(\'sel\')">'+o+'</div>').join('')+'</div>';
+    pg.appendChild(d);
+  });
+},h:`
+<div class="eyebrow">Activities — Multiple Choice</div>
+<div class="slide-title">Questions 1–4 <span style="font-size:16px;color:var(--text2);font-weight:400">2×2 grid · choose the best answer</span></div>
+<hr class="rule"/>
+<div class="mc-grid" id="mc-pg"></div>`});
+
+// 14b HARDER MCQ 5
+S.push({h:`
+<div class="eyebrow">Activities — Multiple Choice · Challenge</div>
+<div class="slide-title">Question 5 — Harder Scenario</div>
+<hr class="rule"/>
+<div class="hard-card">
+  <h3>5. Production image debugging</h3>
+  <p style="font-size:16px;color:var(--text3);line-height:1.55">A teammate deploys a React app using a single-stage Dockerfile that ends with <ic>CMD ["npm","run","dev"]</ic>. The resulting image is ~920 MB, the container uses high memory, and page refreshes on client routes return 404. Write a short diagnosis of the three main problems and the correct multi-stage + Nginx approach that fixes them.</p>
+  <div class="hint"><strong>Hints:</strong> Think about (1) what should be discarded after the build stage, (2) which web server should replace the Node process, and (3) the one Nginx directive that solves SPA refresh 404s.</div>
+  <textarea placeholder="Write your diagnosis and the corrected approach..."></textarea>
+</div>`});
+
+// 15 IDENTIFICATION (2x2)
+S.push({h:`
+<div class="eyebrow">Activities — Identification</div>
+<div class="slide-title">Questions 6–9 <span style="font-size:16px;color:var(--text2);font-weight:400">2×2 grid · name the concept</span></div>
+<hr class="rule"/>
+<div class="id-grid">
+  <div class="id-item">
+    <div class="id-num">6.</div>
+    <div class="id-q">The Dockerfile strategy that uses multiple FROM statements so build tools are discarded from the final image.</div>
+    <input class="id-ans" placeholder="Your answer..."/>
+  </div>
+  <div class="id-item">
+    <div class="id-num">7.</div>
+    <div class="id-q">The lightweight web server commonly used in Stage 2 of production React Docker images.</div>
+    <input class="id-ans" placeholder="Your answer..."/>
+  </div>
+  <div class="id-item">
+    <div class="id-num">8.</div>
+    <div class="id-q">The Nginx directive that falls back to index.html when a requested path does not exist on disk.</div>
+    <input class="id-ans" placeholder="Your answer..."/>
+  </div>
+  <div class="id-item">
+    <div class="id-num">9.</div>
+    <div class="id-q">The minimal Linux distribution used by both node:20-alpine and nginx:alpine base images.</div>
+    <input class="id-ans" placeholder="Your answer..."/>
+  </div>
+</div>`});
+
+// 15b HARDER ID 10
+S.push({h:`
+<div class="eyebrow">Activities — Identification · Challenge</div>
+<div class="slide-title">Question 10 — Harder Scenario</div>
+<hr class="rule"/>
+<div class="hard-card">
+  <h3>10. Design the production layout</h3>
+  <p style="font-size:16px;color:var(--text3);line-height:1.55">You are writing a multi-stage Dockerfile for a Vite React app. List, in order, the five most important instructions (or blocks) that should appear, and briefly explain why each belongs in that stage. Include the final runtime base image and the critical COPY line.</p>
+  <div class="hint"><strong>Hints:</strong> Stage 1 starts with a Node image and ends with a build command. Stage 2 starts with a tiny web-server image. One COPY line uses <ic>--from=build</ic>. Don’t forget the file that configures SPA fallback routing.</div>
+  <textarea placeholder="1. ...&#10;2. ...&#10;3. ...&#10;4. ...&#10;5. ..."></textarea>
+</div>`});
+
+// 16 GTO (2x2)
+S.push({init(el){
+  const qs=[
+    {code:`// Stage 1: FROM node:20 AS build
+// Stage 2: FROM nginx:alpine
+// COPY --from=build /app/dist /usr/share/nginx/html
+// Is Node runtime binary present in Stage 2 image? (Yes/No)`},
+    {code:`// User refreshes on /tasks/15 in Nginx without try_files $uri /index.html.
+// Does Nginx return 200 OK or 404 Not Found?`},
+    {code:`FROM nginx:alpine
+EXPOSE 80
+// What default HTTP port does Nginx listen on inside the container?`},
+    {code:`// Single-stage Node image: ~900MB.
+// Multi-stage Nginx Alpine image: ~25MB.
+// Does multi-stage reduce container image size? (Yes/No)`}
+  ];
+  const pg=el.querySelector('#gto-pg');
+  qs.forEach((q,i)=>{
+    const w=document.createElement('div');w.className='gto-wrap';
+    const lbl=document.createElement('div');lbl.className='gto-qlabel';
+    const nspan=document.createElement('span');nspan.className='gto-num';nspan.textContent=(i+11)+'.';
+    lbl.appendChild(nspan);
+    lbl.appendChild(document.createTextNode(' What is the result?'));
+    const pre=document.createElement('pre');pre.className='gto-pre';pre.textContent=q.code;
+    const al=document.createElement('div');al.className='gto-alabel';al.textContent='Your answer';
+    const ta=document.createElement('textarea');ta.className='gto-ta';ta.placeholder='Write answer...';
+    w.appendChild(lbl);w.appendChild(pre);w.appendChild(al);w.appendChild(ta);
+    pg.appendChild(w);
+  });
+},h:`
+<div class="eyebrow">Activities — Guess the Output</div>
+<div class="slide-title">Questions 11–14 <span style="font-size:16px;color:var(--text2);font-weight:400">2×2 grid · trace execution</span></div>
+<hr class="rule"/>
+<div class="gto-grid" id="gto-pg"></div>`});
+
+// 16b HARDER GTO 15
+S.push({h:`
+<div class="eyebrow">Activities — Guess the Output · Challenge</div>
+<div class="slide-title">Question 15 — Harder Scenario</div>
+<hr class="rule"/>
+<div class="hard-card">
+  <h3>15. Full production flow prediction</h3>
+  <p style="font-size:16px;color:var(--text3);line-height:1.55">A developer runs the following (simplified) multi-stage build, then launches the container and navigates to <ic>http://localhost/dashboard</ic> and presses F5. Predict, step-by-step: (a) approximate final image size category, (b) whether the Node binary exists in the running container, (c) what HTTP status the browser receives on refresh, and (d) which file is actually returned by Nginx.</p>
+  <pre style="background:#040C18;border:1px solid var(--border);border-radius:6px;padding:12px 14px;font-family:var(--mono);font-size:16px;color:var(--text3);overflow-x:auto;margin:0">FROM node:20-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci &amp;&amp; npm run build
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+# nginx.conf contains: try_files $uri /index.html;</pre>
+  <div class="hint"><strong>Hints:</strong> Alpine Nginx images are usually under 30 MB. Stage 2 has no Node. try_files makes every unknown path serve the SPA entry point.</div>
+  <textarea placeholder="(a) size category:&#10;(b) Node binary present?&#10;(c) HTTP status on refresh:&#10;(d) file returned by Nginx:"></textarea>
+</div>`});
+
+// 17 ANSWER KEY
+S.push({h:`
+<div class="eyebrow">Answer Key</div>
+<div class="slide-title">Module 17 — Solutions &amp; Explanations</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2" style="flex:1">
+    <div class="col">
+      <div style="font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--accent3);margin-bottom:8px">Multiple Choice &amp; Identification</div>
+      <div class="ans-block">
+        <div class="ans-row"><span class="anum o">1.</span><div class="abody"><strong>B)</strong> Compile JSX with Node then serve static files with Nginx in a tiny final image.</div></div>
+        <div class="ans-row"><span class="anum o">2.</span><div class="abody"><strong>B)</strong> try_files $uri /index.html — redirects unknown routes to SPA index.html.</div></div>
+        <div class="ans-row"><span class="anum o">3.</span><div class="abody"><strong>B)</strong> nginx:alpine — standard lightweight web server image.</div></div>
+        <div class="ans-row"><span class="anum o">4.</span><div class="abody"><strong>B)</strong> npm run build — produces static minified production assets.</div></div>
+        <div class="ans-row"><span class="anum o">5.</span><div class="abody"><strong>Harder:</strong> Problems = bloated Node image + running dev server + missing SPA fallback. Fix = multi-stage (Node build → Nginx Alpine) + try_files $uri /index.html.</div></div>
+        <div class="ans-row"><span class="anum o">6.</span><div class="abody"><strong>Multi-Stage Build</strong> (or Multi-Stage Dockerfile)</div></div>
+        <div class="ans-row"><span class="anum o">7.</span><div class="abody"><strong>Nginx</strong> (or nginx:alpine)</div></div>
+        <div class="ans-row"><span class="anum o">8.</span><div class="abody"><strong>try_files</strong></div></div>
+        <div class="ans-row"><span class="anum o">9.</span><div class="abody"><strong>Alpine</strong> (or Alpine Linux)</div></div>
+        <div class="ans-row"><span class="anum o">10.</span><div class="abody"><strong>Harder:</strong> 1) FROM node…AS build 2) npm ci + build 3) FROM nginx:alpine 4) COPY --from=build …/dist 5) COPY nginx.conf (with try_files)</div></div>
+      </div>
+    </div>
+    <div class="col">
+      <div style="font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--accent4);margin-bottom:8px">Guess the Output</div>
+      <div class="ans-block">
+        <div class="ans-row"><span class="anum p">11.</span><div class="abody"><strong>No.</strong> Node binary is discarded when switching to FROM nginx:alpine in Stage 2.</div></div>
+        <div class="ans-row"><span class="anum p">12.</span><div class="abody"><strong>404 Not Found.</strong> Without try_files, Nginx looks for a physical /tasks/15 directory.</div></div>
+        <div class="ans-row"><span class="anum p">13.</span><div class="abody"><strong>Port 80.</strong> Default HTTP port for Nginx web servers.</div></div>
+        <div class="ans-row"><span class="anum p">14.</span><div class="abody"><strong>Yes.</strong> Reduces image size by ~97% (900MB → 25MB).</div></div>
+        <div class="ans-row"><span class="anum p">15.</span><div class="abody"><strong>Harder:</strong> (a) ~20–30 MB (b) No Node binary (c) 200 OK (d) /index.html served via try_files</div></div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 18 CLOSING
+S.push({cls:'hero-bg',h:`
+<div class="dots"></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:22px;position:relative;max-width:740px">
+  <div class="eyebrow">Module 17 Complete</div>
+  <div style="font-size:clamp(30px,3.8vw,48px);font-weight:900;line-height:1.15;letter-spacing:-.4px">
+    <span style="color:var(--text)">Your React client is now</span><br/>
+    <span style="color:var(--accent3)">containerized for production.</span>
+  </div>
+  <div class="card" style="background:rgba(251,146,60,.05);border-color:rgba(251,146,60,.25)">
+    <h3>Coming Up — M18: Full-Stack Docker Compose Orchestration</h3>
+    <p>The final capstone session! Orchestrate the entire MERN system stack — React (Nginx), Express API (Node), and MongoDB database — running together seamlessly in isolated Docker networks using docker-compose.yml.</p>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <span class="pill o">Multi-Stage Dockerfile ✓</span>
+    <span class="pill o">Nginx Alpine Server ✓</span>
+    <span class="pill o">try_files $uri /index.html ✓</span>
+    <span class="pill o">Image Optimization ✓</span>
+    <span class="pill a">Full-Stack Docker Compose → next</span>
+  </div>
+</div>`});
+
+let cur=0;
+const deck=document.getElementById('deck');
+const bar=document.getElementById('bar');
+const ctr=document.getElementById('ctr');
+
+function build(){
+  S.forEach((s,i)=>{
+    const el=document.createElement('div');
+    el.className='slide'+(s.cls?' '+s.cls:'');
+    el.innerHTML=s.h||'';
+    if(i===0)el.classList.add('active');
+    deck.appendChild(el);
+    if(s.init)s.init(el);
+  });
+}
+function go(n){
+  if(n<0||n>=S.length||n===cur)return;
+  const els=deck.querySelectorAll('.slide');
+  const fwd=n>cur;
+  els[cur].classList.remove('active');
+  els[cur].classList.add(fwd?'out-l':'out-r');
+  setTimeout(()=>els[cur].classList.remove('out-l','out-r'),420);
+  cur=n;els[cur].classList.add('active');els[cur].scrollTop=0;tick();
+}
+function tick(){
+  bar.style.width=(S.length>1?(cur/(S.length-1)*100):100)+'%';
+  ctr.textContent=(cur+1)+' / '+S.length;
+}
+document.addEventListener('keydown',e=>{
+  const m=document.getElementById('modal');
+  if(m.classList.contains('open')){if(e.key==='Escape')m.classList.remove('open');return;}
+  const t=document.activeElement.tagName;
+  if(t==='INPUT'||t==='TEXTAREA')return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')go(cur+1);
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(cur-1);
+  else if(e.key==='Home')go(0);
+  else if(e.key==='End')go(S.length-1);
+  else if(e.key==='?')m.classList.add('open');
+  else if(e.key==='Escape')m.classList.remove('open');
+});
+document.addEventListener('mousedown',e=>{
+  if(e.target.closest('button,input,a,.mc-opt,.gto-ta,.id-ans'))return;
+  if(e.button===2){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+  else if(e.button===3){e.preventDefault();e.stopImmediatePropagation();go(cur-1);}
+  else if(e.button===4){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+},true);
+document.addEventListener('contextmenu',e=>{
+  if(e.target.closest('button,input,a'))return;
+  e.preventDefault();e.stopImmediatePropagation();
+},true);
+document.addEventListener('auxclick',e=>{
+  if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation();}
+},true);
+build();tick();
+</script>
+</body>
+</html>

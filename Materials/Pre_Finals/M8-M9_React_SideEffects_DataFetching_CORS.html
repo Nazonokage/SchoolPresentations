@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>M8–M9 — React Side Effects, Data Fetching & CORS</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07111F;--surface:#0C1A2E;--surface2:#132236;--border:#1A3050;--border2:#224070;
+  --accent:#61DAFB;--accent2:#4ADE80;--accent3:#FB923C;--accent4:#C084FC;--accent5:#F472B6;
+  --text:#FFFFFF;--text2:#B8D4F0;--text3:#E8F1FA;--card:#0B1828;--card2:#0F1F35;
+  --mono:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;
+  --sans:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --r:10px;--r2:14px;--tr:350ms cubic-bezier(.4,0,.2,1);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15.5px;-webkit-font-smoothing:antialiased}
+#bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent4));transition:width .3s;z-index:100;border-radius:0 2px 2px 0}
+#ctr{position:fixed;top:10px;right:16px;font-size:15px;color:var(--text2);z-index:100;font-variant-numeric:tabular-nums;letter-spacing:.5px;font-family:var(--mono)}
+#deck{width:100%;height:100vh;position:relative;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;padding:42px 54px 28px;opacity:0;pointer-events:none;transform:translateX(48px);transition:opacity var(--tr),transform var(--tr);overflow-y:auto}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.out-l{opacity:0;transform:translateX(-48px)}
+.slide.out-r{opacity:0;transform:translateX(48px)}
+@media(prefers-reduced-motion:reduce){.slide{transition:opacity .15s;transform:none!important}}
+.eyebrow{font-size:14px;font-weight:700;letter-spacing:2.2px;text-transform:uppercase;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.eyebrow::before{content:'';width:20px;height:2px;background:var(--accent);border-radius:1px;display:inline-block}
+.slide-title{font-size:clamp(24px,2.9vw,38px);font-weight:800;line-height:1.15;color:var(--text);margin-bottom:5px;letter-spacing:-.4px}
+.slide-sub{font-size:15px;color:var(--text2);margin-bottom:12px}
+.rule{height:1px;background:linear-gradient(90deg,var(--border2),transparent);border:none;margin-bottom:14px}
+.content{flex:1;display:flex;flex-direction:column;gap:12px;min-height:0}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.g2>*,.g3>*{min-width:0}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;flex:1;min-height:0}
+.split>*{min-width:0;display:flex;flex-direction:column;gap:10px}
+.col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.flex1{flex:1}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px}
+.card h3{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:1.1px;color:var(--accent);margin-bottom:8px}
+.card p,.card li{font-size:14.5px;color:var(--text3);line-height:1.6}
+.card ul{padding-left:16px}.card li{margin-bottom:3px}
+.cw{position:relative;background:#040C18;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;flex:1;display:flex;flex-direction:column;min-height:0}
+.cl{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:#080F1C;border-bottom:1px solid var(--border);font-size:13.5px;color:var(--text2);font-family:var(--mono);flex-shrink:0}
+.cl span{color:var(--accent3)}
+.cw pre{padding:11px 13px;overflow:auto;font-family:var(--mono);font-size:13.5px;line-height:1.65;white-space:pre;flex:1;max-height:320px}
+.cpbtn{padding:3px 11px;font-size:13px;font-family:var(--sans);background:var(--surface2);border:1px solid var(--border2);color:var(--text2);border-radius:4px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.cpbtn:hover{background:var(--accent);color:#07111F;border-color:var(--accent)}
+.cpbtn.ok{background:var(--accent2);color:#07111F;border-color:var(--accent2)}
+.k{color:#F472B6}.s{color:#86EFAC}.f{color:#C4B5FD}.n{color:#7DD3FC}
+.cm{color:#2E4A65;font-style:italic}.t{color:#FCA5A5}.b{color:#FCD34D}
+.bdi{display:flex;gap:9px;align-items:flex-start;padding:8px 11px;background:var(--surface);border:1px solid var(--border);border-radius:6px;border-left:3px solid var(--accent);margin-bottom:6px}
+.bdi.g{border-left-color:var(--accent2)}.bdi.o{border-left-color:var(--accent3)}
+.bdi.p{border-left-color:var(--accent4)}.bdi.r{border-left-color:var(--accent5)}
+.bdl{font-family:var(--mono);font-size:13px;color:var(--accent);background:#040C18;padding:2px 7px;border-radius:3px;white-space:nowrap;min-width:fit-content;align-self:flex-start;margin-top:1px;flex-shrink:0}
+.bdt{font-size:14px;color:var(--text3);line-height:1.5}.bdt strong{color:var(--text);font-weight:600}
+.flow{display:flex;align-items:center;flex-wrap:wrap;gap:0}
+.fb{background:var(--card2);border:1px solid var(--border2);border-radius:6px;padding:6px 12px;font-size:14px;color:var(--text3);font-weight:500}
+.fb.hi{border-color:var(--accent);color:var(--accent)}
+.fa{color:var(--accent);padding:0 6px;font-size:16px}
+.step{display:flex;gap:11px;align-items:flex-start;padding:10px 13px;background:var(--card);border:1px solid var(--border);border-radius:var(--r)}
+.snum{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#07111F;font-weight:900;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.sbody h4{font-size:14.5px;font-weight:700;color:var(--text);margin-bottom:2px}
+.sbody p{font-size:14px;color:var(--text2);line-height:1.45}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{background:var(--surface2);color:var(--accent);padding:8px 11px;text-align:left;font-weight:700;font-size:13px;letter-spacing:.8px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+td{padding:8px 11px;border-bottom:1px solid var(--border);color:var(--text3);line-height:1.45;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.013)}
+.pill{display:inline-block;padding:4px 12px;border-radius:20px;font-size:13.5px;font-weight:600;border:1px solid var(--border);color:var(--text2);margin:2px}
+.pill.a{border-color:var(--accent);color:var(--accent);background:rgba(97,218,251,.08)}
+.pill.g{border-color:var(--accent2);color:var(--accent2);background:rgba(74,222,128,.08)}
+.pill.o{border-color:var(--accent3);color:var(--accent3);background:rgba(251,146,60,.08)}
+.hero-bg{background:radial-gradient(ellipse at 12% 60%,rgba(97,218,251,.1) 0%,transparent 52%),radial-gradient(ellipse at 85% 18%,rgba(192,132,252,.07) 0%,transparent 48%),var(--bg)}
+.hero-title{font-size:clamp(40px,5.2vw,68px);font-weight:900;line-height:1.05;letter-spacing:-1.3px}
+.h1c{color:var(--text)}.h2c{color:var(--accent)}
+.hero-sub{font-size:16.5px;color:var(--text2);max-width:580px;line-height:1.6;margin:12px 0 18px}
+.dots{position:absolute;inset:0;background-image:radial-gradient(rgba(97,218,251,.04) 1px,transparent 1px);background-size:28px 28px;pointer-events:none}
+.ba{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;flex:1}
+.ba-box{border-radius:var(--r);padding:14px 15px;border:1px solid var(--border)}
+.ba-box.bad{background:rgba(244,114,182,.05);border-color:rgba(244,114,182,.2)}
+.ba-box.good{background:rgba(97,218,251,.05);border-color:rgba(97,218,251,.2)}
+.ba-box h4{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:9px}
+.ba-box.bad h4{color:var(--accent5)}.ba-box.good h4{color:var(--accent)}
+.ba-box p,.ba-box li{font-size:14.5px;color:var(--text3);line-height:1.55}
+.ba-box ul{padding-left:16px}
+.q-card{background:linear-gradient(135deg,var(--card),var(--surface));border-left:3px solid var(--accent);border-radius:0 var(--r) var(--r) 0;padding:13px 16px;margin-bottom:10px}
+.q-text{font-size:15.5px;color:var(--text3);line-height:1.65;font-style:italic}
+.q-src{font-size:13.5px;color:var(--accent);margin-top:6px;font-style:normal;font-weight:700;letter-spacing:.4px}
+.rc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.rc{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:14px;text-align:center}
+.rc .ico{font-size:24px;margin-bottom:6px}
+.rc h4{font-size:13.5px;font-weight:700;color:var(--accent);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}
+.rc p{font-size:13.5px;color:var(--text2);line-height:1.5}
+.mc-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:11px;flex:1;min-height:0}
+.mc-item{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;min-height:0}
+.mc-q{font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px;line-height:1.4}
+.qn{color:var(--accent);margin-right:5px;font-weight:800}
+.mc-opts{display:grid;grid-template-columns:minmax(0,1fr);gap:5px;flex:1}
+.mc-opt{padding:7px 11px;border-radius:5px;border:1px solid var(--border);font-size:13.5px;color:var(--text3);cursor:pointer;transition:all .15s;background:var(--surface2);line-height:1.3}
+.mc-opt:hover{border-color:var(--accent);color:var(--text)}
+.mc-opt.sel{border-color:var(--accent);background:rgba(97,218,251,.1);color:var(--accent)}
+.hard-card{background:var(--card);border:1px solid var(--border2);border-radius:var(--r2);padding:16px 18px;flex:1;display:flex;flex-direction:column;gap:11px;min-height:0}
+.hard-card h3{font-size:14.5px;font-weight:700;color:var(--accent);margin-bottom:2px}
+.hard-card .hint{font-size:13.5px;color:var(--text2);background:rgba(97,218,251,.08);border:1px solid rgba(97,218,251,.2);border-radius:6px;padding:8px 11px;line-height:1.45}
+.hard-card .hint strong{color:var(--accent)}
+.hard-card textarea{width:100%;flex:1;min-height:80px;padding:11px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-family:var(--mono);outline:none;resize:vertical;line-height:1.5}
+.hard-card textarea:focus{border-color:var(--accent)}
+.gto-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:11px;flex:1;min-height:0}
+.gto-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;display:flex;flex-direction:column;gap:7px;min-height:0}
+.gto-qlabel{font-size:13.5px;font-weight:700;color:var(--text)}
+.gto-num{color:var(--accent4);font-weight:800;margin-right:5px}
+.gto-pre{background:#040C18;border:1px solid var(--border);border-radius:5px;padding:8px 10px;font-family:var(--mono);font-size:13px;color:var(--text3);white-space:pre;overflow-x:auto;flex:1;margin:0;min-height:46px}
+.gto-alabel{font-size:12.5px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.gto-ta{width:100%;min-height:42px;padding:6px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:13.5px;font-family:var(--mono);outline:none;resize:none;line-height:1.4;transition:border .2s}
+.gto-ta:focus{border-color:var(--accent4)}
+.ans-block{border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;flex:1}
+.ans-row{display:flex;gap:9px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:13.5px;align-items:flex-start}
+.ans-row:last-child{border:none}
+.ans-row:nth-child(even){background:rgba(255,255,255,.012)}
+.anum{font-weight:800;min-width:22px;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:13.5px;flex-shrink:0;margin-top:1px}
+.anum.b{color:var(--accent)}.anum.p{color:var(--accent4)}
+.abody{color:var(--text3);line-height:1.45;flex:1;min-width:0}
+.abody strong{color:var(--accent2)}
+#modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center}
+#modal.open{display:flex}
+.mbox{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:24px 28px;min-width:300px}
+.mbox h3{font-size:15px;font-weight:700;color:var(--accent);margin-bottom:12px}
+.shr{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:14px;color:var(--text3)}
+.shr:last-of-type{border:none}
+.shr kbd{background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:2px 7px;font-family:var(--mono);font-size:13px;color:var(--text)}
+.mcl{margin-top:14px;width:100%;padding:9px;background:var(--accent);color:#07111F;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:700;font-family:var(--sans)}
+#hint{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);font-size:13px;color:var(--text2);letter-spacing:.4px;pointer-events:none;opacity:.45;font-family:var(--mono)}
+ic{background:var(--surface2);padding:1px 6px;border-radius:4px;font-family:var(--mono);font-size:13px;color:var(--accent4);border:1px solid var(--border)}
+small{font-size:13px}button,input,textarea,select{font-size:14px}
+.part-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:12.5px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px}
+.part-badge.p1{background:rgba(97,218,251,.12);color:var(--accent);border:1px solid rgba(97,218,251,.3)}
+.part-badge.p2{background:rgba(74,222,128,.12);color:var(--accent2);border:1px solid rgba(74,222,128,.3)}
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<div id="ctr"></div>
+<div id="deck"></div>
+<div id="hint">→ or right-click to advance · ? for shortcuts</div>
+<div id="modal">
+  <div class="mbox">
+    <h3>⌨ Keyboard Shortcuts</h3>
+    <div class="shr"><span>Next</span><span><kbd>→</kbd> or <kbd>Right-click</kbd></span></div>
+    <div class="shr"><span>Prev</span><span><kbd>←</kbd></span></div>
+    <div class="shr"><span>First / Last</span><span><kbd>Home</kbd> / <kbd>End</kbd></span></div>
+    <div class="shr"><span>Shortcuts</span><span><kbd>?</kbd></span></div>
+    <div class="shr"><span>Close</span><span><kbd>Esc</kbd></span></div>
+    <button class="mcl" onclick="document.getElementById('modal').classList.remove('open')">Close</button>
+  </div>
+</div>
+<script>
+function hl(raw){
+  const KW=/^(const|let|var|function|return|async|await|try|catch|throw|new|class|extends|if|else|for|while|import|export|default|from|of|in|true|false|null|undefined|void|require)\b/;
+  const TY=/^(React|ReactDOM|useState|useEffect|console|document|JSON|Array|Object|Math|Promise|Error|AbortController|axios|express|cors)\b/;
+  const NUM=/^\b\d+(\.\d+)?\b/;
+  function e(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+  let i=0,o='';
+  while(i<raw.length){
+    if(raw[i]==='/'&&raw[i+1]==='/'){const end=raw.indexOf('\n',i);const ch=end<0?raw.slice(i):raw.slice(i,end);o+='<span class="cm">'+e(ch)+'</span>';i+=ch.length;continue;}
+    if(raw[i]==='`'){let j=i+1;while(j<raw.length&&raw[j]!=='`'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    if(raw[i]==="'"){let j=i+1;while(j<raw.length&&raw[j]!=="'"&&raw[j]!=='\n'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    if(raw[i]==='"'){let j=i+1;while(j<raw.length&&raw[j]!=='"'&&raw[j]!=='\n'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    const rest=raw.slice(i);let m;
+    if((m=rest.match(KW))){o+='<span class="k">'+m[0]+'</span>';i+=m[0].length;continue;}
+    if((m=rest.match(TY))){o+='<span class="t">'+m[0]+'</span>';i+=m[0].length;continue;}
+    if((m=rest.match(NUM))){o+='<span class="n">'+m[0]+'</span>';i+=m[0].length;continue;}
+    o+=e(raw[i]);i++;
+  }
+  return o;
+}
+function cw(code,lang,label){
+  const id='c'+Math.random().toString(36).slice(2);
+  const body=(lang==='jsx'||lang==='js')?hl(code):code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return '<div class="cw"><div class="cl"><span>'+(label||lang)+'</span><button class="cpbtn" onclick="doCopy(\''+id+'\',this)">Copy</button></div><pre id="'+id+'">'+body+'</pre></div>';
+}
+function doCopy(id,btn){
+  navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>{
+    btn.textContent='Copied!';btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('ok');},2000);
+  });
+}
+
+const S=[];
+
+// 0 HERO
+S.push({cls:'hero-bg',h:`
+<div class="dots"></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;position:relative;max-width:820px">
+  <div class="eyebrow" style="margin-bottom:12px">Web Systems · Modules 8 + 9</div>
+  <div class="hero-title"><div class="h1c">React Side Effects,</div><div class="h2c">Data Fetching &amp; CORS</div></div>
+  <div class="hero-sub">Two tightly linked modules: first learn how to run work after paint safely, then use that skill to load real data without race conditions or CORS walls.</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+    <span class="pill a">Part 1 · useEffect & Lifecycle</span>
+    <span class="pill g">Part 2 · Axios, 3-UI States & CORS</span>
+  </div>
+</div>`});
+
+// 1 ROADMAP
+S.push({h:`
+<div class="eyebrow">Roadmap</div>
+<div class="slide-title">Two Parts, One Story</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2" style="flex:1">
+    <div class="card" style="border-color:rgba(97,218,251,.35)">
+      <div class="part-badge p1">Part 1</div>
+      <h3 style="color:var(--accent);margin-bottom:10px">Side Effects & Lifecycle</h3>
+      <ul>
+        <li>What a side effect really is</li>
+        <li>useEffect syntax + dependency array modes</li>
+        <li>Cleanup function & why it exists</li>
+        <li>AbortController for safe async work</li>
+        <li>Common pitfalls (stale closures, infinite loops)</li>
+      </ul>
+    </div>
+    <div class="card" style="border-color:rgba(74,222,128,.35)">
+      <div class="part-badge p2">Part 2</div>
+      <h3 style="color:var(--accent2);margin-bottom:10px">Data Fetching, Axios & CORS</h3>
+      <ul>
+        <li>The 3-UI-states pattern (Loading / Error / Data)</li>
+        <li>Native fetch vs Axios trade-offs</li>
+        <li>How CORS works and how to fix it in Express</li>
+        <li>Complete production-style fetch component</li>
+        <li>Environment variables & hard-coded URL traps</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Why these two belong together</h3>
+    <p>Part 1 gives you the <em>mechanism</em> (useEffect + cleanup + AbortController). Part 2 applies that mechanism to the most common real-world job: talking to an API. Without Part 1 you ship race conditions; without Part 2 you hit the CORS wall and have no consistent loading/error UI.</p>
+  </div>
+</div>`});
+
+// ========== PART 1 ==========
+// 2 WHAT IS SIDE EFFECT
+S.push({h:`
+<div class="part-badge p1">Part 1 · Side Effects</div>
+<div class="slide-title">What Exactly Is a Side Effect?</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2" style="flex:1">
+    <div class="col">
+      <div class="card flex1"><h3>Definition</h3>
+        <p>A <strong>side effect</strong> is any work that reaches outside the pure calculation of JSX. Given the same props and state, a pure component must always return the same JSX. Side effects break that rule on purpose — they talk to systems React does not control.</p>
+      </div>
+      <div class="card flex1"><h3>Common Side Effects</h3>
+        <ul>
+          <li>HTTP requests (<ic>fetch</ic> / Axios)</li>
+          <li>Timers (<ic>setTimeout</ic>, <ic>setInterval</ic>)</li>
+          <li>Subscriptions (WebSocket, event listeners)</li>
+          <li>Direct DOM mutation (focus, scroll, measure)</li>
+          <li>Writing to localStorage / cookies</li>
+        </ul>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card flex1"><h3>💡 Motion-Sensor Lights Analogy</h3>
+        <p>Think of a room with motion-sensor lights:</p>
+        <ul>
+          <li><strong>Render</strong> = building the physical room (walls, furniture, doors).</li>
+          <li><strong>useEffect</strong> = the lights turning on <em>after</em> you step inside (mount).</li>
+          <li><strong>Cleanup</strong> = the lights turning off the moment you leave (unmount).</li>
+        </ul>
+        <p style="margin-top:8px">You never turn the lights on while the walls are still being built. React paints first, then runs effects.</p>
+      </div>
+      <div class="card"><h3>Why Isolation Matters</h3>
+        <p>If you put a fetch call directly in the component body, it runs on <em>every</em> render — including the re-renders caused by the data arriving. That creates infinite loops and race conditions. useEffect defers the work until after paint and lets you control re-execution.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 3 USEEFFECT SYNTAX
+S.push({h:`
+<div class="part-badge p1">Part 1 · The Hook</div>
+<div class="slide-title">useEffect — Syntax, What / How / Why</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      ${cw(`import { useEffect } from 'react';
+
+useEffect(() => {
+  // 1. Do the side-effect work here
+  console.log('Effect ran');
+
+  // 2. Optional cleanup
+  return () => {
+    console.log('Cleanup ran');
+  };
+}, [/* dependency array */]);`,'jsx','Basic shape')}
+    </div>
+    <div class="col">
+      <div class="bdi"><span class="bdl">WHAT</span><div class="bdt">A React hook that schedules a function to run <strong>after</strong> the browser has painted the current UI.</div></div>
+      <div class="bdi g"><span class="bdl">HOW</span><div class="bdt">Pass a callback. Optionally return a cleanup function. Optionally pass a dependency array that tells React when to re-run the effect.</div></div>
+      <div class="bdi o"><span class="bdl">WHY</span><div class="bdt">Keeps the render pure. Lets React know which values the effect depends on so it can skip unnecessary work and avoid stale closures.</div></div>
+      <div class="card"><h3>Timing Guarantee</h3>
+        <p>Effects run <em>after</em> the commit phase (DOM is already updated). That is why you can safely read layout measurements or start network requests without blocking the paint.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 4 DEPENDENCY ARRAY
+S.push({h:`
+<div class="part-badge p1">Part 1 · Control When It Runs</div>
+<div class="slide-title">The Dependency Array — Three Modes</div>
+<hr class="rule"/>
+<div class="content">
+  <table>
+    <tr><th>Form</th><th>When the effect runs</th><th>Typical use</th></tr>
+    <tr><td><ic>useEffect(fn)</ic><br/><span style="color:var(--text2);font-size:13px">no array</span></td><td>After <strong>every</strong> render</td><td>Rare — almost never what you want</td></tr>
+    <tr><td><ic>useEffect(fn, [])</ic><br/><span style="color:var(--text2);font-size:13px">empty array</span></td><td>Only once after <strong>mount</strong></td><td>Initial data fetch, one-time setup</td></tr>
+    <tr><td><ic>useEffect(fn, [id])</ic><br/><span style="color:var(--text2);font-size:13px">with values</span></td><td>On mount + whenever <ic>id</ic> changes</td><td>Re-fetch when a prop/state changes</td></tr>
+  </table>
+  <div class="g2" style="margin-top:6px">
+    <div class="card"><h3>Empty Array = “Run once”</h3>
+      <p>React treats the empty array as “this effect has no reactive dependencies.” It therefore schedules the effect only after the first paint and never again (unless the component unmounts and remounts).</p>
+    </div>
+    <div class="card"><h3>With Dependencies = “Re-run when these change”</h3>
+      <p>React does a shallow comparison of every value in the array. If any value is different from the previous render (Object.is), the cleanup of the previous effect runs, then the new effect runs.</p>
+    </div>
+  </div>
+</div>`});
+
+// 5 DEPENDENCY SAMPLES
+S.push({h:`
+<div class="part-badge p1">Part 1 · Concrete Samples</div>
+<div class="slide-title">Dependency Array in Action</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      <div class="step"><div class="snum">1</div><div class="sbody"><h4>Mount-only fetch</h4><p>Load data once when the component appears.</p></div></div>
+      ${cw(`useEffect(() => {
+  fetch('/api/users')
+    .then(r => r.json())
+    .then(setUsers);
+}, []); // empty → once`,'jsx','Mount only')}
+    </div>
+    <div>
+      <div class="step"><div class="snum">2</div><div class="sbody"><h4>Re-fetch when id changes</h4><p>Every time the userId prop changes, cancel the previous request and start a new one.</p></div></div>
+      ${cw(`useEffect(() => {
+  const ctrl = new AbortController();
+  fetch(\`/api/users/\${userId}\`, {
+    signal: ctrl.signal
+  })
+    .then(r => r.json())
+    .then(setUser);
+  return () => ctrl.abort();
+}, [userId]); // re-run when userId changes`,'jsx','Depends on userId')}
+    </div>
+  </div>
+</div>`});
+
+// 6 CLEANUP
+S.push({h:`
+<div class="part-badge p1">Part 1 · Leaving Cleanly</div>
+<div class="slide-title">Cleanup Function — What / How / Why</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2">
+    <div class="col">
+      <div class="card"><h3>WHAT</h3>
+        <p>An optional function you return from the effect callback. React calls it:</p>
+        <ul>
+          <li>before the next effect runs (when a dependency changes), and</li>
+          <li>when the component unmounts.</li>
+        </ul>
+      </div>
+      <div class="card"><h3>HOW</h3>
+        <p>Simply <ic>return () => { /* cancel / unsubscribe */ }</ic> at the end of the effect.</p>
+      </div>
+      <div class="card"><h3>WHY</h3>
+        <p>Prevents memory leaks, race conditions, and “setState on unmounted component” warnings. You started something; you must stop it.</p>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card flex1"><h3>💡 Hotel-Room Analogy</h3>
+        <p>When you check into a hotel room (mount) you turn the lights and TV on (side effect). When you check out (unmount) the staff must turn everything off (cleanup). If you move to a different room (dependency change) the staff cleans the old room before preparing the new one.</p>
+        <p style="margin-top:8px">Never leave the TV running in a room you already left.</p>
+      </div>
+      ${cw(`useEffect(() => {
+  const id = setInterval(() => {
+    console.log('tick');
+  }, 1000);
+
+  // Cleanup: stop the timer
+  return () => clearInterval(id);
+}, []);`,'jsx','Timer cleanup')}
+    </div>
+  </div>
+</div>`});
+
+// 7 ABORTCONTROLLER
+S.push({h:`
+<div class="part-badge p1">Part 1 · Safe Async Work</div>
+<div class="slide-title">AbortController — Cancelling In-Flight Requests</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      ${cw(`useEffect(() => {
+  const controller = new AbortController();
+
+  async function load() {
+    try {
+      const res = await fetch(
+        \`/api/users/\${userId}\`,
+        { signal: controller.signal }
+      );
+      const data = await res.json();
+      setUser(data);
+    } catch (err) {
+      // AbortError is expected on cleanup
+      if (err.name !== 'AbortError') {
+        console.error(err);
+      }
+    }
+  }
+
+  load();
+  return () => controller.abort();
+}, [userId]);`,'jsx','Full pattern')}
+    </div>
+    <div class="col">
+      <div class="bdi"><span class="bdl">1</span><div class="bdt"><strong>Create</strong> an AbortController for this particular effect run.</div></div>
+      <div class="bdi g"><span class="bdl">2</span><div class="bdt"><strong>Pass</strong> <ic>controller.signal</ic> into fetch so the request can be cancelled.</div></div>
+      <div class="bdi o"><span class="bdl">3</span><div class="bdt"><strong>Return</strong> a cleanup that calls <ic>controller.abort()</ic>.</div></div>
+      <div class="bdi p"><span class="bdl">4</span><div class="bdt">In the catch block, <strong>ignore</strong> <ic>AbortError</ic> — it is the expected result of cleanup.</div></div>
+      <div class="card"><h3>Why This Matters</h3>
+        <p>If the user navigates away or the <ic>userId</ic> changes before the response arrives, the old response must not call <ic>setUser</ic>. Aborting the request both cancels the network work and prevents the stale state update.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 8 FULL EXAMPLE
+S.push({h:`
+<div class="part-badge p1">Part 1 · Line-by-Line</div>
+<div class="slide-title">Complete UserProfile Example</div>
+<hr class="rule"/>
+<div class="content">
+  ${cw(`import { useState, useEffect } from 'react';
+
+export function UserProfile({ userId }) {
+  const [user, setUser] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    // Reset state when userId changes
+    setUser(null);
+    setError(null);
+
+    const controller = new AbortController();
+
+    async function loadUser() {
+      try {
+        const res = await fetch(\`/api/users/\${userId}\`, {
+          signal: controller.signal
+        });
+        if (!res.ok) throw new Error('Failed to load');
+        const data = await res.json();
+        setUser(data);
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          setError(err.message);
+        }
+      }
+    }
+
+    loadUser();
+    return () => controller.abort();
+  }, [userId]);
+
+  if (error) return <p>Error: {error}</p>;
+  if (!user) return <p>Loading…</p>;
+  return <h1>{user.name}</h1>;
+}`,'jsx','UserProfile.jsx')}
+</div>`});
+
+// 9 PITFALLS PART 1
+S.push({h:`
+<div class="part-badge p1">Part 1 · Watch Out</div>
+<div class="slide-title">Common Pitfalls & How to Avoid Them</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2">
+    <div class="card"><h3>❌ Missing dependency</h3>
+      <p>You use a value inside the effect but forget to put it in the array. The effect captures a stale value from the first render.</p>
+      <p style="margin-top:5px;font-size:13.5px;color:var(--accent3)">Fix: include every reactive value the effect reads, or use a ref for intentionally-stable values.</p>
+    </div>
+    <div class="card"><h3>❌ Infinite loop</h3>
+      <p>The effect sets state that is also a dependency. Every run schedules another run.</p>
+      <p style="margin-top:5px;font-size:13.5px;color:var(--accent3)">Fix: either remove the state from the dependency array (if it is not needed) or restructure so the effect does not write the same value again.</p>
+    </div>
+    <div class="card"><h3>❌ No cleanup for async</h3>
+      <p>A fetch finishes after the component has unmounted and calls setState → React warning + possible memory leak.</p>
+      <p style="margin-top:5px;font-size:13.5px;color:var(--accent3)">Fix: AbortController (or an <ic>isMounted</ic> flag in older code).</p>
+    </div>
+    <div class="card"><h3>❌ Object / array in deps</h3>
+      <p>A new object literal is created every render, so the effect thinks the dependency changed every time.</p>
+      <p style="margin-top:5px;font-size:13.5px;color:var(--accent3)">Fix: memoize with useMemo or depend on primitive fields instead.</p>
+    </div>
+  </div>
+</div>`});
+
+// 10 EVERYDAY PATTERNS
+S.push({h:`
+<div class="part-badge p1">Part 1 · Daily Recipes</div>
+<div class="slide-title">Three Everyday Side-Effect Patterns</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g3" style="flex:1">
+    <div class="card"><h3>1. Document Title</h3>
+      ${cw(`useEffect(() => {
+  document.title = \`\${count} items\`;
+}, [count]);`,'jsx','')}
+      <p style="font-size:13.5px;margin-top:7px">Updates the browser tab title whenever the count changes. No cleanup needed.</p>
+    </div>
+    <div class="card"><h3>2. Event Listener</h3>
+      ${cw(`useEffect(() => {
+  const handler = (e) => {
+    console.log(e.key);
+  };
+  window.addEventListener('keydown', handler);
+  return () => {
+    window.removeEventListener('keydown', handler);
+  };
+}, []);`,'jsx','')}
+      <p style="font-size:13.5px;margin-top:7px">Always pair addEventListener with removeEventListener in the cleanup.</p>
+    </div>
+    <div class="card"><h3>3. LocalStorage Sync</h3>
+      ${cw(`useEffect(() => {
+  localStorage.setItem(
+    'theme',
+    theme
+  );
+}, [theme]);`,'jsx','')}
+      <p style="font-size:13.5px;margin-top:7px">Persist a value whenever it changes. Write-only effects rarely need cleanup.</p>
+    </div>
+  </div>
+</div>`});
+
+// ========== PART 2 ==========
+// 11 BRIDGE TO PART 2
+S.push({h:`
+<div class="eyebrow">Transition</div>
+<div class="slide-title">Part 1 → Part 2: Side Effects Meet Real APIs</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="ba">
+    <div class="ba-box bad">
+      <h4>What Part 1 left unfinished</h4>
+      <ul>
+        <li>We could fetch safely with AbortController</li>
+        <li>Still used raw <ic>fetch</ic></li>
+        <li>No consistent loading / error / success UI</li>
+        <li>CORS was ignored — it will break the moment ports differ</li>
+      </ul>
+    </div>
+    <div class="ba-box good">
+      <h4>What Part 2 delivers</h4>
+      <ul>
+        <li>The 3-UI States pattern (Loading → Error → Data)</li>
+        <li>Why teams prefer Axios over native fetch</li>
+        <li>How CORS actually works and how to fix it in Express</li>
+        <li>A complete, production-style data-fetching component</li>
+      </ul>
+    </div>
+  </div>
+</div>`});
+
+// 12 CORS
+S.push({h:`
+<div class="part-badge p2">Part 2 · Core Concept</div>
+<div class="slide-title">What is CORS &amp; Why Does the Browser Block You?</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2">
+    <div class="col">
+      <div class="card">
+        <h3>Restaurant Security Analogy</h3>
+        <p>Your React app (port 5173) is a customer. Your Express API (port 5000) is the kitchen.</p>
+        <p style="margin-top:8px">The browser is a strict bouncer. Different ports = different origins. The bouncer blocks the response unless the kitchen sends <ic>Access-Control-Allow-Origin</ic>.</p>
+      </div>
+      <div class="card">
+        <h3>Same-Origin Policy</h3>
+        <p>Browsers only allow a page to read responses from the exact same origin (protocol + domain + port) unless the server opts in with CORS headers.</p>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card">
+        <h3>What / How / Why</h3>
+        <div class="bdi"><span class="bdl">WHAT</span><div class="bdt">Cross-Origin Resource Sharing — a browser security mechanism.</div></div>
+        <div class="bdi g"><span class="bdl">HOW</span><div class="bdt">Server must send <ic>Access-Control-Allow-Origin</ic> (and often methods/headers) for the browser to hand the response to JavaScript.</div></div>
+        <div class="bdi o"><span class="bdl">WHY</span><div class="bdt">Prevents malicious sites from reading data from other origins using the user’s cookies.</div></div>
+      </div>
+      <div class="card">
+        <h3>Typical Error</h3>
+        <p style="font-family:var(--mono);font-size:13.5px;color:var(--accent5);line-height:1.45">Access to fetch at 'http://localhost:5000/api/...' from origin 'http://localhost:5173' has been blocked by CORS policy</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 13 FIX CORS
+S.push({h:`
+<div class="part-badge p2">Part 2 · Server Side</div>
+<div class="slide-title">Fixing CORS in Express</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split" style="height:min(480px,55vh)">
+    <div style="min-height:0;height:100%">
+      ${cw(`// server.js
+const express = require('express');
+const cors = require('cors');
+const app = express();
+
+// Allow the Vite dev server
+app.use(cors({
+  origin: 'http://localhost:5173',
+  methods: ['GET','POST','PUT','DELETE'],
+  allowedHeaders: ['Content-Type','Authorization']
+}));
+
+app.use(express.json());
+
+app.get('/api/users', (req, res) => {
+  res.json([{ id: 1, name: 'Alice' }]);
+});
+
+app.listen(5000);`,'js','Express CORS setup')}
+    </div>
+    <div class="col" style="overflow-y:auto">
+      <div class="bdi"><span class="bdl">1</span><div class="bdt"><strong>npm install cors</strong> — adds the middleware package.</div></div>
+      <div class="bdi g"><span class="bdl">2</span><div class="bdt"><strong>origin</strong> — whitelist the exact frontend origin (Vite’s port 5173).</div></div>
+      <div class="bdi o"><span class="bdl">3</span><div class="bdt"><strong>methods</strong> — which HTTP verbs the browser is allowed to send.</div></div>
+      <div class="bdi p"><span class="bdl">4</span><div class="bdt"><strong>allowedHeaders</strong> — which request headers (e.g. Authorization) may be included.</div></div>
+      <div class="bdi r"><span class="bdl">5</span><div class="bdt"><strong>Production tip</strong> — never use <ic>origin: '*'</ic> with credentials; whitelist exact domains.</div></div>
+    </div>
+  </div>
+</div>`});
+
+// 14 3-UI STATES
+S.push({h:`
+<div class="part-badge p2">Part 2 · Client Pattern</div>
+<div class="slide-title">The 3-UI States Pattern</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="card">
+    <h3>Every async request must handle three realities</h3>
+    <div style="display:flex;gap:14px;margin-top:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:160px;background:var(--surface);padding:16px;border-radius:12px;border:1px solid var(--border)">
+        <div style="font-size:26px;margin-bottom:6px">⏳</div>
+        <strong style="color:var(--accent);font-size:15px">1. Loading</strong>
+        <p style="margin-top:6px;color:var(--text2);font-size:14px">Show spinner or skeleton while waiting</p>
+      </div>
+      <div style="flex:1;min-width:160px;background:var(--surface);padding:16px;border-radius:12px;border:1px solid var(--border)">
+        <div style="font-size:26px;margin-bottom:6px">❌</div>
+        <strong style="color:var(--accent5);font-size:15px">2. Error</strong>
+        <p style="margin-top:6px;color:var(--text2);font-size:14px">Clear message + retry option</p>
+      </div>
+      <div style="flex:1;min-width:160px;background:var(--surface);padding:16px;border-radius:12px;border:1px solid var(--border)">
+        <div style="font-size:26px;margin-bottom:6px">✅</div>
+        <strong style="color:var(--accent2);font-size:15px">3. Success</strong>
+        <p style="margin-top:6px;color:var(--text2);font-size:14px">Render the actual data</p>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Why this matters</h3>
+    <p>If you only handle the success path, users see a blank screen while loading and a crash when the network fails. The 3-state pattern is the difference between a toy demo and a real app.</p>
+  </div>
+</div>`});
+
+// 15 FETCH VS AXIOS
+S.push({h:`
+<div class="part-badge p2">Part 2 · Tool Choice</div>
+<div class="slide-title">Native fetch vs Axios</div>
+<hr class="rule"/>
+<div class="content">
+  <table>
+    <tr>
+      <th>Feature</th>
+      <th>Native fetch</th>
+      <th>Axios</th>
+    </tr>
+    <tr>
+      <td>HTTP 4xx / 5xx</td>
+      <td>Does <strong>not</strong> reject</td>
+      <td>Automatically throws</td>
+    </tr>
+    <tr>
+      <td>JSON parsing</td>
+      <td>Manual <ic>res.json()</ic></td>
+      <td>Automatic → <ic>res.data</ic></td>
+    </tr>
+    <tr>
+      <td>Request timeout</td>
+      <td>Needs AbortController + timer</td>
+      <td>Built-in <ic>timeout</ic> option</td>
+    </tr>
+    <tr>
+      <td>Interceptors</td>
+      <td>None</td>
+      <td>Request + response interceptors</td>
+    </tr>
+    <tr>
+      <td>Base URL</td>
+      <td>Manual every call</td>
+      <td><ic>axios.create({ baseURL })</ic></td>
+    </tr>
+  </table>
+  <div class="card" style="margin-top:6px">
+    <h3>Supporting sample — Axios instance</h3>
+    ${cw(`// api.js
+import axios from 'axios';
+
+export const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
+  timeout: 8000,
+});
+
+// later in a component
+const res = await api.get('/api/users');
+// res.data is already parsed`,'js','Reusable Axios instance')}
+  </div>
+</div>`});
+
+// 16 COMPLETE AXIOS COMPONENT
+S.push({h:`
+<div class="part-badge p2">Part 2 · Implementation</div>
+<div class="slide-title">Complete Axios + 3-UI-States Component</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split" style="height:min(500px,58vh)">
+    <div style="min-height:0;height:100%">
+      ${cw(`import { useState, useEffect } from 'react';
+import axios from 'axios';
+
+export function UserList() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    axios.get('http://localhost:5000/api/users', {
+      signal: controller.signal
+    })
+      .then(res => {
+        setUsers(res.data);
+        setLoading(false);
+      })
+      .catch(err => {
+        if (err.name !== 'CanceledError' &&
+            err.code !== 'ERR_CANCELED') {
+          setError(err.response?.data?.message
+            || err.message);
+        }
+        setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  if (loading) return <p>Loading users…</p>;
+  if (error)   return <p>Error: {error}</p>;
+
+  return (
+    <ul>
+      {users.map(u =>
+        <li key={u.id}>{u.name}</li>)}
+    </ul>
+  );
+}`,'jsx','UserList.jsx')}
+    </div>
+    <div class="col" style="overflow-y:auto">
+      <div class="bdi"><span class="bdl">1</span><div class="bdt"><strong>Three pieces of state</strong> — data, loading flag, and error message.</div></div>
+      <div class="bdi g"><span class="bdl">2</span><div class="bdt"><strong>useEffect runs once</strong> (empty deps) + AbortController for safety.</div></div>
+      <div class="bdi o"><span class="bdl">3</span><div class="bdt"><strong>res.data</strong> is already parsed JSON — no need for <ic>.json()</ic>.</div></div>
+      <div class="bdi p"><span class="bdl">4</span><div class="bdt"><strong>Axios rejects</strong> on 4xx/5xx, so the catch block receives real HTTP errors.</div></div>
+      <div class="bdi r"><span class="bdl">5</span><div class="bdt"><strong>Early returns</strong> — render loading or error UI before trying to map over data.</div></div>
+    </div>
+  </div>
+</div>`});
+
+// 17 AXIOS WHAT HOW WHY
+S.push({h:`
+<div class="part-badge p2">Part 2 · Deep Dive</div>
+<div class="slide-title">Axios — What / How / Why</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2">
+    <div class="col">
+      <div class="bdi"><span class="bdl">WHAT</span><div class="bdt">A promise-based HTTP client that runs in the browser and Node.</div></div>
+      <div class="bdi g"><span class="bdl">HOW</span><div class="bdt"><ic>axios.get(url)</ic> returns a promise that resolves to a response object whose <ic>.data</ic> is already parsed JSON. Non-2xx statuses reject the promise.</div></div>
+      <div class="bdi o"><span class="bdl">WHY</span><div class="bdt">Less boilerplate, consistent error handling, interceptors for auth headers, and better DX for real apps.</div></div>
+    </div>
+    <div class="col">
+      <div class="card">
+        <h3>Install</h3>
+        <p><ic>npm install axios</ic></p>
+      </div>
+      <div class="card">
+        <h3>Key response shape</h3>
+        <p style="font-family:var(--mono);font-size:14px">{ data, status, headers, config }</p>
+        <p style="margin-top:6px">You almost always care about <ic>res.data</ic>.</p>
+      </div>
+      <div class="card">
+        <h3>Analogy</h3>
+        <p>fetch is a raw toolbox. Axios is a ready-made toolkit with the common tools already assembled.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 18 PITFALLS PART 2
+S.push({h:`
+<div class="part-badge p2">Part 2 · Watch Out</div>
+<div class="slide-title">Common Pitfalls</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2">
+    <div class="card">
+      <h3>Forgetting CORS</h3>
+      <p>Frontend works with mock data, then suddenly fails when pointed at the real Express API. Always enable CORS on the backend first.</p>
+    </div>
+    <div class="card">
+      <h3>Treating fetch 404 as success</h3>
+      <p>Native fetch only rejects on network failure. You must check <ic>res.ok</ic> yourself. Axios does this for you.</p>
+    </div>
+    <div class="card">
+      <h3>No loading state</h3>
+      <p>Component tries to map over <ic>undefined</ic> → crash. Always initialise state and show a loading UI.</p>
+    </div>
+    <div class="card">
+      <h3>Hard-coded URLs</h3>
+      <p>Use environment variables (<ic>import.meta.env.VITE_API_URL</ic>) so the same code works in dev and production.</p>
+    </div>
+  </div>
+</div>`});
+
+// 19 RECAP BOTH
+S.push({h:`
+<div class="eyebrow">Recap</div>
+<div class="slide-title">What You Now Own</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="rc-grid" style="flex:1">
+    <div class="rc"><div class="ico">⚡</div><h4>Side Effect</h4><p>Any work outside pure render. Belongs in useEffect.</p></div>
+    <div class="rc"><div class="ico">📦</div><h4>Dependency Array</h4><p>[] = once. [x] = on mount + when x changes.</p></div>
+    <div class="rc"><div class="ico">🧹</div><h4>Cleanup</h4><p>Cancel timers, abort fetches, remove listeners.</p></div>
+    <div class="rc"><div class="ico">🛑</div><h4>AbortController</h4><p>Pass signal to fetch. Call abort() in cleanup.</p></div>
+    <div class="rc"><div class="ico">🌐</div><h4>CORS</h4><p>Browser security. Server must send Access-Control-Allow-Origin.</p></div>
+    <div class="rc"><div class="ico">🚦</div><h4>3-UI States</h4><p>Loading → Error → Success. Never render data before it exists.</p></div>
+  </div>
+  <div class="card" style="margin-top:4px">
+    <h3>Next — M10: TanStack Query</h3>
+    <p>Stop writing the loading/error boilerplate yourself. Let a library manage caching, background refetching, and invalidation.</p>
+  </div>
+</div>`});
+
+// 20 ASSESSMENT INTRO
+S.push({h:`
+<div class="eyebrow">Activities</div>
+<div class="slide-title">Combined Assessment</div>
+<hr class="rule"/>
+<div class="content" style="justify-content:center;align-items:center">
+  <div class="g2" style="max-width:720px">
+    <div class="card" style="text-align:center">
+      <h3>📋 Multiple Choice</h3>
+      <p style="font-size:28px;font-weight:800;color:var(--accent);margin:10px 0">5 questions</p>
+      <p style="font-size:14px">1 pt each · useEffect, Abort, CORS, Axios, 3-states</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>💻 Guess the Output</h3>
+      <p style="font-size:28px;font-weight:800;color:var(--accent4);margin:10px 0">10 questions</p>
+      <p style="font-size:14px">1 pt each · Trace effects, cleanup, fetch vs Axios</p>
+    </div>
+  </div>
+  <div class="card" style="text-align:center;padding:18px;margin-top:12px;max-width:240px">
+    <div style="font-size:44px;font-weight:900;color:var(--accent)">15</div>
+    <div style="color:var(--text2);font-size:14px">Total Points</div>
+  </div>
+  <div class="card" style="max-width:640px;margin-top:6px">
+    <h3>⚠ Note</h3>
+    <p>Attempt every question before checking the answer key. Several scenarios deliberately combine ideas from both modules.</p>
+  </div>
+</div>`});
+
+// 21 MC 1-4
+S.push({init(el){
+  const qs=[
+    {q:"When does useEffect(fn, []) execute its callback?",opts:["After every render","Exactly once after initial mount","Before DOM rendering","Only on unmount"]},
+    {q:"What does the function returned by useEffect do?",opts:["Runs the effect again immediately","Cleanup that runs before next effect or on unmount","Cancels the component render","Stores the dependency array"]},
+    {q:"Which header does the browser check for cross-origin permission?",opts:["Content-Type","Access-Control-Allow-Origin","User-Agent","Host"]},
+    {q:"Which Axios property holds the already-parsed JSON body?",opts:["response.body","response.json","response.data","response.payload"]}
+  ];
+  const pg=el.querySelector('#mc-pg');
+  qs.forEach((q,i)=>{
+    const d=document.createElement('div');d.className='mc-item';
+    d.innerHTML='<div class="mc-q"><span class="qn">'+(i+1)+'.</span>'+q.q+'</div><div class="mc-opts">'+q.opts.map(o=>'<div class="mc-opt" onclick="this.closest(\'.mc-opts\').querySelectorAll(\'.mc-opt\').forEach(x=>x.classList.remove(\'sel\'));this.classList.add(\'sel\')">'+o+'</div>').join('')+'</div>';
+    pg.appendChild(d);
+  });
+},h:`
+<div class="eyebrow">Multiple Choice</div>
+<div class="slide-title">Questions 1–4</div>
+<hr class="rule"/>
+<div class="mc-grid" id="mc-pg" style="align-content:start"></div>`});
+
+// 22 MC 5
+S.push({h:`
+<div class="eyebrow">Multiple Choice · Challenge</div>
+<div class="slide-title">Question 5</div>
+<hr class="rule"/>
+<div class="content" style="justify-content:center">
+  <div class="hard-card" style="max-width:780px">
+    <h3>5. Safe fetch diagnosis</h3>
+    <p style="font-size:14.5px;color:var(--text3);line-height:1.5">A component fetches a user profile in <ic>useEffect</ic> whenever <ic>userId</ic> changes. The developer forgot the cleanup and also put an object literal in the dependency array. List the two concrete bugs this creates and the exact fix for each.</p>
+    <div class="hint"><strong>Hints:</strong> (1) race conditions / setState after unmount → AbortController + ignore AbortError. (2) new object every render → infinite or excessive re-fetches → depend on a primitive or useMemo.</div>
+    <textarea placeholder="Bug 1 + fix:&#10;Bug 2 + fix:"></textarea>
+  </div>
+</div>`});
+
+// 23 GTO 1-4
+S.push({init(el){
+  const qs=[
+    {code:`useEffect(() => {
+  console.log('Mount');
+}, []);
+// Component mounts, then state
+// updates twice. What is logged?`},
+    {code:`useEffect(() => {
+  return () => console.log('Cleanup');
+}, []);
+// Component is unmounted.
+// What is logged?`},
+    {code:`const [id, setId] = useState(1);
+useEffect(() => {
+  console.log('Effect');
+}, [id]);
+// Mount + setId(1) once.
+// How many times does 'Effect' log?`},
+    {code:`useEffect(() => {
+  console.log('NoArray');
+});
+// Mount, then one state update.
+// How many times does 'NoArray' log?`}
+  ];
+  const pg=el.querySelector('#gto-pg');
+  qs.forEach((q,i)=>{
+    const w=document.createElement('div');w.className='gto-wrap';
+    w.innerHTML='<div class="gto-qlabel"><span class="gto-num">'+(i+1)+'.</span> What is the result?</div><pre class="gto-pre">'+q.code+'</pre><div class="gto-alabel">Your answer</div><textarea class="gto-ta" placeholder="Write here..."></textarea>';
+    pg.appendChild(w);
+  });
+},h:`
+<div class="eyebrow">Guess the Output</div>
+<div class="slide-title">Questions 1–4 · Effects & Cleanup</div>
+<hr class="rule"/>
+<div class="gto-grid" id="gto-pg" style="align-content:start"></div>`});
+
+// 24 GTO 5-8
+S.push({init(el){
+  const qs=[
+    {code:`fetch('/missing-404')
+  .then(res => console.log(res.ok ? 'OK' : 'NOT_OK'))
+  .catch(() => console.log('CATCH'));`},
+    {code:`axios.get('/missing-404')
+  .then(() => console.log('SUCCESS'))
+  .catch(err => console.log('ERROR:' + err.response.status));`},
+    {code:`axios.get('/api/status').then(res => {
+  console.log(typeof res.data);
+});
+// server returns {"status":"active"}`},
+    {code:`fetch('http://other-origin:5000/data')
+  .catch(err => console.log(err.name));
+// Assume CORS is not enabled on the server`}
+  ];
+  const pg=el.querySelector('#gto-pg2');
+  qs.forEach((q,i)=>{
+    const w=document.createElement('div');w.className='gto-wrap';
+    w.innerHTML='<div class="gto-qlabel"><span class="gto-num">'+(i+5)+'.</span> What is the result?</div><pre class="gto-pre">'+q.code+'</pre><div class="gto-alabel">Your answer</div><textarea class="gto-ta" placeholder="Write here..."></textarea>';
+    pg.appendChild(w);
+  });
+},h:`
+<div class="eyebrow">Guess the Output</div>
+<div class="slide-title">Questions 5–8 · fetch vs Axios & CORS</div>
+<hr class="rule"/>
+<div class="gto-grid" id="gto-pg2" style="align-content:start"></div>`});
+
+// 25 GTO 9-10
+S.push({init(el){
+  const qs=[
+    {code:`useEffect(() => {
+  const ctrl = new AbortController();
+  console.log('Effect');
+  fetch(\`/api/users/\${userId}\`, { signal: ctrl.signal })
+    .then(r => r.json())
+    .then(setUser)
+    .catch(e => { if (e.name !== 'AbortError') setError(e); });
+  return () => {
+    console.log('Cleanup');
+    ctrl.abort();
+  };
+}, [userId]);
+// (a) Effect on mount?
+// (b) on unmount?
+// (c) when userId 1→2?
+// (d) in-flight fetch on unmount?`},
+    {code:`const [users, setUsers] = useState(null);
+const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+  axios.get('/api/users')
+    .then(res => {
+      setUsers(res.data);
+      setLoading(false);
+    })
+    .catch(() => setLoading(false));
+}, []);
+
+if (loading) return <p>Loading…</p>;
+return (
+  <ul>
+    {users.map(u => <li key={u.id}>{u.name}</li>)}
+  </ul>
+);
+// Request fails with network error.
+// Screen + console?`}
+  ];
+  const pg=el.querySelector('#gto-pg3');
+  qs.forEach((q,i)=>{
+    const w=document.createElement('div');w.className='gto-wrap';
+    w.innerHTML='<div class="gto-qlabel"><span class="gto-num">'+(i+9)+'.</span> What is the result?</div><pre class="gto-pre">'+q.code+'</pre><div class="gto-alabel">Your answer</div><textarea class="gto-ta" style="min-height:56px" placeholder="Write here..."></textarea>';
+    pg.appendChild(w);
+  });
+},h:`
+<div class="eyebrow">Guess the Output · Challenge</div>
+<div class="slide-title">Questions 9–10 · Combined Scenarios</div>
+<hr class="rule"/>
+<div class="gto-grid" id="gto-pg3" style="align-content:start"></div>`});
+
+// 26 ANSWER KEY
+S.push({h:`
+<div class="eyebrow">Answer Key</div>
+<div class="slide-title">Answers &amp; Explanations</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2" style="flex:1">
+    <div class="col">
+      <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--accent);margin-bottom:6px">Multiple Choice</div>
+      <div class="ans-block">
+        <div class="ans-row"><span class="anum b">1.</span><div class="abody"><strong>Exactly once after initial mount.</strong> Empty array restricts the effect to the first paint.</div></div>
+        <div class="ans-row"><span class="anum b">2.</span><div class="abody"><strong>Cleanup function.</strong> Runs before the next effect and on unmount.</div></div>
+        <div class="ans-row"><span class="anum b">3.</span><div class="abody"><strong>Access-Control-Allow-Origin.</strong> The header the browser checks.</div></div>
+        <div class="ans-row"><span class="anum b">4.</span><div class="abody"><strong>response.data</strong> — Axios already parsed the JSON.</div></div>
+        <div class="ans-row"><span class="anum b">5.</span><div class="abody"><strong>Bug 1:</strong> race / setState after unmount → AbortController + ignore AbortError.<br/><strong>Bug 2:</strong> object in deps → infinite refetches → depend on primitive or useMemo.</div></div>
+      </div>
+    </div>
+    <div class="col">
+      <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--accent4);margin-bottom:6px">Guess the Output</div>
+      <div class="ans-block">
+        <div class="ans-row"><span class="anum p">1.</span><div class="abody"><strong>"Mount" once.</strong> Empty deps → never re-runs on state updates.</div></div>
+        <div class="ans-row"><span class="anum p">2.</span><div class="abody"><strong>"Cleanup" once.</strong> Returned function fires on unmount.</div></div>
+        <div class="ans-row"><span class="anum p">3.</span><div class="abody"><strong>"Effect" once.</strong> setId(1) with same primitive does not re-trigger.</div></div>
+        <div class="ans-row"><span class="anum p">4.</span><div class="abody"><strong>"NoArray" twice.</strong> No dependency array → after every render.</div></div>
+        <div class="ans-row"><span class="anum p">5.</span><div class="abody"><strong>NOT_OK</strong> — fetch still resolves on 404; res.ok is false.</div></div>
+        <div class="ans-row"><span class="anum p">6.</span><div class="abody"><strong>ERROR:404</strong> — Axios rejects non-2xx statuses.</div></div>
+        <div class="ans-row"><span class="anum p">7.</span><div class="abody"><strong>object</strong></div></div>
+        <div class="ans-row"><span class="anum p">8.</span><div class="abody"><strong>TypeError</strong> (CORS network error)</div></div>
+        <div class="ans-row"><span class="anum p">9.</span><div class="abody"><strong>(a)</strong> once · <strong>(b)</strong> Cleanup · <strong>(c)</strong> Cleanup then Effect · <strong>(d)</strong> aborted, AbortError ignored</div></div>
+        <div class="ans-row"><span class="anum p">10.</span><div class="abody"><strong>Screen:</strong> crash/blank. <strong>Console:</strong> TypeError (users is still null). loading=false but users stays null → .map fails.</div></div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 27 CLOSING
+S.push({cls:'hero-bg',h:`
+<div class="dots"></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;position:relative;max-width:720px">
+  <div class="eyebrow">Modules 8 + 9 Complete</div>
+  <div style="font-size:clamp(28px,3.4vw,46px);font-weight:900;line-height:1.15;letter-spacing:-.4px">
+    <span style="color:var(--text)">Your components can now</span><br/>
+    <span style="color:var(--accent)">talk to the outside world safely.</span>
+  </div>
+  <div class="q-card" style="margin:0">
+    <div class="q-text">"Effects are an escape hatch from React’s pure world. Use them to synchronise with systems React does not control — and always clean up after yourself."</div>
+    <div class="q-src">— React documentation spirit</div>
+  </div>
+  <div class="card" style="background:rgba(97,218,251,.05);border-color:rgba(97,218,251,.2)">
+    <h3>Coming Up — M10: TanStack Query</h3>
+    <p style="font-size:14.5px;line-height:1.6">Next session we stop writing loading/error boilerplate and let a library handle caching, background refetch, and cache invalidation.</p>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <span class="pill g">useEffect ✓</span>
+    <span class="pill g">Cleanup ✓</span>
+    <span class="pill g">AbortController ✓</span>
+    <span class="pill g">CORS ✓</span>
+    <span class="pill g">Axios ✓</span>
+    <span class="pill g">3-UI States ✓</span>
+    <span class="pill a">TanStack Query → next</span>
+  </div>
+</div>`});
+
+// ENGINE
+let cur=0;
+const deck=document.getElementById('deck');
+const bar=document.getElementById('bar');
+const ctr=document.getElementById('ctr');
+
+function build(){
+  S.forEach((s,i)=>{
+    const el=document.createElement('div');
+    el.className='slide'+(s.cls?' '+s.cls:'');
+    el.innerHTML=s.h||'';
+    if(i===0)el.classList.add('active');
+    deck.appendChild(el);
+    if(s.init)s.init(el);
+  });
+}
+function go(n){
+  if(n<0||n>=S.length||n===cur)return;
+  const els=deck.querySelectorAll('.slide');
+  const fwd=n>cur;
+  els[cur].classList.remove('active');
+  els[cur].classList.add(fwd?'out-l':'out-r');
+  setTimeout(()=>els[cur].classList.remove('out-l','out-r'),420);
+  cur=n;els[cur].classList.add('active');els[cur].scrollTop=0;tick();
+}
+function tick(){
+  bar.style.width=(S.length>1?(cur/(S.length-1)*100):100)+'%';
+  ctr.textContent=(cur+1)+' / '+S.length;
+}
+document.addEventListener('keydown',e=>{
+  const m=document.getElementById('modal');
+  if(m.classList.contains('open')){if(e.key==='Escape')m.classList.remove('open');return;}
+  const t=document.activeElement.tagName;
+  if(t==='INPUT'||t==='TEXTAREA')return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')go(cur+1);
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(cur-1);
+  else if(e.key==='Home')go(0);
+  else if(e.key==='End')go(S.length-1);
+  else if(e.key==='?')m.classList.add('open');
+  else if(e.key==='Escape')m.classList.remove('open');
+});
+document.addEventListener('mousedown',e=>{
+  if(e.target.closest('button,input,a,.mc-opt,.gto-ta'))return;
+  if(e.button===2){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+  else if(e.button===3){e.preventDefault();e.stopImmediatePropagation();go(cur-1);}
+  else if(e.button===4){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+},true);
+document.addEventListener('contextmenu',e=>{
+  if(e.target.closest('button,input,a'))return;
+  e.preventDefault();e.stopImmediatePropagation();
+},true);
+document.addEventListener('auxclick',e=>{
+  if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation();}
+},true);
+let tx=0;
+document.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+document.addEventListener('touchend',e=>{const d=e.changedTouches[0].clientX-tx;if(Math.abs(d)>50){d<0?go(cur+1):go(cur-1);}},{passive:true});
+build();tick();
+</script>
+</body>
+</html>

@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Node.js — Week 5: Docker Fundamentals I — Your First Container</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    * { box-sizing: border-box; margin:0; padding:0; }
+    html, body { height:100%; overflow:hidden; background:var(--bg); color:var(--ink); font-family:'Space Grotesk', sans-serif; }
+    h1,h2,h3 { font-family:'Space Grotesk', sans-serif; font-weight:600; letter-spacing:-0.02em; }
+    code, pre, .mono { font-family:'JetBrains Mono', 'Courier New', monospace; }
+
+    /* ——— NODE.JS THEME (matches deck series) ——— */
+    :root {
+      --bg: #0D1912;
+      --bg-alt: #14261A;
+      --accent: #83CD29;
+      --accent-soft: #A5DE5C;
+      --accent-strong: #4C8C1E;
+      --card: #17281B;
+      --card-border: rgba(131, 205, 41, 0.18);
+      --shadow: rgba(0, 0, 0, 0.55);
+      --ink: #E9F2E4;
+      --ink-soft: #9CB89A;
+      --eyebrow-ink: #A5DE5C;
+      --card-ink: #E9F2E4;
+      --card-ink-soft: #9CB89A;
+      --card-accent: #83CD29;
+      --step-num-ink: #0D1912;
+      --tick: 300ms;
+      --table-border: rgba(131, 205, 41, 0.15);
+      --danger: #FF7A6E;
+      --danger-soft: rgba(255,122,110,0.12);
+      --ok: #83CD29;
+    }
+
+    #app { position:relative; width:100vw; height:100vh; overflow:hidden; }
+
+    .progress-track { position:fixed; top:0; left:0; right:0; height:4px; background:rgba(131,205,41,0.12); z-index:60; }
+    .progress-fill { height:100%; width:0%; background:linear-gradient(90deg, var(--accent-strong), var(--accent)); transition: width 350ms ease; }
+
+    .node-gauge {
+      position:fixed; top:18px; right:22px; z-index:50;
+      display:flex; flex-direction:column; align-items:center; gap:4px;
+      font-family:'JetBrains Mono', monospace; font-size:10px; letter-spacing:0.14em;
+      color:var(--ink-soft); user-select:none; pointer-events:none;
+      transition: color var(--tick) ease;
+    }
+    .node-gauge svg { width:34px; height:34px; display:block; }
+    .node-gauge .hex { transform-origin:center; }
+    @media (prefers-reduced-motion: no-preference) {
+      .node-gauge .hex { animation: hexPulse 3s ease-in-out infinite; }
+    }
+    @keyframes hexPulse {
+      0% { opacity:0.6; transform:scale(0.95) rotate(-2deg); }
+      50% { opacity:1; transform:scale(1.08) rotate(2deg); }
+      100% { opacity:0.6; transform:scale(0.95) rotate(-2deg); }
+    }
+    .gauge-label { text-transform:uppercase; font-weight:700; letter-spacing:0.08em; }
+
+    .stage { position:absolute; inset:0; }
+    .slide {
+      position:absolute; inset:0;
+      overflow-y:auto; overflow-x:hidden;
+      display:flex; flex-direction:column; align-items:stretch; justify-content:safe center;
+      padding: 76px clamp(28px, 7vw, 120px) 90px;
+      opacity:0; transform:translateX(0) scale(1);
+      will-change: transform, opacity;
+    }
+    .slide.active { opacity:1; transform:translateX(0) scale(1); transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:5; }
+    .slide.enter-fwd { transform:translateX(64px) scale(0.985); opacity:0; }
+    .slide.enter-bwd { transform:translateX(-64px) scale(0.985); opacity:0; }
+    .slide.exit-fwd { transform:translateX(-64px) scale(0.985); opacity:0; transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:4; }
+    .slide.exit-bwd { transform:translateX(64px) scale(0.985); opacity:0; transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:4; }
+    @media (prefers-reduced-motion: reduce) {
+      .slide, .slide.active, .slide.enter-fwd, .slide.enter-bwd, .slide.exit-fwd, .slide.exit-bwd {
+        transition: opacity 120ms linear !important; transform:none !important;
+      }
+    }
+    .slide-inner { max-width:1040px; width:100%; margin:0 auto; }
+
+    .eyebrow {
+      font-family:'JetBrains Mono', monospace; font-size:12px; letter-spacing:0.16em;
+      text-transform:uppercase; font-weight:600; color:var(--eyebrow-ink);
+      display:flex; align-items:center; gap:10px; margin-bottom:14px;
+    }
+    .eyebrow::after { content:''; flex:1; height:0; border-top:2px dashed var(--card-border); }
+    h2.slide-title { font-size:clamp(27px, 3.6vw, 42px); font-weight:700; line-height:1.14; margin-bottom:20px; letter-spacing:-0.02em; }
+    .lede { font-size:16.5px; color:var(--ink-soft); margin:-6px 0 20px; max-width:74ch; line-height:1.55; }
+
+    .card {
+      background:var(--card); border:1px solid var(--card-border); border-radius:12px;
+      padding:16px 18px; min-width:0;
+      box-shadow: 0 4px 20px var(--shadow);
+    }
+    .card h3 { font-size:14.5px; font-weight:600; margin-bottom:6px; color:var(--card-ink); }
+    .card p, .card li { font-size:14px; color:var(--card-ink-soft); line-height:1.5; }
+
+    .card-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(0, 1fr)); gap:14px; min-width:0; }
+    .card-grid.cols-2 { grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .card-grid.cols-3 { grid-template-columns:repeat(3, minmax(0,1fr)); }
+    .card-grid.cols-4 { grid-template-columns:repeat(4, minmax(0,1fr)); }
+    .card-grid.cols-5 { grid-template-columns:repeat(5, minmax(0,1fr)); }
+    @media (max-width:760px){ .card-grid.cols-5{grid-template-columns:repeat(2, minmax(0,1fr));} .card-grid.cols-4{grid-template-columns:repeat(2, minmax(0,1fr));} .card-grid.cols-3{grid-template-columns:repeat(2, minmax(0,1fr));} .card-grid.cols-2{grid-template-columns:minmax(0,1fr);} }
+
+    .two-col { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:24px; align-items:start; min-width:0; }
+    @media (max-width:760px){ .two-col { grid-template-columns:minmax(0,1fr); } }
+    .two-col > * { min-width:0; }
+
+    ul.ticket-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+    ul.ticket-list li { position:relative; padding-left:22px; font-size:15px; line-height:1.5; color:var(--ink); }
+    ul.ticket-list li::before { content:'▹'; position:absolute; left:0; color:var(--accent); font-weight:700; }
+
+    ol.step-list { list-style:none; counter-reset:step; margin:0; padding:0; display:flex; flex-direction:column; gap:11px; }
+    ol.step-list li { position:relative; padding-left:38px; font-size:15px; line-height:1.5; min-width:0; }
+    ol.step-list li::before { counter-increment:step; content:counter(step); position:absolute; left:0; top:-1px; width:25px; height:25px; border-radius:50%; background:var(--card-accent); color:var(--step-num-ink); display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:12.5px; }
+    ol.step-list b { font-family:'JetBrains Mono',monospace; font-size:13px; background:var(--card); padding:1px 6px; border-radius:4px; border:1px solid var(--card-border); }
+
+    .quote-block { font-family:'Space Grotesk', sans-serif; font-weight:500; font-size:18px; line-height:1.5; color:var(--ink); border-left:3px solid var(--accent); padding:4px 0 4px 18px; margin:6px 0 16px; }
+    .note { background:var(--card); border:1px dashed var(--card-border); border-radius:10px; padding:12px 16px; font-size:13.5px; color:var(--card-ink-soft); margin-top:14px; }
+    .note b { color:var(--card-ink); }
+    .note.warn { border-color: rgba(255,122,110,0.4); background: var(--danger-soft); }
+    .note.warn b { color: var(--danger); }
+
+    .code-wrap { position:relative; min-width:0; }
+    .code-cap { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:8px; }
+    pre.code-block {
+      background:#0A150D; color:#D9EBD1; border-radius:12px; padding:18px 20px;
+      font-size:13px; line-height:1.65; overflow-x:auto; margin:0; min-width:0;
+      box-shadow: inset 0 0 0 1px rgba(131,205,41,0.06), 0 6px 18px var(--shadow);
+      border:1px solid rgba(131,205,41,0.06);
+    }
+    pre.code-block code { white-space:pre; }
+    .tok-kw{ color:#FFB86C; font-weight:600; }
+    .tok-str{ color:#A3D9A5; }
+    .tok-com{ color:#6A9273; font-style:italic; }
+    .tok-type{ color:#6AB0D6; }
+    .tok-num{ color:#D99A6C; }
+    .tok-fn{ color:#66D9FF; }
+    .tok-prop{ color:#B5A9E8; }
+
+    .two-col pre.code-block { max-width:100%; overflow-x:auto; white-space:pre-wrap; word-break:break-word; }
+    .two-col .code-block code { white-space:pre-wrap; word-break:break-word; }
+
+    .copy-btn {
+      position:absolute; top:8px; right:8px; z-index:2;
+      font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase;
+      background:rgba(131,205,41,0.12); color:var(--accent-soft); border:1px solid var(--card-border);
+      border-radius:6px; padding:5px 9px; cursor:pointer; transition: background 150ms ease, color 150ms ease, transform 150ms ease;
+    }
+    .code-wrap .code-cap ~ .copy-btn, .code-wrap > .copy-btn { top:8px; }
+    .copy-btn:hover { background:rgba(131,205,41,0.22); }
+    .copy-btn:active { transform:scale(0.96); }
+    .copy-btn.copied { background:var(--accent); color:#0A150D; border-color:var(--accent); }
+    .copy-source { position:absolute; left:-9999px; top:-9999px; opacity:0; height:1px; width:1px; }
+
+    .param-table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    .param-table th, .param-table td { text-align:left; padding:8px 12px; border-bottom:1px solid var(--table-border); }
+    .param-table th { font-family:'JetBrains Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.08em; color:var(--accent); }
+    .param-table td { color:var(--ink-soft); }
+    .param-table td b, .param-table td code { color:var(--ink); }
+
+    .badge { display:inline-block; font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; padding:3px 9px; border-radius:999px; border:1px solid var(--card-border); color:var(--accent-soft); background:rgba(131,205,41,0.08); }
+    .badge.danger { color:var(--danger); border-color:rgba(255,122,110,0.35); background:var(--danger-soft); }
+    .badge.ok { color:var(--accent-soft); }
+
+    .mc-q { background:var(--card); border:1px solid var(--card-border); border-radius:10px; padding:12px 16px; margin-bottom:10px; }
+    .mc-q .qn { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--accent-soft); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:4px; }
+    .mc-q .qtext { font-size:14.5px; color:var(--ink); margin-bottom:8px; line-height:1.4; }
+    .mc-q .opts { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:6px 14px; }
+    @media (max-width:900px){ .mc-q .opts { grid-template-columns:minmax(0,1fr); } }
+    .mc-q .opts div { font-size:13px; color:var(--card-ink-soft); padding-left:18px; position:relative; }
+    .mc-q .opts div::before { content:attr(data-letter); position:absolute; left:0; font-family:'JetBrains Mono',monospace; color:var(--accent); font-weight:700; font-size:12px; }
+
+    .id-q { display:flex; gap:10px; align-items:baseline; padding:9px 0; border-bottom:1px dashed var(--card-border); font-size:14.5px; }
+    .id-q:last-child { border-bottom:none; }
+    .id-q .qn { font-family:'JetBrains Mono',monospace; color:var(--accent-soft); font-size:12px; min-width:26px; }
+
+    .hud { position:fixed; bottom:16px; right:20px; z-index:50; display:flex; align-items:center; gap:12px; }
+    .counter { font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:600; background:var(--card); border:1px solid var(--card-border); color:var(--card-ink); padding:8px 16px; border-radius:999px; box-shadow:0 4px 14px var(--shadow); }
+    .hint { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-soft); letter-spacing:0.05em; display:none; }
+    @media (min-width:640px){ .hint { display:block; } }
+
+    .kbd-fab { position:fixed; bottom:16px; left:20px; z-index:50; width:34px; height:34px; border-radius:50%; background:var(--card); border:1px solid var(--card-border); color:var(--card-ink-soft); font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:700; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 14px var(--shadow); }
+    .kbd-fab:hover { color:var(--accent-soft); border-color:var(--accent); }
+
+    .shortcuts-overlay { position:fixed; inset:0; background:rgba(6,12,8,0.72); backdrop-filter: blur(3px); z-index:80; display:none; align-items:center; justify-content:center; }
+    .shortcuts-overlay.show { display:flex; }
+    .shortcuts-panel { background:var(--card); border:1px solid var(--card-border); border-radius:14px; padding:26px 30px; max-width:420px; width:90%; box-shadow:0 20px 60px var(--shadow); }
+    .shortcuts-panel h3 { font-size:17px; margin-bottom:16px; color:var(--ink); }
+    .shortcuts-panel .row { display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px dashed var(--card-border); font-size:13.5px; color:var(--card-ink-soft); }
+    .shortcuts-panel .row:last-child { border-bottom:none; }
+    .shortcuts-panel kbd { font-family:'JetBrains Mono',monospace; background:#0A150D; border:1px solid var(--card-border); border-radius:5px; padding:2px 7px; color:var(--accent-soft); font-size:12px; }
+    .shortcuts-panel .close-hint { margin-top:16px; font-size:11.5px; color:var(--ink-soft); text-align:center; }
+
+    .slide::-webkit-scrollbar { width:6px; }
+    .slide::-webkit-scrollbar-thumb { background:var(--card-border); border-radius:8px; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+  <div class="node-gauge" id="nodeGauge">
+    <svg viewBox="0 0 40 40" fill="none">
+      <path d="M20 4 L34 12 V28 L20 36 L6 28 V12 Z" fill="var(--accent)" opacity="0.85" class="hex" />
+      <path d="M20 6 L32 13 V27 L20 34 L8 27 V13 Z" stroke="var(--bg)" stroke-width="1.6" fill="none" opacity="0.25" />
+      <circle cx="20" cy="20" r="2" fill="var(--bg)" opacity="0.15" />
+    </svg>
+    <span class="gauge-label" id="gaugeLabel">Cold Start</span>
+  </div>
+
+  <div class="stage" id="stage"></div>
+
+  <div class="kbd-fab" id="kbdFab" title="Keyboard shortcuts">?</div>
+
+  <div class="hud">
+    <span class="hint">click / → to continue</span>
+    <div class="counter" id="counter">1 / 24</div>
+  </div>
+
+  <div class="shortcuts-overlay" id="shortcutsOverlay">
+    <div class="shortcuts-panel">
+      <h3>⌨️ Keyboard Shortcuts</h3>
+      <div class="row"><span>Next slide</span><kbd>→</kbd></div>
+      <div class="row"><span>Previous slide</span><kbd>←</kbd></div>
+      <div class="row"><span>First slide</span><kbd>Home</kbd></div>
+      <div class="row"><span>Last slide</span><kbd>End</kbd></div>
+      <div class="row"><span>Toggle this panel</span><kbd>?</kbd></div>
+      <div class="row"><span>Close panel</span><kbd>Esc</kbd></div>
+      <div class="close-hint">Click anywhere outside this box to close.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  var KEYWORDS = ['const','let','var','function','return','if','else','try','catch','finally','throw','new','this','class','extends','super','import','export','default','from','as','async','await','require','module','exports','global','__dirname','__filename','console','log','error','warn','info','process','env','argv','exit','cwd','platform','version','versions','memoryUsage','uptime','nextTick','on','once','emit','off','removeListener','removeAllListeners','EventEmitter','instanceof','typeof','for','while','of','in','break','continue','null','undefined','true','false','Buffer','fs','readFile','writeFile','readFileSync','writeFileSync','createReadStream','createWriteStream','pipe','path','join','resolve','dotenv','config','setTimeout','setInterval','setImmediate','clearTimeout','clearInterval','clearImmediate','Promise','then','catch','finally','all','JSON','stringify','parse','Error','TypeError','ReferenceError','SyntaxError','RangeError','String','Number','Boolean','Object','Array','Date','RegExp','Map','Set','Symbol','http','createServer','listen','express','app','get','post','put','delete','use','req','res','send','json','status','sendStatus','Transform','Readable','Writable','_transform','chunk','encoding','callback','push','write','end','method','url','headers','setHeader','writeHead'];
+  var KW_RE = new RegExp('\\b(' + KEYWORDS.join('|') + ')\\b');
+  var TOKEN_RE = /(\/\/.*$)|("(?:\\.|[^"\\])*")|('(?:\\.|[^'\\])*')|(`(?:\\.|[^`\\])*`)|\b([A-Za-z_$][A-Za-z0-9_$]*)\b|\b(\d+\.?\d*)\b/gm;
+
+  function highlightJS(src){
+    var esc = escapeHtml(src);
+    return esc.replace(TOKEN_RE, function(match, comment, str, chr, tmpl, word, num){
+      if(comment !== undefined) return '<span class="tok-com">' + comment + '</span>';
+      if(str !== undefined) return '<span class="tok-str">' + str + '</span>';
+      if(chr !== undefined) return '<span class="tok-str">' + chr + '</span>';
+      if(tmpl !== undefined) return '<span class="tok-str">' + tmpl + '</span>';
+      if(word !== undefined){
+        if(KW_RE.test(word)) return '<span class="tok-kw">' + word + '</span>';
+        if(/^[A-Z]/.test(word)) return '<span class="tok-type">' + word + '</span>';
+        return word;
+      }
+      if(num !== undefined) return '<span class="tok-num">' + num + '</span>';
+      return match;
+    });
+  }
+
+  var codeCounter = 0;
+  function code(src, label){
+    var raw = src.replace(/^\n/,'').replace(/\n$/,'');
+    var id = 'code_' + (codeCounter++);
+    var html = highlightJS(raw);
+    return '<div class="code-wrap">' +
+      (label ? '<div class="code-cap">' + label + '</div>' : '') +
+      '<button class="copy-btn" data-for="' + id + '" onclick="window.__copyCode(this)">Copy</button>' +
+      '<pre class="code-block"><code>' + html + '</code></pre>' +
+      '<textarea class="copy-source" id="' + id + '" tabindex="-1" readonly>' + escapeHtml(raw) + '</textarea>' +
+    '</div>';
+  }
+
+  window.__copyCode = function(btn){
+    var ta = document.getElementById(btn.getAttribute('data-for'));
+    if(!ta) return;
+    var text = ta.value;
+    function feedback(){
+      var original = 'Copy';
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(function(){ btn.textContent = original; btn.classList.remove('copied'); }, 1200);
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(feedback, function(){
+        ta.style.left = '0'; ta.style.top='0'; ta.style.opacity='0';
+        ta.select(); document.execCommand('copy');
+        ta.style.left = '-9999px'; ta.style.top='-9999px';
+        feedback();
+      });
+    } else {
+      ta.style.left = '0'; ta.style.top='0'; ta.style.opacity='0';
+      ta.select(); document.execCommand('copy');
+      ta.style.left = '-9999px'; ta.style.top='-9999px';
+      feedback();
+    }
+  };
+
+  var S = [];
+
+  // ——— 1. TITLE ———
+  S.push({
+    eyebrow: 'Prelim · Week 5',
+    title: 'Docker Fundamentals I — Your First Container',
+    lede: 'Last week you built a raw-HTTP server that worked perfectly... on your machine. Today we fix that by shipping the machine along with the code.',
+    body:
+      '<div class="card-grid cols-4">' +
+        '<div class="card"><h3>📦 Images</h3><p>A blueprint that describes exactly how to build an environment.</p></div>' +
+        '<div class="card"><h3>🐳 Containers</h3><p>A running instance of an image — isolated, but lightweight.</p></div>' +
+        '<div class="card"><h3>📝 Dockerfile</h3><p>The recipe. Five instructions get you 90% of the way there.</p></div>' +
+        '<div class="card"><h3>⚡ Layers &amp; Caching</h3><p>Order your Dockerfile right and rebuilds take seconds, not minutes.</p></div>' +
+      '</div>'
+  });
+
+  // ——— 2. OBJECTIVES ———
+  S.push({
+    eyebrow: 'Session Overview',
+    title: 'Learning Objectives',
+    body:
+      '<ol class="step-list">' +
+        '<li>Explain the difference between an <b>image</b> and a <b>container</b>, and between a container and a virtual machine.</li>' +
+        '<li>Write a basic <b>Dockerfile</b> for a Node.js application.</li>' +
+        '<li>Build an image with <b>docker build</b> and run it with <b>docker run</b>, including port mapping (<b>-p</b>).</li>' +
+        '<li>Use a <b>.dockerignore</b> file and explain why <b>node_modules</b> shouldn\'t be copied into the image.</li>' +
+        '<li>Explain image layers and caching, and order Dockerfile instructions to take advantage of it.</li>' +
+      '</ol>'
+  });
+
+  // ——— 3. RECAP / BRIDGE ———
+  S.push({
+    eyebrow: 'Warm-Up',
+    title: 'Recap & Homework Debrief',
+    lede: 'Last week\'s homework: run your streaming server on a classmate\'s machine.',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>🔗 Bridge from Week 4</h3><ul class="ticket-list">' +
+          '<li>Your server worked great on your own laptop.</li>' +
+          '<li>On a classmate\'s machine? Wrong Node version, a missing <code>.env</code>, or port 3000 already taken.</li>' +
+          '<li>None of that means the code is wrong — it means the <i>environment</i> was never part of the deal.</li>' +
+        '</ul></div>' +
+        '<div class="card"><h3>💬 The Reframe</h3>' +
+          '<div class="quote-block">"What if we shipped the machine, not just the code?"</div>' +
+          '<p>That\'s literally what Docker does — and it\'s the whole lesson today.</p>' +
+        '</div>' +
+      '</div>'
+  });
+
+  // ——— 4. IMAGE VS CONTAINER VS VM ———
+  S.push({
+    eyebrow: '1. Core Concepts',
+    title: 'Image vs. Container vs. Virtual Machine',
+    lede: 'An image is a recipe. A container is the dish you actually cooked from it.',
+    body:
+      '<table class="param-table">' +
+        '<tr><th>Term</th><th>What it actually is</th></tr>' +
+        '<tr><td><b>Image</b></td><td>A read-only blueprint — your app, its dependencies, and the OS bits it needs, frozen into one package.</td></tr>' +
+        '<tr><td><b>Container</b></td><td>A running (or stopped) instance of an image — isolated, but sharing the host\'s kernel underneath.</td></tr>' +
+        '<tr><td><b>Virtual Machine</b></td><td>A full guest OS, virtualized hardware and all — heavier to boot, heavier to run.</td></tr>' +
+      '</table>' +
+      '<div class="note"><b>💡 Key contrast:</b> a VM virtualizes an entire computer. A container just isolates a process, while quietly borrowing the host\'s kernel — that\'s why containers start in milliseconds and VMs start in seconds-to-minutes.</div>'
+  });
+
+  // ——— 5. WHY THIS MATTERS ———
+  S.push({
+    eyebrow: '1. Core Concepts',
+    title: 'Why "It Works on My Machine" Stops Being an Excuse',
+    body:
+      '<div class="card-grid cols-3">' +
+        '<div class="card"><h3>🧊 Frozen environment</h3><p>Node version, OS libraries, and env config all travel inside the image — not just your source code.</p></div>' +
+        '<div class="card"><h3>🔁 Reproducible</h3><p>The same image produces the same container, every single time, on every machine that runs Docker.</p></div>' +
+        '<div class="card"><h3>🚚 Portable</h3><p>Your laptop, a classmate\'s laptop, a cloud server — if Docker is installed, the image runs identically.</p></div>' +
+      '</div>'
+  });
+
+  // ——— 6. ANATOMY OF A DOCKERFILE ———
+  S.push({
+    eyebrow: '2. The Dockerfile',
+    title: 'Anatomy of a Dockerfile',
+    lede: 'Five instructions cover almost every beginner use case.',
+    body:
+      '<table class="param-table">' +
+        '<tr><th>Instruction</th><th>What it does</th></tr>' +
+        '<tr><td><code>FROM</code></td><td>Pick the base image to build on top of (e.g. <code>node:20-alpine</code>).</td></tr>' +
+        '<tr><td><code>WORKDIR</code></td><td>Set the working directory inside the image for everything that follows.</td></tr>' +
+        '<tr><td><code>COPY</code></td><td>Copy files from your project into the image.</td></tr>' +
+        '<tr><td><code>RUN</code></td><td>Execute a command <i>while building</i> the image (e.g. installing dependencies).</td></tr>' +
+        '<tr><td><code>EXPOSE</code></td><td>Document which port the container listens on.</td></tr>' +
+        '<tr><td><code>CMD</code></td><td>The command that runs when a container actually starts.</td></tr>' +
+      '</table>'
+  });
+
+  // ——— 7. LIVE-CODE THE DOCKERFILE ———
+  S.push({
+    eyebrow: '2. The Dockerfile',
+    title: 'Writing the Dockerfile for Your Wk4 Server',
+    lede: 'Line by line, this packages the raw-HTTP streaming server from last week.',
+    body:
+      code("# 1. Start from an official, lightweight Node image\nFROM node:20-alpine\n\n# 2. Everything after this happens inside /app\nWORKDIR /app\n\n# 3. Copy ONLY the dependency manifests first\nCOPY package*.json ./\n\n# 4. Install dependencies (this layer gets cached!)\nRUN npm install\n\n# 5. Now copy the rest of the source code\nCOPY . .\n\n# 6. Document the port the app listens on\nEXPOSE 3000\n\n# 7. The command that runs when the container starts\nCMD [\"node\", \"server.js\"]", "Dockerfile") +
+      '<div class="note"><b>🔎 Notice the order:</b> dependency files are copied and installed <i>before</i> the rest of the source. That ordering is the whole trick behind fast rebuilds — more on that in a few slides.</div>'
+  });
+
+  // ——— 8. BUILD & RUN ———
+  S.push({
+    eyebrow: '3. Build & Run',
+    title: 'Turning a Dockerfile Into a Running Container',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>🔨 Build the image</h3>' + code("docker build -t streaming-server .") + '<p>Reads the <code>Dockerfile</code> in the current directory (<code>.</code>) and tags the resulting image <code>streaming-server</code>.</p></div>' +
+        '<div class="card"><h3>▶️ Run a container from it</h3>' + code("docker run -p 3000:3000 streaming-server") + '<p><code>-p 3000:3000</code> maps port 3000 on your host to port 3000 inside the container.</p></div>' +
+      '</div>' +
+      '<table class="param-table">' +
+        '<tr><th>Command</th><th>Situation you\'d use it in</th></tr>' +
+        '<tr><td><code>docker ps</code></td><td>"Is my container actually running right now?"</td></tr>' +
+        '<tr><td><code>docker logs &lt;container&gt;</code></td><td>"What has this container been printing to the console?"</td></tr>' +
+        '<tr><td><code>docker stop &lt;container&gt;</code></td><td>"I need to shut this down cleanly."</td></tr>' +
+      '</table>' +
+      '<div class="note"><b>✅ Proof it works:</b> run the exact same image on the instructor\'s machine and a student\'s machine — same behavior, same routes, zero setup drama.</div>'
+  });
+
+  // ——— 9. LAYERS & CACHING ———
+  S.push({
+    eyebrow: '4. Layers & Caching',
+    title: 'Why Instruction Order Actually Matters',
+    lede: 'Every Dockerfile instruction creates a new, cached layer.',
+    body:
+      '<div class="two-col">' +
+        '<div><div class="badge danger" style="margin-bottom:8px;">❌ Slow rebuilds</div>' + code("FROM node:20-alpine\nWORKDIR /app\nCOPY . .\nRUN npm install\nCMD [\"node\", \"server.js\"]") + '<p>Any source-code change invalidates the cache <i>above</i> <code>npm install</code> too — so dependencies reinstall from scratch, every single build.</p></div>' +
+        '<div><div class="badge ok" style="margin-bottom:8px;">✅ Fast rebuilds</div>' + code("FROM node:20-alpine\nWORKDIR /app\nCOPY package*.json ./\nRUN npm install\nCOPY . .\nCMD [\"node\", \"server.js\"]") + '<p>Only <code>package*.json</code> changes trigger a reinstall. Editing <code>server.js</code>? Docker reuses the cached <code>npm install</code> layer instantly.</p></div>' +
+      '</div>'
+  });
+
+  // ——— 10. .dockerignore ———
+  S.push({
+    eyebrow: '4. Layers & Caching',
+    title: 'The .dockerignore File',
+    lede: 'The .gitignore of the Docker world — and just as essential.',
+    body:
+      code(".dockerignore\n\nnode_modules\n.git\n.env\nnpm-debug.log\n*.md") +
+      '<div class="note warn"><b>⚠️ Why this matters:</b> without it, <code>COPY . .</code> drags your local <code>node_modules</code> into the image — bloating it, slowing every build, and sometimes shipping the <i>wrong platform\'s</i> compiled binaries into the container.</div>'
+  });
+
+  // ——— 11. PREVIEW OF WEEK 6 ———
+  S.push({
+    eyebrow: '5. Looking Ahead',
+    title: 'Preview: The Prelim Milestone',
+    lede: 'Week 6 is the "Hello Container" milestone — mostly work time, not new lecture content.',
+    body:
+      '<div class="card-grid cols-2">' +
+        '<div class="card"><h3>🎯 What you\'re proving</h3><p>That you can containerize your own Wk4 server end-to-end, with zero help beyond a README.</p></div>' +
+        '<div class="card"><h3>🧪 How it\'s tested</h3><p>A classmate pulls your repo and runs it using <i>only</i> your <code>docker build</code> / <code>docker run</code> instructions — no other setup.</p></div>' +
+      '</div>'
+  });
+
+  // ——— 12. LAB OVERVIEW ———
+  S.push({
+    eyebrow: 'Hands-On Lab',
+    title: 'Lab: Containerize the Wk4 Streaming Server',
+    lede: 'Package the raw-HTTP server from last week as a Docker image.',
+    body:
+      '<ol class="step-list">' +
+        '<li>Write a <b>Dockerfile</b> using an official Node base image (e.g. <code>node:20-alpine</code>).</li>' +
+        '<li>Order instructions to maximize layer-caching — dependencies before the rest of the source.</li>' +
+        '<li>Add a <b>.dockerignore</b> excluding <code>node_modules</code>, <code>.git</code>, and any local <code>.env</code>.</li>' +
+        '<li>Successfully <code>docker build</code> the image and <code>docker run</code> it with correct port mapping — hit both <code>/summary</code> and <code>/raw</code>.</li>' +
+        '<li>Document the exact <code>docker build</code> and <code>docker run</code> commands in the README, so a classmate can run it with zero local setup beyond Docker itself.</li>' +
+      '</ol>' +
+      '<div class="note"><b>📦 Deliverable:</b> <code>Dockerfile</code>, <code>.dockerignore</code>, and an updated <code>README.md</code> with run instructions, added to the same repo.</div>'
+  });
+
+  // ——— 13. HOMEWORK / BRIDGE ———
+  S.push({
+    eyebrow: 'Before Next Session',
+    title: 'Homework: Send It to a Classmate',
+    body:
+      '<div class="quote-block">"Can you run my container with only docker build and docker run — nothing else?"</div>' +
+      '<p style="font-size:15px; color:var(--ink-soft); line-height:1.6;">Send your Dockerfile + repo link to a classmate and have them try it with zero extra setup. Bring any friction points to Week 6 as troubleshooting material before the milestone submission.</p>'
+  });
+
+  // ——— 14. QUIZ: MULTIPLE CHOICE (1–3) ———
+  S.push({
+    eyebrow: 'Quiz Time',
+    title: 'Multiple Choice (Items 1–3)',
+    lede: 'Ten items total today: 3 Multiple Choice, 7 Identification (situational).',
+    body:
+      '<div class="mc-q"><div class="qn">Question 1</div><div class="qtext">A Docker <b>image</b> is best described as:</div>' +
+        '<div class="opts"><div data-letter="A.">A running process on your machine</div><div data-letter="B.">A blueprint used to create containers</div><div data-letter="C.">A full virtual machine with its own kernel</div><div data-letter="D.">A network configuration file</div></div></div>' +
+      '<div class="mc-q"><div class="qn">Question 2</div><div class="qtext">If <code>node_modules</code> is NOT excluded via <b>.dockerignore</b>, what usually happens?</div>' +
+        '<div class="opts"><div data-letter="A.">The build fails immediately</div><div data-letter="B.">Nothing — Docker automatically skips it</div><div data-letter="C.">Bloated image, slower builds, possible platform mismatches</div><div data-letter="D.">The container refuses to start</div></div></div>' +
+      '<div class="mc-q"><div class="qn">Question 3</div><div class="qtext">Which flag on <code>docker run</code> maps a container\'s internal port to a port on your host machine?</div>' +
+        '<div class="opts"><div data-letter="A.">-e</div><div data-letter="B.">-v</div><div data-letter="C.">-p</div><div data-letter="D.">-t</div></div></div>'
+  });
+
+  // ——— 15. QUIZ: SITUATIONAL IDENTIFICATION (4–7) ———
+  S.push({
+    eyebrow: 'Quiz Time',
+    title: 'Situational Identification (Items 4–7)',
+    lede: 'Name the exact command (or file) that fits each situation.',
+    body:
+      '<div class="id-q"><span class="qn">Q4</span><span>You just finished writing your <code>Dockerfile</code> and want to turn it into an image tagged <code>my-app</code>. What command do you run?</span></div>' +
+      '<div class="id-q"><span class="qn">Q5</span><span>You have an image ready and want to start a container from it, mapping port 3000 in the container to port 3000 on your host. What command do you run?</span></div>' +
+      '<div class="id-q"><span class="qn">Q6</span><span>You want to check which containers are currently running on your machine. What command do you run?</span></div>' +
+      '<div class="id-q"><span class="qn">Q7</span><span>Your container seems stuck and you want to see what it has been printing to the console. What command do you run?</span></div>'
+  });
+
+  // ——— 16. QUIZ: SITUATIONAL IDENTIFICATION (8–10) ———
+  S.push({
+    eyebrow: 'Quiz Time',
+    title: 'Situational Identification (Items 8–10)',
+    body:
+      '<div class="id-q"><span class="qn">Q8</span><span>You need to shut down a running container cleanly before restarting it. What command do you run?</span></div>' +
+      '<div class="id-q"><span class="qn">Q9</span><span>Before you can run <code>docker build</code> at all, what file must exist in your project describing the build instructions?</span></div>' +
+      '<div class="id-q"><span class="qn">Q10</span><span>You don\'t want your local <code>node_modules</code> folder copied into the image during <code>COPY . .</code> — what file do you create to prevent that?</span></div>'
+  });
+
+  // ——— 17. ANSWER KEY: MULTIPLE CHOICE ———
+  S.push({
+    eyebrow: 'Answer Key',
+    title: 'Answers — Multiple Choice',
+    body:
+      '<div class="card-grid cols-3">' +
+        '<div class="card"><h3>✅ Q1 — B</h3><p>An image is a blueprint. A container is what you get when it actually runs.</p></div>' +
+        '<div class="card"><h3>✅ Q2 — C</h3><p>Skipping <code>.dockerignore</code> bloats the image and can ship the wrong platform\'s binaries.</p></div>' +
+        '<div class="card"><h3>✅ Q3 — C</h3><p><code>-p host:container</code> is the port-mapping flag on <code>docker run</code>.</p></div>' +
+      '</div>'
+  });
+
+  // ——— 18. ANSWER KEY: SITUATIONAL IDENTIFICATION ———
+  S.push({
+    eyebrow: 'Answer Key',
+    title: 'Answers — Situational Identification',
+    body:
+      '<div class="card-grid cols-2">' +
+        '<div class="card"><h3>✅ Items 4–7</h3><ul class="ticket-list">' +
+          '<li><b>Q4</b> — <code>docker build -t my-app .</code></li>' +
+          '<li><b>Q5</b> — <code>docker run -p 3000:3000 my-app</code></li>' +
+          '<li><b>Q6</b> — <code>docker ps</code></li>' +
+          '<li><b>Q7</b> — <code>docker logs &lt;container&gt;</code></li>' +
+        '</ul></div>' +
+        '<div class="card"><h3>✅ Items 8–10</h3><ul class="ticket-list">' +
+          '<li><b>Q8</b> — <code>docker stop &lt;container&gt;</code></li>' +
+          '<li><b>Q9</b> — <code>Dockerfile</code></li>' +
+          '<li><b>Q10</b> — <code>.dockerignore</code></li>' +
+        '</ul></div>' +
+      '</div>'
+  });
+
+  // ——— GAUGE ———
+  function applyGauge(t){
+    var label = t < 0.4 ? 'Cold Start' : (t < 0.7 ? 'Warming Up' : 'Event Loop');
+    document.getElementById('gaugeLabel').textContent = label;
+  }
+
+  // ——— RENDER & NAV ———
+  var stage = document.getElementById('stage');
+  var counterEl = document.getElementById('counter');
+  var progressFill = document.getElementById('progressFill');
+  var total = S.length;
+  var current = 0;
+  var animating = false;
+
+  function buildSlideEl(idx){
+    var d = S[idx];
+    var el = document.createElement('div');
+    el.className = 'slide';
+    el.innerHTML =
+      '<div class="slide-inner">' +
+        '<div class="eyebrow">' + d.eyebrow + '</div>' +
+        '<h2 class="slide-title">' + d.title + '</h2>' +
+        (d.lede ? '<div class="lede">' + d.lede + '</div>' : '') +
+        d.body +
+      '</div>';
+    return el;
+  }
+
+  function updateHud(){
+    counterEl.textContent = (current+1) + ' / ' + total;
+    progressFill.style.width = ((current) / (total-1) * 100) + '%';
+    applyGauge(current / (total-1));
+  }
+
+  var curEl = buildSlideEl(0);
+  curEl.classList.add('active');
+  stage.appendChild(curEl);
+  updateHud();
+
+  function goTo(idx, dir){
+    if(animating || idx === current || idx < 0 || idx >= total) return;
+    animating = true;
+    var nextEl = buildSlideEl(idx);
+    nextEl.classList.add(dir > 0 ? 'enter-fwd' : 'enter-bwd');
+    stage.appendChild(nextEl);
+    void nextEl.offsetWidth;
+    var oldEl = curEl;
+    requestAnimationFrame(function(){
+      oldEl.classList.remove('active');
+      oldEl.classList.add(dir > 0 ? 'exit-fwd' : 'exit-bwd');
+      nextEl.classList.remove('enter-fwd','enter-bwd');
+      nextEl.classList.add('active');
+    });
+    current = idx;
+    curEl = nextEl;
+    updateHud();
+    setTimeout(function(){
+      if(oldEl && oldEl.parentNode) oldEl.parentNode.removeChild(oldEl);
+      animating = false;
+    }, 420);
+  }
+
+  function next(){ goTo(current+1, 1); }
+  function prev(){ goTo(current-1, -1); }
+
+  // ——— CLICK-ANYWHERE (EXCEPT INTERACTIVE ELEMENTS) ———
+  var INTERACTIVE_SELECTOR = 'button, a, input, textarea, select, .copy-btn, .kbd-fab, .shortcuts-overlay, .shortcuts-panel';
+  document.getElementById('app').addEventListener('click', function(e){
+    if(e.target.closest(INTERACTIVE_SELECTOR)) return;
+    var overlay = document.getElementById('shortcutsOverlay');
+    if(overlay.classList.contains('show')){ overlay.classList.remove('show'); return; }
+    var w = window.innerWidth;
+    if(e.clientX < w * 0.25){ prev(); } else { next(); }
+  });
+
+  document.addEventListener('keydown', function(e){
+    var overlay = document.getElementById('shortcutsOverlay');
+    if(e.key === '?'){ e.preventDefault(); overlay.classList.toggle('show'); return; }
+    if(e.key === 'Escape'){ if(overlay.classList.contains('show')){ overlay.classList.remove('show'); } return; }
+    if(overlay.classList.contains('show')) return;
+    if(e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown'){ e.preventDefault(); next(); }
+    else if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); prev(); }
+    else if(e.key === 'Home'){ e.preventDefault(); goTo(0, -1); }
+    else if(e.key === 'End'){ e.preventDefault(); goTo(total-1, 1); }
+    else if(e.key === 'ArrowUp'){ e.preventDefault(); prev(); }
+    else if(e.key === 'ArrowDown'){ e.preventDefault(); next(); }
+  });
+
+  document.getElementById('kbdFab').addEventListener('click', function(e){
+    e.stopPropagation();
+    document.getElementById('shortcutsOverlay').classList.toggle('show');
+  });
+
+  // ——— SWIPE GESTURES (mobile) ———
+  var touchStartX = 0, touchStartY = 0, touchActive = false;
+  document.getElementById('app').addEventListener('touchstart', function(e){
+    if(e.target.closest(INTERACTIVE_SELECTOR)) { touchActive = false; return; }
+    touchActive = true;
+    touchStartX = e.changedTouches[0].clientX;
+    touchStartY = e.changedTouches[0].clientY;
+  }, {passive:true});
+
+  document.getElementById('app').addEventListener('touchend', function(e){
+    if(!touchActive) return;
+    touchActive = false;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
+    if(Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5){
+      if(dx < 0) next(); else prev();
+    }
+  }, {passive:true});
+})();
+</script>
+</body>
+</html>

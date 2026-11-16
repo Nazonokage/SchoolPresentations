@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Node.js → MongoDB Prep</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+    :root{
+        --bg:#09090b;
+        --panel:#131316;
+        --panel-2:#1a1a1e;
+        --border:#26262b;
+        --cyan:#22d3ee;
+        --emerald:#34d399;
+        --amber:#fbbf24;
+        --rose:#fb7185;
+        --violet:#a78bfa;
+        --sky:#38bdf8;
+        --muted:#8b8b93;
+    }
+    body{ font-family:'Inter',system-ui,sans-serif; background:var(--bg); }
+    .title-font{ font-family:'Space Grotesk',sans-serif; }
+    .code{
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size:0.82rem; line-height:1.42;
+    }
+    .slide{ transition: opacity 350ms ease, transform 350ms ease; }
+
+    .eyebrow{ letter-spacing:.18em; text-transform:uppercase; font-size:.72rem; font-weight:600; }
+
+    /* ---- language comparison panel: code + inline output, one per language ---- */
+    .langpanel{
+        background: var(--panel);
+        border:1px solid var(--border);
+        border-radius: 1.1rem;
+        overflow:hidden;
+        display:flex; flex-direction:column;
+    }
+    .langpanel .bar{
+        display:flex; align-items:center; gap:.5rem;
+        padding:.5rem .9rem; font-size:.76rem; font-weight:700; letter-spacing:.03em;
+        border-bottom:1px solid var(--border);
+    }
+    .langpanel .bar.bar-js{ color:var(--amber); background:rgba(251,191,36,.07); }
+    .langpanel .bar.bar-py{ color:var(--sky); background:rgba(56,189,248,.07); }
+    .langpanel pre{ margin:0; padding:.7rem .95rem; }
+    .langpanel .out{ border-top:1px dashed var(--border); background:#0b0b0d; padding:.5rem .95rem; }
+    .langpanel .out .line{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:.78rem; color:#e4e4e7; line-height:1.5; }
+    .langpanel .out .line .arrow{ color:var(--emerald); margin-right:.4rem; }
+    .langpanel .note{ padding:.4rem .95rem .6rem; font-size:.72rem; color:var(--muted); border-top:1px dashed var(--border); }
+
+    /* ---- use case callout ---- */
+    .usecase{
+        border:1px solid rgba(52,211,153,.25);
+        background: linear-gradient(180deg, rgba(52,211,153,.07), rgba(52,211,153,.02));
+        border-radius: 1.1rem;
+        padding:.75rem 1.1rem;
+    }
+    .usecase .head{ display:flex; align-items:center; gap:.5rem; color:var(--emerald); font-weight:600; font-size:.8rem; letter-spacing:.02em; margin-bottom:.25rem; }
+
+    .pill{
+        display:inline-flex; align-items:center; gap:.5rem;
+        border:1px solid var(--border); background:var(--panel);
+        padding:.35rem .8rem; border-radius:999px; font-size:.8rem; color:var(--muted);
+    }
+
+    ::-webkit-scrollbar{ width:8px; height:8px; }
+    ::-webkit-scrollbar-thumb{ background:#2c2c31; border-radius:999px; }
+
+    .navdot{ width:7px; height:7px; border-radius:999px; background:#3f3f46; transition: all 200ms ease; cursor:pointer; }
+    .navdot.active{ width:20px; background: linear-gradient(90deg, var(--cyan), var(--emerald)); }
+</style>
+</head>
+<body class="bg-zinc-950 text-zinc-200 overflow-hidden">
+<div id="presentation" class="min-h-screen flex flex-col">
+
+    <!-- Top Bar -->
+    <div class="fixed top-0 left-0 right-0 z-50 bg-zinc-950/90 backdrop-blur border-b border-zinc-800 py-3 px-8 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <i class="fa-brands fa-node-js text-emerald-400"></i>
+            <span class="title-font text-xl font-semibold tracking-tight">Node.js → MongoDB Prep</span>
+        </div>
+        <div class="flex items-center gap-6 text-sm">
+            <div id="slide-counter" class="tabular-nums font-mono text-zinc-400">1 / 17</div>
+            <div class="w-72 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                <div id="progress" class="h-full bg-gradient-to-r from-cyan-400 to-emerald-400 transition-all duration-300" style="width: 5.88%"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="slides" class="flex-1 relative pt-16 pb-14">
+
+        <!-- Slide 1: Title -->
+        <div class="slide absolute inset-0 flex items-center justify-center p-8" id="slide-1">
+            <div class="max-w-3xl text-center">
+                <div class="inline-flex items-center gap-2 bg-zinc-900 border border-cyan-400/30 px-6 py-2 rounded-3xl mb-6 text-cyan-400 text-sm">
+                    Phase 0 &amp; 1 — Foundations
+                </div>
+                <h1 class="title-font text-7xl font-bold tracking-tighter leading-none mb-4">
+                    JavaScript Fundamentals
+                </h1>
+                <p class="text-3xl text-zinc-400">Node.js, then MongoDB</p>
+                <p class="mt-8 text-zinc-500 text-sm tracking-wide">
+                    Node.js · let/var/const · typeof · Conditionals · Loops · Functions · Arrays · Multi-Dimensional Arrays · Objects · JSON
+                </p>
+                <p class="mt-6 text-zinc-600 text-sm max-w-xl mx-auto">
+                    Every code slide shows <span class="text-amber-400 font-mono">JavaScript</span> next to <span class="text-sky-400 font-mono">Python</span> with real output, so if you already know one, the other clicks faster.
+                </p>
+            </div>
+        </div>
+
+        <!-- Slide 2: Intro to Node.js -->
+        <div class="slide hidden absolute inset-0 p-8 overflow-auto" id="slide-2">
+            <div class="max-w-7xl mx-auto">
+                <div class="eyebrow text-emerald-400">Runtime · 00</div>
+                <h2 class="title-font text-3xl font-semibold mt-1 mb-1.5">What is Node.js?</h2>
+                <p class="text-zinc-400 mb-4">JavaScript was built to run inside a browser. <span class="text-zinc-200">Node.js</span> takes the same engine that powers Chrome (V8) and lets JavaScript run anywhere — your laptop, a server, a script you trigger from the terminal. That's what makes JS-powered backends, and eventually a JS app that talks to MongoDB, possible.</p>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="langpanel">
+                        <div class="bar bar-js"><i class="fa-brands fa-node-js"></i> JavaScript — Node.js</div>
+                        <pre class="code"><code><span style="color:#6b7280">// app.js</span>
+console.log(<span style="color:#f1fa8c">"Hello from Node.js!"</span>);
+console.log(<span style="color:#a78bfa">typeof</span> window);</code></pre>
+                        <div class="out">
+                            <div class="line text-zinc-500">$ node app.js</div>
+                            <div class="line"><span class="arrow">›</span>Hello from Node.js!</div>
+                            <div class="line"><span class="arrow">›</span>undefined <span class="text-zinc-500">— no browser here</span></div>
+                        </div>
+                    </div>
+                    <div class="langpanel">
+                        <div class="bar bar-py"><i class="fa-brands fa-python"></i> Python</div>
+                        <pre class="code"><code><span style="color:#6b7280"># app.py</span>
+<span style="color:#a78bfa">print</span>(<span style="color:#f1fa8c">"Hello from Python!"</span>)
+<span style="color:#a78bfa">import</span> sys
+<span style="color:#a78bfa">print</span>(sys.platform)</code></pre>
+                        <div class="out">
+                            <div class="line text-zinc-500">$ python app.py</div>
+                            <div class="line"><span class="arrow">›</span>Hello from Python!</div>
+                            <div class="line"><span class="arrow">›</span>linux <span class="text-zinc-500">(or "darwin" / "win32")</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3 mb-4">
+                    <div class="pill justify-center"><i class="fa-solid fa-box-open"></i> npm ↔ pip <span class="text-zinc-600">(packages)</span></div>
+                    <div class="pill justify-center"><i class="fa-solid fa-file-lines"></i> package.json ↔ requirements.txt</div>
+                    <div class="pill justify-center"><i class="fa-solid fa-terminal"></i> node app.js ↔ python app.py</div>
+                </div>
+
+                <div class="usecase">
+                    <div class="head"><i class="fa-solid fa-database"></i> Why this matters for MongoDB</div>
+                    <p class="text-zinc-300 text-sm">Node.js and MongoDB are a classic pair (the "N" and "M" in the MEAN/MERN stack) because they both think in the same shape: JSON-like objects. Everything you learn in this deck — variables, arrays, objects — is what you'll use to write a Node.js server that reads and writes MongoDB documents.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: Variables -->
+        <div class="slide hidden absolute inset-0 p-8 overflow-auto" id="slide-3">
+            <div class="max-w-7xl mx-auto">
+                <div class="eyebrow text-cyan-400">JS Basics · 01</div>
+                <h2 class="title-font text-3xl font-semibold mt-1 mb-1.5">let, var, const</h2>
+                <p class="text-zinc-400 mb-3">These are three ways to create a "box" that holds a value. The difference is <span class="text-zinc-200">where the box can be used</span> and <span class="text-zinc-200">whether you can put a new value in it later</span>.</p>
+
+                <div class="grid grid-cols-3 gap-3 mb-4">
+                    <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl">
+                        <span class="text-emerald-400 font-mono">let</span>
+                        <p class="text-zinc-400 text-xs mt-1">Block-scoped. Value can change. Default choice.</p>
+                    </div>
+                    <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl">
+                        <span class="text-amber-400 font-mono">var</span>
+                        <p class="text-zinc-400 text-xs mt-1">Function-scoped, ignores blocks. Legacy — avoid.</p>
+                    </div>
+                    <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl">
+                        <span class="text-rose-400 font-mono">const</span>
+                        <p class="text-zinc-400 text-xs mt-1">Block-scoped. Cannot be reassigned.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="langpanel">
+                        <div class="bar bar-js"><i class="fa-brands fa-node-js"></i> JavaScript</div>
+                        <pre class="code"><code><span style="color:#a78bfa">let</span> name = <span style="color:#f1fa8c">"Juan"</span>;
+<span style="color:#a78bfa">const</span> age = <span style="color:#bd93f9">20</span>;
+<span style="color:#a78bfa">var</span> oldStyle = <span style="color:#f1fa8c">"avoid"</span>;
+
+name = <span style="color:#f1fa8c">"Maria"</span>;   <span style="color:#6b7280">// OK</span>
+<span style="color:#6b7280">// age = 21;   // Error: constant</span>
+
+console.log(name, age);</code></pre>
+                        <div class="out"><div class="line"><span class="arrow">›</span>Maria 20</div></div>
+                    </div>
+                    <div class="langpanel">
+                        <div class="bar bar-py"><i class="fa-brands fa-python"></i> Python</div>
+                        <pre class="code"><code>name = <span style="color:#f1fa8c">"Juan"</span>
+age = <span style="color:#bd93f9">20</span>
+AGE_LIMIT = <span style="color:#bd93f9">20</span>  <span style="color:#6b7280"># ALL_CAPS = "treat as constant"</span>
+
+name = <span style="color:#f1fa8c">"Maria"</span>  <span style="color:#6b7280"># fine, Python has no let/const</span>
+
+<span style="color:#a78bfa">print</span>(name, age)</code></pre>
+                        <div class="out"><div class="line"><span class="arrow">›</span>Maria 20</div></div>
+                        <div class="note">Python has no <span class="font-mono">let/var/const</span> — every name is reassignable. "Constants" are just a naming convention, not enforced by the language.</div>
+                    </div>
+                </div>
+
+                <div class="usecase mt-4">
+                    <div class="head"><i class="fa-solid fa-lightbulb"></i> Use case</div>
+                    <p class="text-zinc-300 text-sm">In a student record app, a grade changes every exam, but a student ID should never change once created. This same idea carries into MongoDB: fields you update often vs. fields that identify a document.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: typeof -->
+        <div class="slide hidden absolute inset-0 p-8 overflow-auto" id="slide-4">
+            <div class="max-w-7xl mx-auto">
+                <div class="eyebrow text-cyan-400">JS Basics · 02</div>
+                <h2 class="title-font text-3xl font-semibold mt-1 mb-1.5">Checking data types</h2>
+                <p class="text-zinc-400 mb-3">Every value has a type. Knowing it matters when data arrives from a form, a file, or a database and you're not 100% sure what shape it's in.</p>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="langpanel">
+                        <div class="bar bar-js"><i class="fa-brands fa-node-js"></i> JavaScript — typeof</div>
+                        <pre class="code"><code>console.log(<span style="color:#a78bfa">typeof</span> <span style="color:#f1fa8c">"hello"</span>);
+console.log(<span style="color:#a78bfa">typeof</span> <span style="color:#bd93f9">42</span>);
+console.log(<span style="color:#a78bfa">typeof</span> <span style="color:#a78bfa">true</span>);
+console.log(<span style="color:#a78bfa">typeof</span> {name: <span style="color:#f1fa8c">"Juan"</span>});
+console.log(<span style="color:#a78bfa">typeof</span> [<span style="color:#bd93f9">1</span>,<span style="color:#bd93f9">2</span>,<span style="color:#bd93f9">3</span>]);
+console.log(<span style="color:#a78bfa">typeof</span> (() => {}));
+console.log(<span style="color:#a78bfa">typeof</span> undefined);</code></pre>
+                        <div class="out">
+                            <div class="line"><span class="arrow">›</span>"string"</div>
+                            <div class="line"><span class="arrow">›</span>"number"</div>
+                            <div class="line"><span class="arrow">›</span>"boolean"</div>
+                            <div class="line"><span class="arrow">›</span>"object"</div>
+                            <div class="line"><span class="arrow">›</span>"object" <span class="text-zinc-500">(arrays too)</span></div>
+                            <div class="line"><span class="arrow">›</span>"function"</div>
+                            <div class="line"><span class="arrow">›</span>"undefined"</div>
+                        </div>
+                    </div>
+                    <div class="langpanel">
+                        <div class="bar bar-py"><i class="fa-brands fa-python"></i> Python — type()</div>
+                        <pre class="code"><code><span style="color:#a78bfa">print</span>(<span style="color:#a78bfa">type</span>(<span style="color:#f1fa8c">"hello"</span>))
+<span style="color:#a78bfa">print</span>(<span style="color:#a78bfa">type</span>(<span style="color:#bd93f9">42</span>))
+<span style="color:#a78bfa">print</span>(<span style="color:#a78bfa">type</span>(<span style="color:#a78bfa">True</span>))
+<span style="color:#a78bfa">print</span>(<span style="color:#a78bfa">type</span>({<span style="color:#f1fa8c">"name"</span>: <span style="color:#f1fa8c">"Juan"</span>}))
+<span style="color:#a78bfa">print</span>(<span style="color:#a78bfa">type</span>([<span style="color:#bd93f9">1</span>,<span style="color:#bd93f9">2</span>,<span style="color:#bd93f9">3</span>]))
+<span style="color:#a78bfa">print</span>(<span style="color:#a78bfa">type</span>(<span style="color:#a78bfa">lambda</span>: <span style="color:#a78bfa">None</span>))
+<span style="color:#a78bfa">print</span>(<span style="color:#a78bfa">type</span>(<span style="color:#a78bfa">None</span>))</code></pre>
+                        <div class="out">
+                            <div class="line"><span class="arrow">›</span>&lt;class 'str'&gt;</div>
+                            <div class="line"><span class="arrow">›</span>&lt;class 'int'&gt;</div>
+                            <div class="line"><span class="arrow">›</span>&lt;class 'bool'&gt;</div>
+                            <div class="line"><span class="arrow">›</span>&lt;class 'dict'&gt;</div>
+                            <div class="line"><span class="arrow">›</span>&lt;class 'list'&gt;</div>
+                            <div class="line"><span class="arrow">›</span>&lt;class 'function'&gt;</div>
+                            <div class="line"><span class="arrow">›</span>&lt;class 'NoneType'&gt;</div>
+                        </div>
+                        <div class="note">Python has no <span class="font-mono">undefined</span> — <span class="font-mono">None</span> is the closest equivalent.</div>
+                    </div>
+                </div>
+
+                <div class="usecase mt-4">
+                    <div class="head"><i class="fa-solid fa-lightbulb"></i> Use case</div>
+                    <p class="text-zinc-300 text-sm">Before saving user input to a database, you confirm the age field is really a number, not text someone typed by mistake. In both languages, arrays/lists share a broader type ("object" / list is its own type) — that's why JS has <span class="font-mono text-cyan-400">Array.isArray()</span> and Python has <span class="font-mono text-sky-400">isinstance(x, list)</span> for a precise check.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Conditionals -->
+        <div class="slide hidden absolute inset-0 p-8 overflow-auto" id="slide-5">
+            <div class="max-w-7xl mx-auto">
+                <div class="eyebrow text-cyan-400">JS Basics · 03</div>
+                <h2 class="title-font text-3xl font-semibold mt-1 mb-4">Conditionals</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="langpanel">
+                        <div class="bar bar-js"><i class="fa-brands fa-node-js"></i> JavaScript — if / switch</div>
+                        <pre class="code"><code><span style="color:#a78bfa">let</span> age = <span style="color:#bd93f9">15</span>;
+<span style="color:#a78bfa">if</span> (age >= <span style="color:#bd93f9">18</span>) console.log(<span style="color:#f1fa8c">"Adult"</span>);
+<span style="color:#a78bfa">else if</span> (age >= <span style="color:#bd93f9">13</span>) console.log(<span style="color:#f1fa8c">"Teen"</span>);
+<span style="color:#a78bfa">else</span> console.log(<span style="color:#f1fa8c">"Child"</span>);
+
+<span style="color:#a78bfa">let</span> course = <span style="color:#f1fa8c">"BSCS"</span>;
+<span style="color:#a78bfa">switch</span>(course) {
+  <span style="color:#a78bfa">case</span> <span style="color:#f1fa8c">"BSIT"</span>: console.log(<span style="color:#f1fa8c">"IT"</span>); <span style="color:#a78bfa">break</span>;
+  <span style="color:#a78bfa">case</span> <span style="color:#f1fa8c">"BSCS"</span>: console.log(<span style="color:#f1fa8c">"CS"</span>); <span style="color:#a78bfa">break</span>;
+  <span style="color:#a78bfa">default</span>: console.log(<span style="color:#f1fa8c">"Other"</span>);
+}</code></pre>
+                        <div class="out">
+                            <div class="line"><span class="arrow">›</span>Teen</div>
+                            <div class="line"><span class="arrow">›</span>CS</div>
+                        </div>
+                    </div>
+                    <div class="langpanel">
+                        <div class="bar bar-py"><i class="fa-brands fa-python"></i> Python — if / match</div>
+                        <pre class="code"><code>age = <span style="color:#bd93f9">15</span>
+<span style="color:#a78bfa">if</span> age >= <span style="color:#bd93f9">18</span>: <span style="color:#a78bfa">print</span>(<span style="color:#f1fa8c">"Adult"</span>)
+<span style="color:#a78bfa">elif</span> age >= <span style="color:#bd93f9">13</span>: <span style="color:#a78bfa">print</span>(<span style="color:#f1fa8c">"Teen"</span>)
+<span style="color:#a78bfa">else</span>: <span style="color:#a78bfa">print</span>(<span style="color:#f1fa8c">"Child"</span>)
+
+course = <span style="color:#f1fa8c">"BSCS"</span>
+<span style="color:#a78bfa">match</span> course:
+    <span style="color:#a78bfa">case</span> <span style="color:#f1fa8c">"BSIT"</span>: <span style="color:#a78bfa">print</span>(<span style="color:#f1fa8c">"IT"</span>)
+    <span style="color:#a78bfa">case</span> <span style="color:#f1fa8c">"BSCS"</span>: <span style="color:#a78bfa">print</span>(<span style="color:#f1fa8c">"CS"</span>)
+    <span style="color:#a78bfa">case</span> _: <span style="color:#a78bfa">print</span>(<span style="color:#f1fa8c">"Other"</span>)</code></pre>
+                        <div class="out">
+                            <div class="line"><span class="arrow">›</span>Teen</div>
+                            <div class="line"><span class="arrow">›</span>CS</div>
+                        </div>
+                        <div class="note"><span class="font-mono">match/case</span> (Python 3.10+) is the closest thing Python has to <span class="font-mono">switch</span>.</div>
+                    </div>
+                </div>
+                <div class="usecase mt-4">
+                    <div class="head"><i class="fa-solid fa-lightbulb"></i> Use case</div>
+                    <p class="text-zinc-300 text-sm">A grading system decides pass/fail, a cart decides on free shipping. Later, MongoDB queries use this same "if it matches, include it" logic through operators like <span class="font-mono text-cyan-400">$gte</span> and <span class="font-mono text-cyan-400">$eq</span>.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: Loops -->
+        <div class="slide hidden absolute inset-0 p-8 overflow-auto" id="slide-6">
+            <div class="max-w-7xl mx-auto">
+                <div class="eyebrow text-cyan-400">JS Basics · 04</div>
+                <h2 class="title-font text-3xl font-semibold mt-1 mb-1.5">Loops</h2>
+                <p class="text-zinc-400 mb-3">A loop repeats code so you don't write it by hand for every item. Pick the loop based on <span class="text-zinc-200">what you're repeating over</span>.</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="langpanel">
+                        <div class="bar bar-js"><i class="fa-brands fa-node-js"></i> JavaScript</div>
+                        <pre class="code"><code><span style="color:#a78bfa">for</span> (<span style="color:#a78bfa">let</span> i = <span style="color:#bd93f9">0</span>; i < <span style="color:#bd93f9">3</span>; i++) {
+  console.log(<span style="color:#f1fa8c">"Round"</span>, i);
+}
+
+<span style="color:#a78bfa">let</span> subjects = [<span style="color:#f1fa8c">"DSA"</span>, <span style="color:#f1fa8c">"Web Dev"</span>];
+<span style="color:#a78bfa">for</span> (<span style="color:#a78bfa">let</span> sub <span style="color:#a78bfa">of</span> subjects) console.log(sub);
+
+<span style="color:#a78bfa">let</span> student = { name: <span style="color:#f1fa8c">"Juan"</span>, age: <span style="color:#bd93f9">20</span> };
+<span style="color:#a78bfa">for</span> (<span style="color:#a78bfa">let</span> key <span style="color:#a78bfa">in</span> student) {
+  console.log(key, <span style="color:#f1fa8c">"→"</span>, student[key]);
+}</code></pre>
+                        <div class="out">
+                            <div class="line"><span class="arrow">›</span>Round 0 / Round 1 / Round 2</div>
+                            <div class="line"><span class="arrow">›</span>DSA / Web Dev</div>
+                            <div class="line"><span class="arrow">›</span>name → Juan / age → 20</div>
+                        </div>
+                    </div>
+                    <div class="langpanel">
+                        <div class="bar bar-py"><i class="fa-brands fa-python"></i> Python</div>
+                        <pre class="code"><code><span style="color:#a78bfa">for</span> i <span style="color:#a78bfa">in</span> <span style="color:#a78bfa">range</span>(<span style="color:#bd93f9">3</span>):
+    <span style="color:#a78bfa">print</span>(<span style="color:#f1fa8c">"Round"</span>, i)
+
+subjects = [<span style="color:#f1fa8c">"DSA"</span>, <span style="color:#f1fa8c">"Web Dev"</span>]
+<span style="color:#a78bfa">for</span> sub <span style="color:#a78bfa">in</span> subjects: <span style="color:#a78bfa">print</span>(sub)
+
+student = {<span style="color:#f1fa8c">"name"</span>: <span style="color:#f1fa8c">"Juan"</span>, <span style="color:#f1fa8c">"age"</span>: <span style="color:#bd93f9">20</span>}
+<span style="color:#a78bfa">for</span> key <span style="color:#a78bfa">in</span> student:
+    <span style="color:#a78bfa">print</span>(key, <span style="color:#f1fa8c">"→"</span>, student[key])</code></pre>
+                        <div class="out">
+                            <div class="line"><span class="arrow">›</span>Round 0 / Round 1 / Round 2</div>
+                            <div class="line"><span class="arrow">›</span>DSA / Web Dev</div>
+                            <div class="line"><span class="arrow">›</span>name → Juan / age → 20</div>
+                        </div>
+                        <div class="note">A plain Python <span class="font-mono">for x in list</span> already does what JS needs <span class="font-mono">for...of</span> for — Python doesn't separate the two cases.</div>
+                    </div>
+                </div>
+                <div class="usecase mt-4">
+                    <div class="head"><i class="fa-solid fa-lightbulb"></i> Use case</div>
+                    <p class="text-zinc-300 text-sm">Rendering every student on a page, or averaging class grades — both loops. A MongoDB query result is a list of documents, and you'll loop over it exactly like the examples above.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: Functions -->
+        <div class="slide hidden absolute inset-0 p-8 overflow-auto" id="slide-7">
+            <div class="max-w-7xl mx-auto">
+                <div class="eyebrow text-cyan-400">JS Basics · 05</div>
+                <h2 class="title-font text-3xl font-semibold mt-1 mb-1.5">Functions</h2>
+                <p class="text-zinc-400 mb-3">A function packages logic so you can name it, reuse it, and hand it inputs.</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="langpanel">
+                        <div class="bar bar-js"><i class="fa-brands fa-node-js"></i> JavaScript — function / arrow</div>
+                        <pre class="code"><code><span style="color:#a78bfa">function</span> <span style="color:#50fa7b">add</span>(a, b) {
+  <span style="color:#a78bfa">return</span> a + b;
+}
+console.log(add(<span style="color:#bd93f9">2</span>, <span style="color:#bd93f9">3</span>));
+
+<span style="color:#a78bfa">const</span> add2 = (a, b) => a + b;
+console.log(add2(<span style="color:#bd93f9">2</span>, <span style="color:#bd93f9">3</span>));</code></pre>
+                        <div class="out"><div class="line"><span class="arrow">›</span>5</div><div class="line"><span class="arrow">›</span>5</div></div>
+                    </div>
+                    <div class="langpanel">
+                        <div class="bar bar-py"><i class="fa-brands fa-python"></i> Python — def / lambda</div>
+                        <pre class="code"><code><span style="color:#a78bfa">def</span> <span style="color:#50fa7b">add</span>(a, b):
+    <span style="color:#a78bfa">return</span> a + b
+<span style="color:#a78bfa">print</span>(add(<span style="color:#bd93f9">2</span>, <span style="color:#bd93f9">3</span>))
+
+add2 = <span style="color:#a78bfa">lambda</span> a, b: a + b
+<span style="color:#a78bfa">print</span>(add2(<span style="color:#bd93f9">2</span>, <span style="color:#bd93f9">3</span>))</code></pre>
+                        <div class="out"><div class="line"><span class="arrow">›</span>5</div><div class="line"><span class="arrow">›</span>5</div></div>
+                        <div class="note">JS arrow functions ↔ Python <span class="font-mono">lambda</span> — both are short, throwaway function syntax.</div>
+                    </div>
+                </div>
+                <div class="usecase mt-4">
+                    <div class="head"><i class="fa-solid fa-lightbulb"></i> Use case</div>
+                    <p class="text-zinc-300 text-sm">A <span class="font-mono text-cyan-400">calculateAverage(grades)</span> function keeps grade math in one place. Short functions like this are exactly what you pass into MongoDB driver methods like <span class="font-mono text-cyan-400">.find()</span> or Python's <span class="font-mono text-sky-400">.map()</span>-style comprehensions.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: Arrays basics -->
+        <div class="slide hidden absolute inset-0 p-8 overflow-auto" id="slide-8">
+            <div class="max-w-7xl mx-auto">
+                <div class="eyebrow text-emerald-400">Arrays · 06</div>
+                <h2 class="title-font text-3xl font-semibold mt-1 mb-1.5">Arrays — ordered lists of values</h2>
+                <p class="text-zinc-400 mb-3">A single variable holding <span class="text-zinc-200">many values in order</span>, each reachable by index, starting at <span class="font-mono">0</span>.</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="langpanel">
+                        <div class="bar bar-js"><i class="fa-brands fa-node-js"></i> JavaScript — Array</div>
+                        <pre class="code"><code><span style="color:#a78bfa">let</span> subjects = [<span style="color:#f1fa8c">"DSA"</span>, <span style="color:#f1fa8c">"Web Dev"</span>, <span style="color:#f1fa8c">"Math"</span>];
+console.log(subjects[<span style="color:#bd93f9">0</span>]);
+console.log(subjects.length);
+
+subjects.push(<span style="color:#f1fa8c">"Networking"</span>);
+subjects.pop();
+console.log(subjects);
+
+<span style="color:#a78bfa">let</span> shout = subjects.map(s => s.toUpperCase());
+console.log(shout);
+
+<span style="color:#a78bfa">let</span> filtered = subjects.filter(s => s.length > <span style="color:#bd93f9">4</span>);
+console.log(filtered);</code></pre>
+                        <div class="out">
+                            <div class="line"><span class="arrow">›</span>DSA</div>
+                            <div class="line"><span class="arrow">›</span>3</div>
+                            <div class="line"><span class="arrow">›</span>["DSA", "Web Dev", "Math"]</div>
+                            <div class="line"><span class="arrow">›</span>["DSA", "WEB DEV", "MATH"]</div>
+                            <div class="line"><span class="arrow">›</span>["Web Dev", "Math"]</div>
+                        </div>
+                    </div>
+                    <div class="langpanel">
+                        <div class="bar bar-py"><i class="fa-brands fa-python"></i> Python — list</div>
+                        <pre class="code"><code>subjects = [<span style="color:#f1fa8c">"DSA"</span>, <span style="color:#f1fa8c">"Web Dev"</span>, <span style="color:#f1fa8c">"Math"</span>]
+<span style="color:#a78bfa">print</span>(subjects[<span style="color:#bd93f9">0</span>])
+<span style="color:#a78bfa">print</span>(<span style="color:#a78bfa">len</span>(subjects))
+
+subjects.append(<span style="color:#f1fa8c">"Networking"</span>)
+subjects.pop()
+<span style="color:#a78bfa">print</span>(subjects)
+
+shout = [s.upper() <span style="color:#a78bfa">for</span> s <span style="color:#a78bfa">in</span> subjects]
+<span style="color:#a78bfa">print</span>(shout)
+
+filtered = [s <span style="color:#a78bfa">for</span> s <span style="color:#a78bfa">in</span> subjects <span style="color:#a78bfa">if</span> <span style="color:#a78bfa">len</span>(s) > <span style="color:#bd93f9">4</span>]
+<span style="color:#a78bfa">print</span>(filtered)</code></pre>
+                        <div class="out">
+                            <div class="line"><span class="arrow">›</span>DSA</div>
+                            <div class="line"><span class="arrow">›</span>3</div>
+                            <div class="line"><span class="arrow">›</span>['DSA', 'Web Dev', 'Math']</div>
+                            <div class="line"><span class="arrow">›</span>['DSA', 'WEB DEV', 'MATH']</div>
+                            <div class="line"><span class="arrow">›</span>['Web Dev', 'Math']</div>
+                        </div>
+                        <div class="note">JS <span class="font-mono">.map()/.filter()</span> ↔ Python list comprehensions — same idea, different syntax.</div>
+                    </div>
+                </div>
+                <div class="usecase mt-4">
+                    <div class="head"><i class="fa-solid fa-lightbulb"></i> Use case</div>
+                    <p class="text-zinc-300 text-sm">A cart's items, a playlist's songs, a student's enrolled subjects. MongoDB stores lists inside a document the same way: <span class="font-mono text-cyan-400">subjects: ["DSA", "Web Dev"]</span> is a real, valid field.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: Multi-dimensional Arrays -->
+        <div class="slide hidden absolute inset-0 p-8 overflow-auto" id="slide-9">
+            <div class="max-w-7xl mx-auto">
+                <div class="eyebrow text-emerald-400">Arrays · 07</div>
+                <h2 class="title-font text-3xl font-semibold mt-1 mb-1.5">Multi-dimensional arrays</h2>
+                <p class="text-zinc-400 mb-3">An array whose items are themselves arrays — a grid instead of a line. Like a spreadsheet: the outer array is rows, each inner array is one row's columns.</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="langpanel">
+                        <div class="bar bar-js"><i class="fa-brands fa-node-js"></i> JavaScript</div>
+                        <pre class="code"><code><span style="color:#6b7280">// [ name, grade, course ]</span>
+<span style="color:#a78bfa">let</span> students = [
+  [<span style="color:#f1fa8c">"Juan"</span>,  <span style="color:#bd93f9">85</span>, <span style="color:#f1fa8c">"BSIT"</span>],
+  [<span style="color:#f1fa8c">"Maria"</span>, <span style="color:#bd93f9">92</span>, <span style="color:#f1fa8c">"BSCS"</span>]
+];
+console.log(students[<span style="color:#bd93f9">0</span>][<span style="color:#bd93f9">0</span>]);  <span style="color:#6b7280">// row, column</span>
+
+<span style="color:#a78bfa">for</span> (<span style="color:#a78bfa">let</span> row <span style="color:#a78bfa">of</span> students) {
+  <span style="color:#a78bfa">for</span> (<span style="color:#a78bfa">let</span> cell <span style="color:#a78bfa">of</span> row) console.log(cell);
+  console.log(<span style="color:#f1fa8c">"---"</span>);
+}</code></pre>
+                        <div class="out">
+                            <div class="line"><span class="arrow">›</span>Juan</div>
+                            <div class="line"><span class="arrow">›</span>Juan / 85 / BSIT / ---</div>
+                            <div class="line"><span class="arrow">›</span>Maria / 92 / BSCS / ---</div>
+                        </div>
+                    </div>
+                    <div class="langpanel">
+                        <div class="bar bar-py"><i class="fa-brands fa-python"></i> Python</div>
+                        <pre class="code"><code><span style="color:#6b7280"># [ name, grade, course ]</span>
+students = [
+    [<span style="color:#f1fa8c">"Juan"</span>,  <span style="color:#bd93f9">85</span>, <span style="color:#f1fa8c">"BSIT"</span>],
+    [<span style="color:#f1fa8c">"Maria"</span>, <span style="color:#bd93f9">92</span>, <span style="color:#f1fa8c">"BSCS"</span>]
+]
+<span style="color:#a78bfa">print</span>(students[<span style="color:#bd93f9">0</span>][<span style="color:#bd93f9">0</span>])  <span style="color:#6b7280"># row, column</span>
+
+<span style="color:#a78bfa">for</span> row <span style="color:#a78bfa">in</span> students:
+    <span style="color:#a78bfa">for</span> cell <span style="color:#a78bfa">in</span> row:
+        <span style="color:#a78bfa">print</span>(cell)
+    <span style="color:#a78bfa">print</span>(<span style="color:#f1fa8c">"---"</span>)</code></pre>
+                        <div class="out">
+                            <div class="line"><span class="arrow">›</span>Juan</div>
+                            <div class="line"><span class="arrow">›</span>Juan / 85 / BSIT / ---</div>
+                            <div class="line"><span class="arrow">›</span>Maria / 92 / BSCS / ---</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="usecase mt-4">
+                    <div class="head"><i class="fa-solid fa-lightbulb"></i> Use case</div>
+                    <p class="text-zinc-300 text-sm">Grid-shaped data: a seating chart, a tic-tac-toe board, pixel rows in an image. This is the stepping stone to MongoDB, where a field is more often <span class="text-zinc-200">an array of objects</span> than an array of arrays — next slide.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: Objects -->
+        <div class="slide hidden absolute inset-0 p-8 overflow-auto" id="slide-10">
+            <div class="max-w-7xl mx-auto">
+                <div class="eyebrow text-violet-400">Objects · 08</div>
+                <h2 class="title-font text-3xl font-semibold mt-1 mb-1.5">Objects — labeled data</h2>
+                <p class="text-zinc-400 mb-3">Where an array uses position (<span class="font-mono">[0]</span>), an object uses a <span class="text-zinc-200">named key</span>. Use one when each piece of data has a role, not just a place in line.</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="langpanel">
+                        <div class="bar bar-js"><i class="fa-brands fa-node-js"></i> JavaScript — object</div>
+                        <pre class="code"><code><span style="color:#a78bfa">let</span> student = {
+  name: <span style="color:#f1fa8c">"Juan"</span>,
+  age: <span style="color:#bd93f9">20</span>,
+  address: { city: <span style="color:#f1fa8c">"Manila"</span> },
+  subjects: [<span style="color:#f1fa8c">"DSA"</span>, <span style="color:#f1fa8c">"Web Dev"</span>]
+};
+console.log(student.name);          <span style="color:#6b7280">// dot notation</span>
+console.log(student[<span style="color:#f1fa8c">"age"</span>]);       <span style="color:#6b7280">// bracket notation</span>
+console.log(student.address.city);
+console.log(student.subjects[<span style="color:#bd93f9">1</span>]);</code></pre>
+                        <div class="out">
+                            <div class="line"><span class="arrow">›</span>Juan</div>
+                            <div class="line"><span class="arrow">›</span>20</div>
+                            <div class="line"><span class="arrow">›</span>Manila</div>
+                            <div class="line"><span class="arrow">›</span>Web Dev</div>
+                        </div>
+                    </div>
+                    <div class="langpanel">
+                        <div class="bar bar-py"><i class="fa-brands fa-python"></i> Python — dict</div>
+                        <pre class="code"><code>student = {
+    <span style="color:#f1fa8c">"name"</span>: <span style="color:#f1fa8c">"Juan"</span>,
+    <span style="color:#f1fa8c">"age"</span>: <span style="color:#bd93f9">20</span>,
+    <span style="color:#f1fa8c">"address"</span>: {<span style="color:#f1fa8c">"city"</span>: <span style="color:#f1fa8c">"Manila"</span>},
+    <span style="color:#f1fa8c">"subjects"</span>: [<span style="color:#f1fa8c">"DSA"</span>, <span style="color:#f1fa8c">"Web Dev"</span>]
+}
+<span style="color:#a78bfa">print</span>(student[<span style="color:#f1fa8c">"name"</span>])         <span style="color:#6b7280"># bracket only</span>
+<span style="color:#a78bfa">print</span>(student[<span style="color:#f1fa8c">"age"</span>])
+<span style="color:#a78bfa">print</span>(student[<span style="color:#f1fa8c">"address"</span>][<span style="color:#f1fa8c">"city"</span>])
+<span style="color:#a78bfa">print</span>(student[<span style="color:#f1fa8c">"subjects"</span>][<span style="color:#bd93f9">1</span>])</code></pre>
+                        <div class="out">
+                            <div class="line"><span class="arrow">›</span>Juan</div>
+                            <div class="line"><span class="arrow">›</span>20</div>
+                            <div class="line"><span class="arrow">›</span>Manila</div>
+                            <div class="line"><span class="arrow">›</span>Web Dev</div>
+                        </div>
+                        <div class="note">Python dicts have no dot notation — always <span class="font-mono">student["name"]</span>, never <span class="font-mono">student.name</span>.</div>
+                    </div>
+                </div>
+                <div class="usecase mt-4">
+                    <div class="head"><i class="fa-solid fa-lightbulb"></i> Use case</div>
+                    <p class="text-zinc-300 text-sm">A user profile, a product listing, an API response — real data almost always has named fields. This is exactly what a MongoDB document looks like.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 11: Arrays of Objects -->
+        <div class="slide hidden absolute inset-0 p-8 overflow-auto" id="slide-11">
+            <div class="max-w-7xl mx-auto">
+                <div class="eyebrow text-violet-400">Bridge to MongoDB · 09</div>
+                <h2 class="title-font text-3xl font-semibold mt-1 mb-1.5">Arrays of objects</h2>
+                <p class="text-zinc-400 mb-3">A list of student records, but each row is a labeled object instead of a position-based row. This is the exact shape of a MongoDB <span class="text-zinc-200">collection</span>.</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="langpanel">
+                        <div class="bar bar-js"><i class="fa-brands fa-node-js"></i> JavaScript</div>
+                        <pre class="code"><code><span style="color:#a78bfa">let</span> students = [
+  { name: <span style="color:#f1fa8c">"Juan"</span>,  grade: <span style="color:#bd93f9">85</span>, course: <span style="color:#f1fa8c">"BSIT"</span> },
+  { name: <span style="color:#f1fa8c">"Maria"</span>, grade: <span style="color:#bd93f9">92</span>, course: <span style="color:#f1fa8c">"BSCS"</span> }
+];
+<span style="color:#a78bfa">for</span> (<span style="color:#a78bfa">let</span> s <span style="color:#a78bfa">of</span> students) console.log(s.name, <span style="color:#f1fa8c">"-"</span>, s.grade);
+
+<span style="color:#a78bfa">let</span> names = students.map(s => s.name);
+console.log(names);</code></pre>
+                        <div class="out">
+                            <div class="line"><span class="arrow">›</span>Juan - 85</div>
+                            <div class="line"><span class="arrow">›</span>Maria - 92</div>
+                            <div class="line"><span class="arrow">›</span>["Juan", "Maria"]</div>
+                        </div>
+                    </div>
+                    <div class="langpanel">
+                        <div class="bar bar-py"><i class="fa-brands fa-python"></i> Python</div>
+                        <pre class="code"><code>students = [
+    {<span style="color:#f1fa8c">"name"</span>: <span style="color:#f1fa8c">"Juan"</span>,  <span style="color:#f1fa8c">"grade"</span>: <span style="color:#bd93f9">85</span>, <span style="color:#f1fa8c">"course"</span>: <span style="color:#f1fa8c">"BSIT"</span>},
+    {<span style="color:#f1fa8c">"name"</span>: <span style="color:#f1fa8c">"Maria"</span>, <span style="color:#f1fa8c">"grade"</span>: <span style="color:#bd93f9">92</span>, <span style="color:#f1fa8c">"course"</span>: <span style="color:#f1fa8c">"BSCS"</span>}
+]
+<span style="color:#a78bfa">for</span> s <span style="color:#a78bfa">in</span> students:
+    <span style="color:#a78bfa">print</span>(s[<span style="color:#f1fa8c">"name"</span>], <span style="color:#f1fa8c">"-"</span>, s[<span style="color:#f1fa8c">"grade"</span>])
+
+names = [s[<span style="color:#f1fa8c">"name"</span>] <span style="color:#a78bfa">for</span> s <span style="color:#a78bfa">in</span> students]
+<span style="color:#a78bfa">print</span>(names)</code></pre>
+                        <div class="out">
+                            <div class="line"><span class="arrow">›</span>Juan - 85</div>
+                            <div class="line"><span class="arrow">›</span>Maria - 92</div>
+                            <div class="line"><span class="arrow">›</span>['Juan', 'Maria']</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="usecase mt-4">
+                    <div class="head"><i class="fa-solid fa-database"></i> Why this matters for MongoDB</div>
+                    <p class="text-zinc-300 text-sm">A MongoDB collection of documents is just this pattern: an array of objects (or in Python driver code, a list of dicts). When you later run <span class="font-mono text-cyan-400">db.students.find()</span>, what comes back is exactly this shape.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 12: JSON -->
+        <div class="slide hidden absolute inset-0 p-8 overflow-auto" id="slide-12">
+            <div class="max-w-7xl mx-auto">
+                <div class="eyebrow text-cyan-400">Data Exchange · 10</div>
+                <h2 class="title-font text-3xl font-semibold mt-1 mb-1.5">JSON conversion</h2>
+                <p class="text-zinc-400 mb-3">JSON is <span class="text-zinc-200">text</span> that represents an object or array. Databases, APIs, and files all speak it, so you constantly convert between "live" data and JSON text.</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="langpanel">
+                        <div class="bar bar-js"><i class="fa-brands fa-node-js"></i> JavaScript — JSON</div>
+                        <pre class="code"><code><span style="color:#a78bfa">let</span> student = { name: <span style="color:#f1fa8c">"Juan"</span>, age: <span style="color:#bd93f9">20</span> };
+
+<span style="color:#a78bfa">let</span> asText = JSON.stringify(student);
+console.log(asText);
+console.log(<span style="color:#a78bfa">typeof</span> asText);
+
+<span style="color:#a78bfa">let</span> back = JSON.parse(asText);
+console.log(back.name);</code></pre>
+                        <div class="out">
+                            <div class="line"><span class="arrow">›</span>{"name":"Juan","age":20}</div>
+                            <div class="line"><span class="arrow">›</span>"string"</div>
+                            <div class="line"><span class="arrow">›</span>Juan</div>
+                        </div>
+                    </div>
+                    <div class="langpanel">
+                        <div class="bar bar-py"><i class="fa-brands fa-python"></i> Python — json module</div>
+                        <pre class="code"><code><span style="color:#a78bfa">import</span> json
+student = {<span style="color:#f1fa8c">"name"</span>: <span style="color:#f1fa8c">"Juan"</span>, <span style="color:#f1fa8c">"age"</span>: <span style="color:#bd93f9">20</span>}
+
+as_text = json.dumps(student)
+<span style="color:#a78bfa">print</span>(as_text)
+<span style="color:#a78bfa">print</span>(<span style="color:#a78bfa">type</span>(as_text))
+
+back = json.loads(as_text)
+<span style="color:#a78bfa">print</span>(back[<span style="color:#f1fa8c">"name"</span>])</code></pre>
+                        <div class="out">
+                            <div class="line"><span class="arrow">›</span>{"name": "Juan", "age": 20}</div>
+                            <div class="line"><span class="arrow">›</span>&lt;class 'str'&gt;</div>
+                            <div class="line"><span class="arrow">›</span>Juan</div>
+                        </div>
+                        <div class="note">JS <span class="font-mono">JSON.stringify/parse</span> ↔ Python <span class="font-mono">json.dumps/loads</span>.</div>
+                    </div>
+                </div>
+                <div class="usecase mt-4">
+                    <div class="head"><i class="fa-solid fa-lightbulb"></i> Use case</div>
+                    <p class="text-zinc-300 text-sm">MongoDB documents are stored as BSON, a binary cousin of JSON — this is the format you'll be reading and writing constantly, whether your backend is Node.js or Python.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 13: Recap -->
+        <div class="slide hidden absolute inset-0 p-8 overflow-auto" id="slide-13">
+            <div class="max-w-7xl mx-auto">
+                <div class="eyebrow text-cyan-400">Recap</div>
+                <h2 class="title-font text-3xl font-semibold mt-1 mb-4">Everything, at a glance</h2>
+                <div class="grid grid-cols-4 gap-3">
+                    <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl">
+                        <i class="fa-brands fa-node-js text-emerald-400 mb-2"></i>
+                        <p class="font-semibold text-sm mb-1">Node.js</p>
+                        <p class="text-zinc-500 text-xs">JS outside the browser — servers, scripts</p>
+                    </div>
+                    <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl">
+                        <i class="fa-solid fa-box text-cyan-400 mb-2"></i>
+                        <p class="font-semibold text-sm mb-1">Variables</p>
+                        <p class="text-zinc-500 text-xs">let / var / const vs. plain Python names</p>
+                    </div>
+                    <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl">
+                        <i class="fa-solid fa-code-branch text-cyan-400 mb-2"></i>
+                        <p class="font-semibold text-sm mb-1">Conditionals</p>
+                        <p class="text-zinc-500 text-xs">if/else/switch vs. if/elif/match</p>
+                    </div>
+                    <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl">
+                        <i class="fa-solid fa-rotate text-cyan-400 mb-2"></i>
+                        <p class="font-semibold text-sm mb-1">Loops</p>
+                        <p class="text-zinc-500 text-xs">for/while, Python's simpler for-in</p>
+                    </div>
+                    <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl">
+                        <i class="fa-solid fa-square-root-variable text-emerald-400 mb-2"></i>
+                        <p class="font-semibold text-sm mb-1">Functions</p>
+                        <p class="text-zinc-500 text-xs">function/arrow vs. def/lambda</p>
+                    </div>
+                    <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl">
+                        <i class="fa-solid fa-list-ol text-emerald-400 mb-2"></i>
+                        <p class="font-semibold text-sm mb-1">Arrays / Lists</p>
+                        <p class="text-zinc-500 text-xs">Ordered, indexed collections</p>
+                    </div>
+                    <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl">
+                        <i class="fa-solid fa-table-cells text-emerald-400 mb-2"></i>
+                        <p class="font-semibold text-sm mb-1">Multi-D arrays</p>
+                        <p class="text-zinc-500 text-xs">Grids — arrays/lists of arrays/lists</p>
+                    </div>
+                    <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl">
+                        <i class="fa-solid fa-tags text-violet-400 mb-2"></i>
+                        <p class="font-semibold text-sm mb-1">Objects / Dicts</p>
+                        <p class="text-zinc-500 text-xs">Labeled data, accessed by key</p>
+                    </div>
+                    <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl">
+                        <i class="fa-solid fa-layer-group text-violet-400 mb-2"></i>
+                        <p class="font-semibold text-sm mb-1">Arrays of objects</p>
+                        <p class="text-zinc-500 text-xs">The exact shape of a MongoDB collection</p>
+                    </div>
+                    <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl">
+                        <i class="fa-solid fa-file-code text-cyan-400 mb-2"></i>
+                        <p class="font-semibold text-sm mb-1">JSON</p>
+                        <p class="text-zinc-500 text-xs">stringify/parse vs. json.dumps/loads</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 14: Activity -->
+        <div class="slide hidden absolute inset-0 p-8 overflow-auto" id="slide-14">
+            <div class="max-w-6xl mx-auto">
+                <div class="eyebrow text-emerald-400">Practice</div>
+                <h2 class="title-font text-3xl font-semibold mt-1 mb-4">Activity — Student Grade Calculator</h2>
+                <div class="usecase mb-4">
+                    <div class="head"><i class="fa-solid fa-flag-checkered"></i> Challenge</div>
+                    <p class="text-zinc-300 text-sm">Build a small program using everything from this deck — in Node.js, and if you're curious, in Python too.</p>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex items-start gap-3 bg-zinc-900 border border-zinc-800 p-3 rounded-2xl">
+                        <span class="text-cyan-400 font-mono text-sm mt-0.5">1</span>
+                        <p class="text-zinc-300 text-sm">Create an <span class="font-mono text-emerald-400">array of student objects</span> (or list of dicts), each with <span class="font-mono">name</span> and a <span class="font-mono">grades</span> array/list.</p>
+                    </div>
+                    <div class="flex items-start gap-3 bg-zinc-900 border border-zinc-800 p-3 rounded-2xl">
+                        <span class="text-cyan-400 font-mono text-sm mt-0.5">2</span>
+                        <p class="text-zinc-300 text-sm">Write a <span class="font-mono text-emerald-400">function</span> that takes a grades list and returns the average.</p>
+                    </div>
+                    <div class="flex items-start gap-3 bg-zinc-900 border border-zinc-800 p-3 rounded-2xl">
+                        <span class="text-cyan-400 font-mono text-sm mt-0.5">3</span>
+                        <p class="text-zinc-300 text-sm">Loop through every student and use a <span class="font-mono text-emerald-400">conditional</span> to label them Passed (≥75) or Failed.</p>
+                    </div>
+                    <div class="flex items-start gap-3 bg-zinc-900 border border-zinc-800 p-3 rounded-2xl">
+                        <span class="text-cyan-400 font-mono text-sm mt-0.5">4</span>
+                        <p class="text-zinc-300 text-sm">Convert the results to <span class="font-mono text-emerald-400">JSON</span> (<span class="font-mono">JSON.stringify()</span> in Node, <span class="font-mono">json.dumps()</span> in Python) and log it — that's what you'll eventually save to MongoDB.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 15: Technical Activity -->
+        <div class="slide hidden absolute inset-0 p-8 overflow-auto" id="slide-15">
+            <div class="max-w-7xl mx-auto">
+                <div class="eyebrow text-amber-400">Practice · Technical</div>
+                <h2 class="title-font text-3xl font-semibold mt-1 mb-1.5">Technical Activity — JavaScript Quiz</h2>
+                <p class="text-zinc-400 mb-4">Six questions — <span class="text-zinc-200">predict the output</span> (read the code, say what logs) or spot the bug. Answers are on the next page.</p>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="langpanel">
+                        <div class="bar bar-js"><i class="fa-solid fa-circle-question"></i> Q1 — Predict the output</div>
+                        <pre class="code"><code><span style="color:#a78bfa">let</span> x = <span style="color:#bd93f9">10</span>;
+<span style="color:#a78bfa">const</span> y = <span style="color:#f1fa8c">"5"</span>;
+console.log(<span style="color:#a78bfa">typeof</span> (x + y));</code></pre>
+                    </div>
+                    <div class="langpanel">
+                        <div class="bar bar-js"><i class="fa-solid fa-circle-question"></i> Q2 — Predict the output</div>
+                        <pre class="code"><code><span style="color:#a78bfa">let</span> score = <span style="color:#bd93f9">74</span>;
+<span style="color:#a78bfa">if</span> (score >= <span style="color:#bd93f9">75</span>) console.log(<span style="color:#f1fa8c">"Pass"</span>);
+<span style="color:#a78bfa">else</span> console.log(<span style="color:#f1fa8c">"Fail"</span>);</code></pre>
+                    </div>
+                    <div class="langpanel">
+                        <div class="bar bar-js"><i class="fa-solid fa-circle-question"></i> Q3 — Predict the output</div>
+                        <pre class="code"><code><span style="color:#a78bfa">let</span> total = <span style="color:#bd93f9">0</span>;
+<span style="color:#a78bfa">for</span> (<span style="color:#a78bfa">let</span> i = <span style="color:#bd93f9">1</span>; i <= <span style="color:#bd93f9">5</span>; i++) {
+  total += i;
+}
+console.log(total);</code></pre>
+                    </div>
+                    <div class="langpanel">
+                        <div class="bar bar-js"><i class="fa-solid fa-bug"></i> Q4 — Find &amp; fix the bug</div>
+                        <pre class="code"><code><span style="color:#6b7280">// this should log the LAST fruit</span>
+<span style="color:#a78bfa">let</span> fruits = [<span style="color:#f1fa8c">"apple"</span>,<span style="color:#f1fa8c">"banana"</span>,<span style="color:#f1fa8c">"mango"</span>];
+console.log(fruits[fruits.length]);</code></pre>
+                    </div>
+                    <div class="langpanel">
+                        <div class="bar bar-js"><i class="fa-solid fa-circle-question"></i> Q5 — Predict the output</div>
+                        <pre class="code"><code><span style="color:#a78bfa">let</span> grid = [[<span style="color:#bd93f9">1</span>,<span style="color:#bd93f9">2</span>],[<span style="color:#bd93f9">3</span>,<span style="color:#bd93f9">4</span>],[<span style="color:#bd93f9">5</span>,<span style="color:#bd93f9">6</span>]];
+console.log(grid[<span style="color:#bd93f9">2</span>][<span style="color:#bd93f9">0</span>]);</code></pre>
+                    </div>
+                    <div class="langpanel">
+                        <div class="bar bar-js"><i class="fa-solid fa-circle-question"></i> Q6 — Predict the output</div>
+                        <pre class="code"><code><span style="color:#a78bfa">let</span> user = { name: <span style="color:#f1fa8c">"Ana"</span>, active: <span style="color:#a78bfa">true</span> };
+console.log(JSON.stringify(user));</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 16: Answer Key -->
+        <div class="slide hidden absolute inset-0 p-8 overflow-auto" id="slide-16">
+            <div class="max-w-7xl mx-auto">
+                <div class="eyebrow text-emerald-400">Answer Key</div>
+                <h2 class="title-font text-3xl font-semibold mt-1 mb-4">Answers — Technical Quiz &amp; Grade Calculator</h2>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Quiz answers -->
+                    <div class="langpanel">
+                        <div class="bar bar-js"><i class="fa-solid fa-check"></i> Technical Quiz Answers</div>
+                        <div class="p-3 space-y-2.5 code text-[0.8rem]">
+                            <div><span class="text-emerald-400">Q1</span> → <span class="text-zinc-200">"string"</span> — <span class="text-zinc-500">x + y becomes "10"+"5" = "105", a string</span></div>
+                            <div><span class="text-emerald-400">Q2</span> → <span class="text-zinc-200">"Fail"</span> — <span class="text-zinc-500">74 is less than 75</span></div>
+                            <div><span class="text-emerald-400">Q3</span> → <span class="text-zinc-200">15</span> — <span class="text-zinc-500">1+2+3+4+5</span></div>
+                            <div><span class="text-emerald-400">Q4</span> → <span class="text-zinc-200">undefined</span> (not an error) — <span class="text-zinc-500">index 3 doesn't exist. Fix: fruits[fruits.length - 1] → "mango"</span></div>
+                            <div><span class="text-emerald-400">Q5</span> → <span class="text-zinc-200">5</span> — <span class="text-zinc-500">grid[2] is [5,6], then [0] is 5</span></div>
+                            <div><span class="text-emerald-400">Q6</span> → <span class="text-zinc-200">{"name":"Ana","active":true}</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Grade calculator sample solution -->
+                    <div class="langpanel">
+                        <div class="bar bar-js"><i class="fa-solid fa-check"></i> Grade Calculator — Sample Solution</div>
+                        <pre class="code"><code><span style="color:#a78bfa">const</span> students = [
+  { name: <span style="color:#f1fa8c">"Juan"</span>,  grades: [<span style="color:#bd93f9">85</span>,<span style="color:#bd93f9">90</span>,<span style="color:#bd93f9">78</span>] },
+  { name: <span style="color:#f1fa8c">"Maria"</span>, grades: [<span style="color:#bd93f9">92</span>,<span style="color:#bd93f9">88</span>,<span style="color:#bd93f9">95</span>] }
+];
+
+<span style="color:#a78bfa">function</span> <span style="color:#50fa7b">average</span>(grades) {
+  <span style="color:#a78bfa">return</span> grades.reduce((a,b) => a+b, <span style="color:#bd93f9">0</span>) / grades.length;
+}
+
+<span style="color:#a78bfa">const</span> results = students.map(s => {
+  <span style="color:#a78bfa">const</span> avg = average(s.grades);
+  <span style="color:#a78bfa">return</span> { name: s.name, avg, status: avg >= <span style="color:#bd93f9">75</span> ? <span style="color:#f1fa8c">"Passed"</span> : <span style="color:#f1fa8c">"Failed"</span> };
+});
+
+console.log(JSON.stringify(results));</code></pre>
+                        <div class="out">
+                            <div class="line text-zinc-300">›  [{"name":"Juan","avg":84.33,"status":"Passed"},</div>
+                            <div class="line text-zinc-300">&nbsp;&nbsp;&nbsp;{"name":"Maria","avg":91.67,"status":"Passed"}]</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Final Slide -->
+        <div class="slide hidden absolute inset-0 flex items-center justify-center p-8" id="slide-17">
+            <div class="text-center">
+                <i class="fa-solid fa-check-circle text-8xl text-emerald-400 mb-6"></i>
+                <h2 class="title-font text-6xl font-bold mb-4">Ready for MongoDB!</h2>
+                <p class="text-2xl text-zinc-400">Master these fundamentals first</p>
+                <p class="text-zinc-600 mt-4 text-sm max-w-md mx-auto">Documents are objects (or dicts). Collections are arrays of objects (or lists of dicts). You already know the shape — in two languages.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Bottom nav -->
+    <div class="fixed bottom-0 left-0 right-0 bg-zinc-950/90 backdrop-blur border-t border-zinc-800 py-3 flex flex-col items-center gap-2">
+        <div id="dots" class="flex items-center gap-1.5"></div>
+        <div class="text-[11px] text-zinc-600 flex gap-6">
+            <div>← Previous</div>
+            <div>CLICK ANYWHERE or use ARROW KEYS</div>
+            <div>Next →</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let current = 1;
+    const total = 17;
+
+    const dotsEl = document.getElementById('dots');
+    for (let i = 1; i <= total; i++) {
+        const d = document.createElement('div');
+        d.className = 'navdot';
+        d.dataset.n = i;
+        d.addEventListener('click', (e) => { e.stopPropagation(); show(i); });
+        dotsEl.appendChild(d);
+    }
+
+    function show(n) {
+        document.querySelectorAll('.slide').forEach(s => s.classList.add('hidden'));
+        document.getElementById(`slide-${n}`).classList.remove('hidden');
+        current = n;
+        document.getElementById('slide-counter').textContent = `${current} / ${total}`;
+        document.getElementById('progress').style.width = `${(current / total) * 100}%`;
+        document.querySelectorAll('.navdot').forEach(d => {
+            d.classList.toggle('active', Number(d.dataset.n) === current);
+        });
+    }
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'ArrowRight') current < total && show(current + 1);
+        if (e.key === 'ArrowLeft') current > 1 && show(current - 1);
+    });
+
+    document.getElementById('presentation').addEventListener('click', (e) => {
+        if (e.target.closest('#dots')) return;
+        if (current < total) show(current + 1);
+    });
+
+    window.onload = () => show(1);
+</script>
+</body>
+</html>

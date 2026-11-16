@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Node.js — Quick Start</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    * { box-sizing: border-box; margin:0; padding:0; }
+    html, body { height:100%; overflow:hidden; background:var(--bg); color:var(--ink); font-family:'Space Grotesk', sans-serif; }
+    h1,h2,h3 { font-family:'Space Grotesk', sans-serif; font-weight:600; letter-spacing:-0.02em; }
+    code, pre, .mono { font-family:'JetBrains Mono', 'Courier New', monospace; }
+
+    /* ——— NODE.JS THEME ——— */
+    :root {
+      --bg: #0D1912;
+      --bg-alt: #14261A;
+      --accent: #83CD29;        /* Node.js green */
+      --accent-soft: #A5DE5C;
+      --accent-strong: #4C8C1E;
+      --card: #17281B;
+      --card-border: rgba(131, 205, 41, 0.18);
+      --shadow: rgba(0, 0, 0, 0.55);
+      --ink: #E9F2E4;
+      --ink-soft: #9CB89A;
+      --eyebrow-ink: #A5DE5C;
+      --card-ink: #E9F2E4;
+      --card-ink-soft: #9CB89A;
+      --card-accent: #83CD29;
+      --step-num-ink: #0D1912;
+      --tick: 300ms;
+      --table-border: rgba(131, 205, 41, 0.15);
+    }
+
+    #app { position:relative; width:100vw; height:100vh; overflow:hidden; }
+
+    .progress-track { position:fixed; top:0; left:0; right:0; height:4px; background:rgba(131,205,41,0.12); z-index:50; }
+    .progress-fill { height:100%; width:0%; background:linear-gradient(90deg, var(--accent-strong), var(--accent)); transition: width 350ms ease; }
+
+    /* hex gauge (node hexagon) */
+    .node-gauge {
+      position:fixed; top:18px; right:22px; z-index:50;
+      display:flex; flex-direction:column; align-items:center; gap:4px;
+      font-family:'JetBrains Mono', monospace; font-size:10px; letter-spacing:0.14em;
+      color:var(--ink-soft); user-select:none; pointer-events:none;
+      transition: color var(--tick) ease;
+    }
+    .node-gauge svg { width:34px; height:34px; display:block; }
+    .node-gauge .hex { transform-origin:center; }
+    @media (prefers-reduced-motion: no-preference) {
+      .node-gauge .hex { animation: hexPulse 3s ease-in-out infinite; }
+    }
+    @keyframes hexPulse {
+      0% { opacity:0.6; transform:scale(0.95) rotate(-2deg); }
+      50% { opacity:1; transform:scale(1.08) rotate(2deg); }
+      100% { opacity:0.6; transform:scale(0.95) rotate(-2deg); }
+    }
+    .gauge-label { text-transform:uppercase; font-weight:700; letter-spacing:0.08em; }
+
+    .stage { position:absolute; inset:0; }
+    .slide {
+      position:absolute; inset:0;
+      overflow-y:auto; overflow-x:hidden;
+      display:flex; flex-direction:column; align-items:stretch; justify-content:safe center;
+      padding: 76px clamp(28px, 7vw, 120px) 90px;
+      opacity:0; transform:translateX(0) scale(1);
+      will-change: transform, opacity;
+    }
+    .slide.active { opacity:1; transform:translateX(0) scale(1); transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:5; }
+    .slide.enter-fwd { transform:translateX(64px) scale(0.985); opacity:0; }
+    .slide.enter-bwd { transform:translateX(-64px) scale(0.985); opacity:0; }
+    .slide.exit-fwd { transform:translateX(-64px) scale(0.985); opacity:0; transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:4; }
+    .slide.exit-bwd { transform:translateX(64px) scale(0.985); opacity:0; transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:4; }
+    @media (prefers-reduced-motion: reduce) {
+      .slide, .slide.active, .slide.enter-fwd, .slide.enter-bwd, .slide.exit-fwd, .slide.exit-bwd {
+        transition: opacity 120ms linear !important; transform:none !important;
+      }
+    }
+    .slide-inner { max-width:1000px; width:100%; margin:0 auto; }
+
+    .eyebrow {
+      font-family:'JetBrains Mono', monospace; font-size:12px; letter-spacing:0.16em;
+      text-transform:uppercase; font-weight:600; color:var(--eyebrow-ink);
+      display:flex; align-items:center; gap:10px; margin-bottom:14px;
+      transition: color var(--tick) ease;
+    }
+    .eyebrow::after { content:''; flex:1; height:0; border-top:2px dashed var(--card-border); }
+    h2.slide-title { font-size:clamp(28px, 4vw, 44px); font-weight:700; line-height:1.12; margin-bottom:22px; letter-spacing:-0.02em; }
+    .lede { font-size:17px; color:var(--ink-soft); margin:-8px 0 22px; max-width:70ch; line-height:1.55; }
+
+    .card {
+      background:var(--card); border:1px solid var(--card-border); border-radius:12px;
+      padding:18px 20px; min-width:0;
+      box-shadow: 0 4px 20px var(--shadow);
+      transition: background var(--tick) ease, border-color var(--tick) ease;
+    }
+    .card h3 { font-size:15px; font-weight:600; margin-bottom:6px; color:var(--card-ink); }
+    .card p, .card li { font-size:14.5px; color:var(--card-ink-soft); line-height:1.5; }
+
+    .card-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(0, 1fr)); gap:14px; min-width:0; }
+    .card-grid.cols-2 { grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .card-grid.cols-3 { grid-template-columns:repeat(3, minmax(0,1fr)); }
+    .card-grid.cols-4 { grid-template-columns:repeat(4, minmax(0,1fr)); }
+    @media (max-width:760px){ .card-grid.cols-4{grid-template-columns:repeat(2, minmax(0,1fr));} .card-grid.cols-3{grid-template-columns:repeat(2, minmax(0,1fr));} .card-grid.cols-2{grid-template-columns:minmax(0,1fr);} }
+
+    .two-col { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:26px; align-items:start; min-width:0; }
+    @media (max-width:760px){ .two-col { grid-template-columns:minmax(0,1fr); } }
+    .two-col > * { min-width:0; }
+
+    ul.ticket-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:9px; }
+    ul.ticket-list li { position:relative; padding-left:22px; font-size:15.5px; line-height:1.5; color:var(--ink); }
+    ul.ticket-list li::before { content:'▹'; position:absolute; left:0; color:var(--accent); font-weight:700; }
+
+    ol.step-list { list-style:none; counter-reset:step; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; }
+    ol.step-list li { position:relative; padding-left:40px; font-size:15.5px; line-height:1.55; min-width:0; }
+    ol.step-list li::before { counter-increment:step; content:counter(step); position:absolute; left:0; top:-1px; width:26px; height:26px; border-radius:50%; background:var(--card-accent); color:var(--step-num-ink); display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:13px; transition: background var(--tick) ease; }
+    ol.step-list b { font-family:'JetBrains Mono',monospace; font-size:13.5px; background:var(--card); padding:1px 6px; border-radius:4px; border:1px solid var(--card-border); }
+
+    .quote-block { font-family:'Space Grotesk', sans-serif; font-weight:500; font-size:19px; line-height:1.5; color:var(--ink); border-left:3px solid var(--accent); padding:4px 0 4px 18px; margin:6px 0 20px; }
+    .note { background:var(--card); border:1px dashed var(--card-border); border-radius:10px; padding:12px 16px; font-size:14px; color:var(--card-ink-soft); margin-top:14px; }
+    .note b { color:var(--card-ink); }
+
+    pre.code-block {
+      background:#0A150D; color:#D9EBD1; border-radius:12px; padding:18px 20px;
+      font-size:13.5px; line-height:1.7; overflow-x:auto; margin:0; min-width:0;
+      box-shadow: inset 0 0 0 1px rgba(131,205,41,0.06), 0 6px 18px var(--shadow);
+      border:1px solid rgba(131,205,41,0.06);
+    }
+    pre.code-block code { white-space:pre; }
+    .tok-kw{ color:#FFB86C; font-weight:600; }
+    .tok-str{ color:#A3D9A5; }
+    .tok-com{ color:#6A9273; font-style:italic; }
+    .tok-type{ color:#6AB0D6; }
+    .tok-num{ color:#D99A6C; }
+    .tok-fn{ color:#66D9FF; }
+    .tok-prop{ color:#B5A9E8; }
+
+    .code-cap { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:8px; }
+
+    .two-col pre.code-block { max-width:100%; overflow-x:auto; white-space:pre-wrap; word-break:break-word; }
+    .two-col .code-block code { white-space:pre-wrap; word-break:break-word; }
+
+    .param-table { width:100%; border-collapse:collapse; font-size:14px; }
+    .param-table th, .param-table td { text-align:left; padding:8px 12px; border-bottom:1px solid var(--table-border); }
+    .param-table th { font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--accent); }
+    .param-table td { color:var(--ink-soft); }
+
+    .hud { position:fixed; bottom:16px; right:20px; z-index:50; display:flex; align-items:center; gap:12px; }
+    .counter { font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:600; background:var(--card); border:1px solid var(--card-border); color:var(--card-ink); padding:8px 16px; border-radius:999px; box-shadow:0 4px 14px var(--shadow); transition: background var(--tick) ease, color var(--tick) ease, border-color var(--tick) ease; }
+    .hint { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-soft); letter-spacing:0.05em; display:none; }
+    @media (min-width:640px){ .hint { display:block; } }
+
+    .click-zone { position:fixed; inset:0; z-index:1; cursor:pointer; }
+    .slide::-webkit-scrollbar { width:6px; }
+    .slide::-webkit-scrollbar-thumb { background:var(--card-border); border-radius:8px; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+  <div class="node-gauge" id="nodeGauge">
+    <svg viewBox="0 0 40 40" fill="none">
+      <!-- Node.js hexagon -->
+      <path d="M20 4 L34 12 V28 L20 36 L6 28 V12 Z" fill="var(--accent)" opacity="0.85" class="hex" />
+      <path d="M20 6 L32 13 V27 L20 34 L8 27 V13 Z" stroke="var(--bg)" stroke-width="1.6" fill="none" opacity="0.25" />
+      <circle cx="20" cy="20" r="2" fill="var(--bg)" opacity="0.15" />
+    </svg>
+    <span class="gauge-label" id="gaugeLabel">Cold Start</span>
+  </div>
+
+  <div class="click-zone" id="clickZone"></div>
+  <div class="stage" id="stage"></div>
+
+  <div class="hud">
+    <span class="hint">click / → to continue</span>
+    <div class="counter" id="counter">1 / 18</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Node.js core + JS keywords
+  var KEYWORDS = ['const','let','var','function','return','if','else','try','catch','finally','throw','new','this','class','extends','super','import','export','default','from','as','async','await','require','module','exports','global','__dirname','__filename','console','log','error','warn','info','process','env','argv','exit','cwd','platform','version','versions','memoryUsage','uptime','nextTick','on','once','emit','off','removeListener','removeAllListeners','EventEmitter','Buffer','from','alloc','fs','readFile','writeFile','readFileSync','writeFileSync','appendFile','existsSync','mkdir','mkdirSync','rmdir','unlink','unlinkSync','rename','stat','statSync','watch','createReadStream','createWriteStream','path','join','resolve','basename','dirname','extname','normalize','sep','os','platform','cpus','totalmem','freemem','homedir','http','https','createServer','listen','request','get','post','put','patch','delete','url','URL','URLSearchParams','parse','querystring','stream','Readable','Writable','Duplex','Transform','pipe','pipeline','end','write','read','Promise','resolve','reject','then','catch','finally','all','race','allSettled','any','setTimeout','setInterval','setImmediate','clearTimeout','clearInterval','clearImmediate','cluster','fork','worker_threads','Worker','parentPort','workerData','isMainThread','child_process','spawn','exec','execFile','JSON','stringify','parse','Error','TypeError','ReferenceError','SyntaxError','RangeError','npm','package','dependencies','scripts','main','type','String','Number','Boolean','Object','Array','Date','RegExp','Map','Set','Symbol'];
+  var KW_RE = new RegExp('\\b(' + KEYWORDS.join('|') + ')\\b');
+  var TOKEN_RE = /(\/\/.*$)|("(?:\\.|[^"\\])*")|('(?:\\.|[^'\\])*')|\b([A-Za-z_$][A-Za-z0-9_$]*)\b|\b(\d+\.?\d*)\b/gm;
+
+  function highlightJS(src){
+    var esc = escapeHtml(src);
+    return esc.replace(TOKEN_RE, function(match, comment, str, chr, word, num){
+      if(comment !== undefined) return '<span class="tok-com">' + comment + '</span>';
+      if(str !== undefined) return '<span class="tok-str">' + str + '</span>';
+      if(chr !== undefined) return '<span class="tok-str">' + chr + '</span>';
+      if(word !== undefined){
+        if(KW_RE.test(word)) return '<span class="tok-kw">' + word + '</span>';
+        if(/^[A-Z]/.test(word)) return '<span class="tok-type">' + word + '</span>';
+        return word;
+      }
+      if(num !== undefined) return '<span class="tok-num">' + num + '</span>';
+      return match;
+    });
+  }
+  function code(src){
+    return '<pre class="code-block"><code>' + highlightJS(src.replace(/^\n/,'').replace(/\n$/,'')) + '</code></pre>';
+  }
+
+  var S = [];
+
+  // ——— SLIDES ———
+  S.push({
+    eyebrow: 'Node.js',
+    title: 'Introduction to Node.js',
+    lede: 'The JavaScript runtime that took the language off the browser and onto the server.',
+    body:
+      '<div class="quote-block">"Node.js is a JavaScript runtime built on Chrome\'s V8 engine, designed for building fast, scalable network applications."</div>' +
+      '<div class="card-grid cols-3">' +
+        '<div class="card"><h3>⚙️ V8 Engine</h3><p>Google\'s open-source JavaScript engine compiles JS straight to native machine code.</p></div>' +
+        '<div class="card"><h3>🔁 Event Loop</h3><p>A single-threaded, non-blocking loop that handles thousands of connections concurrently.</p></div>' +
+        '<div class="card"><h3>📦 npm</h3><p>The world\'s largest package registry, bundled with every Node install.</p></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: '1. Why Node.js',
+    title: 'What Makes Node Different?',
+    lede: 'Node runs JavaScript outside the browser, using an event-driven, non-blocking I/O model.',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>🎯 Core Ideas</h3><ul class="ticket-list">' +
+          '<li>Single-threaded — one main thread runs your JS.</li>' +
+          '<li>Non-blocking I/O — heavy work is handed off, not waited on.</li>' +
+          '<li>Event-driven — callbacks fire when work completes.</li>' +
+          '<li>Great for APIs, real-time apps, and I/O-heavy services.</li>' +
+        '</ul></div>' +
+        '<div class="card"><h3>🔧 Installation</h3><p style="font-size:13px;">Check your install or grab the LTS release:</p>' +
+        code('node -v\nnpm -v\n\n# via nvm (recommended)\nnvm install --lts\nnvm use --lts') + '</div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: '2. Architecture',
+    title: 'V8, libuv & the Event Loop',
+    lede: 'Node is JS code (V8) plus a C++ layer (libuv) that handles the OS-level async work.',
+    body:
+      '<div class="card-grid cols-4">' +
+        '<div class="card"><h3>V8</h3><p style="font-size:13px;">Compiles & executes your JavaScript.</p></div>' +
+        '<div class="card"><h3>libuv</h3><p style="font-size:13px;">C library giving Node its event loop & thread pool.</p></div>' +
+        '<div class="card"><h3>Bindings</h3><p style="font-size:13px;">Bridge JS calls to native OS operations.</p></div>' +
+        '<div class="card"><h3>Core Modules</h3><p style="font-size:13px;">fs, http, path, os, and more — written on top of the above.</p></div>' +
+      '</div>' +
+      '<div class="note"><b>💡 Key idea:</b> Node itself is single-threaded, but libuv\'s thread pool handles file system and some crypto work behind the scenes.</div>'
+  });
+
+  S.push({
+    eyebrow: '3. Your First Script',
+    title: 'Hello, Node',
+    lede: 'No browser, no HTML — just a file and the node command.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('// hello.js\nconsole.log(\'Hello from Node.js!\');\nconsole.log(\'Node version:\', process.version);\nconsole.log(\'Platform:\', process.platform);') + '</div>' +
+        '<div class="card"><h3>📝 Run it</h3>' +
+        code('node hello.js') +
+        '<p style="margin-top:10px;">Node executes top to bottom, then exits once the event loop has nothing left to do.</p></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: '4. Modules — CommonJS',
+    title: 'require() & module.exports',
+    lede: 'Node\'s original module system: every file is its own module.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('// math.js\nfunction add(a, b) { return a + b; }\nfunction sub(a, b) { return a - b; }\n\nmodule.exports = { add, sub };') + '</div>' +
+        '<div>' + code('// app.js\nconst { add, sub } = require(\'./math\');\n\nconsole.log(add(2, 3));   // 5\nconsole.log(sub(5, 1));   // 4') + '</div>' +
+      '</div>' +
+      '<div class="note"><b>Note:</b> <code>__dirname</code> and <code>__filename</code> are only available in CommonJS modules.</div>'
+  });
+
+  S.push({
+    eyebrow: '5. Modules — ES Modules',
+    title: 'import & export',
+    lede: 'Node also supports native ES Modules, the same syntax used in modern front-end code.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('// math.mjs\nexport function add(a, b) { return a + b; }\nexport default function multiply(a, b) {\n    return a * b;\n}') + '</div>' +
+        '<div>' + code('// app.mjs\nimport multiply, { add } from \'./math.mjs\';\n\nconsole.log(add(2, 3));\nconsole.log(multiply(4, 5));') + '</div>' +
+      '</div>' +
+      '<div class="card" style="margin-top:14px;"><h3>🔀 Enabling ESM</h3><ul class="ticket-list">' +
+        '<li>Use the <b>.mjs</b> extension, or</li>' +
+        '<li>Set <b>"type": "module"</b> in <code>package.json</code>.</li>' +
+      '</ul></div>'
+  });
+
+  S.push({
+    eyebrow: '6. npm & package.json',
+    title: 'Managing Dependencies',
+    lede: 'npm installs, versions, and scripts your project through one manifest file.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('npm init -y\nnpm install express\nnpm install --save-dev nodemon\nnpm uninstall lodash\nnpm run start') + '</div>' +
+        '<div class="card"><h3>📋 package.json essentials</h3><ul class="ticket-list">' +
+          '<li><b>dependencies</b> — needed at runtime.</li>' +
+          '<li><b>devDependencies</b> — only for development.</li>' +
+          '<li><b>scripts</b> — shortcuts like <code>npm run dev</code>.</li>' +
+          '<li><b>main</b> — the package\'s entry file.</li>' +
+        '</ul></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: '7. The Event Loop',
+    title: 'How Async Work Actually Runs',
+    lede: 'The event loop cycles through phases, running callbacks whose work is ready.',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>🔄 Phases (simplified)</h3><ol class="step-list">' +
+          '<li><b>Timers</b> — setTimeout / setInterval callbacks.</li>' +
+          '<li><b>Pending callbacks</b> — some system operations.</li>' +
+          '<li><b>Poll</b> — fetch new I/O events; execute I/O callbacks.</li>' +
+          '<li><b>Check</b> — setImmediate callbacks.</li>' +
+          '<li><b>Close callbacks</b> — e.g. socket.on(\'close\').</li>' +
+        '</ol></div>' +
+        '<div>' + code('console.log(\'start\');\n\nsetTimeout(() => console.log(\'timeout\'), 0);\nsetImmediate(() => console.log(\'immediate\'));\n\nprocess.nextTick(() => console.log(\'nextTick\'));\n\nconsole.log(\'end\');\n\n// start, end, nextTick, timeout, immediate') + '</div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: '8. File System',
+    title: 'Reading & Writing Files',
+    lede: 'The built-in fs module offers async, sync, and promise-based APIs.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('const fs = require(\'fs\');\n\n// Async (callback)\nfs.readFile(\'data.txt\', \'utf8\', (err, data) => {\n    if (err) throw err;\n    console.log(data);\n});\n\n// Sync — blocks the event loop\nconst data = fs.readFileSync(\'data.txt\', \'utf8\');') + '</div>' +
+        '<div>' + code('// Promise-based (recommended)\nconst fs = require(\'fs/promises\');\n\nasync function readIt() {\n    const data = await fs.readFile(\'data.txt\', \'utf8\');\n    console.log(data);\n}\n\nreadIt();') + '</div>' +
+      '</div>' +
+      '<div class="note"><b>⚠️ Careful:</b> sync methods block the entire event loop — avoid them in server request handlers.</div>'
+  });
+
+  S.push({
+    eyebrow: '9. path & os',
+    title: 'Working with Paths & the System',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('const path = require(\'path\');\n\npath.join(\'/users\', \'bob\', \'file.txt\');\npath.resolve(\'file.txt\');\npath.basename(\'/a/b/file.txt\');   // file.txt\npath.extname(\'file.txt\');          // .txt') + '</div>' +
+        '<div>' + code('const os = require(\'os\');\n\nos.platform();     // \'linux\', \'darwin\', \'win32\'\nos.cpus().length;  // number of cores\nos.totalmem();\nos.freemem();\nos.homedir();') + '</div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: '10. Building a Server',
+    title: 'The http Module',
+    lede: 'Before Express, there\'s a raw HTTP server built into Node itself.',
+    body:
+      '<div>' + code('const http = require(\'http\');\n\nconst server = http.createServer((req, res) => {\n    res.writeHead(200, { \'Content-Type\': \'text/plain\' });\n    res.end(\'Hello from a raw Node server!\');\n});\n\nserver.listen(3000, () => {\n    console.log(\'Listening on http://localhost:3000\');\n});') + '</div>' +
+      '<div class="note"><b>💡 Why Express exists:</b> frameworks like Express wrap this module to add routing, middleware, and convenience — but it\'s all built on <code>http</code>.</div>'
+  });
+
+  S.push({
+    eyebrow: '11. Events',
+    title: 'EventEmitter — Node\'s Backbone',
+    lede: 'Streams, servers, and countless core APIs are all built on the EventEmitter pattern.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('const EventEmitter = require(\'events\');\n\nclass Order extends EventEmitter {}\nconst order = new Order();\n\norder.on(\'placed\', (id) => {\n    console.log(`Order ${id} placed!`);\n});\n\norder.emit(\'placed\', 42);') + '</div>' +
+        '<div class="card"><h3>📡 API basics</h3><ul class="ticket-list">' +
+          '<li><b>on()</b> — subscribe to an event.</li>' +
+          '<li><b>once()</b> — subscribe for a single firing.</li>' +
+          '<li><b>emit()</b> — trigger the event.</li>' +
+          '<li><b>removeListener()</b> — unsubscribe.</li>' +
+        '</ul></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: '12. Streams',
+    title: 'Processing Data in Chunks',
+    lede: 'Streams let you work with data piece by piece instead of loading it all into memory.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('const fs = require(\'fs\');\n\nconst readStream = fs.createReadStream(\'big.txt\');\nconst writeStream = fs.createWriteStream(\'copy.txt\');\n\nreadStream.pipe(writeStream);\n\nreadStream.on(\'end\', () => console.log(\'Done copying!\'));') + '</div>' +
+        '<div class="card"><h3>🌊 Stream types</h3><ul class="ticket-list">' +
+          '<li><b>Readable</b> — a source of data (files, requests).</li>' +
+          '<li><b>Writable</b> — a destination (files, responses).</li>' +
+          '<li><b>Duplex</b> — both readable and writable (sockets).</li>' +
+          '<li><b>Transform</b> — modifies data as it passes through.</li>' +
+        '</ul></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: '13. Async Patterns',
+    title: 'Callbacks → Promises → Async/Await',
+    lede: 'Node\'s async story evolved to make non-blocking code easier to read and maintain.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('// Callback (old style)\nfs.readFile(\'a.txt\', (err, data) => {\n    if (err) return console.error(err);\n    console.log(data);\n});\n\n// Promise\nfsPromises.readFile(\'a.txt\')\n    .then(data => console.log(data))\n    .catch(err => console.error(err));') + '</div>' +
+        '<div>' + code('// Async/await (cleanest)\nasync function run() {\n    try {\n        const data = await fsPromises.readFile(\'a.txt\');\n        console.log(data);\n    } catch (err) {\n        console.error(err);\n    }\n}\nrun();') + '</div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: '14. process & Environment',
+    title: 'Talking to the Runtime',
+    lede: 'The global process object exposes runtime info and lets you interact with the OS.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('process.env.NODE_ENV;      // \'development\' / \'production\'\nprocess.argv;              // CLI arguments\nprocess.cwd();             // current working directory\nprocess.exit(1);           // exit with a status code\nprocess.on(\'exit\', code => {\n    console.log(\'Exiting with\', code);\n});') + '</div>' +
+        '<div class="card"><h3>⚙️ Common uses</h3><ul class="ticket-list">' +
+          '<li>Reading config from <b>environment variables</b>.</li>' +
+          '<li>Checking <b>memory usage</b> and <b>uptime</b>.</li>' +
+          '<li>Handling <b>uncaughtException</b> / <b>unhandledRejection</b>.</li>' +
+          '<li>Graceful shutdown on <b>SIGTERM</b> / <b>SIGINT</b>.</li>' +
+        '</ul></div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: '15. Scaling Node',
+    title: 'Child Processes, Clustering & Workers',
+    lede: 'Node is single-threaded per process — these APIs let you use every CPU core.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code('const cluster = require(\'cluster\');\nconst os = require(\'os\');\n\nif (cluster.isPrimary) {\n    os.cpus().forEach(() => cluster.fork());\n} else {\n    require(\'./server\');\n}') + '</div>' +
+        '<div class="card"><h3>🧵 Options</h3><ul class="ticket-list">' +
+          '<li><b>child_process</b> — spawn/exec external commands.</li>' +
+          '<li><b>cluster</b> — fork multiple copies of your server.</li>' +
+          '<li><b>worker_threads</b> — run JS in parallel threads for CPU-heavy work.</li>' +
+        '</ul></div>' +
+      '</div>' +
+      '<div class="note"><b>💡 Rule of thumb:</b> use clustering/workers for CPU-bound work; Node\'s event loop already handles I/O-bound work efficiently on its own.</div>'
+  });
+
+  S.push({
+    eyebrow: '16. Recap & Next Steps',
+    title: 'What You\'ve Learned',
+    body:
+      '<div class="card-grid cols-4">' +
+        '<div class="card"><h3>⚙️ Runtime</h3><p>V8, libuv, and the event loop</p></div>' +
+        '<div class="card"><h3>📦 Modules</h3><p>CommonJS, ES Modules, npm</p></div>' +
+        '<div class="card"><h3>🔌 Core APIs</h3><p>fs, http, events, streams, process</p></div>' +
+        '<div class="card"><h3>🧵 Concurrency</h3><p>Async patterns, clustering, worker threads</p></div>' +
+      '</div>' +
+      '<div class="quote-block" style="margin-top:20px;">You now understand the runtime that Express and MongoDB sit on top of. Next: bring it all together into a full-stack app.</div>'
+  });
+
+  S.push({
+    eyebrow: 'Final — Resources',
+    title: 'Where to Go From Here',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>📚 Official Docs</h3><ul class="ticket-list">' +
+          '<li>Node.js official documentation</li>' +
+          '<li>Node.js API reference (fs, http, events...)</li>' +
+          '<li>npm documentation</li>' +
+          '<li>MDN Web Docs — JavaScript</li>' +
+        '</ul></div>' +
+        '<div class="card"><h3>🔧 Practice Projects</h3><ul class="ticket-list">' +
+          '<li>Build a raw HTTP server without a framework</li>' +
+          '<li>Write a CLI tool using process.argv</li>' +
+          '<li>Stream-process a large log file</li>' +
+          '<li>Combine with Express + MongoDB for a full API</li>' +
+        '</ul></div>' +
+      '</div>' +
+      '<div class="note"><b>Pro tip:</b> Understanding the event loop pays off everywhere in Node — from debugging slow requests to reasoning about scale.</div>' +
+      '<div class="quote-block">Happy coding! You\'ve now covered the full stack: Node, Express, and MongoDB.</div>'
+  });
+
+  S.push({
+    eyebrow: 'Quiz — Part 1',
+    title: 'Identify It (Q1–Q5)',
+    lede: 'Name the concept, module, or object being described.',
+    body:
+      '<ol class="step-list">' +
+        '<li><b>Q1.</b> The C library that gives Node its event loop and thread pool, sitting underneath V8.</li>' +
+        '<li><b>Q2.</b> The built-in module used to read, write, and check the existence of files on disk.</li>' +
+        '<li><b>Q3.</b> The pattern — using <code>on()</code> and <code>emit()</code> — that underlies streams, servers, and most of Node\'s core APIs.</li>' +
+        '<li><b>Q4.</b> The manifest file that lists a project\'s dependencies, scripts, and entry point.</li>' +
+        '<li><b>Q5.</b> The global object that exposes environment variables, CLI arguments, and lets you exit the running program.</li>' +
+      '</ol>'
+  });
+
+  S.push({
+    eyebrow: 'Quiz — Part 2',
+    title: 'Predict the Output (Q6–Q10)',
+    lede: 'Read each snippet and work out exactly what gets logged.',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>Q6</h3>' + code('console.log(\'A\');\nsetTimeout(() => console.log(\'B\'), 0);\nconsole.log(\'C\');') + '</div>' +
+        '<div class="card"><h3>Q7</h3>' + code('process.nextTick(() => console.log(\'1\'));\nconsole.log(\'2\');') + '</div>' +
+        '<div class="card"><h3>Q8</h3>' + code('const fs = require(\'fs\');\nconsole.log(typeof fs.readFile);') + '</div>' +
+        '<div class="card"><h3>Q9</h3>' + code('function greet(name = \'World\') {\n    return `Hello, ${name}!`;\n}\nconsole.log(greet());') + '</div>' +
+        '<div class="card"><h3>Q10</h3>' + code('const arr = [1, 2, 3];\nconsole.log(arr.map(x => x * 2));') + '</div>' +
+      '</div>'
+  });
+
+  S.push({
+    eyebrow: 'Quiz — Answer Key',
+    title: 'How Did You Do?',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>🔎 Identification</h3><ul class="ticket-list">' +
+          '<li><b>Q1</b> — libuv</li>' +
+          '<li><b>Q2</b> — fs (File System module)</li>' +
+          '<li><b>Q3</b> — EventEmitter</li>' +
+          '<li><b>Q4</b> — package.json</li>' +
+          '<li><b>Q5</b> — process</li>' +
+        '</ul></div>' +
+        '<div class="card"><h3>🧮 Output</h3><ul class="ticket-list">' +
+          '<li><b>Q6</b> — A, C, B</li>' +
+          '<li><b>Q7</b> — 2, 1</li>' +
+          '<li><b>Q8</b> — function</li>' +
+          '<li><b>Q9</b> — Hello, World!</li>' +
+          '<li><b>Q10</b> — [ 2, 4, 6 ]</li>' +
+        '</ul></div>' +
+      '</div>' +
+      '<div class="quote-block" style="margin-top:20px;">10/10? You\'ve genuinely got the Node fundamentals down. Any misses — jump back and revisit that slide.</div>'
+  });
+
+  // ——— GAUGE ———
+  function applyGauge(t){
+    var label = t < 0.4 ? 'Cold Start' : (t < 0.7 ? 'Warming Up' : 'Event Loop');
+    document.getElementById('gaugeLabel').textContent = label;
+  }
+
+  // ——— RENDER & NAV ———
+  var stage = document.getElementById('stage');
+  var counterEl = document.getElementById('counter');
+  var progressFill = document.getElementById('progressFill');
+  var total = S.length;
+  var current = 0;
+  var animating = false;
+
+  function buildSlideEl(idx){
+    var d = S[idx];
+    var el = document.createElement('div');
+    el.className = 'slide';
+    el.innerHTML =
+      '<div class="slide-inner">' +
+        '<div class="eyebrow">' + d.eyebrow + '</div>' +
+        '<h2 class="slide-title">' + d.title + '</h2>' +
+        (d.lede ? '<div class="lede">' + d.lede + '</div>' : '') +
+        d.body +
+      '</div>';
+    return el;
+  }
+
+  function updateHud(){
+    counterEl.textContent = (current+1) + ' / ' + total;
+    progressFill.style.width = ((current) / (total-1) * 100) + '%';
+    applyGauge(current / (total-1));
+  }
+
+  var curEl = buildSlideEl(0);
+  curEl.classList.add('active');
+  stage.appendChild(curEl);
+  updateHud();
+
+  function goTo(idx, dir){
+    if(animating || idx === current || idx < 0 || idx >= total) return;
+    animating = true;
+    var nextEl = buildSlideEl(idx);
+    nextEl.classList.add(dir > 0 ? 'enter-fwd' : 'enter-bwd');
+    stage.appendChild(nextEl);
+    void nextEl.offsetWidth;
+    var oldEl = curEl;
+    requestAnimationFrame(function(){
+      oldEl.classList.remove('active');
+      oldEl.classList.add(dir > 0 ? 'exit-fwd' : 'exit-bwd');
+      nextEl.classList.remove('enter-fwd','enter-bwd');
+      nextEl.classList.add('active');
+    });
+    current = idx;
+    curEl = nextEl;
+    updateHud();
+    setTimeout(function(){
+      if(oldEl && oldEl.parentNode) oldEl.parentNode.removeChild(oldEl);
+      animating = false;
+    }, 420);
+  }
+
+  function next(){ goTo(current+1, 1); }
+  function prev(){ goTo(current-1, -1); }
+
+  document.getElementById('clickZone').addEventListener('click', function(e){
+    var w = window.innerWidth;
+    if(e.clientX < w * 0.25){ prev(); } else { next(); }
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown'){ e.preventDefault(); next(); }
+    else if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); prev(); }
+    else if(e.key === 'Home'){ e.preventDefault(); goTo(0, -1); }
+    else if(e.key === 'End'){ e.preventDefault(); goTo(total-1, 1); }
+    else if(e.key === 'ArrowUp'){ e.preventDefault(); prev(); }
+    else if(e.key === 'ArrowDown'){ e.preventDefault(); next(); }
+  });
+})();
+</script>
+</body>
+</html>

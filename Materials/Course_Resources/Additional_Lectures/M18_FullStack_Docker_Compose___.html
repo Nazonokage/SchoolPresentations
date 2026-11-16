@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>M18 — Full-Stack Docker Compose Orchestration</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07111F;--surface:#0C1A2E;--surface2:#132236;--border:#1A3050;--border2:#224070;
+  --accent:#61DAFB;--accent2:#4ADE80;--accent3:#FB923C;--accent4:#C084FC;--accent5:#F472B6;
+  --text:#FFFFFF;--text2:#B8D4F0;--text3:#E8F1FA;--card:#0B1828;--card2:#0F1F35;
+  --mono:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;
+  --sans:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --r:10px;--r2:14px;--tr:350ms cubic-bezier(.4,0,.2,1);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16px;-webkit-font-smoothing:antialiased}
+#bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent2),var(--accent4));transition:width .3s;z-index:100;border-radius:0 2px 2px 0}
+#ctr{position:fixed;top:12px;right:18px;font-size:16px;color:var(--text2);z-index:100;font-variant-numeric:tabular-nums;letter-spacing:.5px;font-family:var(--mono)}
+#deck{width:100%;height:100vh;position:relative;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;padding:48px 62px 36px;opacity:0;pointer-events:none;transform:translateX(48px);transition:opacity var(--tr),transform var(--tr);overflow-y:auto}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.out-l{opacity:0;transform:translateX(-48px)}
+.slide.out-r{opacity:0;transform:translateX(48px)}
+@media(prefers-reduced-motion:reduce){.slide{transition:opacity .15s;transform:none!important}}
+.eyebrow{font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--accent2);margin-bottom:10px;display:flex;align-items:center;gap:10px}
+.eyebrow::before{content:'';width:22px;height:2px;background:var(--accent2);border-radius:1px;display:inline-block}
+.slide-title{font-size:clamp(26px,3.2vw,42px);font-weight:800;line-height:1.15;color:var(--text);margin-bottom:6px;letter-spacing:-.4px}
+.slide-sub{font-size:17px;color:var(--text2);margin-bottom:16px}
+.rule{height:1px;background:linear-gradient(90deg,var(--border2),transparent);border:none;margin-bottom:16px}
+.content{flex:1;display:flex;flex-direction:column;gap:14px;min-height:0}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.g2>*,.g3>*{min-width:0}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;flex:1;min-height:0}
+.split>*{min-width:0;display:flex;flex-direction:column;gap:10px}
+.col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.flex1{flex:1}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:16px 18px}
+.card h3{font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1.1px;color:var(--accent);margin-bottom:10px}
+.card p,.card li{font-size:16px;color:var(--text3);line-height:1.65}
+.card ul{padding-left:18px}.card li{margin-bottom:5px}
+.cw{position:relative;background:#040C18;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;flex:1;display:flex;flex-direction:column;min-height:0}
+.cl{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#080F1C;border-bottom:1px solid var(--border);font-size:16px;color:var(--text2);font-family:var(--mono);flex-shrink:0}
+.cl span{color:var(--accent3)}
+.cw pre{padding:14px 16px;overflow:auto;font-family:var(--mono);font-size:16px;line-height:1.7;white-space:pre;flex:1;min-height:0}
+.cpbtn{padding:5px 14px;font-size:16px;font-family:var(--sans);background:var(--surface2);border:1px solid var(--border2);color:var(--text2);border-radius:6px;cursor:pointer;transition:all .2s;white-space:nowrap;box-shadow:2px 2px 0 rgba(0,0,0,.25)}
+.cpbtn:hover{background:var(--accent);color:#07111F;border-color:var(--accent)}
+.cpbtn.ok{background:var(--accent2);color:#07111F;border-color:var(--accent2);box-shadow:inset 2px 2px 4px rgba(0,0,0,.3)}
+.k{color:#F472B6}.s{color:#86EFAC}.f{color:#C4B5FD}.n{color:#7DD3FC}
+.cm{color:#2E4A65;font-style:italic}.t{color:#FCA5A5}.b{color:#FCD34D}
+.bd{display:flex;flex-direction:column;gap:8px}
+.bdi{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;border-left:3px solid var(--accent)}
+.bdi.g{border-left-color:var(--accent2)}.bdi.o{border-left-color:var(--accent3)}
+.bdi.p{border-left-color:var(--accent4)}.bdi.r{border-left-color:var(--accent5)}
+.bdl{font-family:var(--mono);font-size:16px;color:var(--accent);background:#040C18;padding:4px 10px;border-radius:4px;white-space:nowrap;min-width:fit-content;align-self:flex-start;margin-top:1px;flex-shrink:0}
+.bdt{font-size:16px;color:var(--text3);line-height:1.55}.bdt strong{color:var(--text);font-weight:600}
+.step{display:flex;gap:14px;align-items:flex-start;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--r)}
+.snum{width:30px;height:30px;border-radius:50%;background:var(--accent2);color:#07111F;font-weight:900;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.sbody h4{font-size:17px;font-weight:700;color:var(--text);margin-bottom:4px}
+.sbody p{font-size:16px;color:var(--text2);line-height:1.5}
+table{width:100%;border-collapse:collapse;font-size:16px}
+th{background:var(--surface2);color:var(--accent2);padding:11px 14px;text-align:left;font-weight:700;font-size:16px;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+td{padding:11px 14px;border-bottom:1px solid var(--border);color:var(--text3);line-height:1.5;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.013)}
+.pill{display:inline-block;padding:6px 15px;border-radius:20px;font-size:16px;font-weight:600;border:1px solid var(--border);color:var(--text2);margin:3px}
+.pill.a{border-color:var(--accent);color:var(--accent);background:rgba(97,218,251,.08)}
+.pill.g{border-color:var(--accent2);color:var(--accent2);background:rgba(74,222,128,.08)}
+.pill.p{border-color:var(--accent4);color:var(--accent4);background:rgba(192,132,252,.08)}
+.hero-bg{background:radial-gradient(ellipse at 12% 60%,rgba(74,222,128,.1) 0%,transparent 52%),radial-gradient(ellipse at 85% 18%,rgba(192,132,252,.07) 0%,transparent 48%),var(--bg)}
+.hero-title{font-size:clamp(40px,5.2vw,68px);font-weight:900;line-height:1.05;letter-spacing:-1.4px}
+.h1c{color:var(--text)}.h2c{color:var(--accent2)}
+.hero-sub{font-size:18px;color:var(--text2);max-width:600px;line-height:1.65;margin:14px 0 22px}
+.dots{position:absolute;inset:0;background-image:radial-gradient(rgba(74,222,128,.045) 1px,transparent 1px);background-size:30px 30px;pointer-events:none}
+.ba{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;flex:1}
+.ba-box{border-radius:var(--r);padding:16px 18px;border:1px solid var(--border)}
+.ba-box.bad{background:rgba(244,114,182,.05);border-color:rgba(244,114,182,.22)}
+.ba-box.good{background:rgba(74,222,128,.05);border-color:rgba(74,222,128,.22)}
+.ba-box h4{font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+.ba-box.bad h4{color:var(--accent5)}.ba-box.good h4{color:var(--accent2)}
+.ba-box p,.ba-box li{font-size:16px;color:var(--text3);line-height:1.65}
+.ba-box ul{padding-left:18px}
+.rc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.rc{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:18px;text-align:center}
+.rc .ico{font-size:28px;margin-bottom:8px}
+.rc h4{font-size:16px;font-weight:700;color:var(--accent2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.rc p{font-size:16px;color:var(--text2);line-height:1.55}
+.mc-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;flex:1;min-height:0}
+.mc-item{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;min-height:0}
+.mc-q{font-size:16px;font-weight:600;color:var(--text);margin-bottom:10px;line-height:1.45}
+.qn{color:var(--accent2);margin-right:7px;font-weight:800}
+.mc-opts{display:grid;grid-template-columns:minmax(0,1fr);gap:5px;flex:1}
+.mc-opt{padding:8px 12px;border-radius:6px;border:1px solid var(--border);font-size:16px;color:var(--text3);cursor:pointer;transition:all .15s;background:var(--surface2);line-height:1.35}
+.mc-opt:hover{border-color:var(--accent2);color:var(--text)}
+.mc-opt.sel{border-color:var(--accent2);background:rgba(74,222,128,.12);color:var(--accent2)}
+.hard-card{background:var(--card);border:1px solid var(--border2);border-radius:var(--r2);padding:18px 20px;flex:1;display:flex;flex-direction:column;gap:12px;min-height:0}
+.hard-card h3{font-size:17px;font-weight:700;color:var(--accent2);margin-bottom:2px}
+.hard-card .hint{font-size:16px;color:var(--text2);background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:6px;padding:8px 12px;line-height:1.5}
+.hard-card .hint strong{color:var(--accent2)}
+.hard-card textarea{width:100%;flex:1;min-height:90px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;font-family:var(--mono);outline:none;resize:vertical;line-height:1.55}
+.hard-card textarea:focus{border-color:var(--accent2)}
+.id-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;flex:1;min-height:0}
+.id-item{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.id-num{font-weight:800;color:var(--accent4);font-family:var(--mono);font-size:16px}
+.id-q{font-size:16px;color:var(--text3);line-height:1.45;flex:1}
+.id-ans{width:100%;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:16px;font-family:var(--mono);outline:none}
+.id-ans:focus{border-color:var(--accent4)}
+.gto-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;flex:1;min-height:0}
+.gto-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-height:0}
+.gto-qlabel{font-size:16px;font-weight:700;color:var(--text)}
+.gto-num{color:var(--accent4);font-weight:800;margin-right:6px}
+.gto-pre{background:#040C18;border:1px solid var(--border);border-radius:6px;padding:9px 11px;font-family:var(--mono);font-size:16px;color:var(--text3);white-space:pre;overflow-x:auto;flex:1;margin:0;min-height:60px}
+.gto-ta{width:100%;min-height:48px;padding:8px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:16px;font-family:var(--mono);outline:none;resize:none;line-height:1.45;transition:border .2s}
+.gto-ta:focus{border-color:var(--accent4)}
+.gto-alabel{font-size:16px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.ans-block{border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;flex:1}
+.ans-row{display:flex;gap:12px;padding:11px 14px;border-bottom:1px solid var(--border);font-size:16px;align-items:flex-start}
+.ans-row:last-child{border:none}
+.ans-row:nth-child(even){background:rgba(255,255,255,.012)}
+.anum{font-weight:800;min-width:26px;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:16px;flex-shrink:0;margin-top:1px}
+.anum.g{color:var(--accent2)}.anum.p{color:var(--accent4)}
+.abody{color:var(--text3);line-height:1.5;flex:1;min-width:0}
+.abody strong{color:var(--accent2)}
+#modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center}
+#modal.open{display:flex}
+.mbox{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:28px 32px;min-width:340px}
+.mbox h3{font-size:17px;font-weight:700;color:var(--accent2);margin-bottom:16px}
+.shr{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:16px;color:var(--text3)}
+.shr:last-of-type{border:none}
+.shr kbd{background:var(--surface2);border:1px solid var(--border2);border-radius:5px;padding:3px 9px;font-family:var(--mono);font-size:16px;color:var(--text)}
+.mcl{margin-top:18px;width:100%;padding:11px;background:var(--accent2);color:#07111F;border:none;border-radius:7px;cursor:pointer;font-size:16px;font-weight:700;font-family:var(--sans)}
+#hint{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);font-size:16px;color:var(--text2);letter-spacing:.4px;pointer-events:none;opacity:.55;font-family:var(--mono)}
+ic{background:var(--surface2);padding:2px 8px;border-radius:4px;font-family:var(--mono);font-size:16px;color:var(--accent2);border:1px solid var(--border)}
+small{font-size:16px}button,input,textarea,select{font-size:16px}
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<div id="ctr"></div>
+<div id="deck"></div>
+<div id="hint">right-click or → to advance · ? for shortcuts</div>
+<div id="modal">
+  <div class="mbox">
+    <h3>⌨ Keyboard Shortcuts</h3>
+    <div class="shr"><span>Next</span><span><kbd>→</kbd> or <kbd>Right-click</kbd></span></div>
+    <div class="shr"><span>Prev</span><span><kbd>←</kbd></span></div>
+    <div class="shr"><span>First / Last</span><span><kbd>Home</kbd> / <kbd>End</kbd></span></div>
+    <div class="shr"><span>Shortcuts</span><span><kbd>?</kbd></span></div>
+    <div class="shr"><span>Close</span><span><kbd>Esc</kbd></span></div>
+    <button class="mcl" onclick="document.getElementById('modal').classList.remove('open')">Close</button>
+  </div>
+</div>
+<script>
+function hl(raw){
+  const KW=/^(const|let|var|function|return|async|await|try|catch|throw|new|class|extends|if|else|for|while|import|export|default|from|of|in|true|false|null|undefined|void|version|services|build|ports|environment|depends_on|volumes|image|env_file)\b/;
+  const TY=/^(React|ReactDOM|console|document|JSON|Array|Object|Math|Promise|Error)\b/;
+  const NUM=/^\b\d+(\.\d+)?\b/;
+  function e(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+  let i=0,o='';
+  while(i<raw.length){
+    if(raw[i]==='/'&&raw[i+1]==='/'){const end=raw.indexOf('\n',i);const ch=end<0?raw.slice(i):raw.slice(i,end);o+='<span class="cm">'+e(ch)+'</span>';i+=ch.length;continue;}
+    if(raw[i]==='#'){const end=raw.indexOf('\n',i);const ch=end<0?raw.slice(i):raw.slice(i,end);o+='<span class="cm">'+e(ch)+'</span>';i+=ch.length;continue;}
+    if(raw[i]==='`'){let j=i+1;while(j<raw.length&&raw[j]!=='`'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    if(raw[i]==="'"){let j=i+1;while(j<raw.length&&raw[j]!=="'"&&raw[j]!=='\n'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    if(raw[i]==='"'){let j=i+1;while(j<raw.length&&raw[j]!=='"'&&raw[j]!=='\n'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    const rest=raw.slice(i);let m;
+    if((m=rest.match(KW))){o+='<span class="k">'+m[0]+'</span>';i+=m[0].length;continue;}
+    if((m=rest.match(TY))){o+='<span class="t">'+m[0]+'</span>';i+=m[0].length;continue;}
+    if((m=rest.match(NUM))){o+='<span class="n">'+m[0]+'</span>';i+=m[0].length;continue;}
+    o+=e(raw[i]);i++;
+  }
+  return o;
+}
+function cw(code,lang,label){
+  const id='c'+Math.random().toString(36).slice(2);
+  const body=(lang==='yaml'||lang==='js'||lang==='jsx')?hl(code):code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return '<div class="cw"><div class="cl"><span>'+(label||lang)+'</span><button class="cpbtn" onclick="doCopy(\''+id+'\',this)">Copy</button></div><pre id="'+id+'">'+body+'</pre></div>';
+}
+function doCopy(id,btn){
+  navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>{
+    btn.textContent='Copied!';btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('ok');},1800);
+  });
+}
+
+const S=[];
+
+// 0 HERO
+S.push({cls:'hero-bg',h:`
+<div class="dots"></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;position:relative">
+  <div class="eyebrow" style="margin-bottom:16px">Web Systems · Module 18</div>
+  <div class="hero-title"><div class="h1c">Full-Stack Docker Compose</div><div class="h2c">Orchestration</div></div>
+  <div class="hero-sub">Capstone: Orchestrating the 3-tier MERN stack — React (Nginx), Express API (Node), and MongoDB using docker-compose.yml.</div>
+  <div>
+    <span class="pill g">docker-compose.yml</span>
+    <span class="pill g">3-Tier MERN Stack</span>
+    <span class="pill a">Internal DNS Routing</span>
+    <span class="pill p">Named Volume Persistence</span>
+  </div>
+</div>`});
+
+// 1 BRIDGE
+S.push({h:`
+<div class="eyebrow">Where We Left Off</div>
+<div class="slide-title">M17 → M18: From Individual Containers to Full System Orchestration</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="ba">
+    <div class="ba-box bad">
+      <h4>❌ Running Containers Manually</h4>
+      <ul>
+        <li>Manually opening 3 terminal tabs to run <ic>docker run</ic> commands</li>
+        <li>Manually creating custom Docker bridge networks via terminal commands</li>
+        <li>Handling IP address changes every time MongoDB restarts</li>
+        <li>Risk of containers starting out of order (API starting before database is ready)</li>
+      </ul>
+      <p style="margin-top:12px;font-size:16px;color:rgba(244,114,182,.75)">Repetitive CLI commands &amp; fragile manual container wiring.</p>
+    </div>
+    <div class="ba-box good">
+      <h4>✅ Full-Stack Docker Compose Orchestration</h4>
+      <ul>
+        <li>Defining all 3 tiers (<ic>client</ic>, <ic>api</ic>, <ic>mongo</ic>) in one <ic>docker-compose.yml</ic></li>
+        <li>Single terminal command: <ic>docker-compose up -d</ic></li>
+        <li>Automatic internal DNS hostname resolution (<ic>mongodb://mongo:27017/db</ic>)</li>
+        <li>Declarative startup dependencies (<ic>depends_on</ic>) and named volume persistence</li>
+      </ul>
+      <p style="margin-top:12px;font-size:16px;color:rgba(74,222,128,.75)">One-command full-stack deployment.</p>
+    </div>
+  </div>
+  <div class="card"><h3>The Throughline</h3>
+    <p>Docker Compose is the ultimate coordinator for multi-container web systems. It allows developers to define, configure, run, and scale complete multi-service web applications with declarative YAML blueprints.</p>
+  </div>
+</div>`});
+
+// 2 CORE CONCEPT
+S.push({h:`
+<div class="eyebrow">Core Concept &amp; System Analogy</div>
+<div class="slide-title">The Symphony Orchestra Conductor</div>
+<hr class="rule"/>
+<div class="content split">
+  <div class="col">
+    <div class="card flex1" style="border-left:3px solid var(--accent2)">
+      <h3 style="color:var(--accent2)">The Orchestra Conductor Analogy</h3>
+      <p>Imagine your containers are individual orchestra musicians (Violin = React UI, Cello = Express API, Drums = MongoDB). <ic>docker-compose.yml</ic> is the Symphony Conductor standing on stage.</p>
+      <ul style="margin-top:10px">
+        <li><strong>Without Conductor:</strong> Musicians play out of tempo, starting and stopping randomly without cues (database connection crashes).</li>
+        <li><strong>With Conductor (<ic>docker-compose.yml</ic>):</strong> Gives the exact entry signal (<ic>depends_on</ic>), tunes instruments to the same key (bridge network), and starts the entire symphony in perfect unison (<ic>docker-compose up</ic>)!</li>
+      </ul>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card flex1" style="border-left:3px solid var(--accent)">
+      <h3>The 3-Tier Web System Architecture</h3>
+      <p>1. <strong>Presentation Tier:</strong> React Nginx container (Port 80).<br/>2. <strong>Application Tier:</strong> Express Node API container (Port 5000).<br/>3. <strong>Data Tier:</strong> MongoDB database container (Port 27017).</p>
+    </div>
+  </div>
+</div>`});
+
+// 3 WHAT / HOW / WHY
+S.push({h:`
+<div class="eyebrow">What / How / Why</div>
+<div class="slide-title">Docker Compose Fundamentals</div>
+<hr class="rule"/>
+<div class="content g3">
+  <div class="card">
+    <h3>What It Is</h3>
+    <p>A tool for defining and running multi-container Docker applications using a declarative YAML specification file (<ic>docker-compose.yml</ic>).</p>
+  </div>
+  <div class="card">
+    <h3>How It Works</h3>
+    <p>1. Define services, networks &amp; volumes in YAML.<br/>2. Run <ic>docker-compose up -d</ic>.<br/>3. Compose builds images, sets up DNS, and starts services.</p>
+  </div>
+  <div class="card">
+    <h3>Why It Matters</h3>
+    <p>Replaces complex multi-line terminal commands with a single version-controlled configuration file usable in dev, testing, and production.</p>
+  </div>
+</div>`});
+
+// 4 INTERNAL DNS
+S.push({h:`
+<div class="eyebrow">Networking Architecture</div>
+<div class="slide-title">Internal Container Networks &amp; DNS Hostnames</div>
+<hr class="rule"/>
+<div class="content split">
+  <div class="col">
+    <div class="card flex1" style="border-left:3px solid var(--accent2)">
+      <h3 style="color:var(--accent2)">Automatic Bridge Network</h3>
+      <p>Docker Compose automatically creates a shared virtual network for all services listed in the YAML file.</p>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card flex1" style="border-left:3px solid var(--accent)">
+      <h3>Service Key as DNS Name</h3>
+      <p>Services locate each other by using their service key name as the hostname. Express connects to MongoDB via:</p>
+      ${cw(`MONGO_URI=mongodb://mongo:27017/websys`, 'yaml', 'DNS Connection String')}
+      <p style="margin-top:8px;font-size:16px;color:rgba(97,218,251,.8)">No hardcoded IP addresses required! Docker DNS handles IP resolution.</p>
+    </div>
+  </div>
+</div>`});
+
+// 5 VOLUME PERSISTENCE
+S.push({h:`
+<div class="eyebrow">Data Persistence</div>
+<div class="slide-title">Persisting Database State with Named Volumes</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="card">
+    <h3>Why Named Volumes Are Essential for Databases</h3>
+    <p style="margin-bottom:10px">Containers are ephemeral — when a container is stopped or removed, all data written inside its internal file system is permanently destroyed. Named volumes mount host directory storage into the container:</p>
+    <div class="bd">
+      <div class="bdi g">
+        <span class="bdl">1. Volume Declaration</span>
+        <div class="bdt">Declare named volumes under the top-level <ic>volumes:</ic> block in <ic>docker-compose.yml</ic>.</div>
+      </div>
+      <div class="bdi o">
+        <span class="bdl">2. Service Mounting</span>
+        <div class="bdt">Mount volume to MongoDB's internal data directory: <ic>mongo_data:/data/db</ic>.</div>
+      </div>
+      <div class="bdi p">
+        <span class="bdl">3. Lifecycle Independence</span>
+        <div class="bdt">Even if the MongoDB container is destroyed (<ic>docker-compose down</ic>), database records remain safely preserved inside <ic>mongo_data</ic>.</div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 6 DOCKER-COMPOSE YML
+S.push({h:`
+<div class="eyebrow">Code Implementation</div>
+<div class="slide-title">The Complete 3-Tier docker-compose.yml</div>
+<hr class="rule"/>
+<div class="content">
+  ${cw(`version: '3.8'
+
+services:
+  client:
+    build: ./client
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
+  api:
+    build: ./api
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/websys
+      - JWT_SECRET=supersecret
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:6
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:`, 'yaml', 'docker-compose.yml')}
+</div>`});
+
+// 7 EXPRESS DB CONNECTION
+S.push({h:`
+<div class="eyebrow">Code Implementation</div>
+<div class="slide-title">Express Database Connection with Environment URI</div>
+<hr class="rule"/>
+<div class="content">
+  ${cw(`// api/config/db.js
+const mongoose = require('mongoose');
+
+const connectDB = async () => {
+  try {
+    // Reads MONGO_URI from docker-compose.yml environment!
+    const conn = await mongoose.connect(process.env.MONGO_URI);
+    console.log(\`🍃 MongoDB Connected: \${conn.connection.host}\`);
+  } catch (error) {
+    console.error(\`MongoDB Error: \${error.message}\`);
+    process.exit(1);
+  }
+};
+
+module.exports = connectDB;`, 'js', 'api/config/db.js')}
+</div>`});
+
+// 8 CLI COMMANDS
+S.push({h:`
+<div class="eyebrow">CLI Reference</div>
+<div class="slide-title">Essential Docker Compose CLI Commands</div>
+<hr class="rule"/>
+<div class="content">
+  <table>
+    <thead>
+      <tr>
+        <th>Command</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><ic>docker-compose up -d</ic></td>
+        <td>Builds images, creates networks &amp; volumes, and starts all services in background (detached) mode.</td>
+      </tr>
+      <tr>
+        <td><ic>docker-compose down</ic></td>
+        <td>Stops and removes active containers and networks (preserves named volumes).</td>
+      </tr>
+      <tr>
+        <td><ic>docker-compose ps</ic></td>
+        <td>Lists current running services, container IDs, and port mappings.</td>
+      </tr>
+      <tr>
+        <td><ic>docker-compose logs -f api</ic></td>
+        <td>Tails live real-time console log output for the specified service (<ic>api</ic>).</td>
+      </tr>
+    </tbody>
+  </table>
+</div>`});
+
+// 9 COMMON PITFALLS
+S.push({h:`
+<div class="eyebrow">Common Pitfalls</div>
+<div class="slide-title">Watch Out: Docker Compose Mistakes</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="ba">
+    <div class="ba-box bad">
+      <h4>❌ Bad: Using localhost inside Container</h4>
+      ${cw(`// Express API inside container:
+MONGO_URI=mongodb://localhost:27017/db`, 'yaml', 'Localhost Error')}
+      <p style="margin-top:8px;font-size:16px;color:rgba(244,114,182,.8)"><ic>localhost</ic> inside a container points to THAT container itself, not the database container! Connection fails.</p>
+    </div>
+    <div class="ba-box good">
+      <h4>✅ Good: Using Compose Service DNS Name</h4>
+      ${cw(`// Express API inside container:
+MONGO_URI=mongodb://mongo:27017/db`, 'yaml', 'DNS Service Name')}
+      <p style="margin-top:8px;font-size:16px;color:rgba(74,222,128,.8)">Use the service key name (<ic>mongo</ic>) as the hostname.</p>
+    </div>
+  </div>
+</div>`});
+
+// 10 ENV_FILE
+S.push({h:`
+<div class="eyebrow">Production Patterns</div>
+<div class="slide-title">Environment Variable Files (env_file)</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="card" style="margin-bottom:12px">
+    <h3>Decoupling Secrets with .env Files</h3>
+    <p>Instead of hardcoding database secrets in <ic>docker-compose.yml</ic>, load credentials from a top-level <ic>.env</ic> file:</p>
+  </div>
+  ${cw(`services:
+  api:
+    build: ./api
+    env_file:
+      - .env
+    depends_on:
+      - mongo`, 'yaml', 'env_file Directive')}
+</div>`});
+
+// 11 CAPSTONE
+S.push({h:`
+<div class="eyebrow">Capstone Activity</div>
+<div class="slide-title">Orchestrate the Full MERN Stack</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="step">
+    <div class="snum">1</div>
+    <div class="sbody">
+      <h4>Create Full-Stack Directory Structure</h4>
+      <p>Organize folders into <ic>/client</ic> (React + Nginx Dockerfile), <ic>/api</ic> (Express Dockerfile), and root.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="snum">2</div>
+    <div class="sbody">
+      <h4>Write docker-compose.yml</h4>
+      <p>Configure <ic>client</ic>, <ic>api</ic>, and <ic>mongo</ic> services with port mappings and named volume persistence.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="snum">3</div>
+    <div class="sbody">
+      <h4>Test &amp; Launch System</h4>
+      <p>Run component checks with <ic>Vitest</ic> and React Testing Library for login and API-error UI. Then run <ic>docker-compose up -d</ic>, open <ic>http://localhost</ic>, and verify full-stack CRUD operations.</p>
+    </div>
+  </div>
+</div>`});
+
+// 12 RECAP
+S.push({h:`
+<div class="eyebrow">Module Summary</div>
+<div class="slide-title">Recap Grid: Key Takeaways</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="rc-grid">
+    <div class="rc">
+      <div class="ico">🎼</div>
+      <h4>Docker Compose</h4>
+      <p>Declarative multi-container orchestrator that manages full 3-tier MERN stacks with a single file.</p>
+    </div>
+    <div class="rc">
+      <div class="ico">🌐</div>
+      <h4>DNS Service Routing</h4>
+      <p>Containers resolve each other using service names (<ic>mongo:27017</ic>) on an isolated bridge network.</p>
+    </div>
+    <div class="rc">
+      <div class="ico">💾</div>
+      <h4>Named Volumes</h4>
+      <p>Preserve database files outside container lifecycles (<ic>mongo_data:/data/db</ic>).</p>
+    </div>
+  </div>
+</div>`});
+
+// 13 QUIZ INTRO
+S.push({cls:'hero-bg',h:`
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:22px;max-width:820px">
+  <div class="eyebrow">Module 18 Assessment</div>
+  <div style="font-size:clamp(30px,3.8vw,48px);font-weight:900">
+    <span style="color:var(--text)">Module 18 Quiz</span><br/>
+    <span style="color:var(--accent2)">15 Items Assessment</span>
+  </div>
+  <div>
+    <span class="pill g">5 Multiple Choice</span>
+    <span class="pill a">5 Identification</span>
+    <span class="pill g">5 Guess the Output</span>
+  </div>
+</div>`});
+
+// 14 MCQs (2x2 + harder 5th)
+S.push({init(el){
+  const qs=[
+    {q:"Which command starts all multi-container services in Docker Compose?",opts:["docker run --all","docker-compose up -d","docker start stack","npm run compose"]},
+    {q:"How do services resolve each other's network IP addresses in Docker Compose?",opts:["By hardcoded localhost IPs","By using service key names as DNS hostnames","By physical MAC addresses","By port numbers"]},
+    {q:"What Docker feature preserves database data across container restarts?",opts:["Environment variables","Named Volumes","Network bridges","Interceptors"]},
+    {q:"Which Docker Compose configuration directive controls container startup order?",opts:["start_first","depends_on","order_by","require_service"]}
+  ];
+  const pg=el.querySelector('#mc-pg');
+  qs.forEach((q,i)=>{
+    const d=document.createElement('div');d.className='mc-item';
+    d.innerHTML='<div class="mc-q"><span class="qn">'+(i+1)+'.</span>'+q.q+'</div><div class="mc-opts">'+q.opts.map(o=>'<div class="mc-opt" onclick="this.closest(\'.mc-opts\').querySelectorAll(\'.mc-opt\').forEach(x=>x.classList.remove(\'sel\'));this.classList.add(\'sel\')">'+o+'</div>').join('')+'</div>';
+    pg.appendChild(d);
+  });
+},h:`
+<div class="eyebrow">Activities — Multiple Choice</div>
+<div class="slide-title">Questions 1–4 <span style="font-size:16px;color:var(--text2);font-weight:400">2×2 grid · choose the best answer</span></div>
+<hr class="rule"/>
+<div class="mc-grid" id="mc-pg"></div>`});
+
+// 14b HARDER MCQ 5
+S.push({h:`
+<div class="eyebrow">Activities — Multiple Choice · Challenge</div>
+<div class="slide-title">Question 5 — Harder Scenario</div>
+<hr class="rule"/>
+<div class="hard-card">
+  <h3>5. Full-stack orchestration diagnosis</h3>
+  <p style="font-size:16px;color:var(--text3);line-height:1.55">A developer manually starts three containers (React Nginx, Express API, MongoDB) with separate <ic>docker run</ic> commands. The API cannot reach MongoDB, data disappears after restarts, and services sometimes start in the wrong order. Explain the three root problems and how a single <ic>docker-compose.yml</ic> solves each of them.</p>
+  <div class="hint"><strong>Hints:</strong> Think about (1) how containers discover each other by name, (2) what survives <ic>docker-compose down</ic>, and (3) the key that controls startup order.</div>
+  <textarea placeholder="Write the three problems and the Compose solutions..."></textarea>
+</div>`});
+
+// 15 IDENTIFICATION (2x2)
+S.push({h:`
+<div class="eyebrow">Activities — Identification</div>
+<div class="slide-title">Questions 6–9 <span style="font-size:16px;color:var(--text2);font-weight:400">2×2 grid · name the concept</span></div>
+<hr class="rule"/>
+<div class="id-grid">
+  <div class="id-item">
+    <div class="id-num">6.</div>
+    <div class="id-q">The YAML file used to declare multi-container services, networks, and volumes.</div>
+    <input class="id-ans" placeholder="Your answer..."/>
+  </div>
+  <div class="id-item">
+    <div class="id-num">7.</div>
+    <div class="id-q">The Docker Compose key that controls the order in which services start.</div>
+    <input class="id-ans" placeholder="Your answer..."/>
+  </div>
+  <div class="id-item">
+    <div class="id-num">8.</div>
+    <div class="id-q">The feature that keeps MongoDB data alive even after docker-compose down.</div>
+    <input class="id-ans" placeholder="Your answer..."/>
+  </div>
+  <div class="id-item">
+    <div class="id-num">9.</div>
+    <div class="id-q">The single command that builds, networks, and starts the entire stack in detached mode.</div>
+    <input class="id-ans" placeholder="Your answer..."/>
+  </div>
+</div>`});
+
+// 15b HARDER ID 10
+S.push({h:`
+<div class="eyebrow">Activities — Identification · Challenge</div>
+<div class="slide-title">Question 10 — Harder Scenario</div>
+<hr class="rule"/>
+<div class="hard-card">
+  <h3>10. Design the compose network &amp; persistence</h3>
+  <p style="font-size:16px;color:var(--text3);line-height:1.55">Write the essential parts of a <ic>docker-compose.yml</ic> that: (1) defines three services (client, api, mongo), (2) makes the API wait for MongoDB, (3) lets the API reach MongoDB by hostname, and (4) keeps database data after <ic>docker-compose down</ic>. You may omit less critical keys.</p>
+  <div class="hint"><strong>Hints:</strong> Use <ic>depends_on</ic>, the service name as hostname, a top-level <ic>volumes:</ic> block, and a volume mount on the mongo service pointing to <ic>/data/db</ic>.</div>
+  <textarea placeholder="services:&#10;  ...&#10;volumes:&#10;  ..."></textarea>
+</div>`});
+
+// 16 GTO (2x2)
+S.push({init(el){
+  const qs=[
+    {code:`// Connection string in Express API:
+const uri = 'mongodb://mongo:27017/db';
+// Does 'mongo' resolve to the MongoDB container? (Yes/No)`},
+    {code:`volumes:
+  - mongo_data:/data/db
+// Container stops and restarts.
+// Does MongoDB data persist? (Yes/No)`},
+    {code:`// Command to stop and remove compose containers:
+docker-compose down
+// Does this command stop active containers? (Yes/No)`},
+    {code:`ports:
+  - "80:80"
+// Which port on the host machine forwards traffic to port 80 in the client container?`}
+  ];
+  const pg=el.querySelector('#gto-pg');
+  qs.forEach((q,i)=>{
+    const w=document.createElement('div');w.className='gto-wrap';
+    const lbl=document.createElement('div');lbl.className='gto-qlabel';
+    const nspan=document.createElement('span');nspan.className='gto-num';nspan.textContent=(i+11)+'.';
+    lbl.appendChild(nspan);
+    lbl.appendChild(document.createTextNode(' What is the result?'));
+    const pre=document.createElement('pre');pre.className='gto-pre';pre.textContent=q.code;
+    const al=document.createElement('div');al.className='gto-alabel';al.textContent='Your answer';
+    const ta=document.createElement('textarea');ta.className='gto-ta';ta.placeholder='Write answer...';
+    w.appendChild(lbl);w.appendChild(pre);w.appendChild(al);w.appendChild(ta);
+    pg.appendChild(w);
+  });
+},h:`
+<div class="eyebrow">Activities — Guess the Output</div>
+<div class="slide-title">Questions 11–14 <span style="font-size:16px;color:var(--text2);font-weight:400">2×2 grid · trace execution</span></div>
+<hr class="rule"/>
+<div class="gto-grid" id="gto-pg"></div>`});
+
+// 16b HARDER GTO 15
+S.push({h:`
+<div class="eyebrow">Activities — Guess the Output · Challenge</div>
+<div class="slide-title">Question 15 — Harder Scenario</div>
+<hr class="rule"/>
+<div class="hard-card">
+  <h3>15. Predict the full Compose run</h3>
+  <p style="font-size:16px;color:var(--text3);line-height:1.55">Given the compose snippet below, answer: (a) Will the API be able to connect to MongoDB using hostname <ic>mongo</ic>? (b) After <ic>docker-compose down</ic> then <ic>up</ic> again, will previous database records still exist? (c) Which service starts first? (d) What host port maps to the React client?</p>
+  <pre style="background:#040C18;border:1px solid var(--border);border-radius:6px;padding:12px 14px;font-family:var(--mono);font-size:16px;color:var(--text3);overflow-x:auto;margin:0">services:
+  client:
+    build: ./client
+    ports: ["80:80"]
+    depends_on: [api]
+  api:
+    build: ./api
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/websys
+    depends_on: [mongo]
+  mongo:
+    image: mongo:6
+    volumes: [mongo_data:/data/db]
+volumes:
+  mongo_data:</pre>
+  <div class="hint"><strong>Hints:</strong> Service names become DNS hostnames. Named volumes survive down. depends_on controls order. The left side of ports is the host port.</div>
+  <textarea placeholder="(a) API can reach mongo?&#10;(b) Data persists after down+up?&#10;(c) Which service starts first?&#10;(d) Host port for React client:"></textarea>
+</div>`});
+
+// 17 ANSWER KEY
+S.push({h:`
+<div class="eyebrow">Answer Key</div>
+<div class="slide-title">Module 18 — Solutions &amp; Explanations</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2" style="flex:1">
+    <div class="col">
+      <div style="font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--accent2);margin-bottom:8px">Multiple Choice &amp; Identification</div>
+      <div class="ans-block">
+        <div class="ans-row"><span class="anum g">1.</span><div class="abody"><strong>B)</strong> docker-compose up -d — launches multi-container stack detached.</div></div>
+        <div class="ans-row"><span class="anum g">2.</span><div class="abody"><strong>B)</strong> Service key names as DNS hostnames — Compose bridge network resolution.</div></div>
+        <div class="ans-row"><span class="anum g">3.</span><div class="abody"><strong>B)</strong> Named Volumes — persists database storage outside containers.</div></div>
+        <div class="ans-row"><span class="anum g">4.</span><div class="abody"><strong>B)</strong> depends_on — controls service startup sequence.</div></div>
+        <div class="ans-row"><span class="anum g">5.</span><div class="abody"><strong>Harder:</strong> Problems = no DNS discovery + no persistence + unordered start. Fix = service-name DNS + named volumes + depends_on in one compose file.</div></div>
+        <div class="ans-row"><span class="anum g">6.</span><div class="abody"><strong>docker-compose.yml</strong> (or Docker Compose)</div></div>
+        <div class="ans-row"><span class="anum g">7.</span><div class="abody"><strong>depends_on</strong></div></div>
+        <div class="ans-row"><span class="anum g">8.</span><div class="abody"><strong>Named Volumes</strong> (or Volumes)</div></div>
+        <div class="ans-row"><span class="anum g">9.</span><div class="abody"><strong>docker-compose up -d</strong> (or docker-compose up)</div></div>
+        <div class="ans-row"><span class="anum g">10.</span><div class="abody"><strong>Harder:</strong> services with depends_on + MONGO_URI=mongodb://mongo:… + volumes: mongo_data:/data/db + top-level volumes block</div></div>
+      </div>
+    </div>
+    <div class="col">
+      <div style="font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--accent4);margin-bottom:8px">Guess the Output</div>
+      <div class="ans-block">
+        <div class="ans-row"><span class="anum p">11.</span><div class="abody"><strong>Yes.</strong> Service name <ic>mongo</ic> resolves via internal Compose DNS bridge network.</div></div>
+        <div class="ans-row"><span class="anum p">12.</span><div class="abody"><strong>Yes.</strong> Named volumes persist data independently of container lifecycles.</div></div>
+        <div class="ans-row"><span class="anum p">13.</span><div class="abody"><strong>Yes.</strong> <ic>docker-compose down</ic> stops active containers and removes the compose network.</div></div>
+        <div class="ans-row"><span class="anum p">14.</span><div class="abody"><strong>Port 80.</strong> First number in <ic>"80:80"</ic> maps host port 80 to container port 80.</div></div>
+        <div class="ans-row"><span class="anum p">15.</span><div class="abody"><strong>Harder:</strong> (a) Yes (b) Yes – named volume (c) mongo first (d) Host port 80</div></div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 18 CLOSING
+S.push({cls:'hero-bg',h:`
+<div class="dots"></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:22px;position:relative;max-width:760px">
+  <div class="eyebrow">EL104 Course Complete</div>
+  <div style="font-size:clamp(32px,4vw,52px);font-weight:900;line-height:1.15;letter-spacing:-.4px">
+    <span style="color:var(--text)">Full-Stack MERN &amp; Docker</span><br/>
+    <span style="color:var(--accent2)">Web Systems Milestone Achieved!</span>
+  </div>
+  <div class="card" style="background:rgba(74,222,128,.05);border-color:rgba(74,222,128,.25)">
+    <h3>🎉 Congratulations!</h3>
+    <p>You have mastered the complete Web Systems curriculum — from JSON, Express, React state, hooks, TanStack Query, Context API, and JWT authentication, up to multi-stage Docker builds and Docker Compose orchestration!</p>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <span class="pill g">React Client ✓</span>
+    <span class="pill g">Express REST API ✓</span>
+    <span class="pill g">MongoDB Database ✓</span>
+    <span class="pill g">Docker Compose Orchestration ✓</span>
+  </div>
+</div>`});
+
+let cur=0;
+const deck=document.getElementById('deck');
+const bar=document.getElementById('bar');
+const ctr=document.getElementById('ctr');
+
+function build(){
+  S.forEach((s,i)=>{
+    const el=document.createElement('div');
+    el.className='slide'+(s.cls?' '+s.cls:'');
+    el.innerHTML=s.h||'';
+    if(i===0)el.classList.add('active');
+    deck.appendChild(el);
+    if(s.init)s.init(el);
+  });
+}
+function go(n){
+  if(n<0||n>=S.length||n===cur)return;
+  const els=deck.querySelectorAll('.slide');
+  const fwd=n>cur;
+  els[cur].classList.remove('active');
+  els[cur].classList.add(fwd?'out-l':'out-r');
+  setTimeout(()=>els[cur].classList.remove('out-l','out-r'),420);
+  cur=n;els[cur].classList.add('active');els[cur].scrollTop=0;tick();
+}
+function tick(){
+  bar.style.width=(S.length>1?(cur/(S.length-1)*100):100)+'%';
+  ctr.textContent=(cur+1)+' / '+S.length;
+}
+document.addEventListener('keydown',e=>{
+  const m=document.getElementById('modal');
+  if(m.classList.contains('open')){if(e.key==='Escape')m.classList.remove('open');return;}
+  const t=document.activeElement.tagName;
+  if(t==='INPUT'||t==='TEXTAREA')return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')go(cur+1);
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(cur-1);
+  else if(e.key==='Home')go(0);
+  else if(e.key==='End')go(S.length-1);
+  else if(e.key==='?')m.classList.add('open');
+  else if(e.key==='Escape')m.classList.remove('open');
+});
+document.addEventListener('mousedown',e=>{
+  if(e.target.closest('button,input,a,.mc-opt,.gto-ta,.id-ans'))return;
+  if(e.button===2){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+  else if(e.button===3){e.preventDefault();e.stopImmediatePropagation();go(cur-1);}
+  else if(e.button===4){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+},true);
+document.addEventListener('contextmenu',e=>{
+  if(e.target.closest('button,input,a'))return;
+  e.preventDefault();e.stopImmediatePropagation();
+},true);
+document.addEventListener('auxclick',e=>{
+  if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation();}
+},true);
+build();tick();
+</script>
+</body>
+</html>

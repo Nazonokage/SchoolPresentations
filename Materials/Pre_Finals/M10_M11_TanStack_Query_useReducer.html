@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>M10–M11 — TanStack Query & useReducer</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07111F;--surface:#0C1A2E;--surface2:#132236;--border:#1A3050;--border2:#224070;
+  --accent:#FF4154;--accent2:#4ADE80;--accent3:#61DAFB;--accent4:#C084FC;--accent5:#F472B6;
+  --text:#FFFFFF;--text2:#C8DCF0;--text3:#E8F1FA;--card:#0B1828;--card2:#0F1F35;
+  --mono:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Monaco,Consolas,monospace;
+  --sans:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --r:10px;--r2:14px;--tr:350ms cubic-bezier(.4,0,.2,1);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:17px;-webkit-font-smoothing:antialiased}
+#bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent4));transition:width .3s;z-index:100;border-radius:0 2px 2px 0}
+#ctr{position:fixed;top:10px;right:16px;font-size:16px;color:var(--text2);z-index:100;font-variant-numeric:tabular-nums;letter-spacing:.5px;font-family:var(--mono)}
+#deck{width:100%;height:100vh;position:relative;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;padding:44px 56px 30px;opacity:0;pointer-events:none;transform:translateX(48px);transition:opacity var(--tr),transform var(--tr);overflow-y:auto}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.out-l{opacity:0;transform:translateX(-48px)}
+.slide.out-r{opacity:0;transform:translateX(48px)}
+@media(prefers-reduced-motion:reduce){.slide{transition:opacity .15s;transform:none!important}}
+.eyebrow{font-size:16px;font-weight:700;letter-spacing:2.2px;text-transform:uppercase;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.eyebrow::before{content:'';width:20px;height:2px;background:var(--accent);border-radius:1px;display:inline-block}
+.slide-title{font-size:clamp(28px,3.2vw,42px);font-weight:800;line-height:1.15;color:var(--text);margin-bottom:5px;letter-spacing:-.4px}
+.rule{height:1px;background:linear-gradient(90deg,var(--border2),transparent);border:none;margin-bottom:14px}
+.content{flex:1;display:flex;flex-direction:column;gap:12px;min-height:0}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.g2>*,.g3>*{min-width:0}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;flex:1;min-height:0}
+.split>*{min-width:0;display:flex;flex-direction:column;gap:10px}
+.col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.flex1{flex:1}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px}
+.card h3{font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1.1px;color:var(--accent);margin-bottom:8px}
+.card p,.card li{font-size:16px;color:var(--text3);line-height:1.6}
+.card ul{padding-left:16px}.card li{margin-bottom:3px}
+.cw{position:relative;background:#040C18;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;flex:1;display:flex;flex-direction:column;min-height:0}
+.cl{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:#080F1C;border-bottom:1px solid var(--border);font-size:15px;color:var(--text2);font-family:var(--mono);flex-shrink:0}
+.cl span{color:var(--accent3)}
+.cw pre{padding:11px 13px;overflow:auto;font-family:var(--mono);font-size:15px;line-height:1.65;white-space:pre;flex:1;max-height:340px}
+.cpbtn{padding:3px 11px;font-size:15px;font-family:var(--sans);background:var(--surface2);border:1px solid var(--border2);color:var(--text2);border-radius:4px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.cpbtn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.cpbtn.ok{background:var(--accent2);color:#07111F;border-color:var(--accent2)}
+.k{color:#F472B6}.s{color:#86EFAC}.n{color:#7DD3FC}.cm{color:#3A5A78;font-style:italic}.t{color:#FCA5A5}.f{color:#DCDCAA}
+.bdi{display:flex;gap:9px;align-items:flex-start;padding:8px 11px;background:var(--surface);border:1px solid var(--border);border-radius:6px;border-left:3px solid var(--accent);margin-bottom:6px}
+.bdi.g{border-left-color:var(--accent2)}.bdi.o{border-left-color:var(--accent3)}
+.bdi.p{border-left-color:var(--accent4)}.bdi.r{border-left-color:var(--accent5)}
+.bdl{font-family:var(--mono);font-size:15px;color:var(--accent);background:#040C18;padding:2px 7px;border-radius:3px;white-space:nowrap;min-width:fit-content;align-self:flex-start;margin-top:1px;flex-shrink:0}
+.bdt{font-size:16px;color:var(--text3);line-height:1.5}.bdt strong{color:var(--text);font-weight:600}
+.step{display:flex;gap:11px;align-items:flex-start;padding:10px 13px;background:var(--card);border:1px solid var(--border);border-radius:var(--r)}
+.snum{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font-weight:900;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.sbody h4{font-size:16px;font-weight:700;color:var(--text);margin-bottom:2px}
+.sbody p{font-size:16px;color:var(--text2);line-height:1.45}
+table{width:100%;border-collapse:collapse;font-size:16px}
+th{background:var(--surface2);color:var(--accent);padding:8px 11px;text-align:left;font-weight:700;font-size:15px;letter-spacing:.8px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+td{padding:8px 11px;border-bottom:1px solid var(--border);color:var(--text3);line-height:1.45;vertical-align:top}
+tr:last-child td{border-bottom:none}
+.pill{display:inline-block;padding:4px 12px;border-radius:20px;font-size:15px;font-weight:600;border:1px solid var(--border);color:var(--text2);margin:2px}
+.pill.a{border-color:var(--accent);color:var(--accent);background:rgba(255,65,84,.12)}
+.pill.g{border-color:var(--accent2);color:var(--accent2);background:rgba(74,222,128,.1)}
+.pill.p{border-color:var(--accent4);color:var(--accent4);background:rgba(192,132,252,.1)}
+.hero-bg{background:radial-gradient(ellipse at 12% 60%,rgba(255,65,84,.12) 0%,transparent 52%),radial-gradient(ellipse at 85% 18%,rgba(192,132,252,.08) 0%,transparent 48%),var(--bg)}
+.hero-title{font-size:clamp(42px,5.4vw,70px);font-weight:900;line-height:1.05;letter-spacing:-1.3px}
+.h1c{color:var(--text)}.h2c{color:var(--accent)}
+.hero-sub{font-size:16.5px;color:var(--text2);max-width:580px;line-height:1.6;margin:12px 0 18px}
+.dots{position:absolute;inset:0;background-image:radial-gradient(rgba(255,65,84,.04) 1px,transparent 1px);background-size:28px 28px;pointer-events:none}
+.ba{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;flex:1}
+.ba-box{border-radius:var(--r);padding:14px 15px;border:1px solid var(--border)}
+.ba-box.bad{background:rgba(244,114,182,.05);border-color:rgba(244,114,182,.22)}
+.ba-box.good{background:rgba(255,65,84,.05);border-color:rgba(255,65,84,.22)}
+.ba-box h4{font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:9px}
+.ba-box.bad h4{color:var(--accent5)}.ba-box.good h4{color:var(--accent)}
+.ba-box p,.ba-box li{font-size:16px;color:var(--text3);line-height:1.55}
+.ba-box ul{padding-left:16px}
+.q-card{background:linear-gradient(135deg,var(--card),var(--surface));border-left:3px solid var(--accent);border-radius:0 var(--r) var(--r) 0;padding:13px 16px;margin-bottom:10px}
+.q-text{font-size:17px;color:var(--text3);line-height:1.65;font-style:italic}
+.q-src{font-size:15px;color:var(--accent);margin-top:6px;font-style:normal;font-weight:700}
+.rc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.rc{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:14px;text-align:center}
+.rc .ico{font-size:24px;margin-bottom:6px}
+.rc h4{font-size:15px;font-weight:700;color:var(--accent);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}
+.rc p{font-size:15px;color:var(--text2);line-height:1.5}
+.mc-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:11px;flex:1;min-height:0}
+.mc-item{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;min-height:0}
+.mc-q{font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px;line-height:1.4}
+.qn{color:var(--accent);margin-right:5px;font-weight:800}
+.mc-opts{display:grid;grid-template-columns:minmax(0,1fr);gap:5px;flex:1}
+.mc-opt{padding:7px 11px;border-radius:5px;border:1px solid var(--border);font-size:15px;color:var(--text3);cursor:pointer;transition:all .15s;background:var(--surface2);line-height:1.3}
+.mc-opt:hover{border-color:var(--accent);color:var(--text)}
+.mc-opt.sel{border-color:var(--accent);background:rgba(255,65,84,.12);color:var(--accent)}
+.hard-card{background:var(--card);border:1px solid var(--border2);border-radius:var(--r2);padding:16px 18px;flex:1;display:flex;flex-direction:column;gap:11px;min-height:0}
+.hard-card h3{font-size:16px;font-weight:700;color:var(--accent);margin-bottom:2px}
+.hard-card .hint{font-size:15px;color:var(--text2);background:rgba(255,65,84,.08);border:1px solid rgba(255,65,84,.2);border-radius:6px;padding:8px 11px;line-height:1.45}
+.hard-card .hint strong{color:var(--accent)}
+.hard-card textarea{width:100%;flex:1;min-height:80px;padding:11px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;font-family:var(--mono);outline:none;resize:vertical;line-height:1.5}
+.hard-card textarea:focus{border-color:var(--accent)}
+.gto-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:11px;flex:1;min-height:0}
+.gto-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;display:flex;flex-direction:column;gap:7px;min-height:0}
+.gto-qlabel{font-size:15px;font-weight:700;color:var(--text)}
+.gto-num{color:var(--accent4);font-weight:800;margin-right:5px}
+.gto-pre{background:#040C18;border:1px solid var(--border);border-radius:5px;padding:8px 10px;font-family:var(--mono);font-size:15px;color:var(--text3);white-space:pre;overflow-x:auto;flex:1;margin:0;min-height:46px}
+.gto-alabel{font-size:14px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.gto-ta{width:100%;min-height:42px;padding:6px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:15px;font-family:var(--mono);outline:none;resize:none;line-height:1.4;transition:border .2s}
+.gto-ta:focus{border-color:var(--accent4)}
+.ans-block{border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;flex:1}
+.ans-row{display:flex;gap:9px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:15px;align-items:flex-start}
+.ans-row:last-child{border:none}
+.ans-row:nth-child(even){background:rgba(255,255,255,.012)}
+.anum{font-weight:800;min-width:22px;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:15px;flex-shrink:0;margin-top:1px}
+.anum.b{color:var(--accent)}.anum.p{color:var(--accent4)}
+.abody{color:var(--text3);line-height:1.45;flex:1;min-width:0}
+.abody strong{color:var(--accent2)}
+#modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center}
+#modal.open{display:flex}
+.mbox{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:24px 28px;min-width:300px}
+.mbox h3{font-size:16px;font-weight:700;color:var(--accent);margin-bottom:12px}
+.shr{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:16px;color:var(--text3)}
+.shr:last-of-type{border:none}
+.shr kbd{background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:2px 7px;font-family:var(--mono);font-size:15px;color:var(--text)}
+.mcl{margin-top:14px;width:100%;padding:9px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:16px;font-weight:700;font-family:var(--sans)}
+#hint{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);font-size:15px;color:var(--text2);letter-spacing:.4px;pointer-events:none;opacity:.45;font-family:var(--mono)}
+ic{background:var(--surface2);padding:1px 6px;border-radius:4px;font-family:var(--mono);font-size:15px;color:var(--accent4);border:1px solid var(--border)}
+small{font-size:15px}button,input,textarea,select{font-size:16px}
+.part-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:14px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px}
+.part-badge.p1{background:rgba(255,65,84,.12);color:var(--accent);border:1px solid rgba(255,65,84,.3)}
+.part-badge.p2{background:rgba(192,132,252,.12);color:var(--accent4);border:1px solid rgba(192,132,252,.3)}
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<div id="ctr"></div>
+<div id="deck"></div>
+<div id="hint">→ or right-click to advance · ? for shortcuts</div>
+<div id="modal">
+  <div class="mbox">
+    <h3>⌨ Keyboard Shortcuts</h3>
+    <div class="shr"><span>Next</span><span><kbd>→</kbd> or <kbd>Right-click</kbd></span></div>
+    <div class="shr"><span>Prev</span><span><kbd>←</kbd></span></div>
+    <div class="shr"><span>First / Last</span><span><kbd>Home</kbd> / <kbd>End</kbd></span></div>
+    <div class="shr"><span>Shortcuts</span><span><kbd>?</kbd></span></div>
+    <div class="shr"><span>Close</span><span><kbd>Esc</kbd></span></div>
+    <button class="mcl" onclick="document.getElementById('modal').classList.remove('open')">Close</button>
+  </div>
+</div>
+<script>
+function hl(raw){
+  const KW=/^(const|let|var|function|return|async|await|try|catch|throw|new|class|extends|if|else|for|while|import|export|default|from|of|in|true|false|null|undefined|void|switch|case|break|typeof)\b/;
+  const TY=/^(React|useState|useEffect|useReducer|useQuery|useMutation|useQueryClient|QueryClient|QueryClientProvider|axios|console|JSON|Promise|Error)\b/;
+  const NUM=/^\b\d+(\.\d+)?\b/;
+  function e(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+  let i=0,o='';
+  while(i<raw.length){
+    if(raw[i]==='/'&&raw[i+1]==='/'){const end=raw.indexOf('\n',i);const ch=end<0?raw.slice(i):raw.slice(i,end);o+='<span class="cm">'+e(ch)+'</span>';i+=ch.length;continue;}
+    if(raw[i]==='`'){let j=i+1;while(j<raw.length&&raw[j]!=='`'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    if(raw[i]==="'"){let j=i+1;while(j<raw.length&&raw[j]!=="'"&&raw[j]!=='\n'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    if(raw[i]==='"'){let j=i+1;while(j<raw.length&&raw[j]!=='"'&&raw[j]!=='\n'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    const rest=raw.slice(i);let m;
+    if((m=rest.match(KW))){o+='<span class="k">'+m[0]+'</span>';i+=m[0].length;continue;}
+    if((m=rest.match(TY))){o+='<span class="t">'+m[0]+'</span>';i+=m[0].length;continue;}
+    if((m=rest.match(NUM))){o+='<span class="n">'+m[0]+'</span>';i+=m[0].length;continue;}
+    o+=e(raw[i]);i++;
+  }
+  return o;
+}
+function cw(code,lang,label){
+  const id='c'+Math.random().toString(36).slice(2);
+  const body=(lang==='jsx'||lang==='js')?hl(code):code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return '<div class="cw"><div class="cl"><span>'+(label||lang)+'</span><button class="cpbtn" onclick="doCopy(\''+id+'\',this)">Copy</button></div><pre id="'+id+'">'+body+'</pre></div>';
+}
+function doCopy(id,btn){
+  navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>{
+    btn.textContent='Copied!';btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('ok');},2000);
+  });
+}
+
+const S=[];
+
+// 0 HERO
+S.push({cls:'hero-bg',h:`
+<div class="dots"></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;position:relative;max-width:840px">
+  <div class="eyebrow" style="margin-bottom:12px">Web Systems · Modules 10 + 11</div>
+  <div class="hero-title"><div class="h1c">TanStack Query &amp;</div><div class="h2c">useReducer</div></div>
+  <div class="hero-sub">Server state gets a dedicated manager. Client state that grows complex gets a pure, predictable machine. Two complementary tools for the two kinds of state.</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+    <span class="pill a">Part 1 · TanStack Query</span>
+    <span class="pill p">Part 2 · useReducer</span>
+  </div>
+</div>`});
+
+// 1 ROADMAP
+S.push({h:`
+<div class="eyebrow">Roadmap</div>
+<div class="slide-title">Two Parts, Two Kinds of State</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2" style="flex:1">
+    <div class="card" style="border-color:rgba(255,65,84,.35)">
+      <div class="part-badge p1">Part 1</div>
+      <h3 style="color:var(--accent);margin-bottom:10px">Enterprise Caching · TanStack Query</h3>
+      <ul>
+        <li>Client state vs Server state</li>
+        <li>useQuery — declarative data fetching</li>
+        <li>queryKey, staleTime, Stale-While-Revalidate</li>
+        <li>useMutation + cache invalidation</li>
+        <li>QueryClientProvider setup</li>
+      </ul>
+    </div>
+    <div class="card" style="border-color:rgba(192,132,252,.35)">
+      <div class="part-badge p2">Part 2</div>
+      <h3 style="color:var(--accent4);margin-bottom:10px">useReducer &amp; State Machines</h3>
+      <ul>
+        <li>When multiple useState becomes messy</li>
+        <li>Pure reducers + action objects</li>
+        <li>dispatch instead of scattered setters</li>
+        <li>Immutability rules & nested updates</li>
+        <li>Shopping-cart style state machine</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Why these two belong together</h3>
+    <p>Part 1 solves <em>server</em> state (remote, async, shared, cacheable). Part 2 solves <em>complex client</em> state (local, synchronous, interdependent). Together they cover almost every state problem you will meet in a real React app.</p>
+  </div>
+</div>`});
+
+// ========== PART 1 ==========
+// 2 CLIENT VS SERVER
+S.push({h:`
+<div class="part-badge p1">Part 1 · Core Concept</div>
+<div class="slide-title">Client State vs Server State</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2">
+    <div class="card">
+      <h3>Client State</h3>
+      <p>Owned by the component, synchronous, local.</p>
+      <ul>
+        <li>Modal open/closed</li>
+        <li>Form input values</li>
+        <li>Dark mode toggle</li>
+        <li>Selected tab</li>
+      </ul>
+      <p style="margin-top:8px">→ useState / useReducer is perfect.</p>
+    </div>
+    <div class="card">
+      <h3>Server State</h3>
+      <p>Lives on a remote server, asynchronous, shared, can become stale.</p>
+      <ul>
+        <li>User profile</li>
+        <li>Product catalog</li>
+        <li>List of todos</li>
+        <li>Any data from your Express API</li>
+      </ul>
+      <p style="margin-top:8px">→ TanStack Query is built for this.</p>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Library Assistant Analogy</h3>
+    <p>Without a cache the assistant runs to the archive basement every time someone asks for a book (slow). With TanStack Query the assistant keeps a copy on the desk (instant) and quietly checks the basement in the background for a newer edition (Stale-While-Revalidate).</p>
+  </div>
+</div>`});
+
+// 3 USEQUERY
+S.push({h:`
+<div class="part-badge p1">Part 1 · The Main Hook</div>
+<div class="slide-title">useQuery — What / How / Why</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split" style="height:min(500px,56vh)">
+    <div style="min-height:0;height:100%">
+      ${cw(`import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
+
+function ProductCatalog() {
+  const { data, isPending, isError, error } = useQuery({
+    queryKey: ['products'],
+    queryFn: () =>
+      axios.get('/api/products').then(r => r.data),
+    staleTime: 1000 * 60 * 5, // 5 min
+  });
+
+  if (isPending) return <p>Loading…</p>;
+  if (isError)   return <p>Error: {error.message}</p>;
+
+  return (
+    <ul>
+      {data.map(p => (
+        <li key={p.id}>{p.name} — \${p.price}</li>
+      ))}
+    </ul>
+  );
+}`,'jsx','useQuery example')}
+    </div>
+    <div class="col" style="overflow-y:auto">
+      <div class="bdi"><span class="bdl">1</span><div class="bdt"><strong>queryKey</strong> — unique cache address. Same key = same cached data.</div></div>
+      <div class="bdi g"><span class="bdl">2</span><div class="bdt"><strong>queryFn</strong> — the async function that actually fetches. Must return a promise.</div></div>
+      <div class="bdi o"><span class="bdl">3</span><div class="bdt"><strong>staleTime</strong> — how long data stays “fresh”. During this window no background refetch happens.</div></div>
+      <div class="bdi p"><span class="bdl">4</span><div class="bdt"><strong>isPending / isError</strong> — built-in flags replace your manual loading & error state.</div></div>
+      <div class="bdi r"><span class="bdl">5</span><div class="bdt"><strong>data</strong> — the resolved value of queryFn. Only safe to use after the early returns.</div></div>
+    </div>
+  </div>
+</div>`});
+
+// 4 QUERY KEY
+S.push({h:`
+<div class="part-badge p1">Part 1 · Cache Address</div>
+<div class="slide-title">queryKey — The Heart of Caching</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2">
+    <div class="card">
+      <h3>What it is</h3>
+      <p>An array that uniquely identifies a piece of cached data. TanStack Query uses it as a lookup key.</p>
+      <p style="margin-top:8px;font-family:var(--mono);font-size:15px">['products']<br/>['products', productId]<br/>['todos', { status: 'done' }]</p>
+    </div>
+    <div class="card">
+      <h3>Why arrays?</h3>
+      <p>They are serialisable and hierarchical. Invalidating <ic>['products']</ic> can also invalidate every product-related query if you want.</p>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Rule of thumb</h3>
+    <p>Everything the queryFn depends on (IDs, filters, page numbers) should appear in the queryKey so the cache stays correct.</p>
+  </div>
+  <div class="card">
+    <h3>Supporting sample — dynamic key</h3>
+    ${cw(`const { data } = useQuery({
+  queryKey: ['user', userId],
+  queryFn: () => axios.get(\`/api/users/\${userId}\`).then(r => r.data),
+  enabled: !!userId, // don't run until userId exists
+});`,'jsx','Dynamic queryKey')}
+  </div>
+</div>`});
+
+// 5 STALETIME
+S.push({h:`
+<div class="part-badge p1">Part 1 · Freshness</div>
+<div class="slide-title">staleTime &amp; Stale-While-Revalidate</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2">
+    <div class="card">
+      <h3>staleTime</h3>
+      <p>How long the data is considered fresh. During this window TanStack Query will not refetch in the background.</p>
+      <p style="margin-top:8px"><ic>staleTime: 1000 * 60 * 5</ic> → 5 minutes fresh.</p>
+      <p style="margin-top:6px">Default is 0 (immediately stale).</p>
+    </div>
+    <div class="card">
+      <h3>Stale-While-Revalidate</h3>
+      <p>Show the cached data instantly (even if it is stale) while a background request quietly updates it. The UI never blocks on the network.</p>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Why this feels fast</h3>
+    <p>Users see content on the first paint. The library updates the numbers a second later if the server has newer data. Perceived performance skyrockets.</p>
+  </div>
+</div>`});
+
+// 6 USEMUTATION
+S.push({h:`
+<div class="part-badge p1">Part 1 · Writing Data</div>
+<div class="slide-title">useMutation + Cache Invalidation</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split" style="height:min(500px,56vh)">
+    <div style="min-height:0;height:100%">
+      ${cw(`import { useMutation, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
+
+function AddProductForm() {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: (newProduct) =>
+      axios.post('/api/products', newProduct),
+    onSuccess: () => {
+      // Tell every ['products'] query to refetch
+      queryClient.invalidateQueries({
+        queryKey: ['products']
+      });
+    }
+  });
+
+  return (
+    <button
+      onClick={() => mutation.mutate({
+        name: 'Keyboard', price: 99
+      })}
+      disabled={mutation.isPending}
+    >
+      {mutation.isPending ? 'Saving…' : 'Add Item'}
+    </button>
+  );
+}`,'jsx','useMutation example')}
+    </div>
+    <div class="col" style="overflow-y:auto">
+      <div class="bdi"><span class="bdl">1</span><div class="bdt"><strong>useQueryClient()</strong> — gives access to the cache so we can invalidate after a write.</div></div>
+      <div class="bdi g"><span class="bdl">2</span><div class="bdt"><strong>mutationFn</strong> — the async function that performs the POST/PUT/DELETE.</div></div>
+      <div class="bdi o"><span class="bdl">3</span><div class="bdt"><strong>onSuccess</strong> — runs after a successful mutation. Perfect place to invalidate.</div></div>
+      <div class="bdi p"><span class="bdl">4</span><div class="bdt"><strong>invalidateQueries</strong> — marks matching cache entries stale and triggers a background refetch.</div></div>
+      <div class="bdi r"><span class="bdl">5</span><div class="bdt"><strong>mutation.mutate()</strong> — fires the mutation. <ic>isPending</ic> disables the button while it runs.</div></div>
+    </div>
+  </div>
+</div>`});
+
+// 7 SETUP
+S.push({h:`
+<div class="part-badge p1">Part 1 · Project Setup</div>
+<div class="slide-title">Installing &amp; Providing the QueryClient</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2">
+    <div class="card">
+      <h3>1. Install</h3>
+      <p style="font-family:var(--mono);font-size:16px">npm install @tanstack/react-query</p>
+    </div>
+    <div class="card">
+      <h3>2. Create the client</h3>
+      <p style="font-family:var(--mono);font-size:16px">const queryClient = new QueryClient()</p>
+    </div>
+  </div>
+  ${cw(`import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60, // 1 min default
+      retry: 1,
+    },
+  },
+});
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ProductCatalog />
+      <AddProductForm />
+    </QueryClientProvider>
+  );
+}`,'jsx','main.jsx / App.jsx')}
+</div>`});
+
+// 8 PITFALLS P1
+S.push({h:`
+<div class="part-badge p1">Part 1 · Watch Out</div>
+<div class="slide-title">Common Pitfalls</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2">
+    <div class="card">
+      <h3>Unstable queryKey</h3>
+      <p>Putting a new object literal in the key every render creates a new cache entry every time. Extract stable values.</p>
+    </div>
+    <div class="card">
+      <h3>Forgetting to invalidate</h3>
+      <p>After a successful mutation the list still shows old data until you call <ic>invalidateQueries</ic>.</p>
+    </div>
+    <div class="card">
+      <h3>Treating server state as client state</h3>
+      <p>Don’t put API data into a global useState. Let TanStack Query own it.</p>
+    </div>
+    <div class="card">
+      <h3>No QueryClientProvider</h3>
+      <p>Hooks will throw. Wrap the app once at the root.</p>
+    </div>
+  </div>
+</div>`});
+
+// ========== PART 2 ==========
+// 9 BRIDGE
+S.push({h:`
+<div class="eyebrow">Transition</div>
+<div class="slide-title">Part 1 → Part 2: When Client State Gets Complex</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="ba">
+    <div class="ba-box bad">
+      <h4>❌ Scattered useState</h4>
+      <ul>
+        <li>Many useState calls across components</li>
+        <li>Updates that depend on multiple sub-values</li>
+        <li>Fragile inline handlers</li>
+        <li>Business logic mixed into JSX</li>
+      </ul>
+    </div>
+    <div class="ba-box good" style="border-color:rgba(192,132,252,.28);background:rgba(192,132,252,.05)">
+      <h4 style="color:var(--accent4)">✅ useReducer</h4>
+      <ul>
+        <li>Pure Reducer function for transitions</li>
+        <li>Explicit Action objects { type, payload }</li>
+        <li>dispatch events instead of setters</li>
+        <li>Logic decoupled from UI</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card">
+    <h3>The Throughline</h3>
+    <p>When state logic grows complex, individual useState setters lead to bugs. useReducer extracts transitions into a pure, testable function. Server state stays in TanStack Query; complex local state moves to a reducer.</p>
+  </div>
+</div>`});
+
+// 10 ANALOGY
+S.push({h:`
+<div class="part-badge p2">Part 2 · Core Concept</div>
+<div class="slide-title">The Fast-Food Order Ticket Analogy</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2">
+    <div class="card" style="border-left:3px solid var(--accent4)">
+      <h3 style="color:var(--accent4)">Order Ticket Analogy</h3>
+      <p>You don't walk into the kitchen and change the food. You hand a ticket (the <strong>action</strong>). The kitchen (the <strong>reducer</strong>) reads it and produces a new tray (the <strong>new state</strong>).</p>
+      <ul style="margin-top:8px">
+        <li><strong>Action</strong> = order ticket</li>
+        <li><strong>Reducer</strong> = kitchen</li>
+        <li><strong>dispatch</strong> = handing the ticket over</li>
+      </ul>
+    </div>
+    <div class="card" style="border-left:3px solid var(--accent3)">
+      <h3>Why it matters</h3>
+      <p>Every state change becomes an explicit named event. You can log actions, test the reducer alone, and reason about the whole history.</p>
+    </div>
+  </div>
+  <div class="g3" style="margin-top:4px">
+    <div class="card"><h3>What It Is</h3><p>A React hook that accepts a pure reducer and initial state, returning current state plus a dispatch function.</p></div>
+    <div class="card"><h3>How It Works</h3><p><ic>const [state, dispatch] = useReducer(reducer, initialState)</ic><br/>Call <ic>dispatch({ type, payload })</ic>.</p></div>
+    <div class="card"><h3>Why It Matters</h3><p>Complex interdependent state becomes predictable, testable, and free of scattered-setter bugs.</p></div>
+  </div>
+</div>`});
+
+// 11 MINIMAL COUNTER
+S.push({h:`
+<div class="part-badge p2">Part 2 · Code Implementation</div>
+<div class="slide-title">A Minimal Counter Reducer</div>
+<hr class="rule"/>
+<div class="content">
+  ${cw(`function counterReducer(state, action) {
+  switch (action.type) {
+    case 'INC':
+      return { count: state.count + 1 };
+    case 'DEC':
+      return { count: state.count - 1 };
+    case 'ADD':
+      return { count: state.count + action.payload };
+    default:
+      return state;
+  }
+}
+
+const [state, dispatch] = useReducer(counterReducer, { count: 0 });
+dispatch({ type: 'INC' });
+dispatch({ type: 'ADD', payload: 5 });`,'js','counterReducer.js')}
+  <div class="card">
+    <h3>Key idea</h3>
+    <p>The reducer is a pure function: (state, action) → newState. No side effects, no mutations. Easy to unit-test with plain JavaScript.</p>
+  </div>
+</div>`});
+
+// 12 IMMUTABILITY
+S.push({h:`
+<div class="part-badge p2">Part 2 · Immutability</div>
+<div class="slide-title">Never Mutate — Always Return a New Reference</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="ba">
+    <div class="ba-box bad">
+      <h4>❌ Direct Mutation</h4>
+      ${cw(`case 'ADD_ITEM':
+  state.items.push(action.payload);
+  return state; // same ref → no re-render`,'js','Mutation Trap')}
+    </div>
+    <div class="ba-box good" style="border-color:rgba(74,222,128,.28);background:rgba(74,222,128,.05)">
+      <h4 style="color:var(--accent2)">✅ Immutable Spread</h4>
+      ${cw(`case 'ADD_ITEM':
+  return {
+    ...state,
+    items: [...state.items, action.payload]
+  };`,'js','Immutable Spread')}
+    </div>
+  </div>
+  <div class="card">
+    <h3>Why React cares</h3>
+    <p>React compares state by reference (Object.is). If you mutate and return the same object, React thinks nothing changed and skips the re-render. Always create a new object/array.</p>
+  </div>
+</div>`});
+
+// 13 NESTED
+S.push({h:`
+<div class="part-badge p2">Part 2 · Production Patterns</div>
+<div class="slide-title">Updating Deeply Nested State</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="card" style="margin-bottom:8px">
+    <h3>Nested Spread Copies</h3>
+    <p>When updating nested properties you must spread every level so React sees a new reference at each layer.</p>
+  </div>
+  ${cw(`function userReducer(state, action) {
+  switch (action.type) {
+    case 'UPDATE_EMAIL':
+      return {
+        ...state,
+        user: {
+          ...state.user,
+          contact: {
+            ...state.user.contact,
+            email: action.payload
+          }
+        }
+      };
+    default:
+      return state;
+  }
+}`,'js','Nested Spread')}
+</div>`});
+
+// 14 CART ACTIVITY
+S.push({h:`
+<div class="part-badge p2">Part 2 · Hands-On</div>
+<div class="slide-title">Build a Shopping Cart State Machine</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="step"><div class="snum">1</div><div class="sbody"><h4>Define Cart Reducer</h4><p>Action cases for ADD_ITEM, REMOVE_ITEM, and CLEAR_CART.</p></div></div>
+  <div class="step"><div class="snum">2</div><div class="sbody"><h4>Wire useReducer</h4><p>useReducer(cartReducer, initialState) inside ShoppingCart.</p></div></div>
+  <div class="step"><div class="snum">3</div><div class="sbody"><h4>Dispatch from UI</h4><p>Button onClick handlers that dispatch action objects.</p></div></div>
+  ${cw(`function cartReducer(state, action) {
+  switch (action.type) {
+    case 'ADD_ITEM':
+      return { ...state, items: [...state.items, action.payload] };
+    case 'REMOVE_ITEM':
+      return {
+        ...state,
+        items: state.items.filter(i => i.id !== action.payload)
+      };
+    case 'CLEAR_CART':
+      return { ...state, items: [] };
+    default:
+      return state;
+  }
+}`,'js','cartReducer.js')}
+</div>`});
+
+// 15 PITFALLS P2
+S.push({h:`
+<div class="part-badge p2">Part 2 · Watch Out</div>
+<div class="slide-title">Reducer Anti-Patterns</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2">
+    <div class="card">
+      <h3>❌ Side Effects Inside Reducer</h3>
+      <p>Calling fetch, writing localStorage, or logging analytics inside the reducer breaks purity. Do that work in the event handler or useEffect, then dispatch a success action.</p>
+    </div>
+    <div class="card">
+      <h3>✅ Pure Transition Only</h3>
+      <p>The reducer receives previous state and an action, and returns the next state. Nothing else. Easy to unit-test with plain JavaScript.</p>
+    </div>
+    <div class="card">
+      <h3>❌ Mutating then returning same ref</h3>
+      <p>React skips the update. Always spread.</p>
+    </div>
+    <div class="card">
+      <h3>✅ Default returns previous state</h3>
+      <p>Unknown actions should return state unchanged so the app stays stable.</p>
+    </div>
+  </div>
+</div>`});
+
+// 16 RECAP BOTH
+S.push({h:`
+<div class="eyebrow">Recap</div>
+<div class="slide-title">What You Now Own</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="rc-grid" style="flex:1">
+    <div class="rc"><div class="ico">🧠</div><h4>Server State</h4><p>Remote, async, shared — TanStack Query owns it.</p></div>
+    <div class="rc"><div class="ico">🔑</div><h4>queryKey</h4><p>Array that uniquely identifies a cache entry.</p></div>
+    <div class="rc"><div class="ico">⏱️</div><h4>staleTime + SWR</h4><p>Fresh window + instant cache while background refetch.</p></div>
+    <div class="rc"><div class="ico">⚙️</div><h4>Pure Reducer</h4><p>(state, action) → newState. No side-effects, no mutations.</p></div>
+    <div class="rc"><div class="ico">🎟️</div><h4>Action Object</h4><p>{ type, payload } describes intent. dispatch fires it.</p></div>
+    <div class="rc"><div class="ico">🛡️</div><h4>Immutable Spread</h4><p>New references every time so React detects change.</p></div>
+  </div>
+  <div class="card" style="margin-top:4px">
+    <h3>Next — M12: Context API</h3>
+    <p>Eliminate prop-drilling. Broadcast auth, themes, and global reducers across deep component trees.</p>
+  </div>
+</div>`});
+
+// 17 ASSESSMENT INTRO
+S.push({h:`
+<div class="eyebrow">Activities</div>
+<div class="slide-title">Combined Assessment</div>
+<hr class="rule"/>
+<div class="content" style="justify-content:center;align-items:center">
+  <div class="g2" style="max-width:720px">
+    <div class="card" style="text-align:center">
+      <h3>📋 Multiple Choice</h3>
+      <p style="font-size:32px;font-weight:800;color:var(--accent);margin:10px 0">5 questions</p>
+      <p style="font-size:16px">1 pt each · queryKey, staleTime, mutations, reducers</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>💻 Guess the Output</h3>
+      <p style="font-size:32px;font-weight:800;color:var(--accent4);margin:10px 0">10 questions</p>
+      <p style="font-size:16px">1 pt each · Trace cache + reducer behaviour</p>
+    </div>
+  </div>
+  <div class="card" style="text-align:center;padding:18px;margin-top:12px;max-width:240px">
+    <div style="font-size:50px;font-weight:900;color:var(--accent)">15</div>
+    <div style="color:var(--text2);font-size:16px">Total Points</div>
+  </div>
+  <div class="card" style="max-width:640px;margin-top:6px">
+    <h3>⚠ Note</h3>
+    <p>Attempt every question before checking the answer key. Several scenarios combine ideas from both modules.</p>
+  </div>
+</div>`});
+
+// 18 MC 1-4
+S.push({init(el){
+  const qs=[
+    {q:"What is the Stale-While-Revalidate pattern?",opts:["Delete records after 5 min","Serve cached data instantly while refetching in background","Block all requests until refresh","Clear localStorage on every view"]},
+    {q:"Role of the queryKey array?",opts:["CSS for spinner","Unique lookup key for caching & invalidation","Encrypt traffic","Convert to GraphQL"]},
+    {q:"Which hook is for POST/PUT/DELETE?",opts:["useQuery","useMutation","useServerState","useFetchCache"]},
+    {q:"What must a pure Reducer return?",opts:["A Promise","A brand new state object","An HTML string","Undefined"]}
+  ];
+  const pg=el.querySelector('#mc-pg');
+  qs.forEach((q,i)=>{
+    const d=document.createElement('div');d.className='mc-item';
+    d.innerHTML='<div class="mc-q"><span class="qn">'+(i+1)+'.</span>'+q.q+'</div><div class="mc-opts">'+q.opts.map(o=>'<div class="mc-opt" onclick="this.closest(\'.mc-opts\').querySelectorAll(\'.mc-opt\').forEach(x=>x.classList.remove(\'sel\'));this.classList.add(\'sel\')">'+o+'</div>').join('')+'</div>';
+    pg.appendChild(d);
+  });
+},h:`
+<div class="eyebrow">Multiple Choice</div>
+<div class="slide-title">Questions 1–4</div>
+<hr class="rule"/>
+<div class="mc-grid" id="mc-pg" style="align-content:start"></div>`});
+
+// 19 MC 5
+S.push({h:`
+<div class="eyebrow">Multiple Choice · Challenge</div>
+<div class="slide-title">Question 5</div>
+<hr class="rule"/>
+<div class="content" style="justify-content:center">
+  <div class="hard-card" style="max-width:780px">
+    <h3>5. Cache + reducer diagnosis</h3>
+    <p style="font-size:16px;color:var(--text3);line-height:1.5">You have a product list managed by useQuery with <ic>staleTime: 5 minutes</ic>. A mutation successfully adds a product but you forgot <ic>invalidateQueries</ic>. Separately, a cart reducer does <ic>state.items.push(item); return state;</ic>. What two concrete bugs appear, and what is the exact fix for each?</p>
+    <div class="hint"><strong>Hints:</strong> (1) list stays stale until hard refresh → invalidateQueries on success. (2) mutation of array keeps same ref → React skips re-render → use spread.</div>
+    <textarea placeholder="Bug 1 + fix:&#10;Bug 2 + fix:"></textarea>
+  </div>
+</div>`});
+
+// 20 GTO 1-4
+S.push({init(el){
+  const qs=[
+    {code:`const { data, isPending } = useQuery({
+  queryKey: ['stats'],
+  queryFn: fetchStats
+});
+console.log(isPending, data);
+// on initial mount`},
+    {code:`const mutation = useMutation({
+  mutationFn: createPost,
+  onSuccess: () => console.log('POSTED')
+});
+mutation.mutate({ title: 'New' });
+// assume success`},
+    {code:`// staleTime defaults to 0
+const { isStale } = useQuery({
+  queryKey: ['item'], queryFn: getItem
+});
+// right after success
+console.log(isStale);`},
+    {code:`onSuccess: () => {
+  queryClient.invalidateQueries({
+    queryKey: ['todos']
+  });
+}
+// what happens to active ['todos'] queries?`}
+  ];
+  const pg=el.querySelector('#gto-pg');
+  qs.forEach((q,i)=>{
+    const w=document.createElement('div');w.className='gto-wrap';
+    w.innerHTML='<div class="gto-qlabel"><span class="gto-num">'+(i+1)+'.</span> What is the result?</div><pre class="gto-pre">'+q.code+'</pre><div class="gto-alabel">Your answer</div><textarea class="gto-ta" placeholder="Write here..."></textarea>';
+    pg.appendChild(w);
+  });
+},h:`
+<div class="eyebrow">Guess the Output</div>
+<div class="slide-title">Questions 1–4 · TanStack Query</div>
+<hr class="rule"/>
+<div class="gto-grid" id="gto-pg" style="align-content:start"></div>`});
+
+// 21 GTO 5-8
+S.push({init(el){
+  const qs=[
+    {code:`// Initial: { count: 0 }
+// dispatch({ type: 'INC' }) twice
+// What is state.count?`},
+    {code:`// Initial: { count: 10 }
+// dispatch({ type: 'ADD', payload: 5 })
+// What is state.count?`},
+    {code:`// reducer has no default case
+// and throws on unknown type
+// dispatch({ type: 'UNKNOWN' })
+// What happens?`},
+    {code:`// Initial: { tags: ['JS','HTML'] }
+// dispatch ADD_TAG 'React'
+// (immutable spread)
+// What is tags.length?`}
+  ];
+  const pg=el.querySelector('#gto-pg2');
+  qs.forEach((q,i)=>{
+    const w=document.createElement('div');w.className='gto-wrap';
+    w.innerHTML='<div class="gto-qlabel"><span class="gto-num">'+(i+5)+'.</span> What is the result?</div><pre class="gto-pre">'+q.code+'</pre><div class="gto-alabel">Your answer</div><textarea class="gto-ta" placeholder="Write here..."></textarea>';
+    pg.appendChild(w);
+  });
+},h:`
+<div class="eyebrow">Guess the Output</div>
+<div class="slide-title">Questions 5–8 · useReducer Basics</div>
+<hr class="rule"/>
+<div class="gto-grid" id="gto-pg2" style="align-content:start"></div>`});
+
+// 22 GTO 9-10
+S.push({init(el){
+  const qs=[
+    {code:`// staleTime: 5 minutes
+// User opens page, leaves after 30s,
+// comes back. Another tab mutated
+// the server list. What does
+// TanStack Query do by default?`},
+    {code:`const queryClient = useQueryClient();
+const mutation = useMutation({
+  mutationFn: (item) => axios.post('/api/items', item),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['items'] });
+  }
+});
+// 1. mutate succeeds
+// 2. active useQuery(['items'])
+// Sequence of cache & network events?`}
+  ];
+  const pg=el.querySelector('#gto-pg3');
+  qs.forEach((q,i)=>{
+    const w=document.createElement('div');w.className='gto-wrap';
+    w.innerHTML='<div class="gto-qlabel"><span class="gto-num">'+(i+9)+'.</span> What is the result?</div><pre class="gto-pre">'+q.code+'</pre><div class="gto-alabel">Your answer</div><textarea class="gto-ta" style="min-height:56px" placeholder="Write here..."></textarea>';
+    pg.appendChild(w);
+  });
+},h:`
+<div class="eyebrow">Guess the Output · Challenge</div>
+<div class="slide-title">Questions 9–10 · Combined Scenarios</div>
+<hr class="rule"/>
+<div class="gto-grid" id="gto-pg3" style="align-content:start"></div>`});
+
+// 23 ANSWER KEY
+S.push({h:`
+<div class="eyebrow">Answer Key</div>
+<div class="slide-title">Answers &amp; Explanations</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2" style="flex:1">
+    <div class="col">
+      <div style="font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--accent);margin-bottom:6px">Multiple Choice</div>
+      <div class="ans-block">
+        <div class="ans-row"><span class="anum b">1.</span><div class="abody"><strong>B</strong> — serve cache + background refetch.</div></div>
+        <div class="ans-row"><span class="anum b">2.</span><div class="abody"><strong>B</strong> — unique cache key for caching & invalidation.</div></div>
+        <div class="ans-row"><span class="anum b">3.</span><div class="abody"><strong>B) useMutation</strong></div></div>
+        <div class="ans-row"><span class="anum b">4.</span><div class="abody"><strong>B</strong> — a brand new state object.</div></div>
+        <div class="ans-row"><span class="anum b">5.</span><div class="abody"><strong>Bug 1:</strong> list stays stale → invalidateQueries on success.<br/><strong>Bug 2:</strong> same ref → no re-render → return { ...state, items: [...state.items, item] }.</div></div>
+      </div>
+    </div>
+    <div class="col">
+      <div style="font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--accent4);margin-bottom:6px">Guess the Output</div>
+      <div class="ans-block">
+        <div class="ans-row"><span class="anum p">1.</span><div class="abody"><strong>true undefined</strong> — still pending, no data yet.</div></div>
+        <div class="ans-row"><span class="anum p">2.</span><div class="abody"><strong>POSTED</strong> (on success).</div></div>
+        <div class="ans-row"><span class="anum p">3.</span><div class="abody"><strong>true</strong> — default staleTime 0 means immediately stale.</div></div>
+        <div class="ans-row"><span class="anum p">4.</span><div class="abody"><strong>marks stale + background refetch</strong></div></div>
+        <div class="ans-row"><span class="anum p">5.</span><div class="abody"><strong>2</strong> — INC twice from 0.</div></div>
+        <div class="ans-row"><span class="anum p">6.</span><div class="abody"><strong>15</strong> — 10 + payload 5.</div></div>
+        <div class="ans-row"><span class="anum p">7.</span><div class="abody"><strong>Throws</strong> (or returns unchanged if default used).</div></div>
+        <div class="ans-row"><span class="anum p">8.</span><div class="abody"><strong>3</strong> — ['JS','HTML','React'].</div></div>
+        <div class="ans-row"><span class="anum p">9.</span><div class="abody"><strong>Serve cached data instantly; still fresh so no background refetch.</strong></div></div>
+        <div class="ans-row"><span class="anum p">10.</span><div class="abody"><strong>POST → onSuccess → invalidateQueries marks ['items'] stale → active useQuery refetches in background → UI updates.</strong></div></div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 24 CLOSING
+S.push({cls:'hero-bg',h:`
+<div class="dots"></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;position:relative;max-width:720px">
+  <div class="eyebrow">Modules 10 + 11 Complete</div>
+  <div style="font-size:clamp(32px,3.6vw,50px);font-weight:900;line-height:1.15;letter-spacing:-.4px">
+    <span style="color:var(--text)">Server state is managed.</span><br/>
+    <span style="color:var(--accent)">Client state is predictable.</span>
+  </div>
+  <div class="q-card" style="margin:0">
+    <div class="q-text">"UI is a function of state — and server state deserves its own dedicated manager. Complex client state deserves a pure machine."</div>
+  </div>
+  <div class="card" style="background:rgba(255,65,84,.05);border-color:rgba(255,65,84,.2)">
+    <h3>Coming Up — M12: Context API</h3>
+    <p style="font-size:16px;line-height:1.6">Next we eliminate prop-drilling. Learn how React Context broadcasts auth, themes, and global reducers across deep trees.</p>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <span class="pill g">useQuery ✓</span>
+    <span class="pill g">useMutation ✓</span>
+    <span class="pill g">Cache Invalidation ✓</span>
+    <span class="pill g">useReducer ✓</span>
+    <span class="pill g">Immutability ✓</span>
+    <span class="pill a">Context API → next</span>
+  </div>
+</div>`});
+
+// ENGINE
+let cur=0;
+const deck=document.getElementById('deck');
+const bar=document.getElementById('bar');
+const ctr=document.getElementById('ctr');
+
+function build(){
+  S.forEach((s,i)=>{
+    const el=document.createElement('div');
+    el.className='slide'+(s.cls?' '+s.cls:'');
+    el.innerHTML=s.h||'';
+    if(i===0)el.classList.add('active');
+    deck.appendChild(el);
+    if(s.init)s.init(el);
+  });
+}
+function go(n){
+  if(n<0||n>=S.length||n===cur)return;
+  const els=deck.querySelectorAll('.slide');
+  const fwd=n>cur;
+  els[cur].classList.remove('active');
+  els[cur].classList.add(fwd?'out-l':'out-r');
+  setTimeout(()=>els[cur].classList.remove('out-l','out-r'),420);
+  cur=n;els[cur].classList.add('active');els[cur].scrollTop=0;tick();
+}
+function tick(){
+  bar.style.width=(S.length>1?(cur/(S.length-1)*100):100)+'%';
+  ctr.textContent=(cur+1)+' / '+S.length;
+}
+document.addEventListener('keydown',e=>{
+  const m=document.getElementById('modal');
+  if(m.classList.contains('open')){if(e.key==='Escape')m.classList.remove('open');return;}
+  const t=document.activeElement.tagName;
+  if(t==='INPUT'||t==='TEXTAREA')return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')go(cur+1);
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(cur-1);
+  else if(e.key==='Home')go(0);
+  else if(e.key==='End')go(S.length-1);
+  else if(e.key==='?')m.classList.add('open');
+  else if(e.key==='Escape')m.classList.remove('open');
+});
+document.addEventListener('mousedown',e=>{
+  if(e.target.closest('button,input,a,.mc-opt,.gto-ta'))return;
+  if(e.button===2){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+  else if(e.button===3){e.preventDefault();e.stopImmediatePropagation();go(cur-1);}
+  else if(e.button===4){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+},true);
+document.addEventListener('contextmenu',e=>{
+  if(e.target.closest('button,input,a'))return;
+  e.preventDefault();e.stopImmediatePropagation();
+},true);
+document.addEventListener('auxclick',e=>{
+  if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation();}
+},true);
+let tx=0;
+document.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+document.addEventListener('touchend',e=>{const d=e.changedTouches[0].clientX-tx;if(Math.abs(d)>50){d<0?go(cur+1):go(cur-1);}},{passive:true});
+build();tick();
+</script>
+</body>
+</html>

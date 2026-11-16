@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>M13 — Custom Hooks, Refs & Performance</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap"/>
+<style>
+:root{--bg:#060E1A;--panel:#0C1829;--panel2:#11223A;--line:#1E3350;--cy:#61DAFB;--or:#FB923C;--gr:#4ADE80;--rs:#F472B6;--tx:#F2F7FC;--tx2:#A9C1DB;--disp:'Bricolage Grotesque',Georgia,serif;--sans:'Instrument Sans',Helvetica,Arial,sans-serif;--mono:'JetBrains Mono',Menlo,Consolas,monospace;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#060E1A}}
+:root[data-theme="dark"]{--bg:#060E1A}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#canvas{width:1760px;height:990px;position:relative;background:radial-gradient(1000px 600px at 90% 0%,rgba(97,218,251,.09),transparent 60%),radial-gradient(800px 500px at 0% 100%,rgba(251,146,60,.08),transparent 60%),var(--bg);overflow:hidden}
+.slide{position:absolute;inset:0;padding:60px 96px 52px;display:none;flex-direction:column;animation:in .45s cubic-bezier(.2,.7,.2,1)}
+.slide.on{display:flex}
+@keyframes in{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.slide{animation:none}}
+.tag{font:600 24px var(--mono);color:var(--or);letter-spacing:.14em;text-transform:uppercase;display:flex;gap:16px;align-items:center}
+.tag i{font-style:normal;color:var(--tx2)}
+h1,h2{font-family:var(--disp);letter-spacing:-.02em;text-wrap:balance}
+h2{font-size:66px;font-weight:800;line-height:1.05;margin:10px 0 30px}
+h1{font-size:136px;font-weight:800;line-height:.95}
+h1 em{font-style:normal;color:var(--cy)}
+p,li{font-size:31px;line-height:1.5;color:var(--tx2);text-wrap:pretty}
+b{color:var(--tx);font-weight:600}
+.row{display:grid;gap:32px;flex:1;min-height:0}.c2{grid-template-columns:1fr 1fr}.c3{grid-template-columns:repeat(3,1fr)}.c-6040{grid-template-columns:1.4fr 1fr}
+.card{justify-content:center;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:34px 38px;display:flex;flex-direction:column;gap:14px;min-height:0}
+.card h3{font:700 37px var(--disp);color:var(--tx)}
+.card.hi{background:linear-gradient(160deg,rgba(97,218,251,.1),var(--panel) 60%);border-color:rgba(97,218,251,.4)}
+.card.wa{background:linear-gradient(160deg,rgba(251,146,60,.1),var(--panel) 60%);border-color:rgba(251,146,60,.4)}
+.num{font:800 96px var(--disp);color:var(--or);line-height:1}
+code,ic{font:500 .86em var(--mono);color:var(--cy);background:rgba(97,218,251,.09);padding:2px 10px;border-radius:8px}
+ul{list-style:none;display:flex;flex-direction:column;gap:12px}
+li::before{content:'→ ';color:var(--or);font-family:var(--mono)}
+.code{background:#040A14;border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.code header{display:flex;justify-content:space-between;align-items:center;padding:12px 22px;border-bottom:1px solid var(--line);font:500 22px var(--mono);color:var(--tx2)}
+.code pre,.code textarea{font:400 27px/1.6 var(--mono);color:#D6E2F0;padding:22px 26px;white-space:pre;overflow:auto;flex:1;min-height:0;background:none;border:0;outline:0;resize:none;width:100%}
+.k{color:#F49AD0}.s{color:#F5B98A}.c{color:#5E7C99;font-style:italic}.f{color:var(--cy)}
+.btn{font:600 22px var(--sans);color:var(--tx);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:8px 22px;cursor:pointer;transition:.2s}
+.btn:hover,.btn:focus-visible{background:var(--cy);color:#04101D;border-color:var(--cy);outline:0}
+.btn.on{background:var(--or);color:#04101D;border-color:var(--or)}
+.opt{font:500 29px var(--sans);text-align:left;color:var(--tx);background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:16px 22px;cursor:pointer;transition:.2s;line-height:1.35}
+.opt:hover:not(:disabled){border-color:var(--cy)}
+.opt.ok{background:rgba(74,222,128,.14);border-color:var(--gr)}.opt.no{background:rgba(244,114,182,.14);border-color:var(--rs)}
+.why{font-size:27px;color:var(--gr);min-height:38px}
+.mcq{gap:16px;justify-content:flex-start}.mcq .q{font:700 36px/1.3 var(--disp);color:var(--tx)}.mcq .q span{color:var(--or);margin-right:10px}
+.lab{gap:16px;justify-content:flex-start}.lab h3 span{color:var(--or);margin-right:10px;font-family:var(--mono)}.lab p{font-size:28px;line-height:1.4}
+.lab .code{flex:1}.lab .code pre,.lab textarea{font-size:24px}
+.hero{justify-content:center;gap:34px}.hero p{max-width:1200px;font-size:36px}
+.pills{display:flex;gap:16px;flex-wrap:wrap}.pill{font:600 26px var(--mono);border:1px solid var(--line);border-radius:999px;padding:10px 24px;color:var(--cy);background:rgba(97,218,251,.06)}.pill.o{color:var(--or);background:rgba(251,146,60,.07)}
+svg text{font:600 22px var(--mono);fill:var(--tx)}
+.nd rect{fill:var(--panel2);stroke:var(--line);stroke-width:2;transition:.4s}.ed{stroke:var(--line);stroke-width:3;fill:none;transition:.4s}
+.drill .ed.d{stroke:var(--or);stroke-dasharray:12 8;animation:fl 1s linear infinite}.drill .nd.d rect{stroke:var(--or)}.drill .cast-only{opacity:0}
+.cast .ed.c{stroke:var(--cy);stroke-dasharray:12 8;animation:fl 1s linear infinite}.cast .nd.p rect,.cast .nd.u rect{stroke:var(--cy);fill:rgba(97,218,251,.12)}.cast .drill-only{opacity:0}.cast .nd.m{opacity:.4}
+.cast-only,.drill-only{transition:.4s}
+@keyframes fl{to{stroke-dashoffset:-20}}
+#lbl{position:fixed;right:22px;bottom:14px;font:500 17px var(--mono);color:var(--tx2);opacity:.7;pointer-events:none;z-index:9}
+#bar{position:fixed;top:0;left:0;height:4px;background:linear-gradient(90deg,var(--or),var(--cy));transition:width .3s;z-index:9}
+
+.demo{gap:18px}.dg{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.dg div{background:#040A14;border:1px solid var(--line);border-radius:16px;padding:16px 20px}.dg small{display:block;font:500 22px var(--mono);color:var(--tx2)}.dg b{font:800 84px/1.1 var(--disp);color:var(--cy)}.dg .rf b{color:var(--or)}.btns{display:flex;gap:16px;flex-wrap:wrap}.btns .btn{font-size:26px;padding:12px 28px}
+.c4{grid-template-columns:repeat(2,1fr);grid-template-rows:1fr 1fr}
+</style></head><body>
+<div id="bar"></div><div id="stage"><div id="canvas"></div></div>
+<div id="lbl"></div>
+<script>
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const hl=s=>esc(s).replace(/(\/\/.*$)|('[^'\n]*'|`[^`]*`)|\b(const|let|return|function|export|import|from|if|throw|new|default|null)\b|\b(use[A-Z]\w*|createContext|Provider)\b/gm,(m,c,st,k,f)=>c?`<span class=c>${m}</span>`:st?`<span class=s>${m}</span>`:k?`<span class=k>${m}</span>`:`<span class=f>${m}</span>`);
+const code=(t,l,x='')=>`<div class="code" ${x}><header><span>${l}</span></header><pre>${hl(t)}</pre></div>`;
+const hd=(t,h)=>`<div class="tag">@@ <i>/</i> ${t}</div><h2>${h}</h2>`;
+
+const MCQ=[
+{q:'What is the mandatory naming rule for custom React hooks?',o:['End the name with "Hook"','Start the name with lowercase "use"','Write it in ALL_CAPS','Return an HTML element'],a:1,e:'The "use" prefix lets React\'s linter enforce the Rules of Hooks on your function.'},
+{q:'You run ref.current = ref.current + 1 inside a click handler. What happens?',o:['The component re-renders immediately','The browser reloads','The value changes silently, with no re-render','A TypeError is thrown'],a:2,e:'Refs are quiet. Writing .current never schedules a render, so the screen is unchanged.'},
+{q:'What does useMemo cache between re-renders?',o:['The return value of a calculation','The function itself','Your CSS','localStorage keys'],a:0,e:'useMemo caches what the function returns, and recomputes only when a dependency changes.'},
+{q:'A memoized child re-renders every time its parent does, because of a callback prop. Which hook fixes it?',o:['useMemo','useRef','useEffect','useCallback'],a:3,e:'useCallback keeps the function reference stable, so React.memo can skip the child.'}];
+
+const LABS=[
+['Store a timer ID','Use a ref to hold the interval ID so stop() can clear it. Storing it must not cause a re-render.',
+`function Ticker() {
+  // TODO: create timerRef
+
+  function start() {
+    // TODO: save setInterval id, log 'tick' every second
+  }
+  function stop() {
+    // TODO
+  }
+  return <button onClick={start}>Start</button>;
+}`,`function Ticker() {
+  const timerRef = useRef(null);
+
+  function start() {
+    timerRef.current = setInterval(() => {
+      console.log('tick');
+    }, 1000);
+  }
+  function stop() {
+    clearInterval(timerRef.current);
+  }
+  return <button onClick={start}>Start</button>;
+}`],
+['Write usePrevious','Build a custom hook that returns the value from the previous render. Hint: a ref plus an effect.',
+`export function usePrevious(value) {
+  // TODO
+}
+
+// usePrevious(count) -> 0 when count is 1`,`export function usePrevious(value) {
+  const ref = useRef();
+  useEffect(() => {
+    ref.current = value; // runs AFTER render
+  });
+  return ref.current;    // still the old value now
+}`],
+['Build useDebouncedValue','Return a copy of value that only updates after delayMs of quiet. Cancel stale timers with an effect cleanup.',
+`export function useDebouncedValue(value, delayMs) {
+  const [debounced, setDebounced] = useState(value);
+  // TODO: effect + timeout + cleanup
+  return debounced;
+}`,`export function useDebouncedValue(value, delayMs) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(id); // cancel stale timer
+  }, [value, delayMs]);
+  return debounced;
+}`],
+['Memoize a big filter','Filtering 10,000 items runs on every render, even when only count changes. Cache the result.',
+`function ProductList({ items, query }) {
+  const [count, setCount] = useState(0);
+  const filtered = items.filter(i =>
+    i.name.includes(query)
+  );
+  return <List rows={filtered} />;
+}`,`function ProductList({ items, query }) {
+  const [count, setCount] = useState(0);
+  const filtered = useMemo(
+    () => items.filter(i => i.name.includes(query)),
+    [items, query]
+  );
+  return <List rows={filtered} />;
+}`],
+['Fix the memo child','Child is wrapped in memo but still logs on every click of the counter. Say why, then fix Parent.',
+`const Child = memo(function Child({ onSelect }) {
+  console.log('Child rendered');
+  return <button onClick={onSelect}>Select</button>;
+});
+
+function Parent() {
+  const [count, setCount] = useState(0);
+  const handleSelect = () => console.log('selected');
+  return <Child onSelect={handleSelect} />;
+}`,`// Why: each render creates a NEW handleSelect function.
+// memo compares props by reference, so it sees a change.
+function Parent() {
+  const [count, setCount] = useState(0);
+  const handleSelect = useCallback(
+    () => console.log('selected'), []
+  );
+  return <Child onSelect={handleSelect} />;
+}
+// After 5 clicks: Child logs once (mount) instead of 6.`],
+['Challenge: useToggle','Write useToggle(initial = false) returning [on, toggle]. toggle must keep the same reference across renders.',
+`export function useToggle(initial = false) {
+  // TODO
+}
+
+// const [open, toggleOpen] = useToggle();`,`export function useToggle(initial = false) {
+  const [on, setOn] = useState(initial);
+  const toggle = useCallback(() => setOn(v => !v), []);
+  return [on, toggle];
+}
+// setOn(v => !v) needs no dependency, so [] is safe
+// and toggle is stable for memoized children.`]];
+
+const labCard=(l,i)=>`<div class="card lab"><h3><span>${String(i+1).padStart(2,'0')}</span>${l[0]}</h3><p>${l[1]}</p><div class="code"><header><span data-t>your workspace · editable</span><button class="btn" data-sol>Show solution</button></header><textarea spellcheck="false" data-ws>${esc(l[2])}</textarea><pre data-so style="display:none">${hl(l[3])}</pre></div></div>`;
+const bdi=(k,t)=>`<div class="card"><h3 style="color:var(--or)">${k}</h3><p>${t}</p></div>`;
+
+const S=[
+`<div class="slide hero"><div class="tag">Web Systems <i>/</i> Module 13</div><h1>Custom Hooks, Refs<br><em>&amp; Performance</em></h1><p>Store values silently with <ic>useRef</ic>, package logic into reusable hooks, and skip work you have already done with <ic>useMemo</ic> and <ic>useCallback</ic>.</p><div class="pills"><span class="pill">useRef</span><span class="pill">Custom Hooks</span><span class="pill">useMemo</span><span class="pill">useCallback</span><span class="pill o">React.memo</span></div></div>`,
+`<div class="slide">${hd('Where we left off','From shared state to silent state')}<div class="row c2"><div class="card"><h3>M12 gave us</h3><ul><li>Context for sharing state without prop-drilling</li><li>Every stored value lived in <code>useState</code>, so every change re-rendered</li><li>No way to reach a real DOM node</li></ul></div><div class="card hi"><h3>M13 adds</h3><ul><li><code>useRef</code>: a quiet box that survives renders</li><li>Custom hooks: your own <code>useSomething()</code></li><li><code>useMemo</code>, <code>useCallback</code>, <code>memo</code>: skip repeated work</li></ul></div></div><p style="margin-top:26px">Not every value needs a render, and not every calculation needs to re-run. This module is about telling React <b>"remember this, don't repaint"</b> and <b>"reuse this, don't recompute"</b>.</p></div>`,
+`<div class="slide">${hd('Core concept','A ref is a private note under your desk')}<div class="row c-6040"><div class="card demo"><div class="tag" style="font-size:22px">Live demo · try it</div><div class="dg"><div><small>renders</small><b id="dr">1</b></div><div><small>useState</small><b id="ds">0</b></div><div class="rf"><small>useRef (on screen)</small><b id="dv">0</b></div></div><div class="btns"><button class="btn" data-d="s">setState +1</button><button class="btn on" data-d="r">ref.current +1</button></div><p id="dn">Click <b>ref.current +1</b> a few times, then <b>setState +1</b>.</p></div><div style="display:flex;flex-direction:column;gap:24px"><div class="card hi"><h3>Definition</h3><p>A plain object <code>{ current }</code>. React returns the <b>same object</b> every render, and writing to it never schedules one.</p></div><div class="card wa"><h3>Two big uses</h3><ul><li>Values the UI doesn't show: timer IDs, previous values</li><li>Pointing at a real DOM node to call <code>.focus()</code></li></ul></div></div></div></div>`,
+`<div class="slide">${hd('The hook','useRef: syntax, what, how, why')}<div class="row c-6040">${code("import { useRef } from 'react';\n\nfunction SearchBox() {\n  const inputRef = useRef(null);\n  const renders = useRef(0);\n\n  renders.current += 1; // no re-render\n\n  function focusInput() {\n    inputRef.current.focus(); // real DOM node\n  }\n  return (\n    <>\n      <input ref={inputRef} />\n      <button onClick={focusInput}>Focus</button>\n    </>\n  );\n}",'SearchBox.jsx')}<div style="display:flex;flex-direction:column;gap:20px">${bdi('What','Returns <code>{ current: initial }</code>, stable for the component\'s whole life.')}${bdi('How','Call once, read or write <code>.current</code> anywhere, or attach with the <code>ref</code> attribute.')}<div class="card wa"><h3>Key rule</h3><p>Don't read or write <code>ref.current</code> during render. Use handlers or <code>useEffect</code>.</p></div></div></div></div>`,
+`<div class="slide">${hd('Reusable logic','Custom hooks: what, how, why')}<div class="row c3"><div class="card"><div class="num">1</div><h3>What</h3><p>A normal function that calls other hooks inside it, so components can share stateful logic.</p></div><div class="card hi"><div class="num">2</div><h3>How</h3><p>The name <b>must start with <ic>use</ic></b>, like <code>useWindowSize</code>. The linter then enforces the Rules of Hooks on it.</p></div><div class="card wa"><div class="num">3</div><h3>Why</h3><p>Without one you copy-paste the same <code>useState</code> + <code>useEffect</code> pair everywhere. With one it is a single import.</p></div></div><p style="margin-top:26px">Like writing a dressing recipe on one index card: every salad just says <b>"use the dressing card"</b>.</p></div>`,
+`<div class="slide">${hd('Line by line','Building useLocalStorage')}<div class="row c-6040">${code("export function useLocalStorage(key, initial) {\n  const [value, setValue] = useState(() => {\n    try {\n      const item = localStorage.getItem(key);\n      return item ? JSON.parse(item) : initial;\n    } catch (err) {\n      return initial;\n    }\n  });\n\n  useEffect(() => {\n    localStorage.setItem(key, JSON.stringify(value));\n  }, [key, value]);\n\n  return [value, setValue];\n}\n\n// const [theme, setTheme] = useLocalStorage('theme','dark');",'useLocalStorage.js')}<div style="display:flex;flex-direction:column;gap:16px">${bdi('1 · Lazy init','Runs <b>once</b>, reading storage so it isn\'t hit every render.')}${bdi('2 · Fallback','Nothing saved or bad JSON? Use <code>initial</code>.')}${bdi('3 · Write back','The effect saves whenever <code>key</code> or <code>value</code> changes.')}${bdi('4 · Familiar shape','Returns <code>[value, setValue]</code> like <code>useState</code>.')}</div></div></div>`,
+`<div class="slide">${hd('Setting up the problem','Why do we need performance hooks?')}<div class="row c2"><div class="card"><h3>The cost of a render</h3><p>Each render re-runs the <b>whole function body</b>, including any expensive sort or filter, even if its inputs didn't change.</p></div><div class="card"><h3>The cost of a new function</h3><p>Each render also creates <b>brand-new function objects</b>. Two identical functions are still different in memory, and React compares props by reference.</p></div></div><div class="row c3" style="flex:none;margin-top:28px"><div class="card"><h3>useMemo</h3><p>Caches a <b>value</b>.</p></div><div class="card"><h3>useCallback</h3><p>Caches a <b>function reference</b>.</p></div><div class="card wa"><h3>Only when it's costly</h3><p>Measure first, optimize second.</p></div></div></div>`,
+`<div class="slide">${hd('Caching values','useMemo: what, how, why')}<div class="row c-6040">${code("import { useMemo } from 'react';\n\nfunction ProductList({ items, query }) {\n  const filtered = useMemo(() => {\n    console.log('Filtering...');\n    return items.filter(i =>\n      i.name.includes(query)\n    );\n  }, [items, query]); // only these trigger\n\n  return (\n    <ul>\n      {filtered.map(i => <li key={i.id}>{i.name}</li>)}\n    </ul>\n  );\n}",'ProductList.jsx')}<div style="display:flex;flex-direction:column;gap:20px">${bdi('What + how','Caches the <b>return value</b>. Re-runs only when a dependency changes.')}${bdi('Why','Skips big filters, sorts and derived data on unrelated renders.')}<div class="card wa"><h3>Don't overuse it</h3><p>Memoizing <code>a + b</code> costs more than it saves. Reach for it after profiling.</p></div></div></div></div>`,
+`<div class="slide">${hd('Caching functions','useCallback and React.memo')}<div class="row c-6040">${code("const Child = memo(function Child({ onSelect }) {\n  console.log('Child rendered');\n  return <button onClick={onSelect}>Select</button>;\n});\n\nfunction Parent() {\n  const [count, setCount] = useState(0);\n\n  const handleSelect = useCallback(() => {\n    console.log('selected');\n  }, []); // same reference every render\n\n  return (\n    <>\n      <button onClick={() => setCount(c => c + 1)}>\n        {count}\n      </button>\n      <Child onSelect={handleSelect} />\n    </>\n  );\n}",'Parent.jsx')}<div style="display:flex;flex-direction:column;gap:20px">${bdi('What + how','Caches a function\'s <b>identity</b>. Same deps means the same reference.')}${bdi('Why','A new <code>handleSelect</code> each render defeats <code>memo</code>: the prop looks changed.')}<div class="card hi"><h3>Recipe book</h3><p>Handing over the same physical book each day lets them see at a glance nothing changed.</p></div></div></div></div>`,
+`<div class="slide">${hd('Watch out','Common pitfalls and fixes')}<div class="row c2" style="grid-template-rows:1fr 1fr"><div class="card"><h3>❌ Premature optimization</h3><p>Wrapping everything "just in case" adds overhead. <b>Fix:</b> profile first, or pair a callback with a memoized child.</p></div><div class="card"><h3>❌ Refs during render</h3><p>Mutating <code>ref.current</code> while building JSX is unpredictable. <b>Fix:</b> touch refs only in handlers or effects.</p></div><div class="card"><h3>❌ Expecting a ref to repaint</h3><p>Changing <code>.current</code> never re-renders. <b>Fix:</b> if it shows on screen, use <code>useState</code>.</p></div><div class="card"><h3>❌ Object literals as deps</h3><p><code>[{ id }]</code> is new every render, so memo never helps. <b>Fix:</b> depend on primitives like <code>id</code>.</p></div></div></div>`,
+`<div class="slide hero"><div class="tag">Module 13 <i>/</i> Assessment</div><h1 style="font-size:120px">Quiz <em>time</em></h1><div class="pills"><span class="pill o">4 Multiple Choice</span><span class="pill">6 Coding Problems</span></div><p>MCQs are checked instantly. Coding labs are editable, with a solution reveal.</p></div>`,
+...[0,1].map(n=>`<div class="slide">${hd('Multiple choice','Questions '+(n*2+1)+'–'+(n*2+2))}<div class="row c2">${[n*2,n*2+1].map(i=>{const m=MCQ[i];return `<div class="card mcq" data-a="${m.a}" data-i="${i}"><div class="q"><span>${i+1}.</span>${esc(m.q)}</div>${m.o.map((o,j)=>`<button class="opt" data-j="${j}">${esc(o)}</button>`).join('')}<div class="why"></div></div>`}).join('')}</div></div>`),
+...[0,1,2].map(n=>`<div class="slide">${hd('Coding lab','Problems '+(n*2+1)+'–'+(n*2+2))}<div class="row c2">${labCard(LABS[n*2],n*2)}${labCard(LABS[n*2+1],n*2+1)}</div></div>`),
+`<div class="slide">${hd('Answer key','Multiple choice')}<div class="row c2" style="grid-template-rows:1fr 1fr">${MCQ.map((m,i)=>`<div class="card"><h3><span style="color:var(--or);font-family:var(--mono)">${i+1}.</span> ${'ABCD'[m.a]}) ${esc(m.o[m.a])}</h3><p>${esc(m.e)}</p></div>`).join('')}</div></div>`,
+...[0,1,2].map(n=>`<div class="slide">${hd('Answer key','Coding problems '+(n*2+1)+'–'+(n*2+2))}<div class="row c2">${[n*2,n*2+1].map(i=>`<div class="card lab"><h3><span>${String(i+1).padStart(2,'0')}</span>${LABS[i][0]}</h3><div class="code" style="flex:1"><header><span>solution</span></header><pre>${hl(LABS[i][3])}</pre></div></div>`).join('')}</div></div>`),
+`<div class="slide hero"><div class="tag">Module 13 <i>/</i> Complete</div><h1 style="font-size:104px">Know when to stay quiet,<br><em>and when to reuse.</em></h1><div class="pills"><span class="pill o">useRef ✓</span><span class="pill o">Custom Hooks ✓</span><span class="pill o">useMemo ✓</span><span class="pill o">useCallback ✓</span><span class="pill o">React.memo ✓</span></div><div class="card wa" style="max-width:1200px"><h3>Golden rule · Next: M14 React Router v6</h3><p>Optimize only after you've proven a bottleneck. Next we add routes, links, dynamic params and nested layouts.</p></div></div>`].map((h,i)=>h.replace('@@',String(i+1).padStart(2,'0')));
+
+const cv=document.getElementById('canvas');cv.innerHTML=S.join('');
+const sl=[...cv.children];sl.forEach((s,i)=>s.dataset.screenLabel=String(i+1).padStart(2,'0'));
+let cur=0;try{cur=Math.min(sl.length-1,+localStorage.getItem('m13')||0)}catch(e){}
+function show(n){cur=Math.max(0,Math.min(sl.length-1,n));sl.forEach((s,i)=>s.classList.toggle('on',i===cur));document.getElementById('lbl').textContent=String(cur+1).padStart(2,'0')+' / '+String(sl.length).padStart(2,'0')+(cur===0?'  ·  right-click → next':'');document.getElementById('bar').style.width=(cur+1)/sl.length*100+'%';try{localStorage.setItem('m13',cur)}catch(e){}}
+function fit(){const k=Math.min(innerWidth/1760,innerHeight/990);cv.style.zoom=k;cv.style.width=innerWidth/k+'px';cv.style.height=innerHeight/k+'px'}
+addEventListener('resize',fit);fit();show(cur);
+addEventListener('contextmenu',e=>{if(e.target.closest('textarea'))return;e.preventDefault();e.shiftKey?show(cur-1):show(cur+1)});
+addEventListener('mouseup',e=>{if(e.button===3){e.preventDefault();show(cur-1)}else if(e.button===4){e.preventDefault();show(cur+1)}});
+let tx=0;addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});addEventListener('touchend',e=>{const d=e.changedTouches[0].clientX-tx;if(Math.abs(d)>70&&!e.target.closest('textarea,pre'))show(cur+(d<0?1:-1))},{passive:true});
+addEventListener('keydown',e=>{if(/TEXTAREA|INPUT/.test(document.activeElement.tagName))return;if(['ArrowRight',' ','PageDown'].includes(e.key)){e.preventDefault();show(cur+1)}else if(['ArrowLeft','PageUp'].includes(e.key))show(cur-1);else if(e.key==='Home')show(0);else if(e.key==='End')show(sl.length-1)});
+// live ref/state demo
+let st=0,rf=0,rn=1,pt=0;const $=id=>document.getElementById(id);
+function paint(n){$('dr').textContent=rn;$('ds').textContent=st;$('dv').textContent=pt;$('dn').innerHTML=n}
+cv.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{if(b.dataset.d==='s'){st++;rn++;pt=rf;paint('<b>State changed → re-render.</b> The screen catches up with the ref too.')}else{rf++;paint('<b>ref.current is now '+rf+'</b> but nothing re-rendered, so the screen still shows '+pt+'.')}});
+// MCQ
+cv.querySelectorAll('.mcq').forEach(c=>{const i=+c.dataset.i;c.querySelectorAll('.opt').forEach(o=>o.onclick=()=>{const a=+c.dataset.a,j=+o.dataset.j;c.querySelectorAll('.opt').forEach(x=>{x.disabled=true;if(+x.dataset.j===a)x.classList.add('ok')});if(j!==a)o.classList.add('no');const w=c.querySelector('.why');w.style.color=j===a?'var(--gr)':'var(--rs)';w.textContent=(j===a?'Correct. ':'Not quite. ')+MCQ[i].e})});
+// labs
+cv.querySelectorAll('[data-sol]').forEach(b=>b.onclick=()=>{const c=b.closest('.code'),s=c.querySelector('[data-so]'),w=c.querySelector('[data-ws]'),on=s.style.display==='none';s.style.display=on?'block':'none';w.style.display=on?'none':'block';b.textContent=on?'Back to my code':'Show solution';c.querySelector('[data-t]').textContent=on?'solution':'your workspace · editable'});
+</script></body></html>

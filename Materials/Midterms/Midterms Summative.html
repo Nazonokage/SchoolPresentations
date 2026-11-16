@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Summative Exam · Web Systems</title>
+    <style>
+        /* ── reset & base ── */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        :root {
+            --bg: #0b0f19;
+            --surface: #111827;
+            --surface2: #1c2536;
+            --border: #253044;
+            --border2: #2d3f58;
+            --accent: #38bdf8;
+            --accent2: #34d399;
+            --accent3: #fb923c;
+            --accent4: #c084fc;
+            --accent5: #f472b6;
+            --text: #f1f5f9;
+            --text2: #94a3b8;
+            --text3: #cbd5e1;
+            --card: #141e2e;
+            --card2: #172032;
+            --font: 'Inter', system-ui, sans-serif;
+            --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+            --r: 8px;
+            --r2: 12px;
+            --tr: 350ms cubic-bezier(.4, 0, .2, 1);
+        }
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        /* ── chrome ── */
+        #bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--accent4));
+            transition: width .3s;
+            z-index: 100;
+            border-radius: 0 2px 2px 0;
+        }
+        #ctr {
+            position: fixed;
+            top: 10px;
+            right: 16px;
+            font-size: 16px;
+            color: var(--text2);
+            z-index: 100;
+            font-variant-numeric: tabular-nums;
+            font-family: var(--mono);
+            letter-spacing: .5px;
+        }
+        /* ── deck ── */
+        #deck {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+        .slide {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 52px 64px 36px;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(48px);
+            transition: opacity var(--tr), transform var(--tr);
+            overflow-y: auto;
+        }
+        .slide.active {
+            opacity: 1;
+            pointer-events: all;
+            transform: translateX(0);
+        }
+        .slide.out-l {
+            opacity: 0;
+            transform: translateX(-48px);
+        }
+        .slide.out-r {
+            opacity: 0;
+            transform: translateX(48px);
+        }
+        @media(prefers-reduced-motion:reduce) {
+            .slide {
+                transition: opacity .15s;
+                transform: none !important;
+            }
+        }
+        /* ── typography ── */
+        .eyebrow {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .eyebrow::before {
+            content: '';
+            display: inline-block;
+            width: 24px;
+            height: 2px;
+            background: var(--accent);
+            border-radius: 1px;
+        }
+        .slide-title {
+            font-size: clamp(28px, 3.6vw, 48px);
+            font-weight: 800;
+            line-height: 1.1;
+            color: var(--text);
+            margin-bottom: 6px;
+            letter-spacing: -.5px;
+        }
+        .slide-sub {
+            font-size: 18px;
+            color: var(--text2);
+            margin-bottom: 24px;
+            font-weight: 400;
+        }
+        .rule {
+            height: 1px;
+            background: linear-gradient(90deg, var(--border2), transparent);
+            border: none;
+            margin-bottom: 22px;
+        }
+        /* ── content helpers ── */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            min-height: 0;
+        }
+        .g2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            min-height: 0;
+        }
+        .g3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+        }
+        .g2>*,
+        .g3>* {
+            min-width: 0;
+        }
+        .split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            flex: 1;
+            min-height: 0;
+        }
+        .split>* {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .col {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 0;
+        }
+        .flex1 {
+            flex: 1;
+        }
+        /* ── cards ── */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--r2);
+            padding: 16px 18px;
+        }
+        .card h3 {
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+        .card p,
+        .card li {
+            font-size: 16px;
+            color: var(--text3);
+            line-height: 1.7;
+        }
+        .card ul {
+            padding-left: 20px;
+        }
+        .card li {
+            margin-bottom: 4px;
+        }
+        /* ── code blocks ── */
+        .cw {
+            position: relative;
+            background: #070c15;
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .cl {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 7px 12px;
+            background: #0d1421;
+            border-bottom: 1px solid var(--border);
+            font-size: 16px;
+            color: var(--text2);
+            font-family: var(--mono);
+            flex-shrink: 0;
+        }
+        .cl span {
+            color: var(--accent3);
+        }
+        .cw pre {
+            padding: 12px 14px;
+            overflow: auto;
+            font-family: var(--mono);
+            font-size: 15px;
+            line-height: 1.7;
+            white-space: pre;
+            flex: 1;
+            min-height: 0;
+            max-height: 400px;
+        }
+        .cpbtn {
+            padding: 3px 10px;
+            font-size: 16px;
+            font-family: var(--font);
+            background: var(--surface2);
+            border: 1px solid var(--border2);
+            color: var(--text2);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all .2s;
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, .3), inset 0 1px 0 rgba(255, 255, 255, .05);
+        }
+        .cpbtn:hover {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+            box-shadow: 0 2px 6px rgba(56, 189, 248, .3);
+        }
+        .cpbtn.ok {
+            background: var(--accent2);
+            color: #fff;
+            border-color: var(--accent2);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, .3);
+            transform: scale(.96);
+        }
+        /* syntax */
+        .k {
+            color: #f472b6;
+        }
+        .s {
+            color: #86efac;
+        }
+        .f {
+            color: #c4b5fd;
+        }
+        .n {
+            color: #7dd3fc;
+        }
+        .c {
+            color: #4b5563;
+            font-style: italic;
+        }
+        .t {
+            color: #fca5a5;
+        }
+        .op {
+            color: #94a3b8;
+        }
+        .b {
+            color: #fcd34d;
+        }
+        /* ── inline code ── */
+        ic {
+            background: var(--surface2);
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-family: var(--mono);
+            font-size: 15px;
+            color: var(--accent4);
+            border: 1px solid var(--border);
+        }
+        /* ── breakdown items ── */
+        .bd {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+        .bdi {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            padding: 9px 11px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            border-left: 3px solid var(--accent);
+        }
+        .bdi.g {
+            border-left-color: var(--accent2);
+        }
+        .bdi.o {
+            border-left-color: var(--accent3);
+        }
+        .bdi.p {
+            border-left-color: var(--accent4);
+        }
+        .bdi.r {
+            border-left-color: var(--accent5);
+        }
+        .bdl {
+            font-family: var(--mono);
+            font-size: 14px;
+            color: var(--accent);
+            background: #070c15;
+            padding: 2px 7px;
+            border-radius: 3px;
+            white-space: nowrap;
+            min-width: fit-content;
+            align-self: flex-start;
+            margin-top: 1px;
+            flex-shrink: 0;
+        }
+        .bdt {
+            font-size: 16px;
+            color: var(--text3);
+            line-height: 1.6;
+        }
+        .bdt strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+        /* ── pills ── */
+        .pill {
+            display: inline-block;
+            padding: 3px 11px;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            color: var(--text2);
+            margin: 3px;
+        }
+        .pill.a {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(56, 189, 248, .1);
+        }
+        .pill.g {
+            border-color: var(--accent2);
+            color: var(--accent2);
+            background: rgba(52, 211, 153, .1);
+        }
+        .pill.o {
+            border-color: var(--accent3);
+            color: var(--accent3);
+            background: rgba(251, 146, 60, .1);
+        }
+        /* ── exam question cards ── */
+        .exam-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            flex: 1;
+            min-height: 0;
+            align-content: start;
+        }
+        .exam-item {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--r2);
+            padding: 14px 16px;
+        }
+        .exam-item h4 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 6px;
+        }
+        .exam-item p,
+        .exam-item li {
+            font-size: 16px;
+            color: var(--text3);
+            line-height: 1.6;
+        }
+        .exam-item .qn {
+            color: var(--accent3);
+            font-weight: 800;
+            margin-right: 4px;
+        }
+        .exam-item .opts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px 12px;
+            margin-top: 6px;
+        }
+        .exam-item .opts span {
+            font-size: 16px;
+            color: var(--text2);
+        }
+        .exam-item .code-snip {
+            background: #070c15;
+            border-radius: 4px;
+            padding: 8px 10px;
+            font-family: var(--mono);
+            font-size: 15px;
+            color: var(--text3);
+            white-space: pre;
+            overflow-x: auto;
+            margin: 6px 0 4px;
+            border: 1px solid var(--border);
+        }
+        .exam-item .answer-blank {
+            display: inline-block;
+            border-bottom: 2px solid var(--accent);
+            min-width: 100px;
+            margin: 0 4px;
+        }
+        .exam-item .scenario {
+            font-style: italic;
+            color: var(--text2);
+        }
+        /* ── recap icons ── */
+        .recap-icon {
+            font-size: 28px;
+            margin-right: 8px;
+        }
+        .recap-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        .recap-item {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 12px 14px;
+            text-align: center;
+        }
+        .recap-item .ico {
+            font-size: 32px;
+            margin-bottom: 6px;
+        }
+        .recap-item h4 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 4px;
+        }
+        .recap-item p {
+            font-size: 16px;
+            color: var(--text2);
+            line-height: 1.5;
+        }
+        /* ── hero / title ── */
+        .hero-slide {
+            background: radial-gradient(ellipse at 15% 60%, rgba(56, 189, 248, .12) 0%, transparent 55%),
+                radial-gradient(ellipse at 80% 20%, rgba(192, 132, 252, .08) 0%, transparent 50%),
+                var(--bg);
+        }
+        .hero-title {
+            font-size: clamp(48px, 5.5vw, 76px);
+            font-weight: 900;
+            line-height: 1.02;
+            letter-spacing: -1.5px;
+        }
+        .hero-title .h1 {
+            color: var(--text);
+        }
+        .hero-title .h2 {
+            color: var(--accent);
+        }
+        .hero-sub {
+            font-size: 18px;
+            color: var(--text2);
+            max-width: 600px;
+            line-height: 1.7;
+            margin: 14px 0 20px;
+        }
+        .dot-grid {
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(rgba(56, 189, 248, .06) 1px, transparent 1px);
+            background-size: 32px 32px;
+            pointer-events: none;
+        }
+        .logo-row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .logo-row svg {
+            height: 40px;
+            width: auto;
+            filter: drop-shadow(0 0 6px rgba(56, 189, 248, .2));
+        }
+        /* ── quote ── */
+        .quote-slide {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        .quote-slide blockquote {
+            font-size: 28px;
+            font-weight: 300;
+            color: var(--text3);
+            max-width: 800px;
+            line-height: 1.5;
+            border-left: 4px solid var(--accent);
+            padding-left: 24px;
+            margin: 0 auto;
+        }
+        .quote-slide blockquote footer {
+            font-size: 18px;
+            color: var(--text2);
+            margin-top: 12px;
+        }
+        /* ── modal ── */
+        #modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .8);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+        #modal.open {
+            display: flex;
+        }
+        .mbox {
+            background: var(--surface);
+            border: 1px solid var(--border2);
+            border-radius: 14px;
+            padding: 28px 32px;
+            min-width: 340px;
+        }
+        .mbox h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 16px;
+        }
+        .shr {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 7px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 16px;
+            color: var(--text3);
+        }
+        .shr:last-of-type {
+            border: none;
+        }
+        .shr kbd {
+            background: var(--surface2);
+            border: 1px solid var(--border2);
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-family: var(--mono);
+            font-size: 14px;
+            color: var(--text);
+        }
+        .mcl {
+            margin-top: 18px;
+            width: 100%;
+            padding: 9px;
+            background: var(--accent);
+            color: #0b0f19;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: var(--font);
+        }
+        #hint {
+            position: fixed;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 16px;
+            color: var(--text2);
+            letter-spacing: .5px;
+            pointer-events: none;
+            opacity: .4;
+            font-family: var(--mono);
+        }
+        /* responsive */
+        @media(max-width:800px) {
+            .slide {
+                padding: 36px 24px 24px;
+            }
+            .g2,
+            .split,
+            .exam-grid {
+                grid-template-columns: 1fr;
+            }
+            .hero-title {
+                font-size: 32px;
+            }
+            .logo-row svg {
+                height: 30px;
+            }
+            .exam-item .opts {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="bar"></div>
+    <div id="ctr"></div>
+    <div id="deck"></div>
+    <div id="hint">right-click or → to advance &nbsp;·&nbsp; ? for shortcuts</div>
+    <div id="modal">
+        <div class="mbox">
+            <h3>⌨ Keyboard Shortcuts</h3>
+            <div class="shr"><span>Next slide</span><span><kbd>→</kbd> or <kbd>Right-click</kbd></span></div>
+            <div class="shr"><span>Prev slide</span><span><kbd>←</kbd></span></div>
+            <div class="shr"><span>First slide</span><span><kbd>Home</kbd></span></div>
+            <div class="shr"><span>Last slide</span><span><kbd>End</kbd></span></div>
+            <div class="shr"><span>Shortcuts</span><span><kbd>?</kbd></span></div>
+            <div class="shr"><span>Close</span><span><kbd>Esc</kbd></span></div>
+            <button class="mcl" onclick="document.getElementById('modal').classList.remove('open')">Close</button>
+        </div>
+    </div>
+    <script>
+        // ── syntax highlighting ──
+        function hl(code) {
+            const KW = /\b(const|let|var|function|return|async|await|try|catch|throw|new|class|extends|if|else|for|while|of|in|from|import|export|default|module|require|true|false|null|undefined|typeof|instanceof|delete|void|yield|super|this)\b/;
+            const TY = /\b(console|process|fs|path|http|express|JSON|Object|Array|Math|Promise|Error|module|exports|fetch|require)\b/;
+            const NUM = /^\b\d+(\.\d+)?\b/;
+
+            function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+            let i = 0,
+                out = '';
+            while (i < code.length) {
+                if (code[i] === '/' && code[i + 1] === '/') {
+                    let e = code.indexOf('\n', i);
+                    let ch = e === -1 ? code.slice(i) : code.slice(i, e);
+                    out += `<span class="c">${esc(ch)}</span>`;
+                    i += ch.length;
+                    continue;
+                }
+                if (code[i] === '`') {
+                    let j = i + 1;
+                    while (j < code.length && code[j] !== '`') { if (code[j] === '\\') j++; j++; }
+                    out += `<span class="s">${esc(code.slice(i, j + 1))}</span>`;
+                    i = j + 1;
+                    continue;
+                }
+                if (code[i] === "'") {
+                    let j = i + 1;
+                    while (j < code.length && code[j] !== "'" && code[j] !== '\n') { if (code[j] === '\\') j++; j++; }
+                    out += `<span class="s">${esc(code.slice(i, j + 1))}</span>`;
+                    i = j + 1;
+                    continue;
+                }
+                if (code[i] === '"') {
+                    let j = i + 1;
+                    while (j < code.length && code[j] !== '"' && code[j] !== '\n') { if (code[j] === '\\') j++; j++; }
+                    out += `<span class="s">${esc(code.slice(i, j + 1))}</span>`;
+                    i = j + 1;
+                    continue;
+                }
+                let rest = code.slice(i),
+                    m;
+                if ((m = rest.match(KW))) { out += `<span class="k">${m[0]}</span>`; i += m[0].length; continue; }
+                if ((m = rest.match(TY))) { out += `<span class="t">${m[0]}</span>`; i += m[0].length; continue; }
+                if ((m = rest.match(NUM))) { out += `<span class="n">${m[0]}</span>`; i += m[0].length; continue; }
+                out += esc(code[i]);
+                i++;
+            }
+            return out;
+        }
+
+        function cw(code, lang = 'js', label = '') {
+            const id = 'c' + Math.random().toString(36).slice(2);
+            const isPlain = (lang === 'bash' || lang === 'dockerfile' || lang === 'text' || lang === 'tree');
+            const inner = isPlain ?
+                code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') :
+                hl(code);
+            return `<div class="cw"><div class="cl"><span>${label||lang}</span><button class="cpbtn" onclick="cp('${id}',this)">Copy</button></div><pre id="${id}">${inner}</pre></div>`;
+        }
+
+        function cp(id, btn) {
+            navigator.clipboard.writeText(document.getElementById(id).textContent).then(() => {
+                btn.textContent = 'Copied!';
+                btn.classList.add('ok');
+                setTimeout(() => { btn.textContent = 'Copy';
+                    btn.classList.remove('ok'); }, 2000);
+            });
+        }
+
+        // escape for outer template literal and HTML
+        function escForTemplate(str) {
+            return str.replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/`/g, '\\`')
+                .replace(/\${/g, '\\${');
+        }
+
+        // ── slides ──
+        const S = [];
+
+        function chunk(items, size = 4) {
+            const pages = [];
+            for (let i = 0; i < items.length; i += size) pages.push(items.slice(i, i + size));
+            return pages;
+        }
+
+        // 0 — TITLE
+        S.push({ cls: 'hero-slide', html: `
+        <div class="dot-grid"></div>
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:0;position:relative">
+          <div class="eyebrow" style="margin-bottom:14px">Summative Exam · Web Systems</div>
+          <div class="hero-title">
+            <div class="h1">JSON, Express</div>
+            <div class="h2">&amp; Docker</div>
+            <div style="font-size:24px;font-weight:400;color:var(--text2);margin-top:8px">with JavaScript Foundations</div>
+          </div>
+          <div class="hero-sub">30‑point assessment — 10 MC, 10 Scenario ID, 10 Guess the Output</div>
+          <div class="logo-row">
+            <!-- JS logo -->
+            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="28" height="28" rx="4" fill="#f7df1e"/><path d="M10 22.5c-1.2 0-2-.6-2.4-1.6l2.4-1.2c.3.6.7.9 1.4.9.8 0 1.3-.5 1.3-1.3v-4.3h2.7v4.3c0 2.2-1.5 3.2-3.4 3.2zm8.5-2c.5.8 1.3 1.4 2.7 1.4 1.2 0 2-.5 2-1.2 0-.7-.5-1-1.6-1.4l-.5-.2c-1.5-.6-2.5-1.4-2.5-3 0-1.5 1.2-2.7 3-2.7 1.5 0 2.5.5 3.2 1.3l-1.7 1.5c-.4-.6-.8-.8-1.5-.8-.7 0-1.1.4-1.1.8 0 .6.4.8 1.3 1.2l.5.2c1.7.7 2.7 1.4 2.7 3 0 1.7-1.3 2.8-3.2 2.8-1.8 0-3-.7-3.5-1.8l2.3-1.3z" fill="#000"/></svg>
+            <!-- Node logo -->
+            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="14" fill="#339933"/><path d="M16 5c-.7 0-1.3.2-1.8.6l-4.2 2.4c-1.1.6-1.8 1.8-1.8 3v4.8c0 1.2.7 2.4 1.8 3l4.2 2.4c1 .6 2.6.6 3.6 0l4.2-2.4c1.1-.6 1.8-1.8 1.8-3v-4.8c0-1.2-.7-2.4-1.8-3l-4.2-2.4c-.5-.4-1.1-.6-1.8-.6zm0 2.8c.3 0 .6.1.9.3l4.2 2.4c.5.3.9.9.9 1.5v4.8c0 .6-.4 1.2-.9 1.5l-4.2 2.4c-.5.3-1.3.3-1.8 0l-4.2-2.4c-.5-.3-.9-.9-.9-1.5v-4.8c0-.6.4-1.2.9-1.5l4.2-2.4c.3-.2.6-.3.9-.3z" fill="#fff"/></svg>
+            <!-- Express logo (stylized) -->
+            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="28" height="28" rx="6" fill="#fff"/><path d="M24 8H8v16h16V8zm-2 2v12h-6v-2h4v-8h2zm-8 0v12h-2V10h2zm-4 0v10h2v-2h-2v-8h-2v10h2v-8z" fill="#000"/></svg>
+            <!-- Docker logo -->
+            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 16h2v2H4v-2zm4 0h2v2H8v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2zm-8-4h2v2H8v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2z" fill="#2496ed"/><path d="M28 13c-.6-1.4-1.8-2.4-3.4-2.8-.2-.1-.4-.1-.6-.1h-1.8v-4h-2v4h-2v-4h-2v4h-2v-4h-2v4H8v-4H6v4H4v6c0 .2 0 .4.1.6C4.4 17.8 6 20 8.2 21c.8.4 1.8.6 2.8.6h14.6c1.8 0 3.4-1.2 4-2.8.4-1 .4-2 0-3 .4-.4.4-.8.4-1.2v-.6h-2v-1z" fill="#fff"/></svg>
+          </div>
+          <div style="margin-top:20px">
+            <span class="pill a">Recap</span>
+            <span class="pill g">MCQ</span>
+            <span class="pill o">Scenario ID</span>
+            <span class="pill a">Guess Output</span>
+          </div>
+        </div>` });
+
+        // 1 — RECAP: JS Fundamentals & Functions
+        S.push({ html: `
+        <div class="eyebrow">Recap · Level 1–2</div>
+        <div class="slide-title">JavaScript Essentials</div>
+        <hr class="rule"/>
+        <div class="content">
+          <div class="g2" style="flex:1">
+            <div class="col">
+              <div class="card"><h3>Variables & Types</h3>
+                <p><strong>let</strong> (mutable), <strong>const</strong> (immutable). Primitives: string, number, boolean, null, undefined.</p>
+                <div style="margin-top:8px;background:#070c15;border-radius:4px;padding:6px 10px;font-family:var(--mono);font-size:15px;color:var(--text3)">const name = "Aria"; let age = 22;</div>
+              </div>
+              <div class="card"><h3>Functions</h3>
+                <p>Declarations, expressions, arrows. Parameters vs arguments, <ic>return</ic>.</p>
+                <div style="margin-top:8px;background:#070c15;border-radius:4px;padding:6px 10px;font-family:var(--mono);font-size:15px;color:var(--text3)">const double = x => x * 2;</div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="card"><h3>Array Methods (critical)</h3>
+                <ul>
+                  <li><strong>.map()</strong> – transform → new array</li>
+                  <li><strong>.filter()</strong> – keep passing → new array</li>
+                  <li><strong>.reduce()</strong> – fold to single value</li>
+                  <li><strong>.forEach()</strong> – loop, no return</li>
+                </ul>
+              </div>
+              <div class="card"><h3>Objects & Nesting</h3>
+                <p>Dot notation <ic>obj.key</ic>, bracket <ic>obj[key]</ic>. Nested objects: <ic>obj.a.b</ic>.</p>
+              </div>
+            </div>
+          </div>
+        </div>` });
+
+        // 2 — RECAP: Modern JS, Modules, Async
+        S.push({ html: `
+        <div class="eyebrow">Recap · Level 3–6</div>
+        <div class="slide-title">Objects, Arrays &amp; Async</div>
+        <hr class="rule"/>
+        <div class="content">
+          <div class="g2" style="flex:1">
+            <div class="col">
+              <div class="card"><h3>Modern JS</h3>
+                <ul>
+                  <li><strong>Destructuring</strong> – <ic>const {name} = user;</ic></li>
+                  <li><strong>Spread</strong> – <ic>const copy = {...obj};</ic></li>
+                  <li><strong>Template literals</strong> – <ic>\`Hello \${name}\`</ic></li>
+                  <li><strong>Optional chaining</strong> – <ic>user?.address?.city</ic></li>
+                  <li><strong>Nullish coalescing</strong> – <ic>user.name ?? 'Guest'</ic></li>
+                </ul>
+              </div>
+              <div class="card"><h3>Modules</h3>
+                <p><strong>CommonJS</strong> (Node): <ic>require()</ic> &amp; <ic>module.exports</ic></p>
+                <p><strong>ES Modules</strong>: <ic>import</ic> &amp; <ic>export</ic></p>
+              </div>
+            </div>
+            <div class="col">
+              <div class="card"><h3>Asynchronous JS</h3>
+                <ul>
+                  <li><strong>Callbacks</strong> – old pattern</li>
+                  <li><strong>Promises</strong> – <ic>.then()</ic>, <ic>.catch()</ic></li>
+                  <li><strong>async/await</strong> – syntactic sugar</li>
+                  <li><strong>try/catch</strong> for error handling</li>
+                </ul>
+                <div style="background:#070c15;border-radius:4px;padding:6px 10px;font-family:var(--mono);font-size:15px;color:var(--text3);margin-top:6px">const data = await fetch(url);</div>
+              </div>
+            </div>
+          </div>
+        </div>` });
+
+        // 3 — RECAP: HTTP, JSON, Express, Docker
+        S.push({ html: `
+        <div class="eyebrow">Recap · Level 7–10 + M5</div>
+        <div class="slide-title">HTTP, REST, Express &amp; Docker</div>
+        <hr class="rule"/>
+        <div class="content">
+          <div class="g2" style="flex:1">
+            <div class="col">
+              <div class="card"><h3>HTTP &amp; REST</h3>
+                <ul>
+                  <li><strong>Methods</strong>: GET, POST, PUT, PATCH, DELETE</li>
+                  <li><strong>Status codes</strong>: 200, 201, 400, 404, 500</li>
+                  <li><strong>REST</strong> – resources mapped to URLs (e.g. <ic>/users</ic>)</li>
+                  <li><strong>JSON</strong>: <ic>JSON.stringify()</ic> and <ic>JSON.parse()</ic></li>
+                </ul>
+              </div>
+              <div class="card"><h3>Express</h3>
+                <ul>
+                  <li><ic>app.get()</ic>, <ic>app.post()</ic>, etc.</li>
+                  <li><ic>req.params</ic>, <ic>req.query</ic>, <ic>req.body</ic></li>
+                  <li><ic>res.send()</ic>, <ic>res.json()</ic></li>
+                  <li>Middleware: <ic>express.json()</ic>, <ic>express.static()</ic></li>
+                </ul>
+              </div>
+            </div>
+            <div class="col">
+              <div class="card"><h3>Docker</h3>
+                <ul>
+                  <li><strong>Dockerfile</strong> – instructions to build an image</li>
+                  <li><strong>.dockerignore</strong> – exclude files</li>
+                  <li><strong>docker build -t name .</strong></li>
+                  <li><strong>docker run -p host:container name</strong></li>
+                  <li>Layer caching: copy <ic>package*.json</ic> first</li>
+                </ul>
+              </div>
+              <div class="card"><h3>Node Basics</h3>
+                <ul>
+                  <li><ic>fs</ic>, <ic>path</ic>, <ic>process.env</ic></li>
+                  <li><ic>npm</ic> – dependencies, scripts</li>
+                  <li>CommonJS vs ESM</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>` });
+
+        // 4 — EXAM: MCQ (10 questions)
+        const mcqs = [
+            { q: 'Which method converts a JavaScript object into a JSON string?', opts: ['JSON.parse()', 'JSON.stringify()', 'JSON.encode()', 'JSON.convert()'] },
+            { q: 'Which array method returns a NEW array containing only elements that pass a test?', opts: ['.map()', '.filter()', '.reduce()', '.forEach()'] },
+            { q: 'In Express, what does <code>app.use(express.json())</code> do?', opts: ['Serves static files', 'Parses JSON request bodies', 'Enables CORS', 'Sets the view engine'] },
+            { q: 'What is the purpose of a <code>Dockerfile</code>?', opts: ['Define container networking', 'Give instructions to build a Docker image', 'List environment variables', 'Configure logging'] },
+            { q: 'Which HTTP method is typically used to partially update a resource?', opts: ['PUT', 'PATCH', 'POST', 'DELETE'] },
+            { q: 'What does <code>module.exports</code> do in Node.js?', opts: ['Imports a module', 'Exports a value from a module', 'Defines a new module', 'Requires a dependency'] },
+            { q: 'Which operator is used for optional chaining in JavaScript?', opts: ['?.', '??', '? :', '=>'] },
+            { q: 'What is the result of <code>typeof JSON.parse(\'{"a":1}\')</code>?', opts: ['"string"', '"object"', '"number"', '"undefined"'] },
+            { q: 'In Express, how do you access URL parameters like <code>/users/:id</code>?', opts: ['req.query', 'req.params', 'req.body', 'req.url'] },
+            { q: 'Which command builds a Docker image with tag <code>myapp</code>?', opts: ['docker build -t myapp .', 'docker build myapp', 'docker image build myapp', 'docker create -t myapp'] }
+        ];
+
+                chunk(mcqs).forEach((page, pageIndex) => S.push({ html: `
+                <div class="eyebrow">Exam · Part 1 · Page ${pageIndex + 1}</div>
+                <div class="slide-title">Multiple Choice — questions ${pageIndex * 4 + 1}–${pageIndex * 4 + page.length}</div>
+                <hr class="rule"/>
+                <div class="content">
+                    <div class="exam-grid">
+                        ${page.map((q,i)=>{ const questionNumber = pageIndex * 4 + i + 1; return `<div class="exam-item"><h4><span class="qn">${questionNumber}.</span></h4><p>${q.q}</p><div class="opts">${q.opts.map(o=>`<span>${o}</span>`).join('')}</div></div>`; }).join('')}
+                    </div>
+                </div>` }));
+
+        // 5 — EXAM: Scenario-based Identification (10)
+        const scenarios = [
+            { q: 'You have an array of user objects and need to extract an array of just the <code>email</code> properties. Which array method do you use?' },
+            { q: 'You need to read a file synchronously in Node. Which built-in module and method do you use?' },
+            { q: 'In Express, you want to send a JavaScript object as a JSON HTTP response. Which method do you call on the <code>res</code> object?' },
+            { q: 'You want to exclude <code>node_modules</code> from the Docker build context. Which file do you create in your project root?' },
+            { q: 'You need to start a container from an image and map port <strong>8080</strong> on your host to port <strong>3000</strong> inside the container. What is the <code>docker run</code> command?' },
+            { q: 'In JavaScript, what is the syntax for a template literal (delimiters) that allows embedded expressions?' },
+            { q: 'Which HTTP status code indicates that a requested resource was not found?' },
+            { q: 'You want to handle a rejected Promise. Which method (or block) do you use?' },
+            { q: 'In Express, you need to serve static files from a <code>public</code> folder. What middleware function do you use?' },
+            { q: 'You need to import a module using ES Modules syntax. What keyword do you use?' }
+        ];
+
+                chunk(scenarios).forEach((page, pageIndex) => S.push({ html: `
+                <div class="eyebrow">Exam · Part 2 · Page ${pageIndex + 1}</div>
+                <div class="slide-title">Scenario‑based Identification — questions ${pageIndex * 4 + 1}–${pageIndex * 4 + page.length}</div>
+                <hr class="rule"/>
+                <div class="content">
+                    <div class="exam-grid">
+                        ${page.map((s,i)=>{ const questionNumber = pageIndex * 4 + i + 1; return `<div class="exam-item"><h4><span class="qn">${questionNumber}.</span></h4><p class="scenario">${s.q}</p><p style="margin-top:4px"><span class="answer-blank">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> (write your answer)</p></div>`; }).join('')}
+                    </div>
+                </div>` }));
+
+        // 6 — EXAM: Guess the Output (10)
+        const outputs = [
+            { code: `const data = [\n  ["Aria", 1.5],\n  ["Ben",  1.75],\n  ["Cora", 1.25]\n];\nconsole.log(data[2][0]);\nconsole.log(data[0][1]);` },
+            { code: `const product = {\n  name: "Keyboard",\n  specs: { brand: "Keychron", wireless: true },\n  tags: ["electronics", "WFH"]\n};\nconsole.log(product.specs.brand);\nconsole.log(product.tags[1]);\nconsole.log(product.specs.wireless);` },
+            { code: `const users = [\n  { name: "Aria", active: true  },\n  { name: "Ben",  active: false },\n  { name: "Cora", active: true  }\n];\nconst active = users.filter(u => u.active);\nconsole.log(active.length);\nconsole.log(active[0].name);` },
+            { code: `const obj = { name: "Aria", gwa: 1.5 };\nconst json = JSON.stringify(obj);\nconst back = JSON.parse(json);\nconsole.log(typeof json);\nconsole.log(typeof back);\nconsole.log(back.name);` },
+            { code: `const menu = [\n  { item: "Pancit", price: 45 },\n  { item: "Lugaw",  price: 25 },\n  { item: "Rice",   price: 15 }\n];\nconst names = menu.map(m => m.item);\nconsole.log(names);\nconsole.log(menu[1].price);` },
+            { code: `const user = { name: "Aria", address: { city: "Iloilo" } };\nconst { name, address: { city } } = user;\nconsole.log(name);\nconsole.log(city);` },
+            { code: `const arr = [1, 2, 3];\nconst doubled = arr.map(x => x * 2);\nconsole.log(doubled);\nconsole.log(arr);` },
+            { code: `const a = { x: 1 };\nconst b = { ...a, y: 2 };\nconsole.log(b);\nconsole.log(a);` },
+            { code: `const greet = (name = "Guest") => \`Hello \${name}\`;\nconsole.log(greet("Aria"));\nconsole.log(greet());` },
+            { code: `const nums = [10, 20, 30];\nconst [first, second] = nums;\nconsole.log(first);\nconsole.log(second);` }
+        ];
+
+                chunk(outputs).forEach((page, pageIndex) => S.push({ html: `
+                <div class="eyebrow">Exam · Part 3 · Page ${pageIndex + 1}</div>
+                <div class="slide-title">Guess the Output — questions ${pageIndex * 4 + 1}–${pageIndex * 4 + page.length}</div>
+                <hr class="rule"/>
+                <div class="content">
+                    <div class="exam-grid">
+                        ${page.map((o,i)=>{ const questionNumber = pageIndex * 4 + i + 1; return `<div class="exam-item"><h4><span class="qn">${questionNumber}.</span></h4><div class="code-snip">${escForTemplate(o.code)}</div><p style="margin-top:4px">Output: <span class="answer-blank">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> (write each line)</p></div>`; }).join('')}
+                    </div>
+                </div>` }));
+
+        // 7 — ANSWER KEY: MC
+        const mcAns = [
+            { q: '1. JSON.stringify() — converts object to JSON string.', ans: 'b' },
+            { q: '2. .filter() — returns new array of passing elements.', ans: 'b' },
+            { q: '3. Parses JSON request bodies — adds req.body.', ans: 'b' },
+            { q: '4. Give instructions to build a Docker image.', ans: 'b' },
+            { q: '5. PATCH — used for partial updates.', ans: 'b' },
+            { q: '6. Exports a value from a module.', ans: 'b' },
+            { q: '7. ?. — optional chaining operator.', ans: 'a' },
+            { q: '8. "object" — parsed JSON becomes an object.', ans: 'b' },
+            { q: '9. req.params — captures URL parameters.', ans: 'b' },
+            { q: '10. docker build -t myapp .', ans: 'a' }
+        ];
+
+                chunk(mcAns).forEach((page, pageIndex) => S.push({ html: `
+                <div class="eyebrow">Answer Key · Part 1 · Page ${pageIndex + 1}</div>
+                <div class="slide-title">Multiple Choice — answers ${pageIndex * 4 + 1}–${pageIndex * 4 + page.length}</div>
+                <hr class="rule"/>
+                <div class="content">
+                    <div class="exam-grid">
+                        ${page.map((a,i)=>{ const questionNumber = pageIndex * 4 + i + 1; return `<div class="exam-item"><h4><span class="qn">${questionNumber}.</span></h4><p>${a.q.slice(a.q.indexOf(' ') + 1)}</p><p style="color:var(--accent2);font-weight:700">Answer: ${a.ans.toUpperCase()}</p></div>`; }).join('')}
+                    </div>
+                </div>` }));
+
+        // 8 — ANSWER KEY: Scenario ID
+        const idAns = [
+            'map',
+            'fs.readFileSync (or require("fs").readFileSync)',
+            'res.json()',
+            '.dockerignore',
+            'docker run -p 8080:3000 ... (image name)',
+            'backticks (` ... `)',
+            '404 Not Found',
+            '.catch() or try/catch with async/await',
+            'express.static("public")',
+            'import'
+        ];
+
+                chunk(idAns).forEach((page, pageIndex) => S.push({ html: `
+                <div class="eyebrow">Answer Key · Part 2 · Page ${pageIndex + 1}</div>
+                <div class="slide-title">Scenario‑based Identification — answers ${pageIndex * 4 + 1}–${pageIndex * 4 + page.length}</div>
+                <hr class="rule"/>
+                <div class="content">
+                    <div class="exam-grid">
+                        ${page.map((a,i)=>{ const questionNumber = pageIndex * 4 + i + 1; return `<div class="exam-item"><h4><span class="qn">${questionNumber}.</span></h4><p style="color:var(--accent2);font-weight:700">${a}</p></div>`; }).join('')}
+                    </div>
+                </div>` }));
+
+        // 9 — ANSWER KEY: Guess the Output
+        const outAns = [
+            'Cora\n1.5',
+            'Keychron\nWFH\ntrue',
+            '2\nAria',
+            'string\nobject\nAria',
+            '["Pancit","Lugaw","Rice"]\n25',
+            'Aria\nIloilo',
+            '[2,4,6]\n[1,2,3]',
+            '{x:1,y:2}\n{x:1}',
+            'Hello Aria\nHello Guest',
+            '10\n20'
+        ];
+
+                chunk(outAns).forEach((page, pageIndex) => S.push({ html: `
+                <div class="eyebrow">Answer Key · Part 3 · Page ${pageIndex + 1}</div>
+                <div class="slide-title">Guess the Output — answers ${pageIndex * 4 + 1}–${pageIndex * 4 + page.length}</div>
+                <hr class="rule"/>
+                <div class="content">
+                    <div class="exam-grid">
+                        ${page.map((a,i)=>{ const questionNumber = pageIndex * 4 + i + 1; return `<div class="exam-item"><h4><span class="qn">${questionNumber}.</span></h4><pre style="background:#070c15;padding:6px 10px;border-radius:4px;border:1px solid var(--border);font-family:var(--mono);font-size:15px;color:var(--accent2);white-space:pre-wrap">${a}</pre></div>`; }).join('')}
+                    </div>
+                </div>` }));
+
+        // 10 — CLOSING
+        S.push({ cls: 'quote-slide', html: `
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center">
+          <div style="font-size:64px;margin-bottom:20px">🎉</div>
+          <blockquote>
+            “The best way to predict the future is to implement it.”
+            <footer>— Adapted from Alan Kay</footer>
+          </blockquote>
+          <p style="font-size:18px;color:var(--text2);margin-top:30px">You’ve got this. Keep building.</p>
+          <div style="margin-top:20px;display:flex;gap:20px;justify-content:center">
+            <span class="pill a">JSON</span>
+            <span class="pill g">Express</span>
+            <span class="pill o">Docker</span>
+          </div>
+        </div>` });
+
+        // ── engine ──
+        let cur = 0;
+        const deck = document.getElementById('deck');
+        const bar = document.getElementById('bar');
+        const ctr = document.getElementById('ctr');
+
+        function build() {
+            S.forEach((s, i) => {
+                const el = document.createElement('div');
+                el.className = 'slide' + (s.cls ? ' ' + s.cls : '');
+                el.innerHTML = s.html || '';
+                if (i === 0) el.classList.add('active');
+                deck.appendChild(el);
+                if (s.init) s.init(el);
+            });
+        }
+
+        function go(n) {
+            if (n < 0 || n >= S.length || n === cur) return;
+            const els = deck.querySelectorAll('.slide');
+            const fwd = n > cur;
+            els[cur].classList.remove('active');
+            els[cur].classList.add(fwd ? 'out-l' : 'out-r');
+            setTimeout(() => els[cur].classList.remove('out-l', 'out-r'), 420);
+            cur = n;
+            els[cur].classList.add('active');
+            els[cur].scrollTop = 0;
+            tick();
+        }
+
+        function tick() {
+            bar.style.width = (S.length > 1 ? (cur / (S.length - 1) * 100) : 100) + '%';
+            ctr.textContent = (cur + 1) + ' / ' + S.length;
+        }
+
+        document.addEventListener('keydown', e => {
+            const m = document.getElementById('modal');
+            if (m.classList.contains('open')) { if (e.key === 'Escape') m.classList.remove('open'); return; }
+            const t = document.activeElement.tagName;
+            if (t === 'INPUT' || t === 'TEXTAREA') return;
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(cur + 1);
+            else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') go(cur - 1);
+            else if (e.key === 'Home') go(0);
+            else if (e.key === 'End') go(S.length - 1);
+            else if (e.key === '?') m.classList.add('open');
+            else if (e.key === 'Escape') m.classList.remove('open');
+        });
+
+        document.addEventListener('mousedown', e => {
+            if (e.target.closest('button,input,a,.cpbtn')) return;
+            if (e.button === 2) { e.preventDefault();
+                e.stopImmediatePropagation();
+                go(cur + 1); } else if (e.button === 3) { e.preventDefault();
+                e.stopImmediatePropagation();
+                go(cur - 1); } else if (e.button === 4) { e.preventDefault();
+                e.stopImmediatePropagation();
+                go(cur + 1); }
+        }, true);
+        document.addEventListener('contextmenu', e => {
+            if (e.target.closest('button,input,a')) return;
+            e.preventDefault();
+            e.stopImmediatePropagation();
+        }, true);
+        document.addEventListener('auxclick', e => {
+            if (e.button === 3 || e.button === 4) { e.preventDefault();
+                e.stopImmediatePropagation(); }
+        }, true);
+
+        let tx = 0;
+        document.addEventListener('touchstart', e => tx = e.touches[0].clientX, { passive: true });
+        document.addEventListener('touchend', e => {
+            const d = e.changedTouches[0].clientX - tx;
+            if (Math.abs(d) > 50) { d < 0 ? go(cur + 1) : go(cur - 1); }
+        }, { passive: true });
+
+        build();
+        tick();
+    </script>
+</body>
+</html>

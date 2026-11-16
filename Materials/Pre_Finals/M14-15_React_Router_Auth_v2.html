@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>M14–15 — React Router & Protected Routes</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap"/>
+<style>
+:root{--bg:#060E1A;--panel:#0C1829;--panel2:#11223A;--line:#1E3350;--cy:#61DAFB;--or:#FB923C;--gr:#4ADE80;--rs:#F472B6;--tx:#F2F7FC;--tx2:#A9C1DB;--disp:'Bricolage Grotesque',Georgia,serif;--sans:'Instrument Sans',Helvetica,Arial,sans-serif;--mono:'JetBrains Mono',Menlo,Consolas,monospace;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#060E1A}}
+:root[data-theme="dark"]{--bg:#060E1A}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#canvas{width:1760px;height:990px;position:relative;background:radial-gradient(1000px 600px at 90% 0%,rgba(97,218,251,.09),transparent 60%),radial-gradient(800px 500px at 0% 100%,rgba(251,146,60,.08),transparent 60%),var(--bg);overflow:hidden}
+.slide{position:absolute;inset:0;padding:60px 96px 52px;display:none;flex-direction:column;animation:in .45s cubic-bezier(.2,.7,.2,1)}
+.slide.on{display:flex}
+@keyframes in{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.slide{animation:none}}
+.tag{font:600 24px var(--mono);color:var(--or);letter-spacing:.14em;text-transform:uppercase;display:flex;gap:16px;align-items:center}
+.tag i{font-style:normal;color:var(--tx2)}
+h1,h2{font-family:var(--disp);letter-spacing:-.02em;text-wrap:balance}
+h2{font-size:66px;font-weight:800;line-height:1.05;margin:10px 0 30px}
+h1{font-size:136px;font-weight:800;line-height:.95}
+h1 em{font-style:normal;color:var(--cy)}
+p,li{font-size:31px;line-height:1.5;color:var(--tx2);text-wrap:pretty}
+b{color:var(--tx);font-weight:600}
+.row{display:grid;gap:32px;flex:1;min-height:0}.c2{grid-template-columns:1fr 1fr}.c3{grid-template-columns:repeat(3,1fr)}.c-6040{grid-template-columns:1.4fr 1fr}
+.card{justify-content:center;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:34px 38px;display:flex;flex-direction:column;gap:14px;min-height:0}
+.card h3{font:700 37px var(--disp);color:var(--tx)}
+.card.hi{background:linear-gradient(160deg,rgba(97,218,251,.1),var(--panel) 60%);border-color:rgba(97,218,251,.4)}
+.card.wa{background:linear-gradient(160deg,rgba(251,146,60,.1),var(--panel) 60%);border-color:rgba(251,146,60,.4)}
+.num{font:800 96px var(--disp);color:var(--or);line-height:1}
+code,ic{font:500 .86em var(--mono);color:var(--cy);background:rgba(97,218,251,.09);padding:2px 10px;border-radius:8px}
+ul{list-style:none;display:flex;flex-direction:column;gap:12px}
+li::before{content:'→ ';color:var(--or);font-family:var(--mono)}
+.code{background:#040A14;border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.code header{display:flex;justify-content:space-between;align-items:center;padding:12px 22px;border-bottom:1px solid var(--line);font:500 22px var(--mono);color:var(--tx2)}
+.code pre,.code textarea{font:400 var(--fs,27px)/1.6 var(--mono);color:#D6E2F0;padding:22px 26px;white-space:pre;overflow:auto;flex:1;min-height:0;background:none;border:0;outline:0;resize:none;width:100%}
+.k{color:#F49AD0}.s{color:#F5B98A}.c{color:#5E7C99;font-style:italic}.f{color:var(--cy)}
+.btn{font:600 22px var(--sans);color:var(--tx);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:8px 22px;cursor:pointer;transition:.2s}
+.btn:hover,.btn:focus-visible{background:var(--cy);color:#04101D;border-color:var(--cy);outline:0}
+.btn.on{background:var(--or);color:#04101D;border-color:var(--or)}
+.opt{font:500 29px var(--sans);text-align:left;color:var(--tx);background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:16px 22px;cursor:pointer;transition:.2s;line-height:1.35}
+.opt:hover:not(:disabled){border-color:var(--cy)}
+.opt.ok{background:rgba(74,222,128,.14);border-color:var(--gr)}.opt.no{background:rgba(244,114,182,.14);border-color:var(--rs)}
+.why{font-size:27px;color:var(--gr);min-height:38px}
+.mcq{gap:16px;justify-content:flex-start}.mcq .q{font:700 36px/1.3 var(--disp);color:var(--tx)}.mcq .q span{color:var(--or);margin-right:10px}
+.lab{gap:16px;justify-content:flex-start}.lab h3 span{color:var(--or);margin-right:10px;font-family:var(--mono)}.lab p{font-size:28px;line-height:1.4}
+.lab .code{flex:1}.lab .code pre,.lab textarea{font-size:24px}
+.hero{justify-content:center;gap:34px}.hero p{max-width:1200px;font-size:36px}
+.pills{display:flex;gap:16px;flex-wrap:wrap}.pill{font:600 26px var(--mono);border:1px solid var(--line);border-radius:999px;padding:10px 24px;color:var(--cy);background:rgba(97,218,251,.06)}.pill.o{color:var(--or);background:rgba(251,146,60,.07)}
+svg text{font:600 22px var(--mono);fill:var(--tx)}
+.nd rect{fill:var(--panel2);stroke:var(--line);stroke-width:2;transition:.4s}.ed{stroke:var(--line);stroke-width:3;fill:none;transition:.4s}
+.drill .ed.d{stroke:var(--or);stroke-dasharray:12 8;animation:fl 1s linear infinite}.drill .nd.d rect{stroke:var(--or)}.drill .cast-only{opacity:0}
+.cast .ed.c{stroke:var(--cy);stroke-dasharray:12 8;animation:fl 1s linear infinite}.cast .nd.p rect,.cast .nd.u rect{stroke:var(--cy);fill:rgba(97,218,251,.12)}.cast .drill-only{opacity:0}.cast .nd.m{opacity:.4}
+.cast-only,.drill-only{transition:.4s}
+@keyframes fl{to{stroke-dashoffset:-20}}
+#lbl{position:fixed;right:22px;bottom:14px;font:500 17px var(--mono);color:var(--tx2);opacity:.7;pointer-events:none;z-index:9}
+#bar{position:fixed;top:0;left:0;height:4px;background:linear-gradient(90deg,var(--or),var(--cy));transition:width .3s;z-index:9}
+
+.demo{gap:18px}.dg{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.dg div{background:#040A14;border:1px solid var(--line);border-radius:16px;padding:16px 20px}.dg small{display:block;font:500 22px var(--mono);color:var(--tx2)}.dg b{font:800 84px/1.1 var(--disp);color:var(--cy)}.dg .rf b{color:var(--or)}.btns{display:flex;gap:16px;flex-wrap:wrap}.btns .btn{font-size:26px;padding:12px 28px}
+.c4{grid-template-columns:repeat(2,1fr);grid-template-rows:1fr 1fr}
+.c1{grid-template-columns:1fr}.inp{font:500 28px var(--mono);color:var(--tx);background:#040A14;border:1px solid var(--line);border-radius:14px;padding:16px 22px;outline:0;width:100%}.inp:focus{border-color:var(--cy)}
+.tight{padding-top:40px}.tight h2{font-size:46px;margin:6px 0 18px}.tight .mcq{gap:8px;padding:20px 26px;overflow:auto}.tight .mcq .q{font-size:29px}.tight .opt{font-size:24px;padding:8px 16px}.tight .why{font-size:22px;min-height:0}
+.mt{font:600 21px var(--mono);color:var(--cy);border:1px solid var(--line);border-radius:999px;padding:2px 12px;margin-right:12px;vertical-align:middle;font-style:normal}.mcq.m15{border-color:rgba(251,146,60,.45)}.mcq.m15 .mt{color:var(--or)}
+.map{display:grid;grid-template-columns:auto 1fr;gap:16px 26px;align-items:center}.map code{font-size:26px;white-space:nowrap}.map p{font-size:28px;line-height:1.35}.irl p{font-size:26px}.irl h3{font-size:32px}
+.bl{font:inherit;color:var(--cy);background:rgba(97,218,251,.1);border:0;border-bottom:2px solid var(--cy);border-radius:6px 6px 0 0;padding:0 6px;outline:0;text-align:center}.bl:focus{background:rgba(97,218,251,.2)}.bl.ok{color:var(--gr);border-color:var(--gr);background:rgba(74,222,128,.12)}.bl.no{color:var(--rs);border-color:var(--rs);background:rgba(244,114,182,.12)}
+.ans{color:var(--gr);background:rgba(74,222,128,.13);border-radius:6px;padding:0 6px;font-weight:600}.sc{font:600 22px var(--mono);color:var(--or)}.hb{display:flex;gap:12px;align-items:center}.lab h3 .pt{font:600 21px var(--mono);color:var(--cy);border:1px solid var(--line);border-radius:999px;padding:2px 14px;margin-left:14px;vertical-align:middle}
+</style></head><body>
+<div id="bar"></div><div id="stage"><div id="canvas"></div></div>
+<div id="lbl"></div>
+<script>
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const hl=s=>esc(s).replace(/(\/\/.*$)|('[^'\n]*'|`[^`]*`)|\b(const|let|return|function|export|import|from|if|throw|new|default|null)\b|\b(use[A-Z]\w*|createContext|Provider)\b/gm,(m,c,st,k,f)=>c?`<span class=c>${m}</span>`:st?`<span class=s>${m}</span>`:k?`<span class=k>${m}</span>`:`<span class=f>${m}</span>`);
+const code=(t,l,x='')=>`<div class="code" ${x}><header><span>${l}</span></header><pre>${hl(t)}</pre></div>`;
+const hd=(t,h)=>`<div class="tag">@@ <i>/</i> ${t}</div><h2>${h}</h2>`;
+
+const MCQ=[
+{q:'What does <Link> do that <a href> does not?',o:['Loads pages faster from the server','Swaps the page without a reload','Only works for external sites','Sends a POST request'],a:1,e:'Link updates the URL via the History API, so React keeps its state.'},
+{q:'useParams() gives you id for /products/42. What type is it?',o:['A number','A boolean','Always undefined','A string'],a:3,e:'URL params are always strings. Use Number(id) before doing math.'},
+{q:'A guest opens /dashboard. What should the guard render?',o:['A blank page','<Outlet />','<Navigate to="/login" replace />','A 200 OK response'],a:2,e:'Guests are redirected. replace stops Back from reopening the page.'},
+{q:'Why must the server still verify the JWT?',o:['Frontend checks can be bypassed directly','React cannot store tokens','Routers cannot read JWTs','Browsers block unsigned requests'],a:0,e:'Hidden buttons and route guards only shape the UI. The API is the real door.'}];
+
+const LABS=[
+['Build the router config','Complete the route tree: a layout at "/" with an index Home, a dynamic product page, and a 404.',
+`export const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <RootLayout />,
+    [[children]]: [
+      { [[index]]: true, element: <Home /> },
+      { path: 'products/[[:id]]', element: <ProductDetail /> },
+      { path: '*', element: <NotFound /> },
+    ],
+  },
+]);`,3,'Nested routes key · the default child of "/" · dynamic segment syntax'],
+['Read a param, then redirect','Read the URL param as a real number, then redirect so Back cannot return to this page.',
+`function ProductDetail() {
+  const { id } = [[useParams]]();
+  const productId = [[Number|parseInt]](id);
+  const navigate = useNavigate();
+
+  function buy() {
+    navigate('/thanks', { [[replace]]: true });
+  }
+  return <button onClick={buy}>Buy #{productId}</button>;
+}`,3,'Hook that reads :id · params are strings · overwrite the history entry'],
+['Challenge: guard the dashboard','Complete the guard: guests go to /login, members see the child routes.',
+`export function ProtectedRoute() {
+  const { [[isAuth]] } = useAuth();
+
+  if ([[!isAuth]]) {
+    return <[[Navigate]] to="/login" [[replace]] />;
+  }
+  return <[[Outlet]] />;
+}
+
+// wired in the router:
+// { element: <ProtectedRoute />, children: [ ... ] }`,5,'Boolean from context · guests fail this check · redirect component · history flag · slot for child routes']];
+const G=[[0,1],[2]];
+const N=x=>x;
+const tpl=(t,mode)=>t.split(/\[\[(.*?)\]\]/).map((seg,k)=>{if(k%2===0)return hl(seg);const alts=seg.split('|'),w=Math.max(alts[0].length,5)+2;return mode==='key'?`<span class="ans">${esc(alts[0])}</span>`:`<input class="bl" data-a="${esc(seg)}" style="width:${w}ch" spellcheck="false" autocomplete="off" aria-label="blank"/>`}).join('');
+const labCard=(l,i)=>`<div class="card lab"><h3><span>${String(i+1).padStart(2,'0')}</span>${l[0]}<span class="pt">${l[3]} pts</span></h3><p>${l[1]}</p><div class="code"><header><span data-sc class="sc">0 / ${l[3]} pts</span><span class="hb"><button class="btn" data-chk>Check</button><button class="btn" data-ans>Show answers</button></span></header><pre>${tpl(l[2])}</pre></div><p style="font-size:23px;color:var(--tx2)">Hint: ${l[4]}</p></div>`;
+const bdi=(k,t)=>`<div class="card"><h3 style="color:var(--or)">${k}</h3><p>${t}</p></div>`;
+const col=x=>`<div style="display:flex;flex-direction:column;gap:20px">${x}</div>`;
+
+const S=[
+`<div class="slide hero"><div class="tag">Web Systems <i>/</i> Modules 14–15</div><h1>Routing &amp;<br><em>Protected Access</em></h1><p>Turn one screen into many with <ic>React Router v6</ic>, then lock the private ones behind a login with JWT, <ic>AuthContext</ic> and a <ic>ProtectedRoute</ic> guard.</p><div class="pills"><span class="pill">createBrowserRouter</span><span class="pill">Outlet</span><span class="pill">useParams</span><span class="pill">useNavigate</span><span class="pill o">AuthContext</span><span class="pill o">ProtectedRoute</span></div></div>`,
+`<div class="slide">${hd('Where we left off','One screen, then many, then guarded')}<div class="row c3"><div class="card"><h3>M13 gave us</h3><ul><li>Fast components: refs, hooks, memo</li><li>But one screen and one URL, forever</li></ul></div><div class="card hi"><h3>M14 adds routing</h3><ul><li>URLs map to components</li><li>Shared layout stays mounted</li><li>Back, forward and bookmarks work</li></ul></div><div class="card wa"><h3>M15 adds guards</h3><ul><li>Anyone can type <code>/dashboard</code></li><li>Auth state decides who gets in</li><li>Guests are redirected to login</li></ul></div></div><p style="margin-top:26px">A single page app never reloads its HTML. The router <b>fakes multiple pages</b> by swapping components, and the guard decides <b>which pages are allowed</b>.</p></div>`,
+`<div class="slide">${hd('Core concept','&lt;Link&gt; vs a full page reload')}<div class="row c-6040"><div class="card demo"><div class="tag" style="font-size:22px">Live demo · type, then navigate</div><input id="dinp" class="inp" placeholder="Type something here..."/><div class="dg"><div><small>page loads</small><b id="dl">1</b></div><div class="rf"><small>current page</small><b id="dp" style="font-size:54px;line-height:1.5">/home</b></div><div><small>typing kept?</small><b id="dk" style="font-size:54px;line-height:1.5">yes</b></div></div><div class="btns"><button class="btn" data-n="link">&lt;Link to="/about"&gt;</button><button class="btn on" data-n="a">&lt;a href="/about"&gt;</button></div><p id="dm">Type in the box, then try both buttons.</p></div>${col(`<div class="card hi"><h3>&lt;Link&gt; (SPA)</h3><p>Click intercepted, URL updated via the History API, component swapped. State, scroll and layout survive.</p></div><div class="card wa"><h3>&lt;a href&gt; (reload)</h3><p>Server sends a new document, React reboots, and all in-memory state is gone.</p></div>`)}</div></div>`,
+`<div class="slide">${hd('The setup','createBrowserRouter: what, how, why')}<div class="row c-6040">${code(`import {\n  createBrowserRouter,\n  RouterProvider,\n} from 'react-router-dom';\n\nconst router = createBrowserRouter([\n  {\n    path: '/',\n    element: <RootLayout />,\n    children: [\n      { index: true, element: <Home /> },\n      { path: 'products/:id', element: <ProductDetail /> },\n      { path: '*', element: <NotFound /> },\n    ],\n  },\n]);\n\nexport default function App() {\n  return <RouterProvider router={router} />;\n}`,'main.jsx','style="--fs:22px"')}${col(bdi('What','A function that builds a <b>route tree</b> mapping URL paths to components.')+bdi('How','Pass route objects (<code>path</code>, <code>element</code>, <code>children</code>) and render once in <code>RouterProvider</code>.')+'<div class="card wa"><h3>Nested = shared layout</h3><p>Children render inside the parent\u2019s <code>&lt;Outlet /&gt;</code>. Add <code>path: \'*\'</code> as the 404 catch-all.</p></div>')}</div></div>`,
+`<div class="slide">${hd('Shared layouts','&lt;Outlet /&gt;: the placeholder that swaps')}<div class="row c-6040">${code(`function RootLayout() {\n  return (\n    <>\n      <nav>\n        <NavLink to="/">Home</NavLink>\n        <NavLink to="/products/99">Product</NavLink>\n      </nav>\n      <main>\n        <Outlet />\n      </main>\n    </>\n  );\n}`,'RootLayout.jsx')}${col(`<div class="card hi"><h3>RootLayout stays mounted</h3><ul><li><code>/</code> renders <code>&lt;Home /&gt;</code></li><li><code>/products/5</code> renders <code>&lt;ProductDetail /&gt;</code></li><li><code>/xyz</code> renders <code>&lt;NotFound /&gt;</code></li></ul></div>`+bdi('Why','Navbar, sidebar and footer live in <b>one place</b>. Only the content in the Outlet swaps.'))}</div></div>`,
+`<div class="slide">${hd('Reading and moving','useParams, useNavigate and NavLink')}<div class="row c3"><div class="card"><h3>useParams</h3><p>Reads <code>:id</code> from the URL. Always a <b>string</b>.</p>${code(`const { id } = useParams();\n// /products/42\n// id === "42" (string)\nNumber(id); // 42`,'read')}</div><div class="card hi"><h3>useNavigate</h3><p>Redirects from code. <code>replace</code> swaps the history entry.</p>${code(`const go = useNavigate();\ngo('/dashboard', {\n  replace: true,\n});`,'redirect')}</div><div class="card wa"><h3>NavLink</h3><p>Like Link, but hands you <code>isActive</code> for styling.</p>${code(`<NavLink\n  to="/profile"\n  className={({ isActive }) =>\n    isActive ? 'on' : ''}\n>Profile</NavLink>`,'active style')}</div></div></div>`,
+`<div class="slide">${hd('Watch out','Routing pitfalls and fixes')}<div class="row c2" style="grid-template-rows:1fr 1fr"><div class="card"><h3>❌ &lt;a href&gt; for internal links</h3><p>Triggers a full reload and wipes state. <b>Fix:</b> use <code>Link</code> or <code>NavLink</code>.</p></div><div class="card"><h3>❌ No wildcard route</h3><p>Mistyped URLs render nothing. <b>Fix:</b> end with <code>path: '*'</code> and a friendly 404.</p></div><div class="card"><h3>❌ Params treated as numbers</h3><p><code>id === 42</code> fails because id is <code>"42"</code>. <b>Fix:</b> <code>Number(id)</code>.</p></div><div class="card"><h3>❌ Layout without Outlet</h3><p>Children match but nothing shows. <b>Fix:</b> every layout with children needs one <code>&lt;Outlet /&gt;</code>.</p></div></div></div>`,
+`<div class="slide">${hd('In real life','Routing is a hotel, not a pile of buildings')}<div class="row c-6040"><div class="card hi"><h3>The hotel analogy</h3><div class="map"><code>&lt;Link&gt;</code><p>An elevator inside the same hotel</p><code>&lt;a href&gt;</code><p>Demolish the hotel and rebuild it</p><code>&lt;Outlet /&gt;</code><p>The floor the elevator opens onto</p><code>useParams</code><p>The room number on the door</p><code>path: '*'</code><p>Front desk for lost guests</p><code>Layout</code><p>Lobby and elevators never disappear</p></div></div>${col(`<div class="card irl"><h3>E-commerce · /products/:id</h3><p>One product template serves thousands of items, and a shared URL opens the same product.</p></div><div class="card irl"><h3>Email client · shared layout</h3><p>Sidebar and header stay put while /inbox and /sent swap only the message list.</p></div><div class="card irl"><h3>Social app · useNavigate</h3><p>After you post or sign up, code redirects you to your feed or profile.</p></div>`)}</div></div>`,
+`<div class="slide">${hd('Module 15 · access guards','JWT is the boarding pass, the guard is the gate')}<div class="row c-6040"><div class="card demo"><div class="tag" style="font-size:22px">Live demo · the guard</div><div class="dg"><div><small>isAuth</small><b id="ga" style="font-size:54px;line-height:1.5">false</b></div><div class="rf"><small>URL</small><b id="gu" style="font-size:54px;line-height:1.5">/</b></div><div><small>renders</small><b id="gr" style="font-size:54px;line-height:1.5">none</b></div></div><div class="btns"><button class="btn" data-a="t">Log in</button><button class="btn on" data-a="v">Visit /dashboard</button></div><p id="gm">Try visiting first, then log in and try again.</p></div>${col(bdi('JWT','A signed session token issued by the server when login succeeds.')+bdi('AuthContext','Holds the token, <code>isAuth</code>, <code>login</code> and <code>logout</code> for the whole tree.')+'<div class="card wa"><h3>ProtectedRoute</h3><p>Checks <code>isAuth</code>. True renders the <code>Outlet</code>. False sends the user to login.</p></div>')}</div></div>`,
+`<div class="slide">${hd('Code','AuthContext and AuthProvider')}<div class="row c-6040">${code(`const AuthContext = createContext(null);\n\nexport function AuthProvider({ children }) {\n  const [token, setToken] = useState(\n    () => localStorage.getItem('token')\n  );\n  const login = (t) => {\n    localStorage.setItem('token', t);\n    setToken(t);\n  };\n  const logout = () => {\n    localStorage.removeItem('token');\n    setToken(null);\n  };\n  const value = { token, isAuth: !!token, login, logout };\n  return (\n    <AuthContext.Provider value={value}>\n      {children}\n    </AuthContext.Provider>\n  );\n}\n\nexport const useAuth = () => useContext(AuthContext);`,'AuthContext.jsx','style="--fs:21px"')}${col(bdi('Lazy init','The token is read from <code>localStorage</code> once, so a refresh keeps you logged in.')+bdi('isAuth','<code>!!token</code> turns the string or null into a clean boolean.')+'<div class="card wa"><h3>Reuses M12</h3><p>Same Context + custom hook pattern you already know.</p></div>')}</div></div>`,
+`<div class="slide">${hd('Code','The ProtectedRoute guard')}<div class="row c-6040">${code(`import { Navigate, Outlet } from 'react-router-dom';\nimport { useAuth } from '../context/AuthContext';\n\nexport function ProtectedRoute() {\n  const { isAuth } = useAuth();\n\n  if (!isAuth) {\n    return <Navigate to="/login" replace />;\n  }\n  return <Outlet />;\n}`,'ProtectedRoute.jsx')}${col(bdi('Gate closed','Not authenticated: render <code>Navigate</code> to <code>/login</code>.')+bdi('Gate open','Authenticated: render <code>Outlet</code> so the matched child appears.')+'<div class="card wa"><h3>Why replace</h3><p>It overwrites history so Back after logout cannot reopen a private page.</p></div>')}</div></div>`,
+`<div class="slide">${hd('Code','Wiring protected routes into the router')}<div class="row c-6040">${code(`import { createBrowserRouter } from 'react-router-dom';\n\nexport const router = createBrowserRouter([\n  { path: '/login', element: <Login /> },\n  {\n    element: <ProtectedRoute />,\n    children: [\n      { path: '/dashboard', element: <Dashboard /> },\n      { path: '/settings', element: <Settings /> },\n    ],\n  },\n]);`,'router.jsx','style="--fs:23px"')}${col(bdi('Layout route','A route with no <code>path</code> but an <code>element</code> only wraps its children.')+bdi('Public vs private','<code>/login</code> sits outside the guard. Everything inside <code>children</code> needs <code>isAuth</code>.'))}</div></div>`,
+`<div class="slide">${hd('Security traps','Frontend guards are not real security')}<div class="row c2" style="grid-template-rows:1fr 1fr"><div class="card"><h3>❌ Hiding buttons only</h3><p><code>{user.isAdmin &amp;&amp; &lt;Delete /&gt;}</code> hides UI, but anyone can still send the request directly.</p></div><div class="card hi"><h3>✅ Verify JWT on the server</h3><p>Every sensitive endpoint checks the token. The frontend guard is for experience, the server is for security.</p></div><div class="card"><h3>⚠ localStorage tokens</h3><p>Readable by any injected script (XSS). Simple, but a known trade-off.</p></div><div class="card hi"><h3>✅ httpOnly cookies</h3><p>JavaScript cannot read them, so XSS cannot steal the token.</p></div></div></div>`,
+`<div class="slide">${hd('Production pattern','Role-based protected routes')}<div class="row c-6040">${code(`export function RoleRoute({ allowedRoles }) {\n  const { user, isAuth } = useAuth();\n\n  if (!isAuth) {\n    return <Navigate to="/login" replace />;\n  }\n  if (!allowedRoles.includes(user?.role)) {\n    return <Navigate to="/forbidden" replace />;\n  }\n  return <Outlet />;\n}`,'RoleRoute.jsx','style="--fs:24px"')}${col(bdi('Two checks','First <b>who are you</b> (auth), then <b>are you allowed</b> (role).')+'<div class="card wa"><h3>Usage</h3><p>Wrap admin pages: <code>element: &lt;RoleRoute allowedRoles={[\'admin\']} /&gt;</code></p></div>')}</div></div>`,
+`<div class="slide">${hd('In real life','Auth is airport security')}<div class="row c-6040"><div class="card hi"><h3>The airport analogy</h3><div class="map"><code>Login form</code><p>Check-in desk</p><code>JWT</code><p>Your boarding pass</p><code>ProtectedRoute</code><p>The security gate</p><code>Navigate replace</code><p>Ticket stub shredded, no walking back</p><code>Server JWT check</code><p>The gate agent at the plane door</p><code>RoleRoute</code><p>The business-class lounge</p></div></div>${col(`<div class="card irl"><h3>Banking app</h3><p>/accounts sits behind login. When your token expires, you are sent back to sign in.</p></div><div class="card irl"><h3>Admin panel · RoleRoute</h3><p>Staff see /admin. A customer who guesses the URL lands on /forbidden.</p></div><div class="card irl"><h3>Private workspaces</h3><p>Boards and docs (Notion or Trello style) stay hidden without a valid session.</p></div>`)}</div></div>`,
+`<div class="slide hero"><div class="tag">Modules 14–15 <i>/</i> Assessment</div><h1 style="font-size:120px">Quiz <em>time</em></h1><div class="pills"><span class="pill o">4 Multiple Choice · 4 pts</span><span class="pill">3 Fill-in-the-blank · 11 pts</span><span class="pill o">15 pts total</span></div><p>MCQs are checked instantly. Blanks are checked with the Check button.</p></div>`,
+`<div class="slide tight">${hd('Multiple choice','Questions 1–4 · 1 pt each')}<div class="row c2" style="grid-template-rows:repeat(2,minmax(0,1fr))">${MCQ.map((m,i)=>`<div class="card mcq ${i>1?'m15':''}" data-a="${m.a}" data-i="${i}"><div class="q"><span>${i+1}.</span><i class="mt">${i>1?'M15':'M14'}</i>${esc(m.q)}</div>${m.o.map((o,j)=>`<button class="opt" data-j="${j}">${esc(o)}</button>`).join('')}<div class="why"></div></div>`).join('')}</div></div>`,
+...G.map(g=>`<div class="slide">${hd('Fill in the blanks',g.length>1?'Problems 1–2 · 3 pts each':'Problem 3 · challenge · 5 pts')}<div class="row ${g.length>1?'c2':'c1'}">${g.map(i=>labCard(LABS[i],i)).join('')}</div></div>`),
+`<div class="slide">${hd('Answer key','Multiple choice')}<div class="row c2" style="grid-template-rows:repeat(2,minmax(0,1fr))">${MCQ.map((m,i)=>`<div class="card"><h3><span style="color:var(--or);font-family:var(--mono)">${i+1}.</span> ${'ABCD'[m.a]}) ${esc(m.o[m.a])}</h3><p>${esc(m.e)}</p></div>`).join('')}</div></div>`,
+...G.map(g=>`<div class="slide">${hd('Answer key',g.length>1?'Coding problems 1–2':'Coding problem 3')}<div class="row ${g.length>1?'c2':'c1'}">${g.map(i=>`<div class="card lab"><h3><span>${String(i+1).padStart(2,'0')}</span>${LABS[i][0]}<span class="pt">${LABS[i][3]} pts</span></h3><div class="code" style="flex:1"><header><span>green = the blank answer</span></header><pre>${tpl(LABS[i][2],'key')}</pre></div></div>`).join('')}</div></div>`),
+`<div class="slide hero"><div class="tag">Modules 14–15 <i>/</i> Complete</div><h1 style="font-size:104px">Your routes are live,<br><em>and now guarded.</em></h1><div class="pills"><span class="pill o">Router ✓</span><span class="pill o">Outlet ✓</span><span class="pill o">useParams ✓</span><span class="pill o">AuthContext ✓</span><span class="pill o">ProtectedRoute ✓</span></div><div class="card wa" style="max-width:1200px"><h3>Next · M16 Connecting React to Express</h3><p>Vite env vars, a centralized Axios client, Bearer token injection and 401 auto-logout.</p></div></div>`].map((h,i)=>h.replace('@@',String(i+1).padStart(2,'0')));
+
+const cv=document.getElementById('canvas');cv.innerHTML=S.join('');
+const sl=[...cv.children];sl.forEach((s,i)=>s.dataset.screenLabel=String(i+1).padStart(2,'0'));
+let cur=0;try{cur=Math.min(sl.length-1,+localStorage.getItem('m1415')||0)}catch(e){}
+function show(n){cur=Math.max(0,Math.min(sl.length-1,n));sl.forEach((s,i)=>s.classList.toggle('on',i===cur));document.getElementById('lbl').textContent=String(cur+1).padStart(2,'0')+' / '+String(sl.length).padStart(2,'0')+(cur===0?'  ·  right-click → next':'');document.getElementById('bar').style.width=(cur+1)/sl.length*100+'%';try{localStorage.setItem('m1415',cur)}catch(e){}}
+function fit(){const k=Math.min(innerWidth/1760,innerHeight/990);cv.style.zoom=k;cv.style.width=innerWidth/k+'px';cv.style.height=innerHeight/k+'px'}
+addEventListener('resize',fit);fit();show(cur);
+addEventListener('contextmenu',e=>{if(e.target.closest('textarea,input'))return;e.preventDefault();e.shiftKey?show(cur-1):show(cur+1)});
+addEventListener('mouseup',e=>{if(e.button===3){e.preventDefault();show(cur-1)}else if(e.button===4){e.preventDefault();show(cur+1)}});
+let tx=0;addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});addEventListener('touchend',e=>{const d=e.changedTouches[0].clientX-tx;if(Math.abs(d)>70&&!e.target.closest('textarea,pre'))show(cur+(d<0?1:-1))},{passive:true});
+addEventListener('keydown',e=>{if(/TEXTAREA|INPUT/.test(document.activeElement.tagName))return;if(['ArrowRight',' ','PageDown'].includes(e.key)){e.preventDefault();show(cur+1)}else if(['ArrowLeft','PageUp'].includes(e.key))show(cur-1);else if(e.key==='Home')show(0);else if(e.key==='End')show(sl.length-1)});
+// demos
+let pg2=0,ld=1,gA=false;const $=id=>document.getElementById(id);
+cv.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>{const i=$('dinp');if(b.dataset.n==='link'){pg2=1-pg2;$('dp').textContent=pg2?'/about':'/home';$('dk').textContent='yes';$('dm').innerHTML='<b>URL swapped via the History API.</b> Your typing survived.'}else{ld++;i.value='';$('dl').textContent=ld;$('dk').textContent='no';$('dm').innerHTML='<b>Full reload.</b> React re-booted and your typing is gone.'}});
+cv.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{if(b.dataset.a==='t'){gA=!gA;$('ga').textContent=gA;b.textContent=gA?'Log out':'Log in';$('gm').innerHTML='Now click <b>Visit /dashboard</b>.'}else if(gA){$('gu').textContent='/dashboard';$('gr').textContent='Dashboard';$('gm').innerHTML='<b>isAuth is true</b>, so the guard renders its Outlet.'}else{$('gu').textContent='/login';$('gr').textContent='Login';$('gm').innerHTML='<b>isAuth is false</b>, so the guard renders Navigate to /login with replace. Back will not reopen /dashboard.'}});
+// MCQ
+cv.querySelectorAll('.mcq').forEach(c=>{const i=+c.dataset.i;c.querySelectorAll('.opt').forEach(o=>o.onclick=()=>{const a=+c.dataset.a,j=+o.dataset.j;c.querySelectorAll('.opt').forEach(x=>{x.disabled=true;if(+x.dataset.j===a)x.classList.add('ok')});if(j!==a)o.classList.add('no');const w=c.querySelector('.why');w.style.color=j===a?'var(--gr)':'var(--rs)';w.textContent=(j===a?'Correct. ':'Not quite. ')+MCQ[i].e})});
+// labs
+const nz=x=>x.trim().replace(/\s+/g,' ').replace(/"/g,"'").replace(/;$/,'');
+cv.querySelectorAll('[data-chk]').forEach(b=>b.onclick=()=>{const c=b.closest('.code'),bl=c.querySelectorAll('.bl');let ok=0;bl.forEach(i=>{const g=i.dataset.a.split('|').some(x=>nz(x)===nz(i.value));i.classList.toggle('ok',g);i.classList.toggle('no',!g);if(g)ok++});c.querySelector('[data-sc]').textContent=ok+' / '+bl.length+' pts'});
+cv.querySelectorAll('[data-ans]').forEach(b=>b.onclick=()=>{const c=b.closest('.code');c.querySelectorAll('.bl').forEach(i=>{i.value=i.dataset.a.split('|')[0];i.classList.add('ok');i.classList.remove('no')});c.querySelector('[data-sc]').textContent='answers shown'});
+addEventListener('input',e=>{if(e.target.classList&&e.target.classList.contains('bl'))e.target.classList.remove('ok','no')});
+</script></body></html>

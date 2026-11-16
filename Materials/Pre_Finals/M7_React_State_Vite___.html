@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>M7 — React State & Vite</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07111F;
+  --surface:#0C1A2E;
+  --surface2:#132236;
+  --border:#1A3050;
+  --border2:#224070;
+  --accent:#61DAFB;
+  --accent2:#4ADE80;
+  --accent3:#FB923C;
+  --accent4:#C084FC;
+  --accent5:#F472B6;
+  --text:#F0F6FC;
+  --text2:#7A9EBF;
+  --text3:#C4D9EF;
+  --card:#0B1828;
+  --card2:#0F1F35;
+  --mono:'Cascadia Code','Fira Code','Consolas',monospace;
+  --sans:'Segoe UI',system-ui,sans-serif;
+  --r:10px;--r2:14px;
+  --tr:350ms cubic-bezier(.4,0,.2,1);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans)}
+#bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent4));transition:width .3s;z-index:100;border-radius:0 2px 2px 0}
+#ctr{position:fixed;top:10px;right:16px;font-size:16px;color:var(--text2);z-index:100;font-variant-numeric:tabular-nums;letter-spacing:.5px;font-family:var(--mono)}
+#deck{width:100%;height:100vh;position:relative;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;padding:48px 62px 32px;opacity:0;pointer-events:none;transform:translateX(48px);transition:opacity var(--tr),transform var(--tr);overflow-y:auto}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.out-l{opacity:0;transform:translateX(-48px)}
+.slide.out-r{opacity:0;transform:translateX(48px)}
+@media(prefers-reduced-motion:reduce){.slide{transition:opacity .15s;transform:none!important}}
+.eyebrow{font-size:16px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:9px;display:flex;align-items:center;gap:10px}
+.eyebrow::before{content:'';width:22px;height:2px;background:var(--accent);border-radius:1px;display:inline-block}
+.slide-title{font-size:clamp(27px,3.2vw,44px);font-weight:800;line-height:1.1;color:var(--text);margin-bottom:5px;letter-spacing:-.5px}
+.rule{height:1px;background:linear-gradient(90deg,var(--border2),transparent);border:none;margin-bottom:20px}
+.content{flex:1;display:flex;flex-direction:column;gap:13px;min-height:0}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:13px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.g2>*,.g3>*{min-width:0}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;flex:1;min-height:0}
+.split>*{min-width:0;display:flex;flex-direction:column;gap:10px}
+.col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.flex1{flex:1}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:15px 17px}
+.card h3{font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin-bottom:9px}
+.card p,.card li{font-size:16px;color:var(--text3);line-height:1.65}
+.card ul{padding-left:16px}.card li{margin-bottom:4px}
+/* CODE */
+.cw{position:relative;background:#040C18;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;flex:1;display:flex;flex-direction:column}
+.cl{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:#080F1C;border-bottom:1px solid var(--border);font-size:16px;color:var(--text2);font-family:var(--mono);flex-shrink:0}
+.cl span{color:var(--accent3)}
+.cw pre{padding:11px 13px;overflow:auto;font-family:var(--mono);font-size:16px;line-height:1.74;white-space:pre;flex:1;max-height:350px}
+.cpbtn{padding:3px 10px;font-size:16px;font-family:var(--sans);background:var(--surface2);border:1px solid var(--border2);color:var(--text2);border-radius:4px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.cpbtn:hover{background:var(--accent);color:#07111F;border-color:var(--accent)}
+.cpbtn.ok{background:var(--accent2);color:#07111F;border-color:var(--accent2)}
+/* syntax */
+.k{color:#F472B6}.s{color:#86EFAC}.f{color:#C4B5FD}.n{color:#7DD3FC}
+.cm{color:#2E4A65;font-style:italic}.t{color:#FCA5A5}.b{color:#FCD34D}
+/* BREAKDOWN */
+.bd{display:flex;flex-direction:column;gap:7px}
+.bdi{display:flex;gap:10px;align-items:flex-start;padding:9px 11px;background:var(--surface);border:1px solid var(--border);border-radius:6px;border-left:3px solid var(--accent)}
+.bdi.g{border-left-color:var(--accent2)}.bdi.o{border-left-color:var(--accent3)}
+.bdi.p{border-left-color:var(--accent4)}.bdi.r{border-left-color:var(--accent5)}
+.bdl{font-family:var(--mono);font-size:16px;color:var(--accent);background:#040C18;padding:2px 7px;border-radius:3px;white-space:nowrap;min-width:fit-content;align-self:flex-start;margin-top:1px;flex-shrink:0}
+.bdt{font-size:16px;color:var(--text3);line-height:1.55}.bdt strong{color:var(--text);font-weight:600}
+/* FLOW */
+.flow{display:flex;align-items:center;flex-wrap:wrap;gap:0}
+.fb{background:var(--card2);border:1px solid var(--border2);border-radius:6px;padding:7px 13px;font-size:16px;color:var(--text3);font-weight:500}
+.fb.hi{border-color:var(--accent);color:var(--accent)}
+.fa{color:var(--accent);padding:0 7px;font-size:17px}
+/* STEP */
+.step{display:flex;gap:12px;align-items:flex-start;padding:11px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--r)}
+.snum{width:28px;height:28px;border-radius:50%;background:var(--accent);color:#07111F;font-weight:900;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.sbody h4{font-size:16px;font-weight:700;color:var(--text);margin-bottom:3px}
+.sbody p{font-size:16px;color:var(--text2);line-height:1.5}
+/* TABLE */
+table{width:100%;border-collapse:collapse;font-size:16px}
+th{background:var(--surface2);color:var(--accent);padding:8px 12px;text-align:left;font-weight:700;font-size:16px;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text3);line-height:1.5;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.013)}
+/* PILLS */
+.pill{display:inline-block;padding:4px 12px;border-radius:20px;font-size:16px;font-weight:600;border:1px solid var(--border);color:var(--text2);margin:3px}
+.pill.a{border-color:var(--accent);color:var(--accent);background:rgba(97,218,251,.08)}
+.pill.g{border-color:var(--accent2);color:var(--accent2);background:rgba(74,222,128,.08)}
+.pill.o{border-color:var(--accent3);color:var(--accent3);background:rgba(251,146,60,.08)}
+/* HERO */
+.hero-bg{background:radial-gradient(ellipse at 12% 60%,rgba(97,218,251,.1) 0%,transparent 52%),radial-gradient(ellipse at 85% 18%,rgba(192,132,252,.07) 0%,transparent 48%),var(--bg)}
+.hero-title{font-size:clamp(48px,5.8vw,76px);font-weight:900;line-height:1.02;letter-spacing:-1.5px}
+.h1c{color:var(--text)}.h2c{color:var(--accent)}
+.hero-sub{font-size:18px;color:var(--text2);max-width:530px;line-height:1.65;margin:14px 0 20px}
+.dots{position:absolute;inset:0;background-image:radial-gradient(rgba(97,218,251,.045) 1px,transparent 1px);background-size:30px 30px;pointer-events:none}
+/* BEFORE/AFTER */
+.ba{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;flex:1}
+.ba-box{border-radius:var(--r);padding:14px 16px;border:1px solid var(--border)}
+.ba-box.bad{background:rgba(244,114,182,.05);border-color:rgba(244,114,182,.2)}
+.ba-box.good{background:rgba(97,218,251,.05);border-color:rgba(97,218,251,.2)}
+.ba-box h4{font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+.ba-box.bad h4{color:var(--accent5)}.ba-box.good h4{color:var(--accent)}
+.ba-box p,.ba-box li{font-size:16px;color:var(--text3);line-height:1.65}
+.ba-box ul{padding-left:16px}
+/* QUOTE */
+.q-card{background:linear-gradient(135deg,var(--card),var(--surface));border-left:3px solid var(--accent);border-radius:0 var(--r) var(--r) 0;padding:14px 18px;margin-bottom:11px}
+.q-text{font-size:16px;color:var(--text3);line-height:1.7;font-style:italic}
+.q-src{font-size:16px;color:var(--accent);margin-top:7px;font-style:normal;font-weight:700;letter-spacing:.5px}
+/* RECAP */
+.rc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.rc{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:15px;text-align:center}
+.rc .ico{font-size:26px;margin-bottom:7px}
+.rc h4{font-size:16px;font-weight:700;color:var(--accent);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.rc p{font-size:16px;color:var(--text2);line-height:1.55}
+/* MC */
+.mc-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;flex:1;min-height:0}
+.mc-item{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:13px 15px;display:flex;flex-direction:column;min-height:0}
+.mc-q{font-size:16px;font-weight:600;color:var(--text);margin-bottom:9px;line-height:1.45}
+.qn{color:var(--accent);margin-right:6px;font-weight:800}
+.mc-opts{display:grid;grid-template-columns:minmax(0,1fr);gap:5px;flex:1}
+.mc-opt{padding:7px 10px;border-radius:5px;border:1px solid var(--border);font-size:16px;color:var(--text3);cursor:pointer;transition:all .15s;background:var(--surface2);line-height:1.35}
+.mc-opt:hover{border-color:var(--accent);color:var(--text)}
+.mc-opt.sel{border-color:var(--accent);background:rgba(97,218,251,.1);color:var(--accent)}
+.hard-card{background:var(--card);border:1px solid var(--border2);border-radius:var(--r2);padding:18px 20px;flex:1;display:flex;flex-direction:column;gap:12px;min-height:0}
+.hard-card h3{font-size:16px;font-weight:700;color:var(--accent);margin-bottom:2px}
+.hard-card .hint{font-size:16px;color:var(--text2);background:rgba(97,218,251,.08);border:1px solid rgba(97,218,251,.2);border-radius:6px;padding:8px 12px;line-height:1.5}
+.hard-card .hint strong{color:var(--accent)}
+.hard-card textarea{width:100%;flex:1;min-height:90px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;font-family:var(--mono);outline:none;resize:vertical;line-height:1.55}
+.hard-card textarea:focus{border-color:var(--accent)}
+/* GTO */
+.gto-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;flex:1;min-height:0}
+.gto-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;display:flex;flex-direction:column;gap:8px;min-height:0}
+.gto-qlabel{font-size:16px;font-weight:700;color:var(--text)}
+.gto-num{color:var(--accent4);font-weight:800;margin-right:6px}
+.gto-pre{background:#040C18;border:1px solid var(--border);border-radius:5px;padding:8px 10px;font-family:var(--mono);font-size:16px;color:var(--text3);white-space:pre;overflow-x:auto;flex:1;margin:0;min-height:50px}
+.gto-alabel{font-size:16px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.gto-ta{width:100%;min-height:48px;padding:6px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:16px;font-family:var(--mono);outline:none;resize:none;line-height:1.5;transition:border .2s}
+.gto-ta:focus{border-color:var(--accent4)}
+/* ANS */
+.ans-block{border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;flex:1}
+.ans-row{display:flex;gap:10px;padding:8px 13px;border-bottom:1px solid var(--border);font-size:16px;align-items:flex-start}
+.ans-row:last-child{border:none}
+.ans-row:nth-child(even){background:rgba(255,255,255,.012)}
+.anum{font-weight:800;min-width:24px;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:16px;flex-shrink:0;margin-top:1px}
+.anum.b{color:var(--accent)}.anum.p{color:var(--accent4)}
+.abody{color:var(--text3);line-height:1.5;flex:1;min-width:0}
+.abody strong{color:var(--accent2)}
+/* MODAL */
+#modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center}
+#modal.open{display:flex}
+.mbox{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:26px 30px;min-width:320px}
+.mbox h3{font-size:16px;font-weight:700;color:var(--accent);margin-bottom:14px}
+.shr{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:16px;color:var(--text3)}
+.shr:last-of-type{border:none}
+.shr kbd{background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:2px 7px;font-family:var(--mono);font-size:16px;color:var(--text)}
+.mcl{margin-top:16px;width:100%;padding:9px;background:var(--accent);color:#07111F;border:none;border-radius:6px;cursor:pointer;font-size:16px;font-weight:700;font-family:var(--sans)}
+#hint{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);font-size:16px;color:var(--text2);letter-spacing:.5px;pointer-events:none;opacity:.4;font-family:var(--mono)}
+ic{background:var(--surface2);padding:1px 6px;border-radius:4px;font-family:var(--mono);font-size:16px;color:var(--accent4);border:1px solid var(--border)}
+small{font-size:16px}button,input,textarea,select{font-size:16px}
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<div id="ctr"></div>
+<div id="deck"></div>
+<div id="hint">right-click or → to advance &nbsp;·&nbsp; ? for shortcuts</div>
+<div id="modal">
+  <div class="mbox">
+    <h3>⌨ Keyboard Shortcuts</h3>
+    <div class="shr"><span>Next</span><span><kbd>→</kbd> or <kbd>Right-click</kbd></span></div>
+    <div class="shr"><span>Prev</span><span><kbd>←</kbd></span></div>
+    <div class="shr"><span>First / Last</span><span><kbd>Home</kbd> / <kbd>End</kbd></span></div>
+    <div class="shr"><span>Shortcuts</span><span><kbd>?</kbd></span></div>
+    <div class="shr"><span>Close</span><span><kbd>Esc</kbd></span></div>
+    <button class="mcl" onclick="document.getElementById('modal').classList.remove('open')">Close</button>
+  </div>
+</div>
+<script>
+// ── TOKENIZER ──────────────────────────────────────────────────────────
+function hl(raw){
+  const KW=/^(const|let|var|function|return|async|await|try|catch|throw|new|class|extends|if|else|for|while|import|export|default|from|of|in|true|false|null|undefined|void)\b/;
+  const TY=/^(React|ReactDOM|useState|useEffect|console|document|JSON|Array|Object|Math|Promise|Error)\b/;
+  const NUM=/^\b\d+(\.\d+)?\b/;
+  function e(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+  let i=0,o='';
+  while(i<raw.length){
+    if(raw[i]==='/'&&raw[i+1]==='/'){const end=raw.indexOf('\n',i);const ch=end<0?raw.slice(i):raw.slice(i,end);o+='<span class="cm">'+e(ch)+'</span>';i+=ch.length;continue;}
+    if(raw[i]==='`'){let j=i+1;while(j<raw.length&&raw[j]!=='`'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    if(raw[i]==="'"){let j=i+1;while(j<raw.length&&raw[j]!=="'"&&raw[j]!=='\n'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    if(raw[i]==='"'){let j=i+1;while(j<raw.length&&raw[j]!=='"'&&raw[j]!=='\n'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    const rest=raw.slice(i);let m;
+    if((m=rest.match(KW))){o+='<span class="k">'+m[0]+'</span>';i+=m[0].length;continue;}
+    if((m=rest.match(TY))){o+='<span class="t">'+m[0]+'</span>';i+=m[0].length;continue;}
+    if((m=rest.match(NUM))){o+='<span class="n">'+m[0]+'</span>';i+=m[0].length;continue;}
+    o+=e(raw[i]);i++;
+  }
+  return o;
+}
+function cw(code,lang,label){
+  const id='c'+Math.random().toString(36).slice(2);
+  const body=(lang==='jsx'||lang==='js')?hl(code):code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return '<div class="cw"><div class="cl"><span>'+(label||lang)+'</span><button class="cpbtn" onclick="doCopy(\''+id+'\',this)">Copy</button></div><pre id="'+id+'">'+body+'</pre></div>';
+}
+function doCopy(id,btn){
+  navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>{
+    btn.textContent='Copied!';btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('ok');},2000);
+  });
+}
+
+// ── SLIDE DEFINITIONS ─────────────────────────────────────────────────
+const S=[];
+
+// 0 ── TITLE
+S.push({cls:'hero-bg',h:`
+<div class="dots"></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;position:relative">
+  <div class="eyebrow" style="margin-bottom:14px">Web Systems · Module 7</div>
+  <div class="hero-title"><div class="h1c">React State</div><div class="h2c">&amp; Vite</div></div>
+  <div class="hero-sub">From CDN React to a real project — useState, controlled inputs, and conditional rendering done properly.</div>
+  <div>
+    <span class="pill a">useState</span>
+    <span class="pill a">Controlled Inputs</span>
+    <span class="pill a">Conditional Rendering</span>
+    <span class="pill a">Vite Setup</span>
+    <span class="pill g">Activity: Searchable Student List</span>
+  </div>
+</div>`});
+
+// 1 ── BRIDGE FROM M6
+S.push({h:`
+<div class="eyebrow">Where We Left Off</div>
+<div class="slide-title">M6 → M7: From Static to Interactive</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="ba">
+    <div class="ba-box bad">
+      <h4>❌ M6 — What we built</h4>
+      <ul>
+        <li>React via CDN — one HTML file, no build tools</li>
+        <li>Data was hardcoded in the JS array</li>
+        <li>Components rendered once and never changed</li>
+        <li>No user interaction — you could read but not filter, search, or update anything</li>
+      </ul>
+      <p style="margin-top:10px;font-size:16px;color:rgba(244,114,182,.7)">Static. Data flows in one direction only.</p>
+    </div>
+    <div class="ba-box good">
+      <h4>✅ M7 — What we're adding</h4>
+      <ul>
+        <li>Real Vite project — proper file structure, hot reload</li>
+        <li>State — data that lives inside a component and <em>can change</em></li>
+        <li>Controlled inputs — a text box that React owns and updates</li>
+        <li>Conditional rendering — show/hide UI based on state</li>
+      </ul>
+      <p style="margin-top:10px;font-size:16px;color:rgba(74,222,128,.7)">Interactive. State drives the UI.</p>
+    </div>
+  </div>
+  <div class="card"><h3>The Core Idea This Module</h3>
+    <p style="font-size:16px;line-height:1.7">In M6, components were like <strong style="color:var(--text)">printed posters</strong> — they showed data but couldn't react to you. In M7, components become <strong style="color:var(--accent)">live dashboards</strong> — they hold their own data and update automatically when something changes. That data is called <strong style="color:var(--accent)">state</strong>.</p>
+  </div>
+</div>`});
+
+// 2 ── WHAT IS STATE
+S.push({h:`
+<div class="eyebrow">Part 1 — useState</div>
+<div class="slide-title">What Is State?</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      <div class="card flex1"><h3>State vs Props — The Difference</h3>
+        <table>
+          <tr><th></th><th>Props</th><th>State</th></tr>
+          <tr><td><strong style="color:var(--text)">Comes from</strong></td><td>Parent component</td><td>The component itself</td></tr>
+          <tr><td><strong style="color:var(--text)">Can change?</strong></td><td>No — read only</td><td>Yes — via setState</td></tr>
+          <tr><td><strong style="color:var(--text)">Who owns it</strong></td><td>Parent</td><td>This component</td></tr>
+          <tr><td><strong style="color:var(--text)">Causes re-render?</strong></td><td>When parent re-renders</td><td>Yes, every update</td></tr>
+          <tr><td><strong style="color:var(--text)">Analogy</strong></td><td>Order handed to you</td><td>Your notepad</td></tr>
+        </table>
+      </div>
+      <div class="card"><h3>The useState Hook</h3>
+        ${cw(`import { useState } from 'react';
+
+function Counter() {
+  // [currentValue, setterFunction]
+  const [count, setCount] = useState(0);
+  //                                 ^ initial value
+
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={() => setCount(count + 1)}>
+        +1
+      </button>
+    </div>
+  );
+}`,'jsx','Counter.jsx')}
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Code Breakdown</h3></div>
+      <div class="bd">
+        <div class="bdi"><div class="bdl">import</div><div class="bdt"><strong>useState</strong> is a named export from <ic>'react'</ic>. In Vite projects, you import it explicitly — it's not a global like with CDN React.</div></div>
+        <div class="bdi g"><div class="bdl">line 4</div><div class="bdt"><strong>Array destructuring</strong> — <ic>useState(0)</ic> returns a pair: the current value and the setter function. You name them anything, but convention is <ic>[thing, setThing]</ic>.</div></div>
+        <div class="bdi o"><div class="bdl">setCount</div><div class="bdt">When you call <ic>setCount(newValue)</ic>, React <strong>schedules a re-render</strong> with the new value. You never modify <ic>count</ic> directly — that would change the variable but React wouldn't know to update the UI.</div></div>
+        <div class="bdi p"><div class="bdl">re-render</div><div class="bdt">Every time <ic>setCount</ic> is called, the <strong>entire component function runs again</strong> with the new state value. React reconciles the new output with the old DOM and updates only what changed.</div></div>
+        <div class="bdi r"><div class="bdl">⚠ Never mutate</div><div class="bdt"><ic>count++</ic> or <ic>count = 5</ic> <em>looks</em> like it works but React won't know state changed — no re-render, stale UI. <strong>Always call the setter.</strong></div></div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 3 ── STATE WITH OBJECTS + ARRAYS
+S.push({h:`
+<div class="eyebrow">Part 1 — useState</div>
+<div class="slide-title">State with Arrays &amp; Objects</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Array State — Adding Items</h3></div>
+      ${cw(`function TodoList() {
+  const [items, setItems] = useState([]);
+  const [input, setInput] = useState('');
+
+  const addItem = () => {
+    if (!input.trim()) return;
+    // ✅ Spread into a NEW array
+    setItems([...items, input]);
+    setInput('');
+  };
+
+  return (
+    <div>
+      <input
+        value={input}
+        onChange={e => setInput(e.target.value)}
+      />
+      <button onClick={addItem}>Add</button>
+      <ul>
+        {items.map((item, i) => (
+          <li key={i}>{item}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}`,'jsx','TodoList.jsx')}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Why Spread? The Immutability Rule</h3></div>
+      <div class="bd">
+        <div class="bdi r"><div class="bdl">❌ Wrong</div><div class="bdt"><ic>items.push(input)</ic> — this mutates the existing array. React uses reference equality to detect change. Same array reference = React thinks nothing changed = no re-render.</div></div>
+        <div class="bdi g"><div class="bdl">✅ Right</div><div class="bdt"><ic>[...items, input]</ic> — creates a <strong>brand new array</strong> containing all old items plus the new one. New reference = React sees a change = re-render triggered.</div></div>
+        <div class="bdi o"><div class="bdl">Objects</div><div class="bdt">Same rule for objects: <ic>setUser({...user, name: 'new'})</ic> — spread the old object, override only what changed. Never <ic>user.name = 'new'</ic>.</div></div>
+      </div>
+      <div class="card" style="margin-top:6px"><h3>Object State Example</h3>
+        ${cw(`const [user, setUser] = useState({
+  name: 'Kalani',
+  age: 20
+});
+
+// ✅ Correct: spread + override
+setUser({ ...user, age: 21 });
+
+// ❌ Wrong: direct mutation
+// user.age = 21; // React won't re-render`,'jsx','')}
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 4 ── CONTROLLED INPUTS
+S.push({h:`
+<div class="eyebrow">Part 2 — Controlled Inputs</div>
+<div class="slide-title">Controlled vs Uncontrolled Inputs</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2" style="margin-bottom:6px">
+    <div class="ba-box bad" style="border-radius:var(--r)">
+      <h4>❌ Uncontrolled Input</h4>
+      <p>The DOM owns the value. React doesn't know what's typed until form submit — you read it with a ref.</p>
+    </div>
+    <div class="ba-box good" style="border-radius:var(--r)">
+      <h4>✅ Controlled Input</h4>
+      <p>React owns the value via state. Every keystroke → onChange → setState → re-render. Always in sync.</p>
+    </div>
+  </div>
+  <div class="split" style="flex:1">
+    <div>
+      <div class="card" style="margin-bottom:0;flex-shrink:0"><h3>Pattern</h3></div>
+      ${cw(`function SearchBox() {
+  const [query, setQuery] = useState('');
+  return (
+    <div>
+      <input
+        type="text"
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        placeholder="Search students..."
+      />
+      <p>You typed: {query}</p>
+      <button onClick={() => setQuery('')}>
+        Clear
+      </button>
+    </div>
+  );
+}`,'jsx','SearchBox.jsx')}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0;flex-shrink:0"><h3>Breakdown</h3></div>
+      <div class="bd" style="flex:1">
+        <div class="bdi"><div class="bdl">value={query}</div><div class="bdt"><strong>Sets the displayed value</strong> from state — React dictates what the input shows, not the DOM.</div></div>
+        <div class="bdi g"><div class="bdl">onChange</div><div class="bdt"><ic>e.target.value</ic> is what the user typed. Immediately passed to <ic>setQuery</ic> — state updates on every keystroke.</div></div>
+        <div class="bdi o"><div class="bdl">loop</div><div class="bdt">Type → onChange fires → setQuery called → re-render → <ic>value={query}</ic> shows new state. Milliseconds.</div></div>
+        <div class="bdi p"><div class="bdl">Clear btn</div><div class="bdt"><ic>setQuery('')</ic> resets state → input clears visually. Clean, predictable, no DOM hacks.</div></div>
+        <div class="bdi r"><div class="bdl">⚠ Rule</div><div class="bdt">Set <ic>value</ic> without <ic>onChange</ic> = read-only input. React will warn you. Both are required.</div></div>
+      </div>
+      <div class="card" style="flex-shrink:0"><h3>Why "Controlled"?</h3>
+        <p style="font-size:16px;color:var(--text3);line-height:1.6">Like a puppet — React holds all the strings. The source of truth is always in state, not buried in the DOM. For larger forms, React Hook Form can manage fields while Zod defines reusable validation rules and error messages.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 5 ── CONDITIONAL RENDERING
+S.push({h:`
+<div class="eyebrow">Part 3 — Conditional Rendering</div>
+<div class="slide-title">Showing &amp; Hiding UI with State</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      ${cw(`function StudentList({ students }) {
+  const [query, setQuery] = useState('');
+  const [showActive, setShowActive] = useState(false);
+
+  // Derived value — computed from state
+  const filtered = students.filter(s => {
+    const matchName = s.name
+      .toLowerCase()
+      .includes(query.toLowerCase());
+    const matchActive = showActive
+      ? s.active === true
+      : true;
+    return matchName && matchActive;
+  });
+
+  return (
+    <div>
+      <input
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        placeholder="Search by name..."
+      />
+
+      <label>
+        <input
+          type="checkbox"
+          checked={showActive}
+          onChange={e =>
+            setShowActive(e.target.checked)
+          }
+        />
+        {' '}Active students only
+      </label>
+
+      {/* Conditional: empty state message */}
+      {filtered.length === 0 && (
+        <p>No students match your search.</p>
+      )}
+
+      {/* Conditional: results grid */}
+      {filtered.length > 0 && (
+        <div className="grid">
+          {filtered.map(s => (
+            <StudentCard key={s.id} student={s} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}`,'jsx','StudentList.jsx')}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0"><h3>Breakdown</h3></div>
+      <div class="bd">
+        <div class="bdi"><div class="bdl">derived value</div><div class="bdt"><strong>filtered</strong> is not state — it's computed <em>from</em> state inside the render. Every re-render recomputes it fresh. This is the recommended pattern: keep state minimal, derive everything else.</div></div>
+        <div class="bdi g"><div class="bdl">&&</div><div class="bdt">Short-circuit rendering: <ic>{condition && &lt;JSX /&gt;}</ic> — if condition is false, nothing renders. Cleaner than a ternary when you only need a "show" case, not a "show/hide" pair.</div></div>
+        <div class="bdi o"><div class="bdl">ternary</div><div class="bdt"><ic>{a ? &lt;X /&gt; : &lt;Y /&gt;}</ic> — use when you need <em>either</em> one component <em>or</em> another. Avoid nesting ternaries — extract to a variable instead.</div></div>
+        <div class="bdi p"><div class="bdl">checkbox</div><div class="bdt"><ic>checked={showActive}</ic> + <ic>onChange={e => setShowActive(e.target.checked)}</ic> — the same controlled pattern as a text input, but using <ic>checked</ic> and <ic>e.target.checked</ic> instead of <ic>value</ic>.</div></div>
+        <div class="bdi r"><div class="bdl">key insight</div><div class="bdt">UI is a <strong>function of state</strong>. You don't manually show/hide elements — you update state and let React figure out what to render. The less you touch the DOM directly, the better.</div></div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 6 ── VITE INTRO
+S.push({h:`
+<div class="eyebrow">Part 4 — Vite</div>
+<div class="slide-title">Why Vite? The CDN Problem</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2" style="margin-bottom:4px">
+    <div class="ba-box bad" style="border-radius:var(--r)">
+      <h4>❌ CDN React (M6)</h4>
+      <ul>
+        <li>Babel runs in the browser — slow</li>
+        <li>No module imports — all code in one file</li>
+        <li>No hot reload — refresh manually every change</li>
+        <li>Can't install npm packages</li>
+        <li>Only for learning / prototyping</li>
+      </ul>
+    </div>
+    <div class="ba-box good" style="border-radius:var(--r)">
+      <h4>✅ Vite (from M7 onwards)</h4>
+      <ul>
+        <li>Babel/esbuild runs at build time — instant startup</li>
+        <li>ES modules — import/export across files</li>
+        <li>Hot Module Replacement — updates without refresh</li>
+        <li>Full npm ecosystem — install any package</li>
+        <li>What real React projects use</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card"><h3>What Vite Actually Does</h3>
+    <p style="font-size:16px;line-height:1.7;margin-bottom:10px">Vite is a <strong style="color:var(--text)">build tool and dev server</strong>. During development it serves your files using native ES modules — almost no bundling, so startup is near-instant. When you run <ic>npm run build</ic>, it bundles everything into optimized static files for production.</p>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:6px">
+      <div class="fb" style="font-size:16px;text-align:center">① Write JSX</div>
+      <div class="fb" style="font-size:16px;text-align:center">② Vite transforms</div>
+      <div class="fb" style="font-size:16px;text-align:center">③ Browser gets JS</div>
+      <div class="fb hi" style="font-size:16px;text-align:center">④ Save → instant HMR</div>
+    </div>
+  </div>
+</div>`});
+
+// 7 ── VITE SETUP
+S.push({h:`
+<div class="eyebrow">Part 4 — Vite</div>
+<div class="slide-title">Setting Up a Vite React Project</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      <div class="step" style="margin-bottom:8px"><div class="snum">1</div><div class="sbody"><h4>Create the project</h4><p>Run this in your terminal — pick a folder name.</p></div></div>
+      ${cw(`npm create vite@latest m7-students -- --template react
+cd m7-students
+npm install
+npm run dev`,'bash','terminal')}
+      <div class="step" style="margin:8px 0"><div class="snum">2</div><div class="sbody"><h4>Folder structure you get</h4></div></div>
+      ${cw(`m7-students/
+├── public/              ← static assets
+├── src/
+│   ├── assets/
+│   ├── App.jsx          ← root component ← edit this
+│   ├── App.css
+│   ├── main.jsx         ← ReactDOM.createRoot
+│   └── index.css
+├── index.html           ← entry point
+├── package.json
+└── vite.config.js`,'text','project structure')}
+    </div>
+    <div>
+      <div class="step" style="margin-bottom:8px"><div class="snum">3</div><div class="sbody"><h4>Clean up App.jsx</h4><p>Replace the default Vite boilerplate with this starting point:</p></div></div>
+      ${cw(`// src/App.jsx
+import { useState } from 'react';
+import StudentList from './components/StudentList';
+import { students } from './data/students';
+
+function App() {
+  return (
+    <div style={{
+      fontFamily: 'Segoe UI, sans-serif',
+      background: '#0f172a',
+      minHeight: '100vh',
+      padding: '40px 24px',
+      color: '#e2e8f0',
+    }}>
+      <h1 style={{ color:'#60a5fa',
+        fontSize:'2rem', marginBottom:'8px' }}>
+        Student Directory
+      </h1>
+      <StudentList students={students} />
+    </div>
+  );
+}
+
+export default App;`,'jsx','src/App.jsx')}
+      <div class="card" style="margin-top:8px"><h3>Key differences from M6</h3>
+        <ul>
+          <li><ic>import { useState }</ic> — explicit, not global</li>
+          <li>Components in <strong style="color:var(--text)">separate files</strong> under <ic>src/components/</ic></li>
+          <li>Data in its own file: <ic>src/data/students.js</ic></li>
+          <li><ic>export default App</ic> — required for imports to work</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 7b ── CODING PROJECT GUIDE
+S.push({h:`
+<div class="eyebrow">Coding Project — Step-by-Step</div>
+<div class="slide-title">Build the Searchable Student List</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split" style="flex:1">
+    <div>
+      <div class="step" style="margin-bottom:8px"><div class="snum">1</div><div class="sbody"><h4>Scaffold the project</h4><p>Run in terminal, then open the folder in VS Code.</p></div></div>
+      ${cw(`npm create vite@latest m7-students -- --template react
+cd m7-students
+npm install
+npm run dev`,'bash','terminal')}
+
+      <div class="step" style="margin:8px 0"><div class="snum">2</div><div class="sbody"><h4>Create folder structure</h4><p>Inside <ic>src/</ic>, create these folders and files:</p></div></div>
+      ${cw(`src/
+├── data/
+│   └── students.js     ← paste data here
+├── components/
+│   ├── StudentCard.jsx  ← paste card here
+│   └── StudentList.jsx  ← paste list here
+└── App.jsx              ← paste app here`,'text','folders to create')}
+
+      <div class="step" style="margin:8px 0"><div class="snum">3</div><div class="sbody"><h4>Paste the files</h4><p>Copy each file from the next 3 slides in order:<br/>students.js → StudentCard.jsx → StudentList.jsx → App.jsx</p></div></div>
+    </div>
+    <div>
+      <div class="step" style="margin-bottom:8px"><div class="snum">4</div><div class="sbody"><h4>Replace index.css</h4><p>Open <ic>src/index.css</ic> and replace its contents with:</p></div></div>
+      ${cw(`* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+body {
+  background: #0f172a;
+}`,'text','src/index.css')}
+
+      <div class="step" style="margin:8px 0"><div class="snum">5</div><div class="sbody"><h4>Run and test</h4><p>Save all files. Vite hot-reloads automatically.</p></div></div>
+      ${cw(`npm run dev
+# → open http://localhost:5173`,'bash','terminal')}
+
+      <div class="card" style="margin-top:6px"><h3>✅ You Should See</h3>
+        <ul>
+          <li>4 student cards in a responsive grid</li>
+          <li>Search box filters cards live as you type</li>
+          <li>Checkbox hides inactive students</li>
+          <li>Counter updates: "X students found"</li>
+          <li>Empty state message when no match</li>
+        </ul>
+      </div>
+      <div class="card"><h3>🔥 Bonus Challenges</h3>
+        <ul>
+          <li>Add a "Sort by GWA" button</li>
+          <li>Show a count badge: "3 / 4 students"</li>
+          <li>Add a course filter dropdown</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 8a ── DATA + CARD FILES
+S.push({h:`
+<div class="eyebrow">Part 4 — Putting It Together · File 1 &amp; 2 of 3</div>
+<div class="slide-title">Data File &amp; StudentCard Component</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split" style="flex:1">
+    <div>
+      <div class="card" style="margin-bottom:0;flex-shrink:0"><h3>src/data/students.js</h3></div>
+      ${cw(`export const students = [
+  {
+    id: 1,
+    name: 'Kalani Reyes',
+    course: 'BSCS',
+    year: 2,
+    gwa: 1.50,
+    active: true
+  },
+  {
+    id: 2,
+    name: 'Imara Santos',
+    course: 'BSIT',
+    year: 3,
+    gwa: 1.75,
+    active: true
+  },
+  {
+    id: 3,
+    name: 'Seren Aquino',
+    course: 'BSCS',
+    year: 1,
+    gwa: 1.25,
+    active: false
+  },
+  {
+    id: 4,
+    name: 'Osei Mendez',
+    course: 'BSIT',
+    year: 4,
+    gwa: 2.00,
+    active: true
+  },
+];`,'jsx','src/data/students.js')}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0;flex-shrink:0"><h3>src/components/StudentCard.jsx</h3></div>
+      ${cw(`export default function StudentCard({ s }) {
+  const card = {
+    background: '#1e293b',
+    border: '1px solid #334155',
+    borderRadius: '10px',
+    padding: '18px',
+  };
+  const badge = {
+    background: s.active ? '#14532d' : '#450a0a',
+    color: s.active ? '#4ade80' : '#f87171',
+    padding: '2px 10px',
+    borderRadius: '20px',
+    fontSize: '.75rem',
+    fontWeight: 700,
+    display: 'inline-block',
+    marginBottom: '10px',
+  };
+  return (
+    <div style={card}>
+      <h2 style={{ color:'#f1f5f9',
+        marginBottom:'6px' }}>
+        {s.name}
+      </h2>
+      <span style={badge}>
+        {s.active ? 'Active' : 'Inactive'}
+      </span>
+      <p style={{ color:'#94a3b8',
+        fontSize:'.9rem' }}>
+        {s.course} · Year {s.year} · GWA {s.gwa}
+      </p>
+    </div>
+  );
+}`,'jsx','src/components/StudentCard.jsx')}
+    </div>
+  </div>
+</div>`});
+
+// 8b ── STUDENTLIST FILE
+S.push({h:`
+<div class="eyebrow">Part 4 — Putting It Together · File 3 of 3</div>
+<div class="slide-title">StudentList — The Search Logic</div>
+<hr class="rule"/>
+<div class="content" style="flex:1;min-height:0">
+  ${cw(`import { useState } from 'react';
+import StudentCard from './StudentCard';
+
+export default function StudentList({ students }) {
+  const [query, setQuery]         = useState('');
+  const [onlyActive, setOnlyActive] = useState(false);
+
+  // Derived — computed from state, not stored in state
+  const filtered = students.filter(s => {
+    const nameMatch   = s.name.toLowerCase()
+                         .includes(query.toLowerCase());
+    const activeMatch = onlyActive ? s.active : true;
+    return nameMatch && activeMatch;
+  });
+
+  return (
+    <div>
+      {/* Controlled text input */}
+      <input
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        placeholder="Search by name..."
+        style={{ padding:'8px 12px', width:'100%',
+          marginBottom:'10px', borderRadius:'6px',
+          border:'1px solid #334155',
+          background:'#1e293b', color:'#e2e8f0',
+          fontSize:'1rem' }}
+      />
+
+      {/* Controlled checkbox */}
+      <label style={{ color:'#94a3b8', fontSize:'.9rem',
+        cursor:'pointer', display:'block',
+        marginBottom:'10px' }}>
+        <input
+          type="checkbox"
+          checked={onlyActive}
+          onChange={e => setOnlyActive(e.target.checked)}
+          style={{ marginRight:'6px' }}
+        />
+        Show active students only
+      </label>
+
+      {/* Result count — updates live */}
+      <p style={{ color:'#64748b', fontSize:'.85rem',
+        marginBottom:'12px' }}>
+        {filtered.length} student
+        {filtered.length !== 1 ? 's' : ''} found
+      </p>
+
+      {/* Conditional: empty state */}
+      {filtered.length === 0 && (
+        <p style={{ color:'#475569', textAlign:'center',
+          padding:'40px 0' }}>
+          No students match your search.
+        </p>
+      )}
+
+      {/* Card grid */}
+      <div style={{ display:'grid',
+        gridTemplateColumns:
+          'repeat(auto-fill, minmax(240px,1fr))',
+        gap:'14px' }}>
+        {filtered.map(s => (
+          <StudentCard key={s.id} s={s} />
+        ))}
+      </div>
+    </div>
+  );
+}`,'jsx','src/components/StudentList.jsx')}
+</div>`});
+
+// 8c ── APP.JSX + HOW IT ALL CONNECTS
+S.push({h:`
+<div class="eyebrow">Part 4 — Putting It Together · Wiring</div>
+<div class="slide-title">App.jsx — Connecting Everything</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split" style="flex:1">
+    <div>
+      <div class="card" style="margin-bottom:0;flex-shrink:0"><h3>src/App.jsx</h3></div>
+      ${cw(`import { useState } from 'react';
+import StudentList from './components/StudentList';
+import { students } from './data/students';
+
+function App() {
+  return (
+    <div style={{
+      fontFamily: 'Segoe UI, sans-serif',
+      background: '#0f172a',
+      minHeight: '100vh',
+      padding: '40px 24px',
+      color: '#e2e8f0',
+    }}>
+      <h1 style={{ color:'#60a5fa',
+        fontSize:'2rem',
+        marginBottom:'4px' }}>
+        Student Directory
+      </h1>
+      <p style={{ color:'#64748b',
+        marginBottom:'24px' }}>
+        M7 Activity — Searchable List
+      </p>
+      <StudentList students={students} />
+    </div>
+  );
+}
+
+export default App;`,'jsx','src/App.jsx')}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0;flex-shrink:0"><h3>How the Files Connect</h3></div>
+      <div style="background:#040C18;border:1px solid var(--border);border-radius:var(--r);padding:16px;font-family:var(--mono);font-size:16px;line-height:2;flex:1">
+        <span style="color:var(--accent4)">main.jsx</span><br/>
+        &nbsp;&nbsp;→ renders <span style="color:var(--accent)">App</span><br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;→ imports <span style="color:var(--accent2)">students</span> from <span style="color:var(--accent3)">data/students.js</span><br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;→ renders <span style="color:var(--accent)">StudentList</span> passing students as prop<br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ holds <span style="color:var(--accent4)">query</span> + <span style="color:var(--accent4)">onlyActive</span> state<br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ derives <span style="color:var(--accent4)">filtered</span> from state<br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ maps filtered → <span style="color:var(--accent)">StudentCard</span><br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ receives <span style="color:var(--accent2)">s</span> prop, renders card
+      </div>
+      <div class="card" style="flex-shrink:0"><h3>What State Controls</h3>
+        <div class="bd" style="gap:6px">
+          <div class="bdi"><div class="bdl">query</div><div class="bdt">Text in the search box. Changes on every keystroke. Filters by name.</div></div>
+          <div class="bdi g"><div class="bdl">onlyActive</div><div class="bdt">Checkbox state. When true, hides inactive students. Derived — not stored separately.</div></div>
+          <div class="bdi o"><div class="bdl">filtered</div><div class="bdt">Not state — computed fresh every render from both state values. Zero sync issues.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 9 ── ANALOGIES
+S.push({h:`
+<div class="eyebrow">Real-World Analogies</div>
+<div class="slide-title">State &amp; Controlled Inputs in Plain Language</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2" style="flex:1">
+    <div class="col">
+      <div class="card flex1"><h3>🧠 State = Short-Term Memory</h3>
+        <p>Props are like information written on a whiteboard by someone else — you can read it, not erase it. State is your own notepad — you can write, cross out, and rewrite whenever you want. When you write something new (<ic>setState</ic>), React takes a photo of your notepad and updates everything that references it.</p>
+      </div>
+      <div class="card flex1"><h3>🎮 Controlled Input = Joystick, Not Autopilot</h3>
+        <p>An uncontrolled input is on autopilot — the browser flies it, you only find out what it typed when the plane lands (form submit). A controlled input is a joystick — you feel every movement, React knows the exact position at all times, and you can override it instantly (clear button, format on the fly).</p>
+      </div>
+      <div class="card flex1"><h3>🔄 Re-render = Recalculate, Not Rebuild</h3>
+        <p>When state changes, React doesn't tear down and rebuild the entire page like a browser refresh does. It's more like Excel recalculating a formula — only the cells that depend on the changed value update. Everything else stays exactly as it was.</p>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card flex1"><h3>🔍 Derived State = Spreadsheet Formula</h3>
+        <p>In the student list, <ic>filtered</ic> is not stored in state — it's computed from <ic>students</ic>, <ic>query</ic>, and <ic>onlyActive</ic> on every render. Just like a spreadsheet formula recalculates when any referenced cell changes. Keep state minimal; derive everything else. This avoids "stale state" bugs where two variables drift out of sync.</p>
+      </div>
+      <div class="card flex1"><h3>📺 useState = TV Remote, Not the TV</h3>
+        <p><ic>useState</ic> doesn't hold your data inside the DOM (the TV screen). It holds it in React's memory and tells the TV what to display. When you change the channel (<ic>setState</ic>), the TV updates — but the remote still works the same way. The display is always a reflection of what the remote's memory says, nothing more.</p>
+      </div>
+      <div class="card flex1"><h3>🏗 Vite = Construction Site vs Finished Building</h3>
+        <p>CDN React is like viewing a building on a slow webcam — every change requires a full camera reload. Vite is the actual construction site: changes to one room instantly show up without rebuilding the rest of the building. <ic>npm run build</ic> is when the building is finished and handed over for people to visit.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 10 ── KEY QUOTES
+S.push({h:`
+<div class="eyebrow">Key Quotes</div>
+<div class="slide-title">Worth Remembering</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="q-card"><div class="q-text">"State is the memory of a component. It lets components remember things between renders — like what the user typed, which tab is selected, or whether a modal is open."</div><div class="q-src">— React Documentation</div></div>
+  <div class="q-card"><div class="q-text">"Never mutate state directly. When you call the setter function, React knows something changed, schedules a re-render, and the UI reflects the new truth. Skip the setter and you break the contract."</div><div class="q-src">— Common React principle</div></div>
+  <div class="q-card"><div class="q-text">"UI is a function of state. The same state always produces the same UI. This predictability is what makes React apps easy to reason about — and easy to debug."</div><div class="q-src">— React mental model</div></div>
+  <div class="q-card"><div class="q-text">"Don't derive state from state. Compute it fresh inside the render. One source of truth, zero stale-state bugs."</div><div class="q-src">— React best practices</div></div>
+</div>`});
+
+// 11 ── RECAP
+S.push({h:`
+<div class="eyebrow">Recap</div>
+<div class="slide-title">Module 7 — What We Covered</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="rc-grid" style="flex:1">
+    <div class="rc"><div class="ico">🧠</div><h4>useState</h4><p><ic>const [val, setVal] = useState(init)</ic> — returns the current value and a setter. Calling the setter triggers a re-render.</p></div>
+    <div class="rc"><div class="ico">🚫</div><h4>Never Mutate</h4><p>Always call the setter. For arrays: spread <ic>[...old, new]</ic>. For objects: spread <ic>{...old, key: val}</ic>. Direct mutation = no re-render.</p></div>
+    <div class="rc"><div class="ico">🎮</div><h4>Controlled Inputs</h4><p><ic>value={state}</ic> + <ic>onChange={e => setState(e.target.value)}</ic>. React owns the value. Every keystroke → state update → re-render.</p></div>
+    <div class="rc"><div class="ico">❓</div><h4>Conditional Rendering</h4><p><ic>{condition && &lt;JSX/&gt;}</ic> for show-only. <ic>{a ? &lt;X/&gt; : &lt;Y/&gt;}</ic> for either/or. Derive, don't store extra state.</p></div>
+    <div class="rc"><div class="ico">⚡</div><h4>Vite</h4><p>Real React toolchain. <ic>npm create vite@latest</ic>. Files split across <ic>src/components/</ic>. Hot reload. Full npm ecosystem.</p></div>
+    <div class="rc"><div class="ico">🔍</div><h4>Derived State</h4><p>Compute filtered/sorted lists inside the render — not in a separate state variable. Single source of truth, zero sync bugs.</p></div>
+  </div>
+  <div class="card" style="margin-top:4px"><h3>Next Up — M8: useEffect + Fetching from an API</h3>
+    <p style="font-size:16px">Right now the student data is hardcoded in a JS file. In M8, <ic>useEffect</ic> fetches it from your Express API instead — and you'll handle loading, error, and empty states like a real app does.</p>
+  </div>
+</div>`});
+
+// 12 ── ACTIVITY INTRO
+S.push({h:`
+<div class="eyebrow">Activities</div>
+<div class="slide-title">Module 7 — Assessment</div>
+<hr class="rule"/>
+<div class="content" style="justify-content:center">
+  <div class="g2">
+    <div class="card"><h3>📋 Multiple Choice — 5 questions</h3>
+      <ul>
+        <li>1 pt each</li>
+        <li>Covers useState, controlled inputs, Vite, conditional rendering</li>
+        <li style="margin-top:6px;color:var(--accent);font-weight:700">5 pts</li>
+      </ul>
+    </div>
+    <div class="card"><h3>💻 Guess the Output — 5 questions</h3>
+      <ul>
+        <li>2 pts each</li>
+        <li>Trace the state flow, write what renders</li>
+        <li style="margin-top:6px;color:var(--accent);font-weight:700">10 pts</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card" style="text-align:center;padding:22px">
+    <div style="font-size:52px;font-weight:900;color:var(--accent);line-height:1">15</div>
+    <div style="font-size:16px;color:var(--text2);margin-top:4px">Total Points</div>
+  </div>
+  <div class="card"><h3>⚠ Note</h3><p>Answer key is on the second-to-last slide. Attempt all questions before checking!</p></div>
+</div>`});
+
+// 13 ── MC (2x2 + harder 5th)
+S.push({init(el){
+  const qs=[
+    {q:"What does calling the useState setter function do?",opts:["Directly modifies the state variable","Schedules a re-render with the new state value","Immediately updates the DOM","Resets state to its initial value"]},
+    {q:"Which of the following correctly adds an item to an array in state?",opts:["items.push(newItem)","setState(items.push(newItem))","setItems([...items, newItem])","items[items.length] = newItem"]},
+    {q:"What makes an input 'controlled' in React?",opts:["It uses the ref attribute","Its value is set from state AND onChange updates that state","It has a default value prop","It is inside a form element with onSubmit"]},
+    {q:"Which Vite command creates a new React project?",opts:["npx create-react-app my-app","npm create vite@latest my-app -- --template react","npm install vite react","vite create my-app --react"]}
+  ];
+  const pg=el.querySelector('#mc-pg');
+  qs.forEach((q,i)=>{
+    const d=document.createElement('div');d.className='mc-item';
+    d.innerHTML='<div class="mc-q"><span class="qn">'+(i+1)+'.</span>'+q.q+'</div><div class="mc-opts">'+q.opts.map(o=>'<div class="mc-opt" onclick="this.closest(\'.mc-opts\').querySelectorAll(\'.mc-opt\').forEach(x=>x.classList.remove(\'sel\'));this.classList.add(\'sel\')">'+o+'</div>').join('')+'</div>';
+    pg.appendChild(d);
+  });
+},h:`
+<div class="eyebrow">Activities — Multiple Choice</div>
+<div class="slide-title">Questions 1–4 <span style="font-size:16px;color:var(--text2);font-weight:400">2×2 grid · choose the best answer</span></div>
+<hr class="rule"/>
+<div class="mc-grid" id="mc-pg"></div>`});
+
+// 13b HARDER MCQ 5
+S.push({h:`
+<div class="eyebrow">Activities — Multiple Choice · Challenge</div>
+<div class="slide-title">Question 5 — Harder Scenario</div>
+<hr class="rule"/>
+<div class="hard-card">
+  <h3>5. Controlled input + derived filter bug hunt</h3>
+  <p style="font-size:16px;color:var(--text3);line-height:1.55">A student list has <ic>const [query, setQuery] = useState('')</ic> and a controlled input. The filtered list is computed as <ic>students.filter(s => s.name.includes(query))</ic>. A teammate also stores <ic>const [filtered, setFiltered] = useState(students)</ic> and updates it inside an onChange handler. Explain the two problems this creates and the correct “derive, don’t store” approach.</p>
+  <div class="hint"><strong>Hints:</strong> Think about (1) single source of truth, (2) stale state when the students array itself changes, and (3) what should be computed during render instead of kept in state.</div>
+  <textarea placeholder="Problems + correct approach..."></textarea>
+</div>`});
+
+// 14 ── GTO (2x2)
+S.push({init(el){
+  const qs=[
+    {code:`const [count, setCount] = useState(3);
+setCount(count + 2);
+// What is the new value of count
+// after the re-render?`},
+    {code:`const [name, setName] = useState('');
+// User types "Re" then "yes"
+// into a controlled input.
+// What is name after typing "yes"?`},
+    {code:`const [show, setShow] = useState(false);
+// In JSX:
+{show && <p>Hello!</p>}
+// Is <p>Hello!</p> rendered?`},
+    {code:`const [items, setItems] = useState(['A','B']);
+setItems([...items, 'C']);
+// What does items contain
+// after the re-render?`}
+  ];
+  const pg=el.querySelector('#gto-pg');
+  qs.forEach((q,i)=>{
+    const w=document.createElement('div');w.className='gto-wrap';
+    const lbl=document.createElement('div');lbl.className='gto-qlabel';
+    const num=document.createElement('span');num.className='gto-num';
+    num.textContent=(i+1)+'.';
+    lbl.appendChild(num);
+    lbl.appendChild(document.createTextNode(' What is the result?'));
+    const pre=document.createElement('pre');pre.className='gto-pre';pre.textContent=q.code;
+    const al=document.createElement('div');al.className='gto-alabel';al.textContent='Your answer';
+    const ta=document.createElement('textarea');ta.className='gto-ta';ta.placeholder='Write here...';
+    w.appendChild(lbl);w.appendChild(pre);w.appendChild(al);w.appendChild(ta);
+    pg.appendChild(w);
+  });
+},h:`
+<div class="eyebrow">Activities — Guess the Output</div>
+<div class="slide-title">Questions 1–4 <span style="font-size:16px;color:var(--text2);font-weight:400">2×2 grid · trace the state</span></div>
+<hr class="rule"/>
+<div class="gto-grid" id="gto-pg"></div>`});
+
+// 14b HARDER GTO 5
+S.push({h:`
+<div class="eyebrow">Activities — Guess the Output · Challenge</div>
+<div class="slide-title">Question 5 — Harder Scenario</div>
+<hr class="rule"/>
+<div class="hard-card">
+  <h3>5. Full state + filter prediction</h3>
+  <p style="font-size:16px;color:var(--text3);line-height:1.55">Given the code below, answer: (a) initial value of <ic>query</ic>, (b) how many students appear after the user types “ka”, (c) what happens if someone mutates the students array with <ic>.push()</ic> instead of using a setter, and (d) the correct way to add a new student while keeping the filter reactive.</p>
+  <pre style="background:#040C18;border:1px solid var(--border);border-radius:6px;padding:12px 14px;font-family:var(--mono);font-size:16px;color:var(--text3);overflow-x:auto;margin:0">const [students, setStudents] = useState([
+  {id:1,name:'Kalani',active:true},
+  {id:2,name:'Imara', active:false},
+  {id:3,name:'Seren', active:true},
+]);
+const [query, setQuery] = useState('');
+const filtered = students.filter(s =>
+  s.name.toLowerCase().includes(query.toLowerCase())
+);</pre>
+  <div class="hint"><strong>Hints:</strong> Controlled input starts empty. Filter runs on every render. Direct mutation does not trigger re-render. Always produce a new array with the setter.</div>
+  <textarea placeholder="(a) query initial:&#10;(b) count after typing 'ka':&#10;(c) effect of .push():&#10;(d) correct add pattern:"></textarea>
+</div>`});
+
+// 15 ── ANSWER KEY
+S.push({h:`
+<div class="eyebrow">Answer Key</div>
+<div class="slide-title">Module 7 — Answers &amp; Explanations</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2" style="flex:1">
+    <div class="col">
+      <div style="font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin-bottom:7px">Multiple Choice</div>
+      <div class="ans-block">
+        <div class="ans-row"><span class="anum b">1.</span><div class="abody"><strong>Schedules a re-render with the new state value.</strong> The setter doesn't update the variable instantly — it tells React "next time you render, use this value."</div></div>
+        <div class="ans-row"><span class="anum b">2.</span><div class="abody"><strong>setItems([...items, newItem])</strong> — spread creates a new array. React detects a new reference and triggers a re-render. <ic>.push()</ic> mutates the existing array silently.</div></div>
+        <div class="ans-row"><span class="anum b">3.</span><div class="abody"><strong>Its value is set from state AND onChange updates that state.</strong> Both are required — setting value without onChange makes it read-only; onChange without value makes it uncontrolled.</div></div>
+        <div class="ans-row"><span class="anum b">4.</span><div class="abody"><strong>npm create vite@latest my-app -- --template react</strong> — the double dash separates Vite's options from npm's. The template flag sets up React + JSX out of the box.</div></div>
+        <div class="ans-row"><span class="anum b">5.</span><div class="abody"><strong>Harder:</strong> Problems = dual source of truth + stale filtered list. Correct = keep only query (and students) in state; compute filtered during render.</div></div>
+      </div>
+    </div>
+    <div class="col">
+      <div style="font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent4);margin-bottom:7px">Guess the Output</div>
+      <div class="ans-block">
+        <div class="ans-row"><span class="anum p">1.</span><div class="abody"><strong>5</strong> — count was 3, setCount(3 + 2) = 5. After re-render, count holds 5.</div></div>
+        <div class="ans-row"><span class="anum p">2.</span><div class="abody"><strong>"Reyes"</strong> — each keystroke updates state. After typing "Re" then "yes", state is "Reyes". The controlled input reflects the full accumulated string.</div></div>
+        <div class="ans-row"><span class="anum p">3.</span><div class="abody"><strong>No, it is not rendered.</strong> — <ic>show</ic> is false. <ic>{false && &lt;p&gt;Hello!&lt;/p&gt;}</ic> short-circuits to false, and React renders nothing.</div></div>
+        <div class="ans-row"><span class="anum p">4.</span><div class="abody"><strong>['A', 'B', 'C']</strong> — spread copies A and B into a new array, then C is appended. The original array is unchanged; state now holds the new array.</div></div>
+        <div class="ans-row"><span class="anum p">5.</span><div class="abody"><strong>Harder:</strong> (a) '' (b) 1 (Kalani) (c) no re-render / UI stale (d) setStudents(prev => [...prev, newStudent])</div></div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 16 ── CLOSING
+S.push({cls:'hero-bg',h:`
+<div class="dots"></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:20px;position:relative;max-width:720px">
+  <div class="eyebrow">Module 7 Complete</div>
+  <div style="font-size:clamp(30px,3.8vw,50px);font-weight:900;line-height:1.15;letter-spacing:-.5px">
+    <span style="color:var(--text)">Your components now</span><br/>
+    <span style="color:var(--accent)">remember things.</span>
+  </div>
+  <div class="q-card" style="margin:0">
+    <div class="q-text">"The goal of React is to make it easy to build interactive UIs by keeping the UI in sync with your application state. useState is the simplest way to introduce that synchronization."</div>
+    <div class="q-src">— React core team, introductory talks</div>
+  </div>
+  <div class="card" style="background:rgba(97,218,251,.05);border-color:rgba(97,218,251,.2)">
+    <h3>Coming Up — M8: useEffect &amp; Fetching from the API</h3>
+    <p style="font-size:16px;line-height:1.7">Next session: <ic>useEffect</ic> runs code after every render — perfect for fetching data. We'll replace the hardcoded student array with a real <ic>GET /api/students</ic> call to your M5 Express server, and handle loading, error, and empty states properly.</p>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <span class="pill g">useState ✓</span>
+    <span class="pill g">Controlled Inputs ✓</span>
+    <span class="pill g">Conditional Rendering ✓</span>
+    <span class="pill g">Vite ✓</span>
+    <span class="pill a">useEffect → next</span>
+    <span class="pill a">API fetching → next</span>
+  </div>
+</div>`});
+
+// ── ENGINE ────────────────────────────────────────────────────────────
+let cur=0;
+const deck=document.getElementById('deck');
+const bar=document.getElementById('bar');
+const ctr=document.getElementById('ctr');
+
+function build(){
+  S.forEach((s,i)=>{
+    const el=document.createElement('div');
+    el.className='slide'+(s.cls?' '+s.cls:'');
+    el.innerHTML=s.h||'';
+    if(i===0)el.classList.add('active');
+    deck.appendChild(el);
+    if(s.init)s.init(el);
+  });
+}
+function go(n){
+  if(n<0||n>=S.length||n===cur)return;
+  const els=deck.querySelectorAll('.slide');
+  const fwd=n>cur;
+  els[cur].classList.remove('active');
+  els[cur].classList.add(fwd?'out-l':'out-r');
+  setTimeout(()=>els[cur].classList.remove('out-l','out-r'),420);
+  cur=n;els[cur].classList.add('active');els[cur].scrollTop=0;tick();
+}
+function tick(){
+  bar.style.width=(S.length>1?(cur/(S.length-1)*100):100)+'%';
+  ctr.textContent=(cur+1)+' / '+S.length;
+}
+document.addEventListener('keydown',e=>{
+  const m=document.getElementById('modal');
+  if(m.classList.contains('open')){if(e.key==='Escape')m.classList.remove('open');return;}
+  const t=document.activeElement.tagName;
+  if(t==='INPUT'||t==='TEXTAREA')return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')go(cur+1);
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(cur-1);
+  else if(e.key==='Home')go(0);
+  else if(e.key==='End')go(S.length-1);
+  else if(e.key==='?')m.classList.add('open');
+  else if(e.key==='Escape')m.classList.remove('open');
+});
+document.addEventListener('mousedown',e=>{
+  if(e.target.closest('button,input,a,.mc-opt,.gto-ta'))return;
+  if(e.button===2){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+  else if(e.button===3){e.preventDefault();e.stopImmediatePropagation();go(cur-1);}
+  else if(e.button===4){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+},true);
+document.addEventListener('contextmenu',e=>{
+  if(e.target.closest('button,input,a'))return;
+  e.preventDefault();e.stopImmediatePropagation();
+},true);
+document.addEventListener('auxclick',e=>{
+  if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation();}
+},true);
+let tx=0;
+document.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+document.addEventListener('touchend',e=>{const d=e.changedTouches[0].clientX-tx;if(Math.abs(d)>50){d<0?go(cur+1):go(cur-1);}},{passive:true});
+build();tick();
+</script>
+</body>
+</html>

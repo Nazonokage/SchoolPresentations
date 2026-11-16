@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>M14 — Client Routing with React Router v6</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07111F;--surface:#0C1A2E;--surface2:#0f1e33;--border:#1a2e48;--border2:#224070;
+  --accent:#F43F5E;--accent2:#4ADE80;--accent3:#61DAFB;--accent4:#C084FC;--accent5:#FB923C;
+  --text:#F0F6FF;--text2:#8FAFC8;--text3:#C8DCF0;--card:#090f1c;--card2:#0d1a2d;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  --sans:'Inter',system-ui,sans-serif;
+  --r:8px;--r2:12px;--tr:320ms cubic-bezier(.4,0,.2,1);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16px;-webkit-font-smoothing:antialiased}
+#bar{position:fixed;bottom:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent),#e11d48);transition:width .35s ease;z-index:100}
+#ctr{position:fixed;bottom:14px;left:20px;font-size:16px;color:var(--text2);z-index:100;font-family:var(--mono);letter-spacing:.5px;opacity:.7}
+#nav-prev,#nav-next{position:fixed;top:50%;transform:translateY(-50%);z-index:90;background:rgba(10,20,35,.7);border:1px solid var(--border2);color:var(--text2);width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;backdrop-filter:blur(8px);font-size:16px;user-select:none}
+#nav-prev{left:10px}#nav-next{right:10px}
+#nav-prev:hover,#nav-next:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+#deck{width:100%;height:100vh;position:relative;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;padding:44px 72px 40px;opacity:0;pointer-events:none;transform:translateX(40px);transition:opacity var(--tr),transform var(--tr);overflow-y:auto}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.out-l{opacity:0;transform:translateX(-40px)}
+.slide.out-r{opacity:0;transform:translateX(40px)}
+@media(prefers-reduced-motion:reduce){.slide{transition:opacity .15s;transform:none!important}}
+.slide-tag{font-size:16px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:11px;display:flex;align-items:center;gap:8px;opacity:.85}
+.slide-tag::after{content:'';flex:1;max-width:32px;height:1.5px;background:var(--accent);border-radius:1px;opacity:.6}
+.slide-title{font-size:clamp(24px,2.8vw,40px);font-weight:800;line-height:1.1;color:var(--text);margin-bottom:4px;letter-spacing:-.4px}
+.slide-sub{font-size:16px;color:var(--text2);margin-bottom:16px}
+.rule{height:1px;background:linear-gradient(90deg,var(--border2) 0%,transparent 80%);border:none;margin-bottom:18px}
+.content{flex:1;display:flex;flex-direction:column;gap:12px;min-height:0}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.g2>*,.g3>*{min-width:0}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;flex:1;min-height:0}
+.split>*{min-width:0;display:flex;flex-direction:column;gap:10px}
+.col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.flex1{flex:1}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px}
+.card h3{font-size:16px;font-weight:700;letter-spacing:1px;color:var(--accent);margin-bottom:8px;text-transform:uppercase}
+.card p,.card li{font-size:16px;color:var(--text3);line-height:1.65}
+.card ul{padding-left:16px}.card li{margin-bottom:4px}
+.cw{position:relative;background:#040C18;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;flex:1;display:flex;flex-direction:column}
+.cl{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:#060d18;border-bottom:1px solid var(--border);font-size:16px;color:var(--text2);font-family:var(--mono);flex-shrink:0}
+.cl span{color:var(--accent3);font-weight:500}
+.cw pre{padding:12px 14px;overflow:auto;font-family:var(--mono);font-size:16px;line-height:1.75;white-space:pre;flex:1;max-height:320px}
+.cpbtn{padding:3px 10px;font-size:16px;font-family:var(--sans);background:var(--surface2);border:1px solid var(--border2);color:var(--text2);border-radius:4px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.cpbtn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.cpbtn.ok{background:var(--accent2);color:#07111F;border-color:var(--accent2)}
+.k{color:#e879f9}.s{color:#86efac}.f{color:#c4b5fd}.n{color:#7dd3fc}
+.cm{color:#2E4A65;font-style:italic}.t{color:#fca5a5}.b{color:#fcd34d}
+.bdi{display:flex;gap:10px;align-items:flex-start;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;border-left:3px solid var(--accent)}
+.bdi.g{border-left-color:var(--accent2)}.bdi.o{border-left-color:var(--accent3)}
+.bdi.p{border-left-color:var(--accent4)}.bdi.r{border-left-color:var(--accent5)}
+.bdl{font-family:var(--mono);font-size:16px;color:var(--accent);background:#040C18;padding:2px 7px;border-radius:3px;white-space:nowrap;min-width:fit-content;align-self:flex-start;margin-top:2px;flex-shrink:0;font-weight:700}
+.bdi.g .bdl{color:var(--accent2)}.bdi.o .bdl{color:var(--accent3)}.bdi.p .bdl{color:var(--accent4)}
+.bdt{font-size:16px;color:var(--text3);line-height:1.55}.bdt strong{color:var(--text);font-weight:600}
+.flow{display:flex;align-items:center;flex-wrap:wrap;gap:0}
+.fb{background:var(--card2);border:1px solid var(--border2);border-radius:6px;padding:6px 12px;font-size:16px;color:var(--text3);font-weight:500}
+.fb.hi{border-color:var(--accent);color:var(--accent)}
+.fa{color:var(--text2);padding:0 8px;font-size:16px}
+.step{display:flex;gap:12px;align-items:flex-start;padding:10px 13px;background:var(--card);border:1px solid var(--border);border-radius:var(--r)}
+.snum{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font-weight:900;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.sbody h4{font-size:16px;font-weight:700;color:var(--text);margin-bottom:2px}
+.sbody p{font-size:16px;color:var(--text2);line-height:1.5}
+table{width:100%;border-collapse:collapse;font-size:16px}
+th{background:var(--surface2);color:var(--accent);padding:8px 12px;text-align:left;font-weight:700;font-size:16px;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text3);line-height:1.5;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.01)}
+.pill{display:inline-block;padding:4px 12px;border-radius:20px;font-size:16px;font-weight:600;border:1px solid var(--border);color:var(--text2);margin:3px}
+.pill.a{border-color:var(--accent);color:var(--accent);background:rgba(244,63,94,.07)}
+.pill.g{border-color:var(--accent2);color:var(--accent2);background:rgba(74,222,128,.07)}
+.pill.o{border-color:var(--accent3);color:var(--accent3);background:rgba(97,218,251,.07)}
+.hero-bg{background:radial-gradient(ellipse at 10% 65%,rgba(244,63,94,.09) 0%,transparent 55%),radial-gradient(ellipse at 88% 20%,rgba(192,132,252,.07) 0%,transparent 50%),var(--bg)}
+.hero-title{font-size:clamp(42px,5.2vw,68px);font-weight:900;line-height:1.05;letter-spacing:-2px}
+.h1c{color:var(--text)}.h2c{color:var(--accent)}
+.hero-sub{font-size:17px;color:var(--text2);max-width:560px;line-height:1.7;margin:12px 0 18px;font-weight:400}
+.dots{position:absolute;inset:0;background-image:radial-gradient(rgba(244,63,94,.04) 1px,transparent 1px);background-size:28px 28px;pointer-events:none}
+.ba{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;flex:1}
+.ba-box{border-radius:var(--r);padding:14px 16px;border:1px solid var(--border)}
+.ba-box.bad{background:rgba(251,146,60,.04);border-color:rgba(251,146,60,.18)}
+.ba-box.good{background:rgba(244,63,94,.04);border-color:rgba(244,63,94,.18)}
+.ba-box h4{font-size:16px;font-weight:700;letter-spacing:.5px;margin-bottom:10px}
+.ba-box.bad h4{color:var(--accent5)}.ba-box.good h4{color:var(--accent)}
+.ba-box p,.ba-box li{font-size:16px;color:var(--text3);line-height:1.65}
+.ba-box ul{padding-left:16px}
+.q-card{background:linear-gradient(135deg,var(--card),var(--surface));border-left:3px solid var(--accent);border-radius:0 var(--r) var(--r) 0;padding:14px 18px;margin-bottom:10px}
+.q-text{font-size:16px;color:var(--text3);line-height:1.75;font-style:italic}
+.q-src{font-size:16px;color:var(--accent);margin-top:6px;font-style:normal;font-weight:700;letter-spacing:.5px}
+.rc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.rc{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:15px;text-align:center}
+.rc .ico{font-size:24px;margin-bottom:7px}
+.rc h4{font-size:16px;font-weight:700;color:var(--accent);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.rc p{font-size:16px;color:var(--text2);line-height:1.55}
+ic{background:var(--surface2);padding:1px 6px;border-radius:4px;font-family:var(--mono);font-size:16px;color:var(--accent4);border:1px solid var(--border)}
+
+/* VISUAL DIAGRAMS */
+.visual-diagram{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.visual-diagram h4{font-size:16px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px}
+.lc-row{display:flex;align-items:center;gap:0;font-size:16px}
+.lc-box{padding:6px 10px;border-radius:5px;font-family:var(--mono);font-size:16px;text-align:center;font-weight:600;white-space:nowrap}
+.lc-arrow{color:var(--text2);padding:0 6px;font-size:16px;flex-shrink:0}
+.lc-box.mount{background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);color:var(--accent2)}
+.lc-box.render{background:rgba(97,218,251,.1);border:1px solid rgba(97,218,251,.25);color:var(--accent3)}
+.lc-box.action{background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.25);color:var(--accent)}
+.lc-box.result{background:rgba(250,204,21,.1);border:1px solid rgba(250,204,21,.25);color:#facc15}
+.lc-box.skip{background:rgba(192,132,252,.1);border:1px solid rgba(192,132,252,.25);color:var(--accent4)}
+
+/* URL anatomy visual */
+.url-bar{background:#040C18;border:1px solid var(--border2);border-radius:6px;padding:10px 14px;font-family:var(--mono);font-size:16px;display:flex;align-items:center;gap:0;flex-wrap:wrap}
+.url-seg{padding:2px 4px;border-radius:3px;font-weight:600}
+.url-seg.host{color:var(--text2)}
+.url-seg.path{color:var(--accent3)}
+.url-seg.param{color:var(--accent);background:rgba(250,204,21,.1);border:1px solid rgba(250,204,21,.2)}
+.url-seg.sep{color:var(--text2);opacity:.5}
+.url-label{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.url-label-row{display:flex;align-items:center;gap:8px;font-size:16px}
+.url-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* SPA vs reload visual */
+.compare-row{display:flex;gap:10px}
+.compare-col{flex:1;padding:10px 12px;border-radius:6px;display:flex;flex-direction:column;gap:6px}
+.compare-col.bad{background:rgba(251,146,60,.05);border:1px solid rgba(251,146,60,.2)}
+.compare-col.good{background:rgba(74,222,128,.05);border:1px solid rgba(74,222,128,.2)}
+.compare-col h5{font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.compare-col.bad h5{color:var(--accent5)}
+.compare-col.good h5{color:var(--accent2)}
+.compare-step{font-size:16px;color:var(--text3);padding:4px 8px;background:rgba(255,255,255,.03);border-radius:4px;line-height:1.4}
+
+/* outlet diagram */
+.outlet-diagram{display:flex;flex-direction:column;align-items:stretch;gap:2px}
+.od-shell{border:1px solid rgba(97,218,251,.3);border-radius:6px;padding:8px 10px;background:rgba(97,218,251,.04)}
+.od-label{font-size:16px;font-weight:700;color:var(--accent3);margin-bottom:6px;font-family:var(--mono)}
+.od-outlet{border:2px dashed rgba(244,63,94,.4);border-radius:4px;padding:8px 10px;background:rgba(244,63,94,.04);text-align:center;font-size:16px;color:var(--accent);font-weight:600;position:relative}
+.od-child{margin:4px 8px;border:1px solid rgba(74,222,128,.3);border-radius:4px;padding:6px 10px;background:rgba(74,222,128,.04);font-size:16px;color:var(--accent2);font-family:var(--mono)}
+
+/* ACTIVITIES */
+.act-grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:12px;flex:1;min-height:0}
+.act-panel{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:14px 15px;display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
+.act-panel-header{display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.act-panel-title{font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.act-panel-pts{font-size:16px;font-weight:700;font-family:var(--mono);padding:2px 8px;border-radius:10px;background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.2);color:var(--accent)}
+.act-body{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;min-height:0}
+.mc-item{display:flex;flex-direction:column;gap:5px}
+.mc-q{font-size:16px;font-weight:600;color:var(--text);line-height:1.45}
+.qn{color:var(--accent);margin-right:5px;font-weight:800;font-family:var(--mono)}
+.mc-opts{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.mc-opt{padding:6px 10px;border-radius:5px;border:1px solid var(--border);font-size:16px;color:var(--text3);cursor:pointer;transition:all .15s;background:var(--surface2);line-height:1.35;user-select:none}
+.mc-opt:hover{border-color:var(--accent);color:var(--text)}
+.mc-opt.sel{border-color:var(--accent);background:rgba(244,63,94,.08);color:var(--accent)}
+.mc-sep{height:1px;background:var(--border);flex-shrink:0}
+.id-item{display:flex;gap:8px;align-items:stretch}
+.id-q{flex:1;background:#040C18;border:1px solid var(--border);border-radius:5px;padding:7px 10px;font-size:16px;color:var(--text3);line-height:1.45;display:flex;align-items:center;gap:6px}
+.id-num{font-family:var(--mono);font-weight:800;color:var(--accent4);font-size:16px;flex-shrink:0}
+.id-ans{width:130px;flex-shrink:0}
+.id-ta{width:100%;height:100%;min-height:44px;padding:6px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:16px;font-family:var(--mono);outline:none;resize:none;line-height:1.5;transition:border .2s}
+.id-ta:focus{border-color:var(--accent4)}
+.gto-item{display:flex;gap:8px;align-items:stretch}
+.gto-pre-sm{background:#040C18;border:1px solid var(--border);border-radius:5px;padding:7px 10px;font-family:var(--mono);font-size:16px;color:var(--text3);white-space:pre;overflow-x:auto;flex:1;line-height:1.6}
+.gto-right-sm{display:flex;flex-direction:column;gap:3px;width:130px;flex-shrink:0}
+.gto-alabel{font-size:16px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.8px}
+.gto-ta{width:100%;flex:1;min-height:52px;padding:6px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:16px;font-family:var(--mono);outline:none;resize:none;line-height:1.5;transition:border .2s}
+.gto-ta:focus{border-color:var(--accent4)}
+.chal-item{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:14px;display:flex;gap:12px;flex:1}
+.chal-left{flex:1;display:flex;flex-direction:column;gap:8px;min-width:0}
+.chal-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:12px;font-size:16px;font-weight:700;background:rgba(192,132,252,.12);border:1px solid rgba(192,132,252,.3);color:var(--accent4);width:fit-content}
+.chal-q{font-size:16px;font-weight:600;color:var(--text);line-height:1.45}
+.chal-pre{background:#040C18;border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-family:var(--mono);font-size:16px;color:var(--text3);white-space:pre;overflow-x:auto;flex:1;line-height:1.7}
+.chal-right{width:200px;flex-shrink:0;display:flex;flex-direction:column;gap:8px}
+.hint-btn{width:100%;padding:7px 12px;background:rgba(192,132,252,.08);border:1px solid rgba(192,132,252,.25);border-radius:6px;color:var(--accent4);font-size:16px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:all .2s;text-align:left}
+.hint-btn:hover{background:rgba(192,132,252,.15)}
+.hint-reveal{background:rgba(192,132,252,.07);border:1px solid rgba(192,132,252,.2);border-radius:6px;padding:8px 10px;font-size:16px;color:var(--text3);line-height:1.55;display:none}
+.hint-reveal.open{display:block}
+.chal-ta{width:100%;flex:1;min-height:80px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:16px;font-family:var(--mono);outline:none;resize:none;line-height:1.6;transition:border .2s}
+.chal-ta:focus{border-color:var(--accent4)}
+.chal-alabel{font-size:16px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.8px}
+.ans-block{border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;flex:1}
+.ans-row{display:flex;gap:10px;padding:8px 13px;border-bottom:1px solid var(--border);font-size:16px;align-items:flex-start}
+.ans-row:last-child{border:none}
+.ans-row:nth-child(even){background:rgba(255,255,255,.01)}
+.anum{font-weight:800;min-width:22px;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:16px;flex-shrink:0;margin-top:2px}
+.anum.b{color:var(--accent)}.anum.p{color:var(--accent4)}.anum.c{color:var(--accent2)}
+.abody{color:var(--text3);line-height:1.5;flex:1;min-width:0;font-size:16px}
+.abody strong{color:var(--accent2)}
+#modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center}
+#modal.open{display:flex}
+.mbox{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:24px 28px;min-width:300px}
+.mbox h3{font-size:16px;font-weight:700;color:var(--accent);margin-bottom:12px}
+.shr{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:16px;color:var(--text3)}
+.shr:last-of-type{border:none}
+.shr kbd{background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:2px 7px;font-family:var(--mono);font-size:16px;color:var(--text)}
+.mcl{margin-top:14px;width:100%;padding:8px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:16px;font-weight:700;font-family:var(--sans)}
+#hint-bar{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);font-size:16px;color:var(--text2);letter-spacing:.4px;pointer-events:none;opacity:.4;font-family:var(--mono)}
+
+/* ── 2x2 ACTIVITY GRID ── */
+.act2x2{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:11px;flex:1;min-height:0}
+.act-cell{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:12px 13px;display:flex;flex-direction:column;gap:6px;overflow:hidden;min-height:0}
+.act-cell-hd{font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;flex-shrink:0;display:flex;align-items:center;gap:6px}
+.act-body2{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:7px;min-height:0}
+.mc2-q{font-size:17px;font-weight:600;color:var(--text);line-height:1.4}
+.mc2-opts{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:3px}
+.mc2-opt{padding:5px 9px;border-radius:5px;border:1px solid var(--border);font-size:16px;color:var(--text3);cursor:pointer;transition:all .15s;background:var(--surface2);line-height:1.3;user-select:none}
+.mc2-opt:hover{border-color:var(--accent);color:var(--text)}
+.mc2-opt.sel{border-color:var(--accent);background:rgba(244,63,94,.08);color:var(--accent)}
+.id2-item{display:flex;flex-direction:column;gap:4px}
+.id2-scenario{font-size:17px;color:var(--text3);line-height:1.45;background:#040C18;border:1px solid var(--border);border-radius:5px;padding:6px 9px}
+.id2-scenario strong{color:var(--text)}
+.gto2-item{display:flex;flex-direction:column;gap:4px}
+.gto2-code{background:#040C18;border:1px solid var(--border);border-radius:5px;padding:6px 9px;font-family:var(--mono);font-size:16px;color:var(--text3);white-space:pre;overflow-x:auto;line-height:1.6}
+.long-wrap{display:flex;gap:14px;flex:1;min-height:0}
+.long-left{flex:1;display:flex;flex-direction:column;gap:8px;min-width:0}
+.long-right{width:220px;flex-shrink:0;display:flex;flex-direction:column;gap:8px}
+.long-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:12px;font-size:16px;font-weight:700;background:rgba(192,132,252,.12);border:1px solid rgba(192,132,252,.3);color:var(--accent4);width:fit-content}
+.long-pts{background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.25);color:var(--accent);padding:3px 10px;border-radius:12px;font-size:16px;font-weight:700;font-family:var(--mono)}
+.long-q{font-size:16px;font-weight:600;color:var(--text);line-height:1.5}
+.long-code{background:#040C18;border:1px solid var(--border);border-radius:7px;padding:11px 13px;font-family:var(--mono);font-size:16px;color:var(--text3);white-space:pre;overflow-x:auto;flex:1;line-height:1.75}
+.hint2-btn{width:100%;padding:8px 12px;background:rgba(192,132,252,.08);border:1px solid rgba(192,132,252,.25);border-radius:6px;color:var(--accent4);font-size:16px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:all .2s;text-align:left}
+.hint2-btn:hover{background:rgba(192,132,252,.15)}
+.hint2-body{background:rgba(192,132,252,.07);border:1px solid rgba(192,132,252,.2);border-radius:6px;padding:9px 11px;font-size:16px;color:var(--text3);line-height:1.6;display:none}
+.hint2-body.open{display:block}
+.long-ta{width:100%;flex:1;min-height:80px;padding:9px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:16px;font-family:var(--mono);outline:none;resize:none;line-height:1.6;transition:border .2s}
+.long-ta:focus{border-color:var(--accent4)}
+.long-alabel{font-size:16px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.8px}
+.qnum{color:var(--accent);font-family:var(--mono);font-weight:800;font-size:16px;margin-right:3px}
+.ans-block{border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;flex:1}
+.ans-row{display:flex;gap:10px;padding:8px 13px;border-bottom:1px solid var(--border);font-size:16px;align-items:flex-start}
+.ans-row:last-child{border:none}
+.ans-row:nth-child(even){background:rgba(255,255,255,.01)}
+.anum{font-weight:800;min-width:22px;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:16px;flex-shrink:0;margin-top:2px}
+.anum.b{color:var(--accent)}.anum.p{color:var(--accent4)}.anum.c{color:var(--accent2)}
+.abody{color:var(--text3);line-height:1.5;flex:1;min-width:0;font-size:16px}
+.abody strong{color:var(--accent2)}
+
+small{font-size:16px}button,input,textarea,select{font-size:16px}
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<div id="ctr"></div>
+<div id="nav-prev" onclick="go(cur-1)">&#8592;</div>
+<div id="nav-next" onclick="go(cur+1)">&#8594;</div>
+<div id="deck"></div>
+<div id="hint-bar">→ advance &nbsp;·&nbsp; ← back &nbsp;·&nbsp; ? shortcuts</div>
+<div id="modal">
+  <div class="mbox">
+    <h3>⌨ Keyboard Shortcuts</h3>
+    <div class="shr"><span>Next</span><span><kbd>→</kbd> or <kbd>Right-click</kbd></span></div>
+    <div class="shr"><span>Prev</span><span><kbd>←</kbd></span></div>
+    <div class="shr"><span>First / Last</span><span><kbd>Home</kbd> / <kbd>End</kbd></span></div>
+    <div class="shr"><span>Shortcuts</span><span><kbd>?</kbd></span></div>
+    <div class="shr"><span>Close</span><span><kbd>Esc</kbd></span></div>
+    <button class="mcl" onclick="document.getElementById('modal').classList.remove('open')">Close</button>
+  </div>
+</div>
+<script>
+function hl(raw){
+  const KW=/^(const|let|var|function|return|async|await|try|catch|throw|new|class|extends|if|else|for|while|import|export|default|from|of|in|true|false|null|undefined|void)\b/;
+  const TY=/^(React|ReactDOM|createBrowserRouter|RouterProvider|Outlet|Link|NavLink|useParams|useNavigate|useLocation|console|document|window)\b/;
+  const NUM=/^\b\d+(\.\d+)?\b/;
+  function e(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+  let i=0,o='';
+  while(i<raw.length){
+    if(raw[i]==='/'&&raw[i+1]==='/'){const end=raw.indexOf('\n',i);const ch=end<0?raw.slice(i):raw.slice(i,end);o+='<span class="cm">'+e(ch)+'</span>';i+=ch.length;continue;}
+    if(raw[i]==='`'){let j=i+1;while(j<raw.length&&raw[j]!=='`'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    if(raw[i]==="'"){let j=i+1;while(j<raw.length&&raw[j]!=="'"&&raw[j]!=='\n'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    if(raw[i]==='"'){let j=i+1;while(j<raw.length&&raw[j]!=='"'&&raw[j]!=='\n'){if(raw[j]==='\\')j++;j++;}o+='<span class="s">'+e(raw.slice(i,j+1))+'</span>';i=j+1;continue;}
+    const rest=raw.slice(i);let m;
+    if((m=rest.match(KW))){o+='<span class="k">'+m[0]+'</span>';i+=m[0].length;continue;}
+    if((m=rest.match(TY))){o+='<span class="t">'+m[0]+'</span>';i+=m[0].length;continue;}
+    if((m=rest.match(NUM))){o+='<span class="n">'+m[0]+'</span>';i+=m[0].length;continue;}
+    o+=e(raw[i]);i++;
+  }
+  return o;
+}
+function cw(code,lang,label){
+  const id='c'+Math.random().toString(36).slice(2);
+  const body=(lang==='jsx'||lang==='js')?hl(code):code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return '<div class="cw"><div class="cl"><span>'+(label||lang)+'</span><button class="cpbtn" onclick="doCopy(\''+id+'\',this)">Copy</button></div><pre id="'+id+'">'+body+'</pre></div>';
+}
+function doCopy(id,btn){
+  navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>{
+    btn.textContent='Copied!';btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('ok');},2000);
+  });
+}
+
+const S=[];
+
+// 0 HERO
+S.push({cls:'hero-bg',h:`
+<div class="dots"></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;position:relative">
+  <div class="slide-tag" style="margin-bottom:16px">Web Systems · Module 14</div>
+  <div class="hero-title"><div class="h1c">Client Routing with</div><div class="h2c">React Router v6</div></div>
+  <div class="hero-sub">Move from one component to many "pages" — layouts with Outlet, dynamic URL params, and programmatic navigation, all without a single server round-trip.</div>
+  <div>
+    <span class="pill a">createBrowserRouter</span>
+    <span class="pill a">&lt;Outlet /&gt;</span>
+    <span class="pill a">useParams</span>
+    <span class="pill a">useNavigate</span>
+    <span class="pill g">NavLink</span>
+  </div>
+</div>`});
+
+// 1 BRIDGE
+S.push({h:`
+<div class="slide-tag">Where We Left Off</div>
+<div class="slide-title">M13 → M14: From One Screen to Many</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="ba">
+    <div class="ba-box bad">
+      <h4>❌ What M13 gave us</h4>
+      <ul>
+        <li>Fast, optimized components — refs, custom hooks, memoization</li>
+        <li>But everything still lived on <strong>one single screen</strong></li>
+        <li>No concept of a URL representing "where the user is"</li>
+        <li>No way to bookmark, share, or hit the browser back button meaningfully</li>
+      </ul>
+      <p style="margin-top:10px;font-size:16px;color:rgba(251,146,60,.7)">One giant component tree, one URL, forever.</p>
+    </div>
+    <div class="ba-box good">
+      <h4>✅ What M14 adds</h4>
+      <ul>
+        <li>React Router maps <strong>URLs to components</strong> — <ic>/products/42</ic> renders a specific screen</li>
+        <li>Shared layout (navbar, footer) stays mounted; only the inner content swaps</li>
+        <li>Dynamic segments (<ic>:id</ic>) and programmatic redirects after actions like login</li>
+        <li>Real browser history — back/forward buttons and bookmarks work correctly</li>
+      </ul>
+      <p style="margin-top:10px;font-size:16px;color:rgba(244,63,94,.7)">Now your app finally feels like a multi-page site — without ever leaving the SPA.</p>
+    </div>
+  </div>
+  <div class="card"><h3>The Throughline</h3>
+    <p style="font-size:16px">A Single Page Application never reloads the HTML document. React Router's job is to fake the feeling of "multiple pages" by swapping which components render, based on the current URL — instantly, client-side.</p>
+  </div>
+</div>`});
+
+// 2 SPA vs RELOAD — with visual
+S.push({h:`
+<div class="slide-tag">Core Concept</div>
+<div class="slide-title">SPA Routing vs. Traditional Page Reloads</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split" style="flex:1">
+    <div class="col">
+      <div class="visual-diagram flex1">
+        <h4>What actually happens when you navigate</h4>
+        <div class="compare-row">
+          <div class="compare-col bad">
+            <h5>❌ &lt;a href&gt; (reload)</h5>
+            <div class="compare-step">1. Browser sends GET /about to server</div>
+            <div class="compare-step">2. Server returns new HTML document</div>
+            <div class="compare-step">3. Browser discards everything 🗑️</div>
+            <div class="compare-step">4. React re-boots from scratch</div>
+            <div class="compare-step">5. All in-memory state is gone 😬</div>
+          </div>
+          <div class="compare-col good">
+            <h5>✅ &lt;Link&gt; (SPA)</h5>
+            <div class="compare-step">1. Click intercepted by React Router</div>
+            <div class="compare-step">2. URL updated via History API</div>
+            <div class="compare-step">3. React swaps the component 🔄</div>
+            <div class="compare-step">4. Layout, state, scroll — preserved</div>
+            <div class="compare-step">5. Instant, no round-trip ⚡</div>
+          </div>
+        </div>
+        <div style="font-size:16px;color:var(--text2);font-style:italic;margin-top:4px">The building's lobby and elevator (shared layout) never disappear — only the floor you're on changes.</div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card flex1"><h3>Why Not Just Use &lt;a href&gt;?</h3>
+        <p>A plain HTML <ic>&lt;a href="/about"&gt;</ic> tells the <em>browser</em> to fetch a brand-new document from the server — which throws away every bit of React state you were holding (form input, scroll position, in-memory data).</p>
+      </div>
+      <div class="card"><h3>The Fix: &lt;Link&gt;</h3>
+        <p style="font-size:16px">React Router's <ic>&lt;Link to="/about"&gt;</ic> intercepts the click, updates the URL using the browser's History API, and lets React swap components — no document reload, no lost state.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 3 ROUTER SETUP SYNTAX
+S.push({h:`
+<div class="slide-tag">The Setup</div>
+<div class="slide-title">createBrowserRouter — What / How / Why</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      ${cw(`import {\n  createBrowserRouter,\n  RouterProvider\n} from 'react-router-dom';\n\nconst router = createBrowserRouter([\n  {\n    path: '/',\n    element: <RootLayout />,\n    children: [\n      { index: true, element: <Home /> },\n      { path: 'products/:id', element: <ProductDetail /> },\n      { path: '*', element: <NotFound /> }\n    ]\n  }\n]);\n\nexport default function App() {\n  return <RouterProvider router={router} />;\n}`,'jsx','main routing setup')}
+    </div>
+    <div class="col">
+      <div class="bdi"><span class="bdl">WHAT</span><div class="bdt">A function that builds a route configuration — a tree mapping URL paths to the components that should render for them.</div></div>
+      <div class="bdi g"><span class="bdl">HOW</span><div class="bdt">Pass an array of route objects (<ic>path</ic>, <ic>element</ic>, optional <ic>children</ic>). Render the result inside <ic>&lt;RouterProvider&gt;</ic> once, near the top of your app.</div></div>
+      <div class="bdi o"><span class="bdl">WHY</span><div class="bdt">Centralizes "which URL shows which screen" in one readable tree, instead of scattering conditional rendering logic everywhere.</div></div>
+      <div class="card"><h3>Nested = Shared Layout</h3>
+        <p style="font-size:16px">Routes nested under <ic>children</ic> automatically render <em>inside</em> their parent's <ic>&lt;Outlet /&gt;</ic> — that's how the navbar stays mounted across every "page."</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 4 OUTLET — with visual diagram
+S.push({h:`
+<div class="slide-tag">Shared Layouts</div>
+<div class="slide-title">&lt;Outlet /&gt; — The Placeholder That Swaps</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      ${cw(`function RootLayout() {\n  return (\n    <div>\n      <nav>\n        <Link to="/">Home</Link>\n        <Link to="/products/99">Product #99</Link>\n      </nav>\n      <hr />\n      {/* Whichever child route matched renders here */}\n      <Outlet />\n    </div>\n  );\n}`,'jsx','RootLayout.jsx')}
+    </div>
+    <div class="col">
+      <div class="visual-diagram">
+        <h4>How &lt;Outlet /&gt; works</h4>
+        <div class="outlet-diagram">
+          <div class="od-shell">
+            <div class="od-label">RootLayout — always mounted</div>
+            <div style="font-size:16px;color:var(--text2);padding:2px 0 6px;font-family:var(--mono)">&lt;nav&gt; Home | Products &lt;/nav&gt;</div>
+            <div class="od-outlet">&lt;Outlet /&gt; ← child renders here</div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:4px">
+            <div class="od-child" style="flex:1">URL: / → &lt;Home /&gt;</div>
+            <div class="od-child" style="flex:1">URL: /products/5 → &lt;ProductDetail /&gt;</div>
+            <div class="od-child" style="flex:1">URL: /xyz → &lt;NotFound /&gt;</div>
+          </div>
+        </div>
+      </div>
+      <div class="bdi"><span class="bdl">WHAT</span><div class="bdt">A placeholder — wherever it sits in a parent layout, React Router renders the currently matched child route there.</div></div>
+      <div class="bdi g"><span class="bdl">WHY</span><div class="bdt">Shared chrome (navbar, sidebar, footer) lives in one place. The "page" content swaps underneath without re-mounting the layout.</div></div>
+    </div>
+  </div>
+</div>`});
+
+// 5 USEPARAMS — with URL anatomy visual
+S.push({h:`
+<div class="slide-tag">Reading The URL</div>
+<div class="slide-title">useParams — Dynamic URL Segments</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      ${cw(`import { useParams } from 'react-router-dom';\n\n// Route was defined as: path: 'products/:id'\n\nfunction ProductDetail() {\n  const { id } = useParams();\n  // Visiting /products/42 -> id is the string "42"\n\n  return <h2>Viewing Product ID: {id}</h2>;\n}`,'jsx','ProductDetail.jsx')}
+    </div>
+    <div class="col">
+      <div class="visual-diagram">
+        <h4>Anatomy of a dynamic URL</h4>
+        <div class="url-bar">
+          <span class="url-seg host">localhost:5173</span>
+          <span class="url-seg sep">/</span>
+          <span class="url-seg path">products</span>
+          <span class="url-seg sep">/</span>
+          <span class="url-seg param">42</span>
+        </div>
+        <div class="url-label">
+          <div class="url-label-row"><div class="url-dot" style="background:var(--accent3)"></div><span style="font-size:16px;color:var(--text2)"><code style="font-family:var(--mono);font-size:16px;color:var(--accent3)">products</code> — static path segment, always literal</span></div>
+          <div class="url-label-row"><div class="url-dot" style="background:var(--accent)"></div><span style="font-size:16px;color:var(--text2)"><code style="font-family:var(--mono);font-size:16px;color:var(--accent)">42</code> — dynamic segment, captured as <ic>:id</ic> → always a string</span></div>
+        </div>
+      </div>
+      <div class="bdi"><span class="bdl">WHAT</span><div class="bdt">A hook that reads the dynamic segments of the current URL — the parts marked with a colon in the route path, like <ic>:id</ic>.</div></div>
+      <div class="bdi g"><span class="bdl">WHY</span><div class="bdt">One component handles infinitely many URLs — <ic>/products/1</ic>, <ic>/products/999</ic> — without a separate route for each.</div></div>
+      <div class="card" style="border-color:rgba(250,204,21,.2)"><h3 style="color:var(--accent)">⚠ Always a String</h3>
+        <p style="font-size:16px">Every value from <ic>useParams()</ic> is a <ic>string</ic>. Convert with <ic>Number(id)</ic> before doing math.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 6 USENAVIGATE + NAVLINK
+S.push({h:`
+<div class="slide-tag">Moving The User</div>
+<div class="slide-title">useNavigate &amp; NavLink — What / How / Why</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="split">
+    <div>
+      ${cw(`import { useNavigate, NavLink } from 'react-router-dom';\n\nfunction LoginForm() {\n  const navigate = useNavigate();\n\n  function handleLogin(e) {\n    e.preventDefault();\n    // Redirect after a successful action\n    navigate('/dashboard', { replace: true });\n  }\n\n  return (\n    <form onSubmit={handleLogin}>\n      <button type="submit">Sign In</button>\n    </form>\n  );\n}\n\n// NavLink auto-applies class="active" on match\n<NavLink to="/profile">Profile</NavLink>`,'jsx','Programmatic navigation')}
+    </div>
+    <div class="col">
+      <div class="bdi"><span class="bdl">WHAT</span><div class="bdt"><ic>useNavigate</ic> lets you redirect the user from inside a function — after a form submits, a login succeeds, or a timer fires.</div></div>
+      <div class="bdi g"><span class="bdl">HOW</span><div class="bdt">Call <ic>navigate('/path')</ic>. Pass <ic>{ replace: true }</ic> to swap the current history entry instead of adding a new one.</div></div>
+      <div class="bdi o"><span class="bdl">WHY</span><div class="bdt">Some navigation isn't a click on a link — it's the <em>result</em> of code running. This is how you redirect programmatically.</div></div>
+      <div class="card"><h3>replace: true in Practice</h3>
+        <p style="font-size:16px">After login, you usually don't want the back button to return the user to the login form. <ic>{ replace: true }</ic> removes that page from history entirely.</p>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+// 7 PITFALLS
+S.push({h:`
+<div class="slide-tag">Watch Out</div>
+<div class="slide-title">Common Pitfalls &amp; How to Avoid Them</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2">
+    <div class="card"><h3>❌ Using &lt;a href&gt; for internal links</h3>
+      <p>Triggers a full document reload, discarding React state and re-downloading the whole JS bundle.</p>
+      <p style="margin-top:6px;font-size:16px;color:var(--accent3)">Fix: always use <ic>&lt;Link&gt;</ic> or <ic>&lt;NavLink&gt;</ic> for in-app navigation.</p>
+    </div>
+    <div class="card"><h3>❌ Forgetting the wildcard route</h3>
+      <p>Without a <ic>path: '*'</ic> catch-all, mistyped or invalid URLs render nothing at all, confusing the user.</p>
+      <p style="margin-top:6px;font-size:16px;color:var(--accent3)">Fix: always add a wildcard route pointing to a friendly 404 page.</p>
+    </div>
+    <div class="card"><h3>❌ Treating useParams values as numbers</h3>
+      <p>Comparing <ic>id === 42</ic> silently fails because <ic>id</ic> is the string <ic>"42"</ic>.</p>
+      <p style="margin-top:6px;font-size:16px;color:var(--accent3)">Fix: convert explicitly with <ic>Number(id)</ic> or <ic>parseInt(id, 10)</ic> before comparing or doing math.</p>
+    </div>
+    <div class="card"><h3>❌ Missing &lt;Outlet /&gt; in a layout</h3>
+      <p>You define nested child routes but forget to render <ic>&lt;Outlet /&gt;</ic> in the parent — the children match, but nothing visibly appears.</p>
+      <p style="margin-top:6px;font-size:16px;color:var(--accent3)">Fix: every layout route with children needs exactly one <ic>&lt;Outlet /&gt;</ic> where the content should appear.</p>
+    </div>
+  </div>
+</div>`});
+
+// 8 PRACTICAL PATTERNS
+S.push({h:`
+<div class="slide-tag">Patterns You Will Use Daily</div>
+<div class="slide-title">Three Everyday Routing Recipes</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g3" style="flex:1">
+    <div class="card"><h3>1. Active Nav Styling</h3>
+      ${cw(`<NavLink\n  to="/profile"\n  className={({isActive}) =>\n    isActive ? 'link active' : 'link'\n  }\n>\n  Profile\n</NavLink>`,'jsx','')}
+      <p style="font-size:16px;margin-top:8px">NavLink hands you <ic>isActive</ic> so you can style the current page's link differently.</p>
+    </div>
+    <div class="card"><h3>2. Redirect After Submit</h3>
+      ${cw(`function handleSave() {\n  saveData();\n  navigate('/saved', { replace: true });\n}`,'jsx','')}
+      <p style="font-size:16px;margin-top:8px">Common pattern for forms: save, then redirect somewhere that shouldn't be re-visited via back button.</p>
+    </div>
+    <div class="card"><h3>3. Friendly 404</h3>
+      ${cw(`{ path: '*', element: <NotFound /> }`,'jsx','')}
+      <p style="font-size:16px;margin-top:8px">Always the last entry in your route array — catches anything that didn't match above it.</p>
+    </div>
+  </div>
+</div>`});
+
+// 9 ACTIVITY
+S.push({h:`
+<div class="slide-tag">Hands-On</div>
+<div class="slide-title">Activity: Build a Mini Product Catalog</div>
+<hr class="rule"/>
+<div class="content" style="justify-content:center">
+  <div class="card" style="max-width:640px;margin:0 auto">
+    <h3>Goal</h3>
+    <p>Build a router with:</p>
+    <ol style="padding-left:20px;margin:10px 0;color:var(--text3)">
+      <li style="margin-bottom:6px">A <ic>RootLayout</ic> with a nav bar using <ic>NavLink</ic> and an <ic>&lt;Outlet /&gt;</ic></li>
+      <li style="margin-bottom:6px">An index route showing a list of products</li>
+      <li style="margin-bottom:6px">A <ic>products/:id</ic> route showing one product's detail using <ic>useParams</ic></li>
+      <li>A wildcard <ic>*</ic> route rendering a NotFound page</li>
+    </ol>
+    <p style="margin-top:12px;font-size:16px">Every ingredient was covered on the last few slides — assemble them into one working router config.</p>
+  </div>
+  <div class="flow" style="justify-content:center;margin-top:18px">
+    <div class="fb">Router config</div><div class="fa">→</div>
+    <div class="fb">Outlet layout</div><div class="fa">→</div>
+    <div class="fb">Dynamic route</div><div class="fa">→</div>
+    <div class="fb hi">Working catalog ✓</div>
+  </div>
+</div>`});
+
+// 10 RECAP
+S.push({h:`
+<div class="slide-tag">Recap</div>
+<div class="slide-title">Module 14 — What You Now Own</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="rc-grid" style="flex:1">
+    <div class="rc"><div class="ico">🗺️</div><h4>createBrowserRouter</h4><p>Builds the route tree mapping URLs to components.</p></div>
+    <div class="rc"><div class="ico">🪟</div><h4>&lt;Outlet /&gt;</h4><p>Placeholder where the matched child route renders inside a shared layout.</p></div>
+    <div class="rc"><div class="ico">🔗</div><h4>&lt;Link&gt; / &lt;NavLink&gt;</h4><p>Client-side navigation without a full page reload; NavLink adds active styling.</p></div>
+    <div class="rc"><div class="ico">🏷️</div><h4>useParams</h4><p>Reads dynamic URL segments like <ic>:id</ic> — always returned as strings.</p></div>
+    <div class="rc"><div class="ico">➡️</div><h4>useNavigate</h4><p>Redirects programmatically from inside event handlers or effects.</p></div>
+    <div class="rc"><div class="ico">🚧</div><h4>Wildcard Route</h4><p><ic>path: '*'</ic> catches unmatched URLs for a friendly 404 page.</p></div>
+  </div>
+  <div class="card" style="margin-top:4px"><h3>Next Up — M15: Authentication &amp; Protected Routes</h3>
+    <p style="font-size:16px">We'll use everything from this module to gate certain routes behind a login check, redirecting unauthenticated users automatically.</p>
+  </div>
+</div>`});
+
+
+// ─── ACTIVITY SLIDES ───────────────────────────────────────────────────────
+// 11 QUIZ OVERVIEW
+S.push({h:`
+<div class="slide-tag">Assessment</div>
+<div class="slide-title">Module 14 — Quiz Overview</div>
+<hr class="rule"/>
+<div class="content" style="justify-content:center;gap:16px">
+  <div class="g2">
+    <div class="card"><h3>📋 Multiple Choice · 4 pts</h3>
+      <ul><li>4 questions · 1 pt each</li><li>Link vs anchor, Outlet, useParams, useNavigate</li></ul>
+    </div>
+    <div class="card"><h3>🔍 Situational ID · 4 pts</h3>
+      <ul><li>4 scenarios · 1 pt each</li><li>Read the situation, name the hook or Router concept</li></ul>
+    </div>
+    <div class="card"><h3>💻 Guess the Output · 4 pts</h3>
+      <ul><li>4 code snippets · 1 pt each</li><li>Trace routing, params, and navigation behavior</li></ul>
+    </div>
+    <div class="card" style="border-color:rgba(192,132,252,.3);background:rgba(192,132,252,.04)"><h3 style="color:var(--accent4)">⚡ Long Code · 3 pts</h3>
+      <ul><li>1 multi-part question · 3 pts</li><li>Harder tracing — hints available</li></ul>
+    </div>
+  </div>
+  <div style="text-align:center;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:var(--r2)">
+    <span style="font-size:42px;font-weight:900;color:var(--accent)">15</span>
+    <span style="font-size:16px;color:var(--text2);margin-left:8px">total points</span>
+  </div>
+  <div class="card"><h3>⚠ Note</h3><p style="font-size:16px">Every concept tested here was covered on the teaching slides. Attempt each question before peeking at the answer key at the end.</p></div>
+</div>`});
+
+// 12 MCQ — 2x2 grid
+S.push({init(el){
+  const qs=[
+    {q:"Why use &lt;Link to&gt; instead of &lt;a href&gt; in React SPAs?",opts:["Anchor tags aren't valid HTML5","Anchor tags cause full reloads, losing React state","Link tags encrypt URLs","Link tags only work on mobile"],ans:1},
+    {q:"What does &lt;Outlet /&gt; do in nested routes?",opts:["Shows battery status","Renders the matched child route inside a parent layout","Disconnects Express backend","Clears browser cache"],ans:1},
+    {q:"Which hook reads dynamic URL segments like /users/:id?",opts:["useLocation()","useParams()","useRouteId()","useQueryString()"],ans:1},
+    {q:"Which hook navigates programmatically after an event?",opts:["useNavigate()","useRedirect()","useHistoryPush()","useHref()"],ans:0}
+  ];
+  qs.forEach((q,i)=>{
+    const cell=el.querySelector('#mc-cell-'+i);
+    const hd=document.createElement('div');hd.className='act-cell-hd';hd.style.color='var(--accent)';
+    hd.innerHTML=`<span class="qnum">Q${i+1}</span><span style="font-size:16px;color:var(--text2);font-weight:500">1 pt</span>`;
+    const body=document.createElement('div');body.className='act-body2';
+    const qd=document.createElement('div');qd.className='mc2-q';qd.innerHTML=q.q;
+    const od=document.createElement('div');od.className='mc2-opts';
+    q.opts.forEach((o,oi)=>{
+      const btn=document.createElement('div');btn.className='mc2-opt';btn.textContent=o;
+      btn.onclick=()=>{od.querySelectorAll('.mc2-opt').forEach(x=>x.classList.remove('sel'));btn.classList.add('sel');};
+      od.appendChild(btn);
+    });
+    body.appendChild(qd);body.appendChild(od);
+    cell.appendChild(hd);cell.appendChild(body);
+  });
+},h:`
+<div class="slide-tag">Activity 1 of 4</div>
+<div class="slide-title">Multiple Choice <span style="font-size:16px;color:var(--text2);font-weight:400">4 questions · 1 pt each · 4 pts total</span></div>
+<hr class="rule"/>
+<div class="act2x2">
+  <div class="act-cell" id="mc-cell-0"></div>
+  <div class="act-cell" id="mc-cell-1"></div>
+  <div class="act-cell" id="mc-cell-2"></div>
+  <div class="act-cell" id="mc-cell-3"></div>
+</div>`});
+
+// 13 SITUATIONAL ID — 2x2 grid
+S.push({init(el){
+  const qs=[
+    {scenario:`A user clicks the navbar link <strong>"Products"</strong>. The URL updates to /products instantly with no server request, and the shared navbar stays mounted. What concept makes this possible?`,label:"Name the routing architecture:"},
+    {scenario:`You have a <strong>Dashboard layout</strong> with a top navbar and a sidebar. You want different inner pages (Analytics, Settings, Users) to swap in and out <strong>without unmounting the Dashboard shell</strong>.`,label:"Which Router component is the slot where inner pages render?"},
+    {scenario:`Your route is defined as <code style="font-family:var(--mono);font-size:16px">path: 'products/:productId'</code>. Inside the component you need to read the actual value from the URL — e.g. visiting <code style="font-family:var(--mono);font-size:16px">/products/789</code> should give you <strong>"789"</strong>.`,label:"Which hook extracts this value?"},
+    {scenario:`After a user successfully submits a <strong>login form</strong>, you want to send them to <code style="font-family:var(--mono);font-size:16px">/dashboard</code> and make sure the <strong>back button doesn't return them to the login screen</strong>.`,label:"Which hook + option achieves this?"}
+  ];
+  qs.forEach((q,i)=>{
+    const cell=el.querySelector('#id-cell-'+i);
+    const hd=document.createElement('div');hd.className='act-cell-hd';hd.style.color='var(--accent3)';
+    hd.innerHTML=`<span class="qnum" style="color:var(--accent3)">Q${i+5}</span><span style="font-size:16px;color:var(--text2);font-weight:500">1 pt</span>`;
+    const body=document.createElement('div');body.className='act-body2';
+    const sc=document.createElement('div');sc.className='id2-scenario';sc.innerHTML=q.scenario;
+    const lb=document.createElement('div');lb.style.cssText='font-size:16px;color:var(--text2);margin-top:2px';lb.textContent=q.label;
+    body.appendChild(sc);body.appendChild(lb);
+    cell.appendChild(hd);cell.appendChild(body);
+  });
+},h:`
+<div class="slide-tag">Activity 2 of 4</div>
+<div class="slide-title">Situational Identification <span style="font-size:16px;color:var(--text2);font-weight:400">4 scenarios · 1 pt each · 4 pts total</span></div>
+<hr class="rule"/>
+<div class="act2x2">
+  <div class="act-cell" id="id-cell-0"></div>
+  <div class="act-cell" id="id-cell-1"></div>
+  <div class="act-cell" id="id-cell-2"></div>
+  <div class="act-cell" id="id-cell-3"></div>
+</div>`});
+
+// 14 GUESS THE OUTPUT — 2x2 grid
+S.push({init(el){
+  const qs=[
+    {code:`// Route: path: 'orders/:orderId'
+const { orderId } = useParams();
+console.log(orderId, typeof orderId);
+// Visiting /orders/789
+// What is logged?`},
+    {code:`// RootLayout:
+// <div><h1>Dash</h1><Outlet /></div>
+// Child route 'settings':
+// <p>Settings Panel</p>
+// What renders at /dashboard/settings?`},
+    {code:`const navigate = useNavigate();
+navigate('/login', { replace: true });
+// Click back in the browser.
+// Does it return to the previous page?`},
+    {code:`<NavLink to="/profile">Profile</NavLink>
+// Current URL is /profile.
+// What class is on the <a> element?`}
+  ];
+  qs.forEach((q,i)=>{
+    const cell=el.querySelector('#gto-cell-'+i);
+    const hd=document.createElement('div');hd.className='act-cell-hd';hd.style.color='var(--accent4)';
+    hd.innerHTML=`<span class="qnum" style="color:var(--accent4)">Q${i+9}</span><span style="font-size:16px;color:var(--text2);font-weight:500">1 pt</span>`;
+    const body=document.createElement('div');body.className='act-body2';
+    const pre=document.createElement('pre');pre.className='gto2-code';pre.innerHTML=hl(q.code);
+    body.appendChild(pre);
+    cell.appendChild(hd);cell.appendChild(body);
+  });
+},h:`
+<div class="slide-tag">Activity 3 of 4</div>
+<div class="slide-title">Guess the Output <span style="font-size:16px;color:var(--text2);font-weight:400">4 snippets · 1 pt each · 4 pts total</span></div>
+<hr class="rule"/>
+<div class="act2x2">
+  <div class="act-cell" id="gto-cell-0"></div>
+  <div class="act-cell" id="gto-cell-1"></div>
+  <div class="act-cell" id="gto-cell-2"></div>
+  <div class="act-cell" id="gto-cell-3"></div>
+</div>`});
+
+// 15 LONG CODE — 3 pts with hints
+S.push({h:`
+<div class="slide-tag">Activity 4 of 4</div>
+<div class="slide-title">Long Code Analysis <span style="font-size:16px;color:var(--text2);font-weight:400">1 question · 3 pts</span></div>
+<hr class="rule"/>
+<div class="long-wrap">
+  <div class="long-left">
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <span class="long-badge">⚡ Q13</span>
+      <span class="long-pts">3 pts</span>
+    </div>
+    <div class="long-q">Trace this router config and component. Answer: (a) what renders at <code style="font-family:var(--mono);font-size:16px">/dashboard</code>, (b) what renders at <code style="font-family:var(--mono);font-size:16px">/dashboard/stats</code>, and (c) what is wrong with visiting <code style="font-family:var(--mono);font-size:16px">/dashboard/unknown</code>?</div>
+    <pre class="long-code">createBrowserRouter([
+  {
+    path: '/',
+    element: &lt;RootLayout /&gt;,
+    children: [
+      { index: true, element: &lt;Home /&gt; },
+      {
+        path: 'dashboard',
+        element: &lt;Dashboard /&gt;,
+        children: [
+          { path: 'stats', element: &lt;Stats /&gt; }
+          // no wildcard here!
+        ]
+      },
+      { path: '*', element: &lt;NotFound /&gt; }
+    ]
+  }
+]);
+
+// Dashboard component:
+function Dashboard() {
+  return (
+    &lt;section&gt;
+      &lt;h2&gt;Dashboard&lt;/h2&gt;
+      &lt;Outlet /&gt;
+    &lt;/section&gt;
+  );
+}</pre>
+  </div>
+  <div class="long-right">
+    <button class="hint2-btn" onclick="toggleHint2(this)">💡 Hint 1 — Outlet</button>
+    <div class="hint2-body">When a route matches but no child route matches too, what does &lt;Outlet /&gt; render — something or nothing?</div>
+    <button class="hint2-btn" onclick="toggleHint2(this)">💡 Hint 2 — wildcard scope</button>
+    <div class="hint2-body">The <code style="font-family:var(--mono);font-size:16px">path: '*'</code> wildcard at the top level catches anything under <code style="font-family:var(--mono);font-size:16px">/</code> that didn't match. But does it also catch unmatched paths <em>inside</em> the dashboard children?</div>
+    <div class="long-alabel">Your answer (a, b, c)</div>
+    <textarea class="long-ta" placeholder="(a) /dashboard renders…&#10;(b) /dashboard/stats renders…&#10;(c) /dashboard/unknown…"></textarea>
+  </div>
+</div>`});
+
+// 16 ANSWER KEY
+S.push({h:`
+<div class="slide-tag">Answer Key</div>
+<div class="slide-title">All Answers — Module 14</div>
+<hr class="rule"/>
+<div class="content">
+  <div class="g2" style="flex:1">
+    <div class="col">
+      <div style="font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin-bottom:5px">Multiple Choice (Q1–4)</div>
+      <div class="ans-block">
+        <div class="ans-row"><span class="anum b">1.</span><div class="abody"><strong>Anchor tags cause full reloads</strong>, discarding React state.</div></div>
+        <div class="ans-row"><span class="anum b">2.</span><div class="abody"><strong>Renders the matched child route</strong> inside the parent layout shell.</div></div>
+        <div class="ans-row"><span class="anum b">3.</span><div class="abody"><strong>useParams()</strong> — reads dynamic URL segment parameters.</div></div>
+        <div class="ans-row"><span class="anum b">4.</span><div class="abody"><strong>useNavigate()</strong> — programmatic client-side navigation.</div></div>
+      </div>
+      <div style="font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent3);margin-bottom:5px;margin-top:8px">Situational ID (Q5–8)</div>
+      <div class="ans-block">
+        <div class="ans-row"><span class="anum p">5.</span><div class="abody"><strong>SPA (Single Page Application)</strong> routing.</div></div>
+        <div class="ans-row"><span class="anum p">6.</span><div class="abody"><strong>&lt;Outlet /&gt;</strong> — the placeholder where child routes render.</div></div>
+        <div class="ans-row"><span class="anum p">7.</span><div class="abody"><strong>useParams()</strong> — returns { productId: "789" }.</div></div>
+        <div class="ans-row"><span class="anum p">8.</span><div class="abody"><strong>useNavigate() with { replace: true }</strong> — replaces history entry so back button skips login.</div></div>
+      </div>
+    </div>
+    <div class="col">
+      <div style="font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent4);margin-bottom:5px">Guess the Output (Q9–12)</div>
+      <div class="ans-block">
+        <div class="ans-row"><span class="anum c">9.</span><div class="abody"><strong>"789" "string"</strong> — useParams always returns strings.</div></div>
+        <div class="ans-row"><span class="anum c">10.</span><div class="abody"><strong>&lt;div&gt;&lt;h1&gt;Dash&lt;/h1&gt;&lt;p&gt;Settings Panel&lt;/p&gt;&lt;/div&gt;</strong> — Outlet is replaced by the matched child.</div></div>
+        <div class="ans-row"><span class="anum c">11.</span><div class="abody"><strong>No.</strong> replace:true swaps the history entry — back skips over it.</div></div>
+        <div class="ans-row"><span class="anum c">12.</span><div class="abody"><strong>class="active"</strong> — NavLink auto-applies it on URL match.</div></div>
+      </div>
+      <div style="font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent4);margin-bottom:5px;margin-top:8px">Long Code (Q13) — 3 pts</div>
+      <div class="ans-block">
+        <div class="ans-row"><span class="anum c">13a.</span><div class="abody"><strong>/dashboard</strong> → &lt;section&gt;&lt;h2&gt;Dashboard&lt;/h2&gt;&lt;/section&gt; with empty Outlet (no child matched).</div></div>
+        <div class="ans-row"><span class="anum c">13b.</span><div class="abody"><strong>/dashboard/stats</strong> → Dashboard wraps Stats: &lt;section&gt;&lt;h2&gt;Dashboard&lt;/h2&gt;&lt;Stats /&gt;&lt;/section&gt;.</div></div>
+        <div class="ans-row"><span class="anum c">13c.</span><div class="abody"><strong>/dashboard/unknown</strong> → Dashboard renders with empty Outlet (no child + no wildcard inside dashboard children). The top-level <code style="font-family:var(--mono)">*</code> doesn't catch it. Fix: add <code style="font-family:var(--mono)">{ path: '*', element: &lt;NotFound /&gt; }</code> inside dashboard's children.</div></div>
+      </div>
+    </div>
+  </div>
+</div>`});
+
+
+// 16 CLOSING
+S.push({cls:'hero-bg',h:`
+<div class="dots"></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:18px;position:relative;max-width:720px">
+  <div class="slide-tag">Module 14 Complete</div>
+  <div style="font-size:clamp(28px,3.6vw,48px);font-weight:900;line-height:1.15;letter-spacing:-.5px">
+    <span style="color:var(--text)">Your app now feels like</span><br/>
+    <span style="color:var(--accent)">a real multi-page site.</span>
+  </div>
+  <div class="q-card" style="margin:0">
+    <div class="q-text">"The URL is the source of truth for what the user sees. Routing is just keeping the screen honest about it."</div>
+    <div class="q-src">— React Router mental model</div>
+  </div>
+  <div class="card" style="background:rgba(244,63,94,.04);border-color:rgba(244,63,94,.18)">
+    <h3>Coming Up — M15: Authentication &amp; Protected Routes</h3>
+    <p style="font-size:16px;line-height:1.7">Next session we gate specific routes behind a login check, redirecting unauthenticated users and storing tokens safely.</p>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <span class="pill g">createBrowserRouter ✓</span>
+    <span class="pill g">Outlet Layouts ✓</span>
+    <span class="pill g">useParams &amp; useNavigate ✓</span>
+    <span class="pill a">Protected Routes → next</span>
+  </div>
+</div>`});
+
+
+function toggleHint2(btn){
+  const body=btn.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+// ENGINE
+function pickOpt(el){
+  el.closest('.mc-opts').querySelectorAll('.mc-opt').forEach(x=>x.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function toggleHint(btn){
+  const reveal=btn.nextElementSibling;
+  reveal.classList.toggle('open');
+  btn.textContent=reveal.classList.contains('open')?'🙈 Hide hint':'💡 Reveal hint';
+}
+let cur=0;
+const deck=document.getElementById('deck');
+const bar=document.getElementById('bar');
+const ctr=document.getElementById('ctr');
+function build(){
+  S.forEach((s,i)=>{
+    const el=document.createElement('div');
+    el.className='slide'+(s.cls?' '+s.cls:'');
+    el.innerHTML=s.h||'';
+    if(i===0)el.classList.add('active');
+    deck.appendChild(el);
+    if(s.init)s.init(el);
+    el.querySelectorAll('.long-code').forEach(pre=>{pre.innerHTML=hl(pre.textContent);});
+  });
+}
+function go(n){
+  if(n<0||n>=S.length||n===cur)return;
+  const els=deck.querySelectorAll('.slide');
+  const fwd=n>cur;
+  els[cur].classList.remove('active');
+  els[cur].classList.add(fwd?'out-l':'out-r');
+  setTimeout(()=>els[cur].classList.remove('out-l','out-r'),380);
+  cur=n;els[cur].classList.add('active');els[cur].scrollTop=0;tick();
+}
+function tick(){
+  bar.style.width=(S.length>1?(cur/(S.length-1)*100):100)+'%';
+  ctr.textContent=(cur+1)+' / '+S.length;
+}
+document.addEventListener('keydown',e=>{
+  const m=document.getElementById('modal');
+  if(m.classList.contains('open')){if(e.key==='Escape')m.classList.remove('open');return;}
+  const t=document.activeElement.tagName;
+  if(t==='INPUT'||t==='TEXTAREA')return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')go(cur+1);
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(cur-1);
+  else if(e.key==='Home')go(0);
+  else if(e.key==='End')go(S.length-1);
+  else if(e.key==='?')m.classList.add('open');
+  else if(e.key==='Escape')m.classList.remove('open');
+});
+document.addEventListener('mousedown',e=>{
+  if(e.target.closest('button,input,a,.mc-opt,.gto-ta,.id-ta,.chal-ta'))return;
+  if(e.button===2){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+},true);
+document.addEventListener('contextmenu',e=>{
+  if(e.target.closest('button,input,a'))return;
+  e.preventDefault();e.stopImmediatePropagation();
+},true);
+let tx=0;
+document.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+document.addEventListener('touchend',e=>{const d=e.changedTouches[0].clientX-tx;if(Math.abs(d)>50){d<0?go(cur+1):go(cur-1);}},{passive:true});
+build();tick();
+</script>
+</body>
+</html>

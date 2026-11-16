@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Node.js — Week 4: http, EventEmitter, Streams &amp; a First Look at Express</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    * { box-sizing: border-box; margin:0; padding:0; }
+    html, body { height:100%; overflow:hidden; background:var(--bg); color:var(--ink); font-family:'Space Grotesk', sans-serif; }
+    h1,h2,h3 { font-family:'Space Grotesk', sans-serif; font-weight:600; letter-spacing:-0.02em; }
+    code, pre, .mono { font-family:'JetBrains Mono', 'Courier New', monospace; }
+
+    /* ——— NODE.JS THEME (matches deck series) ——— */
+    :root {
+      --bg: #0D1912;
+      --bg-alt: #14261A;
+      --accent: #83CD29;
+      --accent-soft: #A5DE5C;
+      --accent-strong: #4C8C1E;
+      --card: #17281B;
+      --card-border: rgba(131, 205, 41, 0.18);
+      --shadow: rgba(0, 0, 0, 0.55);
+      --ink: #E9F2E4;
+      --ink-soft: #9CB89A;
+      --eyebrow-ink: #A5DE5C;
+      --card-ink: #E9F2E4;
+      --card-ink-soft: #9CB89A;
+      --card-accent: #83CD29;
+      --step-num-ink: #0D1912;
+      --tick: 300ms;
+      --table-border: rgba(131, 205, 41, 0.15);
+      --danger: #FF7A6E;
+      --danger-soft: rgba(255,122,110,0.12);
+      --ok: #83CD29;
+    }
+
+    #app { position:relative; width:100vw; height:100vh; overflow:hidden; }
+
+    .progress-track { position:fixed; top:0; left:0; right:0; height:4px; background:rgba(131,205,41,0.12); z-index:60; }
+    .progress-fill { height:100%; width:0%; background:linear-gradient(90deg, var(--accent-strong), var(--accent)); transition: width 350ms ease; }
+
+    .node-gauge {
+      position:fixed; top:18px; right:22px; z-index:50;
+      display:flex; flex-direction:column; align-items:center; gap:4px;
+      font-family:'JetBrains Mono', monospace; font-size:10px; letter-spacing:0.14em;
+      color:var(--ink-soft); user-select:none; pointer-events:none;
+      transition: color var(--tick) ease;
+    }
+    .node-gauge svg { width:34px; height:34px; display:block; }
+    .node-gauge .hex { transform-origin:center; }
+    @media (prefers-reduced-motion: no-preference) {
+      .node-gauge .hex { animation: hexPulse 3s ease-in-out infinite; }
+    }
+    @keyframes hexPulse {
+      0% { opacity:0.6; transform:scale(0.95) rotate(-2deg); }
+      50% { opacity:1; transform:scale(1.08) rotate(2deg); }
+      100% { opacity:0.6; transform:scale(0.95) rotate(-2deg); }
+    }
+    .gauge-label { text-transform:uppercase; font-weight:700; letter-spacing:0.08em; }
+
+    .stage { position:absolute; inset:0; }
+    .slide {
+      position:absolute; inset:0;
+      overflow-y:auto; overflow-x:hidden;
+      display:flex; flex-direction:column; align-items:stretch; justify-content:safe center;
+      padding: 76px clamp(28px, 7vw, 120px) 90px;
+      opacity:0; transform:translateX(0) scale(1);
+      will-change: transform, opacity;
+    }
+    .slide.active { opacity:1; transform:translateX(0) scale(1); transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:5; }
+    .slide.enter-fwd { transform:translateX(64px) scale(0.985); opacity:0; }
+    .slide.enter-bwd { transform:translateX(-64px) scale(0.985); opacity:0; }
+    .slide.exit-fwd { transform:translateX(-64px) scale(0.985); opacity:0; transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:4; }
+    .slide.exit-bwd { transform:translateX(64px) scale(0.985); opacity:0; transition: opacity var(--tick) ease, transform var(--tick) ease; z-index:4; }
+    @media (prefers-reduced-motion: reduce) {
+      .slide, .slide.active, .slide.enter-fwd, .slide.enter-bwd, .slide.exit-fwd, .slide.exit-bwd {
+        transition: opacity 120ms linear !important; transform:none !important;
+      }
+    }
+    .slide-inner { max-width:1040px; width:100%; margin:0 auto; }
+
+    .eyebrow {
+      font-family:'JetBrains Mono', monospace; font-size:12px; letter-spacing:0.16em;
+      text-transform:uppercase; font-weight:600; color:var(--eyebrow-ink);
+      display:flex; align-items:center; gap:10px; margin-bottom:14px;
+    }
+    .eyebrow::after { content:''; flex:1; height:0; border-top:2px dashed var(--card-border); }
+    h2.slide-title { font-size:clamp(27px, 3.6vw, 42px); font-weight:700; line-height:1.14; margin-bottom:20px; letter-spacing:-0.02em; }
+    .lede { font-size:16.5px; color:var(--ink-soft); margin:-6px 0 20px; max-width:74ch; line-height:1.55; }
+
+    .card {
+      background:var(--card); border:1px solid var(--card-border); border-radius:12px;
+      padding:16px 18px; min-width:0;
+      box-shadow: 0 4px 20px var(--shadow);
+    }
+    .card h3 { font-size:14.5px; font-weight:600; margin-bottom:6px; color:var(--card-ink); }
+    .card p, .card li { font-size:14px; color:var(--card-ink-soft); line-height:1.5; }
+
+    .card-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(0, 1fr)); gap:14px; min-width:0; }
+    .card-grid.cols-2 { grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .card-grid.cols-3 { grid-template-columns:repeat(3, minmax(0,1fr)); }
+    .card-grid.cols-4 { grid-template-columns:repeat(4, minmax(0,1fr)); }
+    .card-grid.cols-5 { grid-template-columns:repeat(5, minmax(0,1fr)); }
+    @media (max-width:760px){ .card-grid.cols-5{grid-template-columns:repeat(2, minmax(0,1fr));} .card-grid.cols-4{grid-template-columns:repeat(2, minmax(0,1fr));} .card-grid.cols-3{grid-template-columns:repeat(2, minmax(0,1fr));} .card-grid.cols-2{grid-template-columns:minmax(0,1fr);} }
+
+    .two-col { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:24px; align-items:start; min-width:0; }
+    @media (max-width:760px){ .two-col { grid-template-columns:minmax(0,1fr); } }
+    .two-col > * { min-width:0; }
+
+    ul.ticket-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+    ul.ticket-list li { position:relative; padding-left:22px; font-size:15px; line-height:1.5; color:var(--ink); }
+    ul.ticket-list li::before { content:'▹'; position:absolute; left:0; color:var(--accent); font-weight:700; }
+
+    ol.step-list { list-style:none; counter-reset:step; margin:0; padding:0; display:flex; flex-direction:column; gap:11px; }
+    ol.step-list li { position:relative; padding-left:38px; font-size:15px; line-height:1.5; min-width:0; }
+    ol.step-list li::before { counter-increment:step; content:counter(step); position:absolute; left:0; top:-1px; width:25px; height:25px; border-radius:50%; background:var(--card-accent); color:var(--step-num-ink); display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:12.5px; }
+    ol.step-list b { font-family:'JetBrains Mono',monospace; font-size:13px; background:var(--card); padding:1px 6px; border-radius:4px; border:1px solid var(--card-border); }
+
+    .quote-block { font-family:'Space Grotesk', sans-serif; font-weight:500; font-size:18px; line-height:1.5; color:var(--ink); border-left:3px solid var(--accent); padding:4px 0 4px 18px; margin:6px 0 16px; }
+    .note { background:var(--card); border:1px dashed var(--card-border); border-radius:10px; padding:12px 16px; font-size:13.5px; color:var(--card-ink-soft); margin-top:14px; }
+    .note b { color:var(--card-ink); }
+    .note.warn { border-color: rgba(255,122,110,0.4); background: var(--danger-soft); }
+    .note.warn b { color: var(--danger); }
+
+    .code-wrap { position:relative; min-width:0; }
+    .code-cap { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:8px; }
+    pre.code-block {
+      background:#0A150D; color:#D9EBD1; border-radius:12px; padding:18px 20px;
+      font-size:13px; line-height:1.65; overflow-x:auto; margin:0; min-width:0;
+      box-shadow: inset 0 0 0 1px rgba(131,205,41,0.06), 0 6px 18px var(--shadow);
+      border:1px solid rgba(131,205,41,0.06);
+    }
+    pre.code-block code { white-space:pre; }
+    .tok-kw{ color:#FFB86C; font-weight:600; }
+    .tok-str{ color:#A3D9A5; }
+    .tok-com{ color:#6A9273; font-style:italic; }
+    .tok-type{ color:#6AB0D6; }
+    .tok-num{ color:#D99A6C; }
+    .tok-fn{ color:#66D9FF; }
+    .tok-prop{ color:#B5A9E8; }
+
+    .two-col pre.code-block { max-width:100%; overflow-x:auto; white-space:pre-wrap; word-break:break-word; }
+    .two-col .code-block code { white-space:pre-wrap; word-break:break-word; }
+
+    .copy-btn {
+      position:absolute; top:8px; right:8px; z-index:2;
+      font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase;
+      background:rgba(131,205,41,0.12); color:var(--accent-soft); border:1px solid var(--card-border);
+      border-radius:6px; padding:5px 9px; cursor:pointer; transition: background 150ms ease, color 150ms ease, transform 150ms ease;
+    }
+    .code-wrap .code-cap ~ .copy-btn, .code-wrap > .copy-btn { top:8px; }
+    .copy-btn:hover { background:rgba(131,205,41,0.22); }
+    .copy-btn:active { transform:scale(0.96); }
+    .copy-btn.copied { background:var(--accent); color:#0A150D; border-color:var(--accent); }
+    .copy-source { position:absolute; left:-9999px; top:-9999px; opacity:0; height:1px; width:1px; }
+
+    .param-table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    .param-table th, .param-table td { text-align:left; padding:8px 12px; border-bottom:1px solid var(--table-border); }
+    .param-table th { font-family:'JetBrains Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.08em; color:var(--accent); }
+    .param-table td { color:var(--ink-soft); }
+    .param-table td b, .param-table td code { color:var(--ink); }
+
+    .badge { display:inline-block; font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; padding:3px 9px; border-radius:999px; border:1px solid var(--card-border); color:var(--accent-soft); background:rgba(131,205,41,0.08); }
+    .badge.danger { color:var(--danger); border-color:rgba(255,122,110,0.35); background:var(--danger-soft); }
+    .badge.ok { color:var(--accent-soft); }
+
+    .mc-q { background:var(--card); border:1px solid var(--card-border); border-radius:10px; padding:12px 16px; margin-bottom:10px; }
+    .mc-q .qn { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--accent-soft); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:4px; }
+    .mc-q .qtext { font-size:14.5px; color:var(--ink); margin-bottom:8px; line-height:1.4; }
+    .mc-q .opts { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:6px 14px; }
+    @media (max-width:900px){ .mc-q .opts { grid-template-columns:minmax(0,1fr); } }
+    .mc-q .opts div { font-size:13px; color:var(--card-ink-soft); padding-left:18px; position:relative; }
+    .mc-q .opts div::before { content:attr(data-letter); position:absolute; left:0; font-family:'JetBrains Mono',monospace; color:var(--accent); font-weight:700; font-size:12px; }
+
+    .id-q { display:flex; gap:10px; align-items:baseline; padding:9px 0; border-bottom:1px dashed var(--card-border); font-size:14.5px; }
+    .id-q:last-child { border-bottom:none; }
+    .id-q .qn { font-family:'JetBrains Mono',monospace; color:var(--accent-soft); font-size:12px; min-width:26px; }
+
+    .hud { position:fixed; bottom:16px; right:20px; z-index:50; display:flex; align-items:center; gap:12px; }
+    .counter { font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:600; background:var(--card); border:1px solid var(--card-border); color:var(--card-ink); padding:8px 16px; border-radius:999px; box-shadow:0 4px 14px var(--shadow); }
+    .hint { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-soft); letter-spacing:0.05em; display:none; }
+    @media (min-width:640px){ .hint { display:block; } }
+
+    .kbd-fab { position:fixed; bottom:16px; left:20px; z-index:50; width:34px; height:34px; border-radius:50%; background:var(--card); border:1px solid var(--card-border); color:var(--card-ink-soft); font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:700; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 14px var(--shadow); }
+    .kbd-fab:hover { color:var(--accent-soft); border-color:var(--accent); }
+
+    .shortcuts-overlay { position:fixed; inset:0; background:rgba(6,12,8,0.72); backdrop-filter: blur(3px); z-index:80; display:none; align-items:center; justify-content:center; }
+    .shortcuts-overlay.show { display:flex; }
+    .shortcuts-panel { background:var(--card); border:1px solid var(--card-border); border-radius:14px; padding:26px 30px; max-width:420px; width:90%; box-shadow:0 20px 60px var(--shadow); }
+    .shortcuts-panel h3 { font-size:17px; margin-bottom:16px; color:var(--ink); }
+    .shortcuts-panel .row { display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px dashed var(--card-border); font-size:13.5px; color:var(--card-ink-soft); }
+    .shortcuts-panel .row:last-child { border-bottom:none; }
+    .shortcuts-panel kbd { font-family:'JetBrains Mono',monospace; background:#0A150D; border:1px solid var(--card-border); border-radius:5px; padding:2px 7px; color:var(--accent-soft); font-size:12px; }
+    .shortcuts-panel .close-hint { margin-top:16px; font-size:11.5px; color:var(--ink-soft); text-align:center; }
+
+    .slide::-webkit-scrollbar { width:6px; }
+    .slide::-webkit-scrollbar-thumb { background:var(--card-border); border-radius:8px; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+  <div class="node-gauge" id="nodeGauge">
+    <svg viewBox="0 0 40 40" fill="none">
+      <path d="M20 4 L34 12 V28 L20 36 L6 28 V12 Z" fill="var(--accent)" opacity="0.85" class="hex" />
+      <path d="M20 6 L32 13 V27 L20 34 L8 27 V13 Z" stroke="var(--bg)" stroke-width="1.6" fill="none" opacity="0.25" />
+      <circle cx="20" cy="20" r="2" fill="var(--bg)" opacity="0.15" />
+    </svg>
+    <span class="gauge-label" id="gaugeLabel">Cold Start</span>
+  </div>
+
+  <div class="stage" id="stage"></div>
+
+  <div class="kbd-fab" id="kbdFab" title="Keyboard shortcuts">?</div>
+
+  <div class="hud">
+    <span class="hint">click / → to continue</span>
+    <div class="counter" id="counter">1 / 24</div>
+  </div>
+
+  <div class="shortcuts-overlay" id="shortcutsOverlay">
+    <div class="shortcuts-panel">
+      <h3>⌨️ Keyboard Shortcuts</h3>
+      <div class="row"><span>Next slide</span><kbd>→</kbd></div>
+      <div class="row"><span>Previous slide</span><kbd>←</kbd></div>
+      <div class="row"><span>First slide</span><kbd>Home</kbd></div>
+      <div class="row"><span>Last slide</span><kbd>End</kbd></div>
+      <div class="row"><span>Toggle this panel</span><kbd>?</kbd></div>
+      <div class="row"><span>Close panel</span><kbd>Esc</kbd></div>
+      <div class="close-hint">Click anywhere outside this box to close.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  var KEYWORDS = ['const','let','var','function','return','if','else','try','catch','finally','throw','new','this','class','extends','super','import','export','default','from','as','async','await','require','module','exports','global','__dirname','__filename','console','log','error','warn','info','process','env','argv','exit','cwd','platform','version','versions','memoryUsage','uptime','nextTick','on','once','emit','off','removeListener','removeAllListeners','EventEmitter','instanceof','typeof','for','while','of','in','break','continue','null','undefined','true','false','Buffer','fs','readFile','writeFile','readFileSync','writeFileSync','createReadStream','createWriteStream','pipe','path','join','resolve','dotenv','config','setTimeout','setInterval','setImmediate','clearTimeout','clearInterval','clearImmediate','Promise','then','catch','finally','all','JSON','stringify','parse','Error','TypeError','ReferenceError','SyntaxError','RangeError','String','Number','Boolean','Object','Array','Date','RegExp','Map','Set','Symbol','http','createServer','listen','express','app','get','post','put','delete','use','req','res','send','json','status','sendStatus','Transform','Readable','Writable','_transform','chunk','encoding','callback','push','write','end','method','url','headers','setHeader','writeHead'];
+  var KW_RE = new RegExp('\\b(' + KEYWORDS.join('|') + ')\\b');
+  var TOKEN_RE = /(\/\/.*$)|("(?:\\.|[^"\\])*")|('(?:\\.|[^'\\])*')|(`(?:\\.|[^`\\])*`)|\b([A-Za-z_$][A-Za-z0-9_$]*)\b|\b(\d+\.?\d*)\b/gm;
+
+  function highlightJS(src){
+    var esc = escapeHtml(src);
+    return esc.replace(TOKEN_RE, function(match, comment, str, chr, tmpl, word, num){
+      if(comment !== undefined) return '<span class="tok-com">' + comment + '</span>';
+      if(str !== undefined) return '<span class="tok-str">' + str + '</span>';
+      if(chr !== undefined) return '<span class="tok-str">' + chr + '</span>';
+      if(tmpl !== undefined) return '<span class="tok-str">' + tmpl + '</span>';
+      if(word !== undefined){
+        if(KW_RE.test(word)) return '<span class="tok-kw">' + word + '</span>';
+        if(/^[A-Z]/.test(word)) return '<span class="tok-type">' + word + '</span>';
+        return word;
+      }
+      if(num !== undefined) return '<span class="tok-num">' + num + '</span>';
+      return match;
+    });
+  }
+
+  var codeCounter = 0;
+  function code(src, label){
+    var raw = src.replace(/^\n/,'').replace(/\n$/,'');
+    var id = 'code_' + (codeCounter++);
+    var html = highlightJS(raw);
+    return '<div class="code-wrap">' +
+      (label ? '<div class="code-cap">' + label + '</div>' : '') +
+      '<button class="copy-btn" data-for="' + id + '" onclick="window.__copyCode(this)">Copy</button>' +
+      '<pre class="code-block"><code>' + html + '</code></pre>' +
+      '<textarea class="copy-source" id="' + id + '" tabindex="-1" readonly>' + escapeHtml(raw) + '</textarea>' +
+    '</div>';
+  }
+
+  window.__copyCode = function(btn){
+    var ta = document.getElementById(btn.getAttribute('data-for'));
+    if(!ta) return;
+    var text = ta.value;
+    function feedback(){
+      var original = 'Copy';
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(function(){ btn.textContent = original; btn.classList.remove('copied'); }, 1200);
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(feedback, function(){
+        ta.style.left = '0'; ta.style.top='0'; ta.style.opacity='0';
+        ta.select(); document.execCommand('copy');
+        ta.style.left = '-9999px'; ta.style.top='-9999px';
+        feedback();
+      });
+    } else {
+      ta.style.left = '0'; ta.style.top='0'; ta.style.opacity='0';
+      ta.select(); document.execCommand('copy');
+      ta.style.left = '-9999px'; ta.style.top='-9999px';
+      feedback();
+    }
+  };
+
+  var S = [];
+
+  // ——— 1. TITLE ———
+  S.push({
+    eyebrow: 'Prelim · Week 4',
+    title: 'The http Module, EventEmitter, Streams &amp; a First Look at Express',
+    lede: 'Today we build a server with zero frameworks, meet the tool (EventEmitter) that quietly powers half of Node, fix last week\'s memory problem with streams — then peek at what Express buys you, and start testing HTTP like a professional with Thunder Client.',
+    body:
+      '<div class="card-grid cols-4">' +
+        '<div class="card"><h3>🌐 Raw http</h3><p>Build a server with only the built-in module — no dependencies.</p></div>' +
+        '<div class="card"><h3>📡 EventEmitter</h3><p>The pattern underneath http.Server itself.</p></div>' +
+        '<div class="card"><h3>🌊 Streams</h3><p>Process huge files without blowing up memory.</p></div>' +
+        '<div class="card"><h3>⚡ Express Preview</h3><p>A 10-line sneak peek + Thunder Client for testing it.</p></div>' +
+      '</div>'
+  });
+
+  // ——— 2. OBJECTIVES ———
+  S.push({
+    eyebrow: 'Session Overview',
+    title: 'Learning Objectives',
+    body:
+      '<ol class="step-list">' +
+        '<li>Build a working web server using only the built-in <b>http</b> module — no Express.</li>' +
+        '<li>Explain what Express actually does under the hood by contrasting it with raw <b>http</b> code.</li>' +
+        '<li>Write a tiny beginner Express app, and know what problem it solves for you.</li>' +
+        '<li>Recognize the most common HTTP status codes and when a server should send each one.</li>' +
+        '<li>Install and use <b>Thunder Client</b> in VS Code to send requests and inspect responses.</li>' +
+        '<li>Use <b>EventEmitter</b> to build a custom event-driven object.</li>' +
+        '<li>Explain the four stream types and pipe data between them to process large files without loading them fully into memory.</li>' +
+      '</ol>'
+  });
+
+  // ——— 3. RECAP / BRIDGE ———
+  S.push({
+    eyebrow: 'Warm-Up',
+    title: 'Recap & Homework Debrief',
+    lede: 'Last week\'s homework: run your tool against a 500MB+ log file and time it.',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>🔗 Bridge from Week 3</h3><ul class="ticket-list">' +
+          '<li>Custom Error classes, .env config, and safety-net handlers made your tool <i>predictable</i>.</li>' +
+          '<li>Homework: throw a genuinely huge file at it and watch memory climb (or the process slow to a crawl).</li>' +
+          '<li>That spike is today\'s motivating problem — streams exist to fix exactly this.</li>' +
+        '</ul></div>' +
+        '<div class="card"><h3>💬 Discussion Prompt</h3>' +
+          '<div class="quote-block">"Why did loading the whole file into memory hurt, even though the code was correct?"</div>' +
+          '<p>We\'ll answer that with streams later today — but first, let\'s see what\'s actually happening when a request hits your machine at all.</p>' +
+        '</div>' +
+      '</div>'
+  });
+
+  // ——— 4. RAW HTTP SERVER ———
+  S.push({
+    eyebrow: '1. Raw http Module',
+    title: 'A Web Server With Zero Dependencies',
+    lede: 'No npm install required — http ships with Node itself.',
+    body:
+      code("const http = require('http');\n\nconst server = http.createServer((req, res) => {\n    console.log(req.method, req.url);\n\n    res.statusCode = 200;\n    res.setHeader('Content-Type', 'text/plain');\n    res.end('Hello from a raw Node server!');\n});\n\nserver.listen(3000, () => {\n    console.log('Listening on http://localhost:3000');\n});") +
+      '<div class="note"><b>💡 Notice:</b> <code>req</code> and <code>res</code> are plain objects Node hands you — nothing magic. Every header, status code, and body write is something <i>you</i> control by hand.</div>'
+  });
+
+  // ——— 5. MANUAL ROUTING ———
+  S.push({
+    eyebrow: '1. Raw http Module',
+    title: 'Manual Routing With if / else',
+    lede: 'This is the part frameworks exist to take off your hands.',
+    body:
+      code("const http = require('http');\n\nconst server = http.createServer((req, res) => {\n    if (req.method === 'GET' && req.url === '/') {\n        res.writeHead(200, { 'Content-Type': 'text/plain' });\n        res.end('Home page');\n    } else if (req.method === 'GET' && req.url === '/about') {\n        res.writeHead(200, { 'Content-Type': 'text/plain' });\n        res.end('About page');\n    } else {\n        res.writeHead(404, { 'Content-Type': 'application/json' });\n        res.end(JSON.stringify({ error: 'Not found' }));\n    }\n});\n\nserver.listen(3000);") +
+      '<div class="note warn"><b>⚠️ Getting old fast:</b> two routes and it\'s already a wall of <code>if/else</code>. Imagine twenty routes, each needing its own validation and error handling.</div>'
+  });
+
+  // ——— 6. THIS IS WHAT EXPRESS DOES ———
+  S.push({
+    eyebrow: '2. Meet Express (Preview)',
+    title: '"This Is What Express Does"',
+    lede: 'Same three routes. Express doesn\'t add new powers — it removes boilerplate.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code("// raw http\nif (req.method === 'GET' && req.url === '/') {\n    res.writeHead(200);\n    res.end('Home page');\n} else if (req.method === 'GET' && req.url === '/about') {\n    res.writeHead(200);\n    res.end('About page');\n} else {\n    res.writeHead(404);\n    res.end('Not found');\n}", "Raw http — manual routing") + '</div>' +
+        '<div>' + code("// express\nconst express = require('express');\nconst app = express();\n\napp.get('/', (req, res) => res.send('Home page'));\napp.get('/about', (req, res) => res.send('About page'));\n\napp.listen(3000);\n// unmatched routes get an automatic 404", "Express — same behavior") + '</div>' +
+      '</div>' +
+      '<div class="note"><b>🗓️ Note:</b> Express gets its own dedicated week (Wk7) with middleware, error handling, and more. Today is just enough to see <i>why</i> it exists.</div>'
+  });
+
+  // ——— 7. FIRST EXPRESS APP ———
+  S.push({
+    eyebrow: '2. Meet Express (Preview)',
+    title: 'Your First Express App',
+    lede: 'Three commands and a few lines — the classic beginner on-ramp.',
+    body:
+      '<div class="two-col">' +
+        '<div class="card"><h3>🧰 Setup</h3>' + code("npm init -y\nnpm install express") + '</div>' +
+        '<div>' + code("// app.js\nconst express = require('express');\nconst app = express();\nconst PORT = 3000;\n\napp.get('/', (req, res) => {\n    res.send('Hello, Express!');\n});\n\napp.get('/greet/:name', (req, res) => {\n    res.send(`Hello, ${req.params.name}!`);\n});\n\napp.listen(PORT, () => {\n    console.log(`Server running at http://localhost:${PORT}`);\n});") + '</div>' +
+      '</div>' +
+      '<div class="note"><b>Run it:</b> <code>node app.js</code>, then visit <code>/</code> or <code>/greet/juan</code> in a browser. Next, let\'s test it properly — with something better than a browser tab.</div>'
+  });
+
+  // ——— 8. HTTP STATUS CODES 101 ———
+  S.push({
+    eyebrow: '3. HTTP Status Codes',
+    title: 'The Codes You\'ll Actually Use',
+    lede: 'Every response needs a status code. These cover the vast majority of real-world APIs.',
+    body:
+      '<table class="param-table">' +
+        '<tr><th>Code</th><th>Meaning</th><th>When your server sends it</th></tr>' +
+        '<tr><td><span class="badge ok">200</span></td><td><b>OK</b></td><td>The request succeeded — the default happy path.</td></tr>' +
+        '<tr><td><span class="badge ok">201</span></td><td><b>Created</b></td><td>A new resource was created (e.g. after a successful POST).</td></tr>' +
+        '<tr><td><span class="badge">400</span></td><td><b>Bad Request</b></td><td>The client sent malformed or missing data.</td></tr>' +
+        '<tr><td><span class="badge">401</span></td><td><b>Unauthorized</b></td><td>The client needs to authenticate first.</td></tr>' +
+        '<tr><td><span class="badge">404</span></td><td><b>Not Found</b></td><td>No route or resource matches the request.</td></tr>' +
+        '<tr><td><span class="badge danger">500</span></td><td><b>Internal Server Error</b></td><td>Something broke on your side, not the client\'s.</td></tr>' +
+      '</table>' +
+      '<div class="note"><b>💡 Rule of thumb:</b> 2xx = success, 4xx = the client\'s fault, 5xx = your server\'s fault.</div>'
+  });
+
+  // ——— 9. MEET THUNDER CLIENT ———
+  S.push({
+    eyebrow: '4. Testing Tools',
+    title: 'Meet Thunder Client',
+    lede: 'A lightweight REST client that lives right inside VS Code.',
+    body:
+      '<div class="card-grid cols-3">' +
+        '<div class="card"><h3>🧭 Why not just a browser?</h3><p>Browsers only send GET easily. You need POST, PUT, DELETE, custom headers, and JSON bodies — a browser tab can\'t do that.</p></div>' +
+        '<div class="card"><h3>⚡ Why Thunder Client?</h3><p>No context switching to a separate app like Postman — it opens as a tab right next to your code.</p></div>' +
+        '<div class="card"><h3>📦 What it shows you</h3><p>Status, response size, response time, headers, cookies, and the raw body — everything you need to verify a route works.</p></div>' +
+      '</div>' +
+      '<div class="note"><b>Install:</b> Extensions panel in VS Code → search "Thunder Client" → Install. A lightning-bolt icon appears in the sidebar.</div>'
+  });
+
+  // ——— 10. SENDING YOUR FIRST REQUEST ———
+  S.push({
+    eyebrow: '4. Testing Tools',
+    title: 'Sending Your First Request',
+    lede: 'The same five steps, every single time.',
+    body:
+      '<ol class="step-list">' +
+        '<li>Click the Thunder Client icon, then <b>New Request</b>.</li>' +
+        '<li>Pick the HTTP method from the dropdown — <b>GET</b>, <b>POST</b>, <b>PUT</b>, or <b>DELETE</b>.</li>' +
+        '<li>Type the URL, e.g. <b>http://localhost:3000/greet/juan</b>.</li>' +
+        '<li>If the route needs a body, open the <b>Body</b> tab and enter JSON; leave <b>Auth</b> as <b>None</b> unless the route requires it.</li>' +
+        '<li>Click <b>Send</b>, then read the <b>Status</b>, <b>Size</b>, and <b>Time</b> in the Response panel — and check the body underneath.</li>' +
+      '</ol>' +
+      '<div class="note"><b>🖥️ In class:</b> instructor screen-shares Thunder Client sending a GET to a local Express route and walks through every field in the response panel before students try it themselves.</div>'
+  });
+
+  // ——— 11. SAMPLE PROGRAM: STATUS CODE PLAYGROUND ———
+  S.push({
+    eyebrow: '5. Practice Program',
+    title: 'Sample Program: HTTP Status Code Playground',
+    lede: 'One small Express app, five routes, five different status codes to test.',
+    body:
+      code("const express = require('express');\nconst app = express();\napp.use(express.json());\n\n// 200 — everything is fine\napp.get('/ok', (req, res) => {\n    res.status(200).json({ message: 'Everything is fine.' });\n});\n\n// 201 — something new was created\napp.post('/items', (req, res) => {\n    const { name } = req.body;\n    res.status(201).json({ message: 'Item created', name });\n});\n\n// 400 — the client forgot something\napp.get('/bad', (req, res) => {\n    res.status(400).json({ error: 'Missing required query param: ?name=' });\n});\n\n// 404 — nothing here\napp.get('/missing', (req, res) => {\n    res.status(404).json({ error: 'That resource does not exist.' });\n});\n\n// 500 — the server itself broke\napp.get('/boom', (req, res) => {\n    try {\n        throw new Error('Something went wrong on the server.');\n    } catch (err) {\n        res.status(500).json({ error: err.message });\n    }\n});\n\napp.listen(3000, () => console.log('Playground running on port 3000'));") +
+      '<div class="note"><b>Try it yourself:</b> save as <code>playground.js</code>, run <code>node playground.js</code>, then hit each route from Thunder Client on the next slide.</div>'
+  });
+
+  // ——— 12. TEST IT WITH THUNDER CLIENT ———
+  S.push({
+    eyebrow: '5. Practice Program',
+    title: 'Test the Playground With Thunder Client',
+    lede: 'Five requests, five expected results — confirm each one before moving on.',
+    body:
+      '<table class="param-table">' +
+        '<tr><th>Method</th><th>Route</th><th>Expected Status</th><th>What to check</th></tr>' +
+        '<tr><td>GET</td><td><code>/ok</code></td><td><span class="badge ok">200</span></td><td>Body shows the success message.</td></tr>' +
+        '<tr><td>POST</td><td><code>/items</code> (body: <code>{"name":"pen"}</code>)</td><td><span class="badge ok">201</span></td><td>Response echoes back the item name.</td></tr>' +
+        '<tr><td>GET</td><td><code>/bad</code></td><td><span class="badge">400</span></td><td>Error message explains what was missing.</td></tr>' +
+        '<tr><td>GET</td><td><code>/missing</code></td><td><span class="badge">404</span></td><td>Confirms the route was intentionally not found.</td></tr>' +
+        '<tr><td>GET</td><td><code>/boom</code></td><td><span class="badge danger">500</span></td><td>Server-side error surfaces without crashing the process.</td></tr>' +
+      '</table>' +
+      '<div class="note"><b>💡 Habit to build:</b> before writing a single line of frontend code, confirm every backend route behaves correctly in Thunder Client first. It\'s much faster to debug here than in the browser.</div>'
+  });
+
+  // ——— 13. EVENTEMITTER ———
+  S.push({
+    eyebrow: '6. EventEmitter',
+    title: 'Build a Custom Event-Driven Object',
+    lede: 'http.Server itself is an EventEmitter — this is the pattern hiding underneath everything you\'ve used so far.',
+    body:
+      code("const { EventEmitter } = require('events');\n\nclass OrderProcessor extends EventEmitter {\n    placeOrder(order) {\n        console.log('Processing order:', order.id);\n        this.emit('received', order);\n\n        setTimeout(() => {\n            this.emit('shipped', order);\n        }, 1000);\n    }\n}\n\nconst processor = new OrderProcessor();\n\nprocessor.on('received', (order) => {\n    console.log(`Order ${order.id} received.`);\n});\n\nprocessor.on('shipped', (order) => {\n    console.log(`Order ${order.id} shipped!`);\n});\n\nprocessor.placeOrder({ id: 42 });") +
+      '<div class="note"><b>💡 Connection:</b> when you write <code>server.on(\'request\', ...)</code> or <code>req.on(\'data\', ...)</code>, you\'re using this exact same pattern.</div>'
+  });
+
+  // ——— 14. STREAMS ———
+  S.push({
+    eyebrow: '7. Streams',
+    title: 'Piping Data Without Loading It All Into Memory',
+    lede: 'This directly fixes the Week 3 homework problem: the large-file memory spike.',
+    body:
+      '<div class="two-col">' +
+        '<div>' + code("const fs = require('fs');\n\n// Old way (Week 2-3): loads the entire file into memory\n// const data = fs.readFileSync('huge.log');\n\n// New way: streams the file in small chunks\nfs.createReadStream('huge.log')\n  .pipe(fs.createWriteStream('copy.log'));", "fs streams — copy a huge file safely") + '</div>' +
+        '<div>' + code("const { Transform } = require('stream');\n\nconst upperCase = new Transform({\n    transform(chunk, encoding, callback) {\n        this.push(chunk.toString().toUpperCase());\n        callback();\n    }\n});\n\nfs.createReadStream('huge.log')\n  .pipe(upperCase)\n  .pipe(fs.createWriteStream('SHOUTED.log'));", "Transform stream — modify data in flight") + '</div>' +
+      '</div>' +
+      '<div class="note"><b>Four stream types:</b> <b>Readable</b> (source), <b>Writable</b> (destination), <b>Duplex</b> (both), <b>Transform</b> (modifies data as it passes through).</div>'
+  });
+
+  // ——— 15. HANDS-ON LAB ———
+  S.push({
+    eyebrow: 'Hands-On Lab',
+    title: 'Streaming Log Server',
+    lede: 'Combine everything from today into one raw-http server — no Express.',
+    body:
+      '<ol class="step-list">' +
+        '<li>Build an <b>http</b> server (no Express) with at least two routes: <b>GET /summary</b> returns JSON stats (lines, errors, warnings); <b>GET /raw</b> streams the raw log file straight to the response.</li>' +
+        '<li>Use a custom <b>EventEmitter</b> to log a <code>\'request\'</code> event (method + URL) every time a request comes in, separate from the response logic.</li>' +
+        '<li>Test <b>/raw</b> against the Week 3 large log file and confirm memory stays flat — print <code>process.memoryUsage()</code> before and after.</li>' +
+        '<li>Handle a <b>404</b> for any unknown route with an appropriate status code and JSON error body.</li>' +
+      '</ol>' +
+      '<div class="note"><b>Deliverable:</b> a new <code>server.js</code>, plus a short README note comparing memory usage: loading the whole file vs. streaming it. Test both routes in Thunder Client before submitting.</div>'
+  });
+
+  // ——— 16. HOMEWORK / BRIDGE TO WEEK 5 ———
+  S.push({
+    eyebrow: 'Homework / Bridge to Week 5',
+    title: '"Works on My Machine"',
+    lede: 'Send your server to a classmate and have them run it cold.',
+    body:
+      '<div class="card"><h3>🧩 The friction you\'ll hit</h3><ul class="ticket-list">' +
+        '<li>Wrong Node version installed on their machine.</li>' +
+        '<li>A missing <code>.env</code> file they didn\'t know they needed.</li>' +
+        '<li>Port 3000 already taken by something else.</li>' +
+      '</ul></div>' +
+      '<div class="note"><b>That friction is next week\'s motivating problem:</b> "what if we shipped the machine, not just the code?" — Docker starts in Week 5.</div>'
+  });
+
+  // ——— 17. ANALOGIES ———
+  S.push({
+    eyebrow: 'Making It Stick',
+    title: 'Real-Life Analogies for HTTP &amp; Express',
+    lede: 'Reach for these when the technical explanation doesn\'t quite land.',
+    body:
+      '<div class="card-grid cols-3">' +
+        '<div class="card"><h3>🍽️ The Restaurant</h3><p>The client is the <b>customer</b>, the request is <b>placing an order</b>, and the route is the specific <b>menu item</b> you point at. The response is the <b>dish that comes back</b> — and the status code is the waiter telling you it\'s served, sold out, or the kitchen\'s on fire.</p></div>' +
+        '<div class="card"><h3>📮 The Post Office</h3><p><b>GET</b> is like checking your mailbox — you\'re just asking to see what\'s there. <b>POST</b> is dropping off a new package. A <b>404</b> is a delivery to an address that doesn\'t exist. A <b>500</b> is the sorting facility itself breaking down.</p></div>' +
+        '<div class="card"><h3>🛎️ Express = The Host</h3><p>Raw <b>http</b> is you personally greeting every guest at the door and deciding, by hand, where each one sits. <b>Express</b> is hiring a host who already knows the seating chart (routes) and handles it for you.</p></div>' +
+      '</div>'
+  });
+
+  // ——— 18. ANALOGY MAPPED TO CODE ———
+  S.push({
+    eyebrow: 'Making It Stick',
+    title: 'The Restaurant, Mapped to Code',
+    lede: 'Same restaurant story — now lined up next to the technical term it stands for.',
+    body:
+      '<table class="param-table">' +
+        '<tr><th>HTTP / Express concept</th><th>Restaurant equivalent</th></tr>' +
+        '<tr><td><b>Client</b></td><td>The customer</td></tr>' +
+        '<tr><td><b>Request</b></td><td>Placing an order</td></tr>' +
+        '<tr><td><b>Route</b> (e.g. <code>/menu/pizza</code>)</td><td>Pointing at a specific menu item</td></tr>' +
+        '<tr><td><b>Server</b></td><td>The kitchen + waiter, working together</td></tr>' +
+        '<tr><td><b>Response</b></td><td>The plate that comes back to your table</td></tr>' +
+        '<tr><td><span class="badge ok">200 OK</span></td><td>Dish served, exactly as ordered</td></tr>' +
+        '<tr><td><span class="badge ok">201 Created</span></td><td>Confirmation your reservation was just booked</td></tr>' +
+        '<tr><td><span class="badge">404 Not Found</span></td><td>Asking for a dish that isn\'t on the menu</td></tr>' +
+        '<tr><td><span class="badge danger">500 Server Error</span></td><td>The kitchen catches fire mid-order — not your fault</td></tr>' +
+      '</table>'
+  });
+
+  // ——— 19. QUIZ: TRUE OR FALSE ———
+  S.push({
+    eyebrow: 'Quiz Time',
+    title: 'True or False (Items 1–2)',
+    lede: 'Ten items total today: 2 True/False, 4 Identification, 4 Coding Challenges.',
+    body:
+      '<div class="mc-q"><div class="qn">Question 1</div><div class="qtext">Express is required in order to build any web server in Node.js.</div>' +
+        '<div class="opts"><div data-letter="A.">True</div><div data-letter="B.">False</div></div></div>' +
+      '<div class="mc-q"><div class="qn">Question 2</div><div class="qtext">A 201 status code means a new resource was successfully created.</div>' +
+        '<div class="opts"><div data-letter="A.">True</div><div data-letter="B.">False</div></div></div>'
+  });
+
+  // ——— 20. QUIZ: IDENTIFICATION ———
+  S.push({
+    eyebrow: 'Quiz Time',
+    title: 'Identification (Items 3–6)',
+    lede: 'One word or term per blank.',
+    body:
+      '<div class="id-q"><span class="qn">Q3</span><span>The Node.js built-in module used to build a web server without any external packages.</span></div>' +
+      '<div class="id-q"><span class="qn">Q4</span><span>The HTTP method typically used to submit data and create a new resource.</span></div>' +
+      '<div class="id-q"><span class="qn">Q5</span><span>The status code a server should return when the client requests a route that doesn\'t exist.</span></div>' +
+      '<div class="id-q"><span class="qn">Q6</span><span>The Express method used to register a handler for GET requests on a specific path.</span></div>'
+  });
+
+  // ——— 21. QUIZ: CODING — GUESS THE OUTPUT ———
+  S.push({
+    eyebrow: 'Quiz Time',
+    title: 'Coding Challenge — Guess the Output (Items 7–8)',
+    body:
+      '<div class="id-q"><span class="qn">Q7</span><span>What happens when a client sends <b>GET /hello</b>?</span></div>' +
+      code("const express = require('express');\nconst app = express();\n\napp.get('/hello', (req, res) => {\n    res.send('Hi there');\n    res.send('Goodbye'); // <-- what happens here?\n});\n\napp.listen(3000);") +
+      '<div class="id-q" style="margin-top:18px;"><span class="qn">Q8</span><span>A client sends <b>GET /check</b>. What status code and body do they receive?</span></div>' +
+      code("app.get('/check', (req, res) => {\n    res.status(404).json({ ok: false });\n});")
+  });
+
+  // ——— 22. QUIZ: CODING — FILL IN THE BLANK ———
+  S.push({
+    eyebrow: 'Quiz Time',
+    title: 'Coding Challenge — Fill in the Blank (Items 9–10)',
+    body:
+      '<div class="id-q"><span class="qn">Q9</span><span>Fill in the blank so <b>GET /health</b> responds with 200 and a JSON body.</span></div>' +
+      code("const http = require('http');\n\nconst server = http.createServer((req, res) => {\n    if (req.method === 'GET' && req.url === '/health') {\n        res.________(200, { 'Content-Type': 'application/json' });\n        res.end(JSON.stringify({ status: 'ok' }));\n    }\n});\n\nserver.listen(3000);") +
+      '<div class="id-q" style="margin-top:18px;"><span class="qn">Q10</span><span>Fill in both blanks so this Express route handles POST and returns 201.</span></div>' +
+      code("app.____('/users', (req, res) => {\n    res.status(____).json({ message: 'User created' });\n});")
+  });
+
+  // ——— 23. ANSWER KEY: T/F &amp; IDENTIFICATION ———
+  S.push({
+    eyebrow: 'Answer Key',
+    title: 'Answers — True/False &amp; Identification',
+    body:
+      '<div class="card-grid cols-2">' +
+        '<div class="card"><h3>✅ True or False</h3><ul class="ticket-list">' +
+          '<li><b>Q1 — False.</b> The built-in http module can build a server with no frameworks at all.</li>' +
+          '<li><b>Q2 — True.</b> 201 Created signals a new resource now exists.</li>' +
+        '</ul></div>' +
+        '<div class="card"><h3>✅ Identification</h3><ul class="ticket-list">' +
+          '<li><b>Q3</b> — http</li>' +
+          '<li><b>Q4</b> — POST</li>' +
+          '<li><b>Q5</b> — 404 (Not Found)</li>' +
+          '<li><b>Q6</b> — app.get()</li>' +
+        '</ul></div>' +
+      '</div>'
+  });
+
+  // ——— 24. ANSWER KEY: CODING CHALLENGES ———
+  S.push({
+    eyebrow: 'Answer Key',
+    title: 'Answers — Coding Challenges',
+    body:
+      '<div class="note"><b>Q7:</b> only <code>"Hi there"</code> reaches the client. The second <code>res.send()</code> throws <code>Error: Cannot set headers after they are sent</code> — a response can only be sent once.</div>' +
+      '<div class="note"><b>Q8:</b> status <code>404</code> with body <code>{ "ok": false }</code>.</div>' +
+      code("app.get('/health-check-example', (req, res) => {\n    // Q9 answer: writeHead\n    res.writeHead(200, { 'Content-Type': 'application/json' });\n    res.end(JSON.stringify({ status: 'ok' }));\n});\n\n// Q10 answer:\napp.post('/users', (req, res) => {\n    res.status(201).json({ message: 'User created' });\n});", "Q9 & Q10 — completed code")
+  });
+
+  // ——— GAUGE ———
+  function applyGauge(t){
+    var label = t < 0.4 ? 'Cold Start' : (t < 0.7 ? 'Warming Up' : 'Event Loop');
+    document.getElementById('gaugeLabel').textContent = label;
+  }
+
+  // ——— RENDER & NAV ———
+  var stage = document.getElementById('stage');
+  var counterEl = document.getElementById('counter');
+  var progressFill = document.getElementById('progressFill');
+  var total = S.length;
+  var current = 0;
+  var animating = false;
+
+  function buildSlideEl(idx){
+    var d = S[idx];
+    var el = document.createElement('div');
+    el.className = 'slide';
+    el.innerHTML =
+      '<div class="slide-inner">' +
+        '<div class="eyebrow">' + d.eyebrow + '</div>' +
+        '<h2 class="slide-title">' + d.title + '</h2>' +
+        (d.lede ? '<div class="lede">' + d.lede + '</div>' : '') +
+        d.body +
+      '</div>';
+    return el;
+  }
+
+  function updateHud(){
+    counterEl.textContent = (current+1) + ' / ' + total;
+    progressFill.style.width = ((current) / (total-1) * 100) + '%';
+    applyGauge(current / (total-1));
+  }
+
+  var curEl = buildSlideEl(0);
+  curEl.classList.add('active');
+  stage.appendChild(curEl);
+  updateHud();
+
+  function goTo(idx, dir){
+    if(animating || idx === current || idx < 0 || idx >= total) return;
+    animating = true;
+    var nextEl = buildSlideEl(idx);
+    nextEl.classList.add(dir > 0 ? 'enter-fwd' : 'enter-bwd');
+    stage.appendChild(nextEl);
+    void nextEl.offsetWidth;
+    var oldEl = curEl;
+    requestAnimationFrame(function(){
+      oldEl.classList.remove('active');
+      oldEl.classList.add(dir > 0 ? 'exit-fwd' : 'exit-bwd');
+      nextEl.classList.remove('enter-fwd','enter-bwd');
+      nextEl.classList.add('active');
+    });
+    current = idx;
+    curEl = nextEl;
+    updateHud();
+    setTimeout(function(){
+      if(oldEl && oldEl.parentNode) oldEl.parentNode.removeChild(oldEl);
+      animating = false;
+    }, 420);
+  }
+
+  function next(){ goTo(current+1, 1); }
+  function prev(){ goTo(current-1, -1); }
+
+  // ——— CLICK-ANYWHERE (EXCEPT INTERACTIVE ELEMENTS) ———
+  var INTERACTIVE_SELECTOR = 'button, a, input, textarea, select, .copy-btn, .kbd-fab, .shortcuts-overlay, .shortcuts-panel';
+  document.getElementById('app').addEventListener('click', function(e){
+    if(e.target.closest(INTERACTIVE_SELECTOR)) return;
+    var overlay = document.getElementById('shortcutsOverlay');
+    if(overlay.classList.contains('show')){ overlay.classList.remove('show'); return; }
+    var w = window.innerWidth;
+    if(e.clientX < w * 0.25){ prev(); } else { next(); }
+  });
+
+  document.addEventListener('keydown', function(e){
+    var overlay = document.getElementById('shortcutsOverlay');
+    if(e.key === '?'){ e.preventDefault(); overlay.classList.toggle('show'); return; }
+    if(e.key === 'Escape'){ if(overlay.classList.contains('show')){ overlay.classList.remove('show'); } return; }
+    if(overlay.classList.contains('show')) return;
+    if(e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown'){ e.preventDefault(); next(); }
+    else if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); prev(); }
+    else if(e.key === 'Home'){ e.preventDefault(); goTo(0, -1); }
+    else if(e.key === 'End'){ e.preventDefault(); goTo(total-1, 1); }
+    else if(e.key === 'ArrowUp'){ e.preventDefault(); prev(); }
+    else if(e.key === 'ArrowDown'){ e.preventDefault(); next(); }
+  });
+
+  document.getElementById('kbdFab').addEventListener('click', function(e){
+    e.stopPropagation();
+    document.getElementById('shortcutsOverlay').classList.toggle('show');
+  });
+
+  // ——— SWIPE GESTURES (mobile) ———
+  var touchStartX = 0, touchStartY = 0, touchActive = false;
+  document.getElementById('app').addEventListener('touchstart', function(e){
+    if(e.target.closest(INTERACTIVE_SELECTOR)) { touchActive = false; return; }
+    touchActive = true;
+    touchStartX = e.changedTouches[0].clientX;
+    touchStartY = e.changedTouches[0].clientY;
+  }, {passive:true});
+
+  document.getElementById('app').addEventListener('touchend', function(e){
+    if(!touchActive) return;
+    touchActive = false;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
+    if(Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5){
+      if(dx < 0) next(); else prev();
+    }
+  }, {passive:true});
+})();
+</script>
+</body>
+</html>
