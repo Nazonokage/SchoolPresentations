@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OOP Midterms — Java Methods & Access Modifiers</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #21262d;
+    --border: #30363d;
+    --accent: #58a6ff;
+    --accent2: #3fb950;
+    --accent3: #f78166;
+    --accent4: #d2a8ff;
+    --accent5: #ffa657;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --text-subtle: #6e7681;
+    --java-orange: #f89820;
+    --private-red: #f85149;
+    --default-blue: #58a6ff;
+    --protected-purple: #d2a8ff;
+    --public-green: #3fb950;
+    --static-yellow: #ffa657;
+    --instance-cyan: #39d353;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: var(--bg);
+    font-family: 'Inter', sans-serif;
+    color: var(--text);
+  }
+
+  /* ── Progress bar ── */
+  #progress-bar {
+    position: fixed; top: 0; left: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.35s ease; z-index: 1000;
+  }
+
+  /* ── Counter ── */
+  #counter {
+    position: fixed; bottom: 18px; right: 24px;
+    font-size: 16px; color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    z-index: 1000; letter-spacing: 0.03em;
+  }
+
+  /* ── Slides container ── */
+  #deck {
+    width: 100%; height: 100%;
+    position: relative; overflow: hidden;
+  }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    padding: 40px 56px 60px;
+    overflow-y: auto;
+    opacity: 0; pointer-events: none;
+    transform: translateX(60px);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+  .slide.active {
+    opacity: 1; pointer-events: all;
+    transform: translateX(0);
+  }
+  .slide.exit-left { opacity: 0; transform: translateX(-60px); }
+  .slide.exit-right { opacity: 0; transform: translateX(60px); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .slide { transition: opacity 0.15s ease; transform: none !important; }
+  }
+
+  /* ── Typography ── */
+  .eyebrow {
+    font-size: 16px; font-weight: 600; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .slide-title {
+    font-size: clamp(26px, 3.5vw, 42px);
+    font-weight: 800; line-height: 1.15;
+    color: var(--text); margin-bottom: 28px;
+  }
+  .slide-title span { color: var(--accent); }
+
+  /* ── Cards / grids ── */
+  .grid-2 {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 20px; flex: 1;
+  }
+  .grid-3 {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 16px; flex: 1;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+  }
+  .card h3 {
+    font-size: 18px; font-weight: 700;
+    margin-bottom: 10px; color: var(--text);
+  }
+  .card p, .card li {
+    font-size: 16px; line-height: 1.65;
+    color: var(--text-muted);
+  }
+  .card ul { padding-left: 18px; }
+
+  /* ── Code blocks ── */
+  .code-wrap {
+    background: #010409;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .code-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .code-lang {
+    font-size: 16px; font-weight: 600;
+    color: var(--java-orange);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .copy-btn {
+    font-size: 16px; padding: 4px 14px; border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    box-shadow: 2px 2px 4px rgba(0,0,0,0.4), -1px -1px 2px rgba(255,255,255,0.03);
+    transition: all 0.18s;
+  }
+  .copy-btn:hover { color: var(--text); border-color: var(--accent); }
+  .copy-btn.copied {
+    color: var(--accent2);
+    box-shadow: inset 1px 1px 3px rgba(0,0,0,0.5);
+    transform: scale(0.97);
+  }
+  pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px; line-height: 1.7;
+    padding: 18px 20px;
+    overflow: auto; flex: 1;
+    color: var(--text);
+  }
+
+  /* ── Syntax colors ── */
+  .kw { color: #ff7b72; } /* keywords */
+  .ty { color: #ffa657; } /* types */
+  .fn { color: #d2a8ff; } /* function names */
+  .st { color: #a5d6ff; } /* strings */
+  .cm { color: #8b949e; font-style: italic; } /* comments */
+  .nm { color: #79c0ff; } /* numbers */
+  .op { color: #ff7b72; } /* operators */
+  .cls { color: #ffa657; font-weight: 600; } /* class names */
+
+  /* ── Tables ── */
+  table {
+    width: 100%; border-collapse: collapse;
+    font-size: 16px;
+  }
+  th {
+    background: var(--surface2);
+    padding: 12px 16px; text-align: left;
+    font-weight: 700; font-size: 16px;
+    border-bottom: 2px solid var(--border);
+    color: var(--accent);
+  }
+  td {
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 16px; color: var(--text-muted);
+    vertical-align: top; line-height: 1.5;
+  }
+  tr:hover td { background: rgba(88,166,255,0.04); }
+
+  /* ── Badge chips ── */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 16px; font-weight: 600;
+  }
+  .badge-red { background: rgba(248,81,73,0.18); color: var(--private-red); }
+  .badge-blue { background: rgba(88,166,255,0.18); color: var(--default-blue); }
+  .badge-purple { background: rgba(210,168,255,0.18); color: var(--protected-purple); }
+  .badge-green { background: rgba(63,185,80,0.18); color: var(--public-green); }
+  .badge-orange { background: rgba(255,166,87,0.18); color: var(--static-yellow); }
+  .badge-cyan { background: rgba(57,211,83,0.18); color: var(--instance-cyan); }
+
+  /* ── Q&A items ── */
+  .q-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+  }
+  .q-num {
+    font-size: 16px; font-weight: 700;
+    color: var(--accent); margin-bottom: 6px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .q-text {
+    font-size: 17px; line-height: 1.6;
+    color: var(--text); margin-bottom: 10px;
+  }
+  .q-option {
+    font-size: 16px; color: var(--text-muted);
+    padding: 4px 0; line-height: 1.5;
+  }
+  .q-option.correct { color: var(--accent2); font-weight: 600; }
+  .q-answer {
+    font-size: 16px; color: var(--accent2);
+    font-weight: 600; padding-top: 8px;
+    border-top: 1px solid var(--border); margin-top: 8px;
+  }
+  .q-explain {
+    font-size: 16px; color: var(--text-muted);
+    margin-top: 5px; line-height: 1.55;
+  }
+
+  /* ── Output box ── */
+  .output-box {
+    background: #010409;
+    border: 1px solid var(--accent2);
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 17px; color: var(--accent2);
+    line-height: 1.7;
+    margin-top: 12px;
+  }
+
+  /* ── Hero / title slide ── */
+  .hero {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; gap: 20px;
+  }
+  .hero-title {
+    font-size: clamp(36px, 5vw, 62px);
+    font-weight: 900; line-height: 1.1;
+    background: linear-gradient(135deg, var(--accent), var(--accent4), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-sub {
+    font-size: 20px; color: var(--text-muted);
+    max-width: 600px; line-height: 1.6;
+  }
+  .hero-tags {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    justify-content: center; margin-top: 10px;
+  }
+  .hero-tag {
+    padding: 7px 18px; border-radius: 30px;
+    border: 1px solid var(--border);
+    font-size: 16px; font-weight: 600;
+    background: var(--surface);
+  }
+
+  /* ── Section divider ── */
+  .section-slide {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+  }
+  .section-number {
+    font-size: 80px; font-weight: 900;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--surface2);
+    line-height: 1;
+  }
+  .section-label {
+    font-size: 32px; font-weight: 800;
+    color: var(--text); margin-top: -10px;
+  }
+  .section-desc { font-size: 18px; color: var(--text-muted); margin-top: 12px; }
+
+  /* ── Visual diagram ── */
+  .diagram-wrap { flex: 1; display: flex; align-items: center; justify-content: center; }
+
+  /* ── Shortcuts overlay ── */
+  #overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(1,4,9,0.88); z-index: 2000;
+    align-items: center; justify-content: center;
+  }
+  #overlay.show { display: flex; }
+  .overlay-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 32px 40px; min-width: 320px;
+  }
+  .overlay-box h2 { font-size: 22px; margin-bottom: 20px; color: var(--accent); }
+  .shortcut-row {
+    display: flex; justify-content: space-between;
+    padding: 8px 0; border-bottom: 1px solid var(--border);
+    font-size: 17px;
+  }
+  .key {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 5px; padding: 2px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px; color: var(--accent);
+  }
+
+  /* Blank line spacer */
+  .spacer { height: 16px; }
+
+  /* Recap highlight */
+  .highlight-box {
+    background: linear-gradient(135deg, rgba(88,166,255,0.1), rgba(210,168,255,0.08));
+    border: 1px solid rgba(88,166,255,0.3);
+    border-radius: 10px; padding: 16px 20px;
+    margin-bottom: 14px;
+  }
+  .highlight-box h4 { font-size: 18px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+  .highlight-box p { font-size: 16px; color: var(--text-muted); line-height: 1.6; }
+
+  /* tag pill */
+  .pill {
+    display: inline-block; padding: 2px 10px;
+    border-radius: 12px; font-size: 16px; font-weight: 600;
+    margin-left: 6px;
+  }
+
+  .ans-key-item {
+    background: var(--surface); border-radius: 10px;
+    padding: 14px 18px; margin-bottom: 10px;
+    border-left: 3px solid var(--accent2);
+  }
+  .ans-key-item .num { font-size: 16px; color: var(--text-muted); font-weight: 600; }
+  .ans-key-item .ans { font-size: 17px; color: var(--accent2); font-weight: 700; margin: 4px 0; }
+  .ans-key-item .exp { font-size: 16px; color: var(--text-muted); }
+
+  .final-quote {
+    font-size: 22px; font-style: italic; color: var(--text-muted);
+    text-align: center; max-width: 600px; line-height: 1.7;
+    margin: 0 auto;
+  }
+  .final-quote strong { color: var(--accent); font-style: normal; }
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+<div id="counter"></div>
+
+<div id="deck"></div>
+
+<div id="overlay">
+  <div class="overlay-box">
+    <h2>⌨️ Keyboard Shortcuts</h2>
+    <div class="shortcut-row"><span>Next slide</span><span><kbd class="key">→</kbd></span></div>
+    <div class="shortcut-row"><span>Previous slide</span><span><kbd class="key">←</kbd></span></div>
+    <div class="shortcut-row"><span>First slide</span><span><kbd class="key">Home</kbd></span></div>
+    <div class="shortcut-row"><span>Last slide</span><span><kbd class="key">End</kbd></span></div>
+    <div class="shortcut-row"><span>Toggle shortcuts</span><span><kbd class="key">?</kbd></span></div>
+    <div style="margin-top:20px;font-size:16px;color:var(--text-muted)">Click anywhere to close</div>
+  </div>
+</div>
+
+<script>
+// ── Slide data ──────────────────────────────────────────────────────────────
+const slides = [
+
+// ── SLIDE 1: TITLE ──────────────────────────────────────────────────────────
+{html: `
+<div class="hero">
+  <svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Java coffee cup">
+    <circle cx="40" cy="40" r="38" fill="rgba(248,152,32,0.12)" stroke="#f89820" stroke-width="1.5"/>
+    <text x="40" y="54" text-anchor="middle" font-size="36" font-family="serif">☕</text>
+  </svg>
+  <div class="hero-title">Java OOP<br>Midterms Review</div>
+  <div class="hero-sub">Methods & Access Modifiers — Modules 5 & 6<br>30-Item Summative Exam Prep</div>
+  <div class="hero-tags">
+    <span class="hero-tag" style="color:var(--static-yellow)">Static Methods</span>
+    <span class="hero-tag" style="color:var(--instance-cyan)">Instance Methods</span>
+    <span class="hero-tag" style="color:var(--private-red)">private</span>
+    <span class="hero-tag" style="color:var(--default-blue)">default</span>
+    <span class="hero-tag" style="color:var(--protected-purple)">protected</span>
+    <span class="hero-tag" style="color:var(--public-green)">public</span>
+  </div>
+  <div style="font-size:16px;color:var(--text-subtle);margin-top:8px">Press → to begin · Press ? for shortcuts</div>
+</div>
+`},
+
+// ── SLIDE 2: AGENDA ──────────────────────────────────────────────────────────
+{html: `
+<div class="eyebrow">Overview</div>
+<div class="slide-title">What's in this deck?</div>
+<div class="grid-2" style="gap:16px">
+  <div class="card" style="border-color:rgba(88,166,255,0.4)">
+    <h3 style="color:var(--accent)">📚 Part 1 — Recap</h3>
+    <ul style="font-size:17px;line-height:1.8;padding-left:18px;color:var(--text-muted)">
+      <li>What is a Method?</li>
+      <li>Static vs Instance (Deep Dive)</li>
+      <li>Memory & object lifecycle</li>
+      <li>The four access modifiers</li>
+      <li>Visibility matrix</li>
+      <li>Real-world analogies</li>
+    </ul>
+  </div>
+  <div class="card" style="border-color:rgba(63,185,80,0.4)">
+    <h3 style="color:var(--accent2)">📝 Part 2 — 30-Item Exam</h3>
+    <ul style="font-size:17px;line-height:1.8;padding-left:18px;color:var(--text-muted)">
+      <li>10 Multiple Choice</li>
+      <li>15 Identification</li>
+      <li>5 Guess the Output</li>
+      <li>Answer Key + Explanations</li>
+    </ul>
+    <div style="margin-top:14px;padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:16px;color:var(--text-muted)">
+      Aligned to your actual midterms exam format
+    </div>
+  </div>
+</div>
+`},
+
+// ── SLIDE 3: WHAT IS A METHOD ─────────────────────────────────────────────
+{html: `
+<div class="eyebrow">Recap · Module 5</div>
+<div class="slide-title">What is a <span>Method</span>?</div>
+<div style="display:flex;gap:20px;flex:1">
+  <div style="flex:1;display:flex;flex-direction:column;gap:14px">
+    <div class="highlight-box">
+      <h4>Definition</h4>
+      <p>A <strong style="color:var(--text)">method</strong> is a named block of code that performs a specific task. It only runs when explicitly called.</p>
+    </div>
+    <div class="highlight-box" style="border-color:rgba(63,185,80,0.3);background:linear-gradient(135deg,rgba(63,185,80,0.08),rgba(63,185,80,0.04))">
+      <h4 style="color:var(--accent2)">Why use methods?</h4>
+      <ul style="font-size:16px;color:var(--text-muted);padding-left:18px;line-height:1.7">
+        <li>♻️ <strong style="color:var(--text)">Reuse</strong> — write once, call anywhere</li>
+        <li>📦 <strong style="color:var(--text)">Organization</strong> — break big problems into pieces</li>
+        <li>🔧 <strong style="color:var(--text)">Actions</strong> — define what an object <em>can do</em></li>
+        <li>🔒 <strong style="color:var(--text)">Encapsulation</strong> — hide complexity inside</li>
+      </ul>
+    </div>
+  </div>
+  <div style="flex:1">
+    <div class="code-wrap" style="height:100%">
+      <div class="code-header">
+        <span class="code-lang">Java</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
+      <pre><span class="cm">// Basic method anatomy</span>
+<span class="kw">return_type</span> <span class="fn">methodName</span>(<span class="ty">parameters</span>) {
+    <span class="cm">// body — code that runs</span>
+    <span class="kw">return</span> value; <span class="cm">// if not void</span>
+}
+
+<span class="cm">// Real example</span>
+<span class="ty">int</span> <span class="fn">addOne</span>(<span class="ty">int</span> num) {
+    <span class="kw">return</span> num + <span class="nm">1</span>;
+}
+
+<span class="cm">// void = returns nothing</span>
+<span class="kw">void</span> <span class="fn">greet</span>(<span class="ty">String</span> name) {
+    System.out.<span class="fn">println</span>(<span class="st">"Hello, "</span> + name);
+}</pre>
+    </div>
+  </div>
+</div>
+`},
+
+// ── SLIDE 4: STATIC DEEP DIVE ─────────────────────────────────────────────
+{html: `
+<div class="eyebrow">Deep Dive · Static Methods</div>
+<div class="slide-title"><span>Static</span> Methods — The Class-Level Tool</div>
+<div style="display:flex;gap:20px;flex:1">
+  <div style="flex:1;display:flex;flex-direction:column;gap:12px">
+    <div class="card" style="border-color:rgba(255,166,87,0.4)">
+      <h3 style="color:var(--static-yellow)">🔑 Key Facts</h3>
+      <ul style="font-size:16px;line-height:1.8;padding-left:16px;color:var(--text-muted)">
+        <li>Declared with the <code style="color:var(--static-yellow);background:var(--surface2);padding:1px 6px;border-radius:4px">static</code> keyword</li>
+        <li>Belongs to the <strong style="color:var(--text)">class itself</strong>, not any object</li>
+        <li>Called as <code style="color:var(--static-yellow);background:var(--surface2);padding:1px 6px;border-radius:4px">ClassName.method()</code></li>
+        <li><strong style="color:var(--text)">No object needed</strong> — loaded with the class</li>
+        <li>Can only directly access <em>other static</em> members</li>
+        <li>Shared across ALL instances</li>
+      </ul>
+    </div>
+    <div class="card" style="border-color:rgba(255,166,87,0.25)">
+      <h3 style="color:var(--static-yellow)">🏗️ Memory Model</h3>
+      <p style="font-size:16px;color:var(--text-muted);line-height:1.65">When the JVM loads a class, static methods are placed in the <strong style="color:var(--text)">Method Area</strong> (part of the heap/meta-space). They exist before any object is ever created. Think of them as class-level utilities.</p>
+    </div>
+  </div>
+  <div style="flex:1">
+    <div class="code-wrap" style="height:100%">
+      <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="kw">public class</span> <span class="cls">MathHelper</span> {
+
+  <span class="cm">// static field — shared by all</span>
+  <span class="kw">static</span> <span class="ty">int</span> callCount = <span class="nm">0</span>;
+
+  <span class="cm">// static method — no object needed</span>
+  <span class="kw">static</span> <span class="ty">int</span> <span class="fn">square</span>(<span class="ty">int</span> n) {
+    callCount++;        <span class="cm">// CAN access static field</span>
+    <span class="kw">return</span> n * n;
+  }
+
+  <span class="kw">public static void</span> <span class="fn">main</span>(<span class="ty">String</span>[] args) {
+    <span class="cm">// called via class name, no new!</span>
+    System.out.<span class="fn">println</span>(MathHelper.<span class="fn">square</span>(<span class="nm">5</span>));
+    System.out.<span class="fn">println</span>(MathHelper.callCount);
+  }
+}
+<span class="cm">// Output:
+// 25
+// 1</span></pre>
+    </div>
+  </div>
+</div>
+`},
+
+// ── SLIDE 5: INSTANCE DEEP DIVE ───────────────────────────────────────────
+{html: `
+<div class="eyebrow">Deep Dive · Instance Methods</div>
+<div class="slide-title"><span style="color:var(--instance-cyan)">Instance</span> Methods — The Object-Level Tool</div>
+<div style="display:flex;gap:20px;flex:1">
+  <div style="flex:1;display:flex;flex-direction:column;gap:12px">
+    <div class="card" style="border-color:rgba(57,211,83,0.4)">
+      <h3 style="color:var(--instance-cyan)">🔑 Key Facts</h3>
+      <ul style="font-size:16px;line-height:1.8;padding-left:16px;color:var(--text-muted)">
+        <li><strong style="color:var(--text)">No</strong> <code style="color:var(--instance-cyan);background:var(--surface2);padding:1px 6px;border-radius:4px">static</code> keyword</li>
+        <li>Belongs to an <strong style="color:var(--text)">object (instance)</strong></li>
+        <li>Called as <code style="color:var(--instance-cyan);background:var(--surface2);padding:1px 6px;border-radius:4px">object.method()</code></li>
+        <li>Requires <code style="color:var(--instance-cyan);background:var(--surface2);padding:1px 6px;border-radius:4px">new ClassName()</code> first</li>
+        <li>Can access both <em>static</em> and <em>instance</em> members</li>
+        <li>Has access to <code style="color:var(--instance-cyan);background:var(--surface2);padding:1px 6px;border-radius:4px">this</code> keyword</li>
+      </ul>
+    </div>
+    <div class="card" style="border-color:rgba(57,211,83,0.25)">
+      <h3 style="color:var(--instance-cyan)">🏗️ Memory Model</h3>
+      <p style="font-size:16px;color:var(--text-muted);line-height:1.65">Each time you use <code style="color:var(--text)">new</code>, Java allocates a new object on the <strong style="color:var(--text)">Heap</strong>. Instance methods operate on <em>that specific object's data</em>. Two Dog objects have separate <code>name</code> fields; each <code>bark()</code> prints its own name.</p>
+    </div>
+  </div>
+  <div style="flex:1">
+    <div class="code-wrap" style="height:100%">
+      <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="kw">public class</span> <span class="cls">Dog</span> {
+  <span class="ty">String</span> name;  <span class="cm">// instance field</span>
+  <span class="ty">int</span> age;
+
+  <span class="kw">public</span> <span class="fn">Dog</span>(<span class="ty">String</span> n, <span class="ty">int</span> a) {
+    <span class="kw">this</span>.name = n;  <span class="cm">// 'this' = this object</span>
+    <span class="kw">this</span>.age  = a;
+  }
+
+  <span class="cm">// instance method — needs an object</span>
+  <span class="kw">public void</span> <span class="fn">bark</span>() {
+    System.out.<span class="fn">println</span>(name + <span class="st">" says: Woof!"</span>);
+  }
+
+  <span class="kw">public static void</span> <span class="fn">main</span>(<span class="ty">String</span>[] args) {
+    Dog d1 = <span class="kw">new</span> <span class="fn">Dog</span>(<span class="st">"Buddy"</span>, <span class="nm">3</span>);
+    Dog d2 = <span class="kw">new</span> <span class="fn">Dog</span>(<span class="st">"Max"</span>, <span class="nm">5</span>);
+    d1.<span class="fn">bark</span>(); <span class="cm">// Buddy says: Woof!</span>
+    d2.<span class="fn">bark</span>(); <span class="cm">// Max says: Woof!</span>
+  }
+}
+<span class="cm">// d1 and d2 are DIFFERENT objects in memory</span></pre>
+    </div>
+  </div>
+</div>
+`},
+
+// ── SLIDE 6: STATIC vs INSTANCE COMPARISON ────────────────────────────────
+{html: `
+<div class="eyebrow">Comparison</div>
+<div class="slide-title">Static <span>vs</span> Instance — Side by Side</div>
+<div style="flex:1;overflow:auto">
+<table>
+  <tr>
+    <th style="width:25%">Feature</th>
+    <th style="color:var(--static-yellow)">⚡ Static Method</th>
+    <th style="color:var(--instance-cyan)">🟢 Instance Method</th>
+  </tr>
+  <tr><td>Keyword</td><td><span class="badge badge-orange">static</span></td><td><em style="color:var(--text-muted)">no static keyword</em></td></tr>
+  <tr><td>Belongs to</td><td>The <strong style="color:var(--text)">Class</strong></td><td>An <strong style="color:var(--text)">Object</strong></td></tr>
+  <tr><td>Object required?</td><td>❌ No</td><td>✅ Yes — use <code>new</code></td></tr>
+  <tr><td>How to call</td><td><code style="color:var(--static-yellow)">ClassName.method()</code></td><td><code style="color:var(--instance-cyan)">obj.method()</code></td></tr>
+  <tr><td>Access to <code>this</code>?</td><td>❌ No — no object context</td><td>✅ Yes — refers to current obj</td></tr>
+  <tr><td>Can access instance fields?</td><td>❌ No (compile error)</td><td>✅ Yes</td></tr>
+  <tr><td>Can access static fields?</td><td>✅ Yes</td><td>✅ Yes</td></tr>
+  <tr><td>Memory location</td><td>Method Area / Class metadata</td><td>Heap (per object)</td></tr>
+  <tr><td>Common use cases</td><td>Utility/helper, <code>Math.abs()</code>, factory methods</td><td>Object behavior, getters/setters</td></tr>
+  <tr><td>Example</td><td><code style="color:var(--static-yellow)">Math.sqrt(25)</code></td><td><code style="color:var(--instance-cyan)">dog.bark()</code></td></tr>
+</table>
+</div>
+<div style="margin-top:14px;padding:10px 18px;background:rgba(248,152,32,0.08);border:1px solid rgba(248,152,32,0.3);border-radius:8px;font-size:16px;color:var(--text-muted)">
+  ⚠️ <strong style="color:var(--static-yellow)">Common trap:</strong> You <em>cannot</em> call an instance method from inside a static method without first creating an object. <code style="color:var(--private-red)">main()</code> is static — that's why you always need <code>new ClassName()</code> inside it!
+</div>
+`},
+
+// ── SLIDE 7: ANALOGY ─────────────────────────────────────────────────────
+{html: `
+<div class="eyebrow">Analogy</div>
+<div class="slide-title">The Mall Escalator vs Your Smartphone 📱</div>
+<div class="grid-2" style="flex:1;gap:20px">
+  <div class="card" style="border-color:rgba(255,166,87,0.5);display:flex;flex-direction:column;gap:12px">
+    <div style="text-align:center;padding:10px">
+      <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Escalator icon">
+        <rect width="64" height="64" rx="12" fill="rgba(255,166,87,0.1)"/>
+        <text x="32" y="44" text-anchor="middle" font-size="32">🏬</text>
+      </svg>
+    </div>
+    <h3 style="color:var(--static-yellow);text-align:center">⚡ Static = Mall Escalator</h3>
+    <ul style="font-size:16px;line-height:1.8;color:var(--text-muted);padding-left:16px">
+      <li>Anyone can use it — no ownership needed</li>
+      <li>Belongs to the <strong style="color:var(--text)">building (the Class)</strong></li>
+      <li>Always available, even if no shoppers present</li>
+      <li>You walk up without "creating" anything</li>
+    </ul>
+    <div style="background:var(--surface2);border-radius:8px;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:16px;color:var(--static-yellow)">
+      Mall.goUpEscalator();
+    </div>
+  </div>
+  <div class="card" style="border-color:rgba(57,211,83,0.5);display:flex;flex-direction:column;gap:12px">
+    <div style="text-align:center;padding:10px">
+      <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Smartphone icon">
+        <rect width="64" height="64" rx="12" fill="rgba(57,211,83,0.1)"/>
+        <text x="32" y="44" text-anchor="middle" font-size="32">📱</text>
+      </svg>
+    </div>
+    <h3 style="color:var(--instance-cyan);text-align:center">🟢 Instance = Smartphone Camera</h3>
+    <ul style="font-size:16px;line-height:1.8;color:var(--text-muted);padding-left:16px">
+      <li>You can't take photos without a phone</li>
+      <li>Must <strong style="color:var(--text)">create (buy) the object first</strong></li>
+      <li>Your phone has <em>your</em> photos — mine has mine</li>
+      <li>Each object has its own state</li>
+    </ul>
+    <div style="background:var(--surface2);border-radius:8px;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:16px;color:var(--instance-cyan)">
+      Smartphone myPhone = new Smartphone();<br>myPhone.takePhoto();
+    </div>
+  </div>
+</div>
+`},
+
+// ── SLIDE 8: ACCESS MODIFIERS INTRO ──────────────────────────────────────
+{html: `
+<div class="eyebrow">Recap · Module 6</div>
+<div class="slide-title"><span>Access Modifiers</span> — Who Gets In?</div>
+<div style="flex:1;display:flex;gap:20px">
+  <div style="flex:1.1;display:flex;flex-direction:column;gap:12px">
+    <div class="card" style="border-left:4px solid var(--private-red)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span class="badge badge-red">private</span>
+        <span style="font-size:16px;color:var(--text-muted)">Most restrictive</span>
+      </div>
+      <p style="font-size:16px;color:var(--text-muted)">Only the class itself can access. Like a personal diary — nobody else reads it.</p>
+    </div>
+    <div class="card" style="border-left:4px solid var(--default-blue)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span class="badge badge-blue">default</span>
+        <span style="font-size:16px;color:var(--text-muted)">(no keyword written)</span>
+      </div>
+      <p style="font-size:16px;color:var(--text-muted)">Same package only. Like a staff-only room — teammates can enter, outsiders cannot.</p>
+    </div>
+    <div class="card" style="border-left:4px solid var(--protected-purple)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span class="badge badge-purple">protected</span>
+      </div>
+      <p style="font-size:16px;color:var(--text-muted)">Same package + subclasses in other packages. Like a family recipe — children inherit it.</p>
+    </div>
+    <div class="card" style="border-left:4px solid var(--public-green)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span class="badge badge-green">public</span>
+        <span style="font-size:16px;color:var(--text-muted)">Least restrictive</span>
+      </div>
+      <p style="font-size:16px;color:var(--text-muted)">Accessible from anywhere. The menu board — anyone off the street can read it.</p>
+    </div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+    <svg viewBox="0 0 300 280" xmlns="http://www.w3.org/2000/svg" style="max-height:280px" role="img" aria-label="Access modifier scope diagram — four concentric rings">
+      <title>Access modifier scope: public outermost, protected next, default then private innermost</title>
+      <!-- Concentric rings -->
+      <ellipse cx="150" cy="140" rx="140" ry="120" fill="rgba(63,185,80,0.08)" stroke="#3fb950" stroke-width="1.5"/>
+      <text x="150" y="26" text-anchor="middle" font-size="13" fill="#3fb950" font-family="Inter,sans-serif">public — everywhere</text>
+      <ellipse cx="150" cy="140" rx="108" ry="90" fill="rgba(210,168,255,0.08)" stroke="#d2a8ff" stroke-width="1.5"/>
+      <text x="150" y="60" text-anchor="middle" font-size="13" fill="#d2a8ff" font-family="Inter,sans-serif">protected</text>
+      <ellipse cx="150" cy="140" rx="76" ry="62" fill="rgba(88,166,255,0.1)" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="150" y="86" text-anchor="middle" font-size="13" fill="#58a6ff" font-family="Inter,sans-serif">default</text>
+      <ellipse cx="150" cy="140" rx="44" ry="36" fill="rgba(248,81,73,0.12)" stroke="#f85149" stroke-width="1.5"/>
+      <text x="150" y="134" text-anchor="middle" font-size="13" fill="#f85149" font-family="Inter,sans-serif">private</text>
+      <text x="150" y="152" text-anchor="middle" font-size="11" fill="#f85149" font-family="Inter,sans-serif">class only</text>
+    </svg>
+    <div style="text-align:center;font-size:16px;color:var(--text-muted);margin-top:8px">Bigger ring = wider access</div>
+  </div>
+</div>
+`},
+
+// ── SLIDE 9: VISIBILITY MATRIX ───────────────────────────────────────────
+{html: `
+<div class="eyebrow">Access Modifiers</div>
+<div class="slide-title">Visibility <span>Matrix</span></div>
+<div style="flex:1;overflow:auto">
+<table>
+  <tr>
+    <th>Access Level</th>
+    <th>Same Class</th>
+    <th>Same Package</th>
+    <th>Subclass (diff. pkg)</th>
+    <th>World / Everywhere</th>
+  </tr>
+  <tr>
+    <td><span class="badge badge-red">private</span></td>
+    <td style="color:var(--accent2)">✅ Yes</td>
+    <td style="color:var(--private-red)">❌ No</td>
+    <td style="color:var(--private-red)">❌ No</td>
+    <td style="color:var(--private-red)">❌ No</td>
+  </tr>
+  <tr>
+    <td><span class="badge badge-blue">default</span> <span style="font-size:14px;color:var(--text-subtle)">(no keyword)</span></td>
+    <td style="color:var(--accent2)">✅ Yes</td>
+    <td style="color:var(--accent2)">✅ Yes</td>
+    <td style="color:var(--private-red)">❌ No</td>
+    <td style="color:var(--private-red)">❌ No</td>
+  </tr>
+  <tr>
+    <td><span class="badge badge-purple">protected</span></td>
+    <td style="color:var(--accent2)">✅ Yes</td>
+    <td style="color:var(--accent2)">✅ Yes</td>
+    <td style="color:var(--accent2)">✅ Yes</td>
+    <td style="color:var(--private-red)">❌ No</td>
+  </tr>
+  <tr>
+    <td><span class="badge badge-green">public</span></td>
+    <td style="color:var(--accent2)">✅ Yes</td>
+    <td style="color:var(--accent2)">✅ Yes</td>
+    <td style="color:var(--accent2)">✅ Yes</td>
+    <td style="color:var(--accent2)">✅ Yes</td>
+  </tr>
+</table>
+</div>
+<div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+  <div style="padding:12px 16px;background:rgba(248,81,73,0.08);border:1px solid rgba(248,81,73,0.3);border-radius:8px;font-size:16px;color:var(--text-muted)">
+    🔒 <strong style="color:var(--private-red)">Rule of Least Privilege:</strong> Use the most restrictive modifier that still gets the job done.
+  </div>
+  <div style="padding:12px 16px;background:rgba(63,185,80,0.08);border:1px solid rgba(63,185,80,0.3);border-radius:8px;font-size:16px;color:var(--text-muted)">
+    🏗️ <strong style="color:var(--accent2)">Encapsulation:</strong> Access modifiers are the primary way OOP protects data.
+  </div>
+</div>
+`},
+
+// ── SLIDE 10: ENCAPSULATION + GETTERS/SETTERS ─────────────────────────────
+{html: `
+<div class="eyebrow">Best Practice</div>
+<div class="slide-title">Encapsulation — <span>Private Fields + Public Methods</span></div>
+<div style="display:flex;gap:20px;flex:1">
+  <div style="flex:1;display:flex;flex-direction:column;gap:12px">
+    <div class="card">
+      <h3>The Pattern</h3>
+      <ul style="font-size:16px;color:var(--text-muted);line-height:1.8;padding-left:16px">
+        <li>Make fields <span class="badge badge-red">private</span> — hide data</li>
+        <li>Add <span class="badge badge-green">public</span> getter/setter methods</li>
+        <li>Validate inside setters — full control</li>
+        <li>Outside code can't corrupt your data directly</li>
+      </ul>
+    </div>
+    <div class="card" style="border-color:rgba(248,81,73,0.3)">
+      <h3 style="color:var(--private-red)">❌ Bad (exposed field)</h3>
+      <pre style="font-size:16px;padding:8px;background:var(--surface2);border-radius:6px;color:var(--text-muted)"><span class="kw">public int</span> balance = <span class="nm">1000</span>;
+<span class="cm">// Anyone can: account.balance = -9999;</span></pre>
+    </div>
+    <div class="card" style="border-color:rgba(63,185,80,0.3)">
+      <h3 style="color:var(--accent2)">✅ Good (encapsulated)</h3>
+      <pre style="font-size:16px;padding:8px;background:var(--surface2);border-radius:6px;color:var(--text-muted)"><span class="kw">private int</span> balance = <span class="nm">1000</span>;
+<span class="kw">public void</span> <span class="fn">deposit</span>(<span class="ty">int</span> amt) {
+  <span class="kw">if</span> (amt > <span class="nm">0</span>) balance += amt;
+}</pre>
+    </div>
+  </div>
+  <div style="flex:1">
+    <div class="code-wrap" style="height:100%">
+      <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="kw">class</span> <span class="cls">BankAccount</span> {
+  <span class="kw">private double</span> balance = <span class="nm">0</span>;
+
+  <span class="kw">public void</span> <span class="fn">deposit</span>(<span class="ty">double</span> amount) {
+    <span class="kw">if</span> (amount > <span class="nm">0</span>) {
+      balance += amount;
+    }
+  }
+
+  <span class="kw">public double</span> <span class="fn">getBalance</span>() {
+    <span class="kw">return</span> balance;
+  }
+
+  <span class="kw">public static void</span> <span class="fn">main</span>(<span class="ty">String</span>[] args) {
+    BankAccount acc = <span class="kw">new</span> <span class="fn">BankAccount</span>();
+    acc.<span class="fn">deposit</span>(<span class="nm">500</span>);
+    System.out.<span class="fn">println</span>(acc.<span class="fn">getBalance</span>());
+    <span class="cm">// Output: 500.0</span>
+  }
+}
+<span class="cm">// acc.balance = -9999 → COMPILE ERROR!</span></pre>
+    </div>
+  </div>
+</div>
+`},
+
+// ── SLIDE 11: RECAP SUMMARY ───────────────────────────────────────────────
+{html: `
+<div class="eyebrow">Recap Complete</div>
+<div class="slide-title">Key Takeaways Before the <span>Exam</span></div>
+<div class="grid-2" style="flex:1;gap:16px">
+  <div class="card" style="border-color:rgba(255,166,87,0.4)">
+    <h3 style="color:var(--static-yellow)">⚡ Static Methods</h3>
+    <ul style="font-size:16px;color:var(--text-muted);line-height:1.8;padding-left:16px">
+      <li>Keyword: <code>static</code></li>
+      <li>Call: <code>ClassName.method()</code></li>
+      <li>No object needed</li>
+      <li>Cannot use <code>this</code></li>
+      <li>Cannot access instance fields directly</li>
+      <li>Example: <code>Math.sqrt()</code>, utility helpers</li>
+    </ul>
+  </div>
+  <div class="card" style="border-color:rgba(57,211,83,0.4)">
+    <h3 style="color:var(--instance-cyan)">🟢 Instance Methods</h3>
+    <ul style="font-size:16px;color:var(--text-muted);line-height:1.8;padding-left:16px">
+      <li>No <code>static</code> keyword</li>
+      <li>Call: <code>obj.method()</code></li>
+      <li>Needs <code>new ClassName()</code></li>
+      <li>Has access to <code>this</code></li>
+      <li>Can access all fields</li>
+      <li>Example: <code>dog.bark()</code>, object behaviors</li>
+    </ul>
+  </div>
+  <div class="card" style="grid-column:1/-1;border-color:rgba(88,166,255,0.3)">
+    <h3 style="color:var(--accent)">🔒 Access Modifiers (most → least restrictive)</h3>
+    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:10px">
+      <div style="text-align:center">
+        <span class="badge badge-red" style="font-size:17px;padding:5px 14px">private</span>
+        <div style="font-size:15px;color:var(--text-muted);margin-top:4px">Class only</div>
+      </div>
+      <div style="font-size:22px;color:var(--text-subtle)">→</div>
+      <div style="text-align:center">
+        <span class="badge badge-blue" style="font-size:17px;padding:5px 14px">default</span>
+        <div style="font-size:15px;color:var(--text-muted);margin-top:4px">Package</div>
+      </div>
+      <div style="font-size:22px;color:var(--text-subtle)">→</div>
+      <div style="text-align:center">
+        <span class="badge badge-purple" style="font-size:17px;padding:5px 14px">protected</span>
+        <div style="font-size:15px;color:var(--text-muted);margin-top:4px">Package + subclasses</div>
+      </div>
+      <div style="font-size:22px;color:var(--text-subtle)">→</div>
+      <div style="text-align:center">
+        <span class="badge badge-green" style="font-size:17px;padding:5px 14px">public</span>
+        <div style="font-size:15px;color:var(--text-muted);margin-top:4px">Everywhere</div>
+      </div>
+    </div>
+  </div>
+</div>
+`},
+
+// ── SLIDE 12: SECTION — MCQ ───────────────────────────────────────────────
+{html: `
+<div class="section-slide">
+  <div class="section-number">01</div>
+  <div class="section-label">Multiple Choice</div>
+  <div class="section-desc">10 Questions · Choose the best answer</div>
+  <div style="margin-top:28px;display:flex;gap:14px;flex-wrap:wrap;justify-content:center">
+    <span class="badge badge-orange" style="font-size:17px;padding:6px 18px">Static Methods</span>
+    <span class="badge badge-cyan" style="font-size:17px;padding:6px 18px">Instance Methods</span>
+    <span class="badge badge-red" style="font-size:17px;padding:6px 18px">Access Modifiers</span>
+    <span class="badge badge-green" style="font-size:17px;padding:6px 18px">Encapsulation</span>
+  </div>
+</div>
+`},
+
+// ── SLIDE 13: MCQ 1–4 ─────────────────────────────────────────────────────
+{html: `
+<div class="eyebrow">Multiple Choice</div>
+<div class="slide-title">Questions <span>1 – 4</span></div>
+<div style="flex:1;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:16px;align-content:start">
+
+<div class="q-item">
+  <div class="q-num">Q1</div>
+  <div class="q-text">Which keyword is used to declare a method that can be called without creating an object?</div>
+  <div class="q-option">A. public</div>
+  <div class="q-option">B. private</div>
+  <div class="q-option">C. static</div>
+  <div class="q-option">D. void</div>
+</div>
+
+<div class="q-item">
+  <div class="q-num">Q2</div>
+  <div class="q-text">Which access modifier makes a field accessible only within the class it is declared in?</div>
+  <div class="q-option">A. public</div>
+  <div class="q-option">B. protected</div>
+  <div class="q-option">C. default</div>
+  <div class="q-option">D. private</div>
+</div>
+
+<div class="q-item">
+  <div class="q-num">Q3</div>
+  <div class="q-text">What happens when you write a method with no access modifier keyword?</div>
+  <div class="q-option">A. It becomes public</div>
+  <div class="q-option">B. It becomes private</div>
+  <div class="q-option">C. It becomes package-private (default)</div>
+  <div class="q-option">D. Compile error</div>
+</div>
+
+<div class="q-item">
+  <div class="q-num">Q4</div>
+  <div class="q-text">Which OOP pillar do access modifiers primarily support?</div>
+  <div class="q-option">A. Inheritance</div>
+  <div class="q-option">B. Polymorphism</div>
+  <div class="q-option">C. Abstraction</div>
+  <div class="q-option">D. Encapsulation</div>
+</div>
+
+</div>
+`},
+
+// ── SLIDE 14: MCQ 5–8 ─────────────────────────────────────────────────────
+{html: `
+<div class="eyebrow">Multiple Choice</div>
+<div class="slide-title">Questions <span>5 – 8</span></div>
+<div style="flex:1;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:16px;align-content:start">
+
+<div class="q-item">
+  <div class="q-num">Q5</div>
+  <div class="q-text">Inside a static method, which of the following will cause a compile error?</div>
+  <div class="q-option">A. Calling another static method</div>
+  <div class="q-option">B. Declaring a local variable</div>
+  <div class="q-option">C. Directly accessing an instance field without an object</div>
+  <div class="q-option">D. Using a for-loop</div>
+</div>
+
+<div class="q-item">
+  <div class="q-num">Q6</div>
+  <div class="q-text">Which modifier allows a subclass in a different package to access a field, but blocks unrelated classes in that package?</div>
+  <div class="q-option">A. public</div>
+  <div class="q-option">B. protected</div>
+  <div class="q-option">C. default</div>
+  <div class="q-option">D. private</div>
+</div>
+
+<div class="q-item">
+  <div class="q-num">Q7</div>
+  <div class="q-text">A method declared as <code style="color:var(--accent)">public void bark()</code> inside a class <code>Dog</code> is called as <code style="color:var(--accent)">d.bark()</code>. What type of method is this?</div>
+  <div class="q-option">A. Static method</div>
+  <div class="q-option">B. Class method</div>
+  <div class="q-option">C. Instance method</div>
+  <div class="q-option">D. Abstract method</div>
+</div>
+
+<div class="q-item">
+  <div class="q-num">Q8</div>
+  <div class="q-text">What does the keyword <code style="color:var(--accent)">this</code> refer to inside an instance method?</div>
+  <div class="q-option">A. The class itself</div>
+  <div class="q-option">B. The current object</div>
+  <div class="q-option">C. The parent class</div>
+  <div class="q-option">D. A static variable</div>
+</div>
+
+</div>
+`},
+
+// ── SLIDE 15: MCQ 9–10 ────────────────────────────────────────────────────
+{html: `
+<div class="eyebrow">Multiple Choice</div>
+<div class="slide-title">Questions <span>9 – 10</span></div>
+<div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:16px;align-content:start">
+
+<div class="q-item">
+  <div class="q-num">Q9</div>
+  <div class="q-text">Which of the following correctly calls a static method named <code style="color:var(--accent)">calculate()</code> in a class called <code style="color:var(--accent)">Solver</code>?</div>
+  <div class="q-option">A. <code>new Solver().calculate();</code></div>
+  <div class="q-option">B. <code>Solver solver = new Solver(); solver.calculate();</code></div>
+  <div class="q-option">C. <code>Solver.calculate();</code></div>
+  <div class="q-option">D. <code>calculate();</code> (only works outside the class)</div>
+</div>
+
+<div class="q-item">
+  <div class="q-num">Q10</div>
+  <div class="q-text">You want a utility method that converts miles to kilometers — it doesn't need to know about any specific Vehicle object. Which method type is the best fit?</div>
+  <div class="q-option">A. Instance method, because it's useful</div>
+  <div class="q-option">B. Static method, because it doesn't depend on object state</div>
+  <div class="q-option">C. Protected method, for better safety</div>
+  <div class="q-option">D. Default method, to restrict it to the package</div>
+</div>
+
+<div style="padding:14px 18px;background:rgba(88,166,255,0.07);border:1px solid rgba(88,166,255,0.2);border-radius:8px;font-size:16px;color:var(--text-muted)">
+  💡 Tip: Static methods are perfect for pure calculations — they take input, return output, and need no object state (like <code>Math.abs()</code>, <code>Integer.parseInt()</code>).
+</div>
+
+</div>
+`},
+
+// ── SLIDE 16: SECTION — IDENTIFICATION ───────────────────────────────────
+{html: `
+<div class="section-slide">
+  <div class="section-number">02</div>
+  <div class="section-label">Identification</div>
+  <div class="section-desc">15 Questions · Write the exact term, keyword, or modifier</div>
+  <div style="margin-top:28px;padding:16px 24px;background:var(--surface);border:1px solid var(--border);border-radius:10px;max-width:500px;font-size:16px;color:var(--text-muted)">
+    Word bank for scenario items:<br>
+    <span class="badge badge-orange" style="margin:4px">Static Method</span>
+    <span class="badge badge-cyan" style="margin:4px">Instance Method</span>
+    <span class="badge badge-red" style="margin:4px">private</span>
+    <span class="badge badge-blue" style="margin:4px">default</span>
+    <span class="badge badge-purple" style="margin:4px">protected</span>
+    <span class="badge badge-green" style="margin:4px">public</span>
+    <span class="badge" style="background:rgba(230,237,243,0.1);color:var(--text);margin:4px">Encapsulation</span>
+    <span class="badge" style="background:rgba(230,237,243,0.1);color:var(--text);margin:4px">Field</span>
+  </div>
+</div>
+`},
+
+// ── SLIDE 17: IDENTIFICATION 1–8 ─────────────────────────────────────────
+{html: `
+<div class="eyebrow">Identification</div>
+<div class="slide-title">Questions <span>11 – 18</span></div>
+<div style="flex:1;overflow-y:auto">
+
+<div class="q-item"><div class="q-num">Q11</div><div class="q-text">The keyword used to declare a method that belongs to the class itself, not to any object.</div></div>
+
+<div class="q-item"><div class="q-num">Q12</div><div class="q-text">The access modifier that restricts a member to only the class where it is declared.</div></div>
+
+<div class="q-item"><div class="q-num">Q13</div><div class="q-text">The access level applied automatically when no modifier keyword is written at all.</div></div>
+
+<div class="q-item"><div class="q-num">Q14</div><div class="q-text">The OOP pillar that access modifiers primarily enforce — hiding internal data and exposing only what is necessary.</div></div>
+
+<div class="q-item"><div class="q-num">Q15</div><div class="q-text">The type of method that requires an object to be created with <code style="color:var(--accent)">new</code> before it can be called.</div></div>
+
+<div class="q-item"><div class="q-num">Q16</div><div class="q-text">The keyword used inside an instance method to refer to the current object.</div></div>
+
+<div class="q-item"><div class="q-num">Q17</div><div class="q-text">A variable declared directly inside a class (not inside a method) that stores the state of an object.</div></div>
+
+<div class="q-item"><div class="q-num">Q18</div><div class="q-text">The access modifier that allows both the same package AND subclasses in other packages to access a member, but blocks all other external classes.</div></div>
+
+</div>
+`},
+
+// ── SLIDE 18: IDENTIFICATION 9–15 (SCENARIOS) ────────────────────────────
+{html: `
+<div class="eyebrow">Identification — Scenario-Based</div>
+<div class="slide-title">Questions <span>19 – 25</span></div>
+<div style="flex:1;overflow-y:auto">
+
+<div class="q-item"><div class="q-num">Q19</div><div class="q-text">A method called directly through the class name, without ever creating an object first (e.g., <code style="color:var(--accent)">ClassName.method()</code>).</div></div>
+
+<div class="q-item"><div class="q-num">Q20</div><div class="q-text">A bank account's balance field that only the class's own methods are allowed to touch directly. No outside class can set it freely.</div></div>
+
+<div class="q-item"><div class="q-num">Q21</div><div class="q-text">A shared recipe that a franchise subclass in another package can inherit and use, but an unrelated class in that package cannot access.</div></div>
+
+<div class="q-item"><div class="q-num">Q22</div><div class="q-text">A method on a <code style="color:var(--accent)">Smartphone</code> object (<code style="color:var(--accent)">takePhoto()</code>) that you can only call after you have built the phone with <code style="color:var(--accent)">new</code>.</div></div>
+
+<div class="q-item"><div class="q-num">Q23</div><div class="q-text">A constant displayed on a menu board that literally anyone in the project — any class, any package — can read.</div></div>
+
+<div class="q-item"><div class="q-num">Q24</div><div class="q-text">The action of creating an object in memory using the <code style="color:var(--accent)">new</code> keyword — what this represents conceptually in OOP.</div></div>
+
+<div class="q-item"><div class="q-num">Q25</div><div class="q-text">When a <code style="color:var(--accent)">class B</code> in a different package extends <code style="color:var(--accent)">class A</code>, the access modifier that lets B access A's members even across package boundaries.</div></div>
+
+</div>
+`},
+
+// ── SLIDE 19: SECTION — GUESS THE OUTPUT ─────────────────────────────────
+{html: `
+<div class="section-slide">
+  <div class="section-number">03</div>
+  <div class="section-label">Guess the Output</div>
+  <div class="section-desc">5 Code Snippets · Predict exactly what prints to the console</div>
+  <div style="margin-top:28px">
+    <svg width="120" height="80" viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Terminal icon">
+      <rect width="120" height="80" rx="10" fill="rgba(88,166,255,0.1)" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="14" y="30" font-size="13" fill="#3fb950" font-family="JetBrains Mono,monospace">$ java Main</text>
+      <text x="14" y="50" font-size="13" fill="#8b949e" font-family="JetBrains Mono,monospace">???</text>
+      <text x="14" y="66" font-size="13" fill="#58a6ff" font-family="JetBrains Mono,monospace">_</text>
+    </svg>
+  </div>
+</div>
+`},
+
+// ── SLIDE 20: GTO 1 ───────────────────────────────────────────────────────
+{html: `
+<div class="eyebrow">Guess the Output · Q26</div>
+<div class="slide-title">What does this <span>print</span>?</div>
+<div style="flex:1;display:flex;gap:20px">
+  <div style="flex:1.2">
+    <div class="code-wrap" style="height:100%">
+      <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="kw">public class</span> <span class="cls">Counter</span> {
+  <span class="kw">static</span> <span class="ty">int</span> count = <span class="nm">0</span>;
+
+  <span class="kw">static void</span> <span class="fn">increment</span>() {
+    count++;
+  }
+
+  <span class="kw">public static void</span> <span class="fn">main</span>(<span class="ty">String</span>[] args) {
+    Counter.<span class="fn">increment</span>();
+    Counter.<span class="fn">increment</span>();
+    Counter.<span class="fn">increment</span>();
+    System.out.<span class="fn">println</span>(count);
+  }
+}</pre>
+    </div>
+  </div>
+  <div style="flex:0.8;display:flex;flex-direction:column;gap:12px;justify-content:center">
+    <div class="card">
+      <h3>Think about it…</h3>
+      <ul style="font-size:16px;color:var(--text-muted);line-height:1.8;padding-left:16px">
+        <li><code>count</code> starts at <strong style="color:var(--text)">0</strong></li>
+        <li><code>increment()</code> is called <strong style="color:var(--text)">3 times</strong></li>
+        <li>Each call does <code>count++</code></li>
+        <li>All static — no objects created</li>
+      </ul>
+    </div>
+    <div style="padding:12px 16px;background:var(--surface2);border-radius:8px;font-size:16px;color:var(--text-subtle)">
+      Write your answer before checking the answer key slide!
+    </div>
+  </div>
+</div>
+`},
+
+// ── SLIDE 21: GTO 2 ───────────────────────────────────────────────────────
+{html: `
+<div class="eyebrow">Guess the Output · Q27</div>
+<div class="slide-title">What does this <span>print</span>?</div>
+<div style="flex:1;display:flex;gap:20px">
+  <div style="flex:1.2">
+    <div class="code-wrap" style="height:100%">
+      <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="kw">public class</span> <span class="cls">Car</span> {
+  <span class="ty">int</span> speed = <span class="nm">100</span>;
+  <span class="ty">String</span> model = <span class="st">"Vios"</span>;
+
+  <span class="kw">public void</span> <span class="fn">show</span>() {
+    System.out.<span class="fn">println</span>(speed + <span class="st">" "</span> + model);
+  }
+
+  <span class="kw">public static void</span> <span class="fn">main</span>(<span class="ty">String</span>[] args) {
+    Car c = <span class="kw">new</span> <span class="fn">Car</span>();
+    c.speed = <span class="nm">200</span>;
+    c.<span class="fn">show</span>();
+  }
+}</pre>
+    </div>
+  </div>
+  <div style="flex:0.8;display:flex;flex-direction:column;gap:12px;justify-content:center">
+    <div class="card">
+      <h3>Hints</h3>
+      <ul style="font-size:16px;color:var(--text-muted);line-height:1.8;padding-left:16px">
+        <li><code>show()</code> is an <strong style="color:var(--instance-cyan)">instance method</strong></li>
+        <li>Object <code>c</code> has speed = 100, then changed to <strong style="color:var(--text)">200</strong></li>
+        <li>model stays <code>"Vios"</code></li>
+        <li>Format: <code>speed + " " + model</code></li>
+      </ul>
+    </div>
+  </div>
+</div>
+`},
+
+// ── SLIDE 22: GTO 3 ───────────────────────────────────────────────────────
+{html: `
+<div class="eyebrow">Guess the Output · Q28</div>
+<div class="slide-title">What does this <span>print</span>?</div>
+<div style="flex:1;display:flex;gap:20px">
+  <div style="flex:1.2">
+    <div class="code-wrap" style="height:100%">
+      <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="kw">public class</span> <span class="cls">Animal</span> {
+  <span class="kw">private</span> <span class="ty">String</span> sound = <span class="st">"Roar"</span>;
+
+  <span class="kw">public void</span> <span class="fn">makeSound</span>() {
+    System.out.<span class="fn">println</span>(sound);
+  }
+
+  <span class="kw">public static void</span> <span class="fn">main</span>(<span class="ty">String</span>[] args) {
+    Animal a = <span class="kw">new</span> <span class="fn">Animal</span>();
+    a.<span class="fn">makeSound</span>();
+  }
+}</pre>
+    </div>
+  </div>
+  <div style="flex:0.8;display:flex;flex-direction:column;gap:12px;justify-content:center">
+    <div class="card">
+      <h3>Key concept</h3>
+      <ul style="font-size:16px;color:var(--text-muted);line-height:1.8;padding-left:16px">
+        <li><code>sound</code> is <span class="badge badge-red">private</span> — but <code>makeSound()</code> is inside the same class, so it CAN access it</li>
+        <li>No error here — private is accessible within its own class</li>
+      </ul>
+    </div>
+  </div>
+</div>
+`},
+
+// ── SLIDE 23: GTO 4 ───────────────────────────────────────────────────────
+{html: `
+<div class="eyebrow">Guess the Output · Q29</div>
+<div class="slide-title">What does this <span>print</span>?</div>
+<div style="flex:1;display:flex;gap:20px">
+  <div style="flex:1.2">
+    <div class="code-wrap" style="height:100%">
+      <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="kw">public class</span> <span class="cls">Greeter</span> {
+  <span class="ty">String</span> name;
+
+  <span class="kw">public</span> <span class="fn">Greeter</span>(<span class="ty">String</span> n) {
+    <span class="kw">this</span>.name = n;
+  }
+
+  <span class="kw">public void</span> <span class="fn">greet</span>() {
+    System.out.<span class="fn">println</span>(<span class="st">"Hello, "</span> + name + <span class="st">"!"</span>);
+  }
+
+  <span class="kw">public static void</span> <span class="fn">main</span>(<span class="ty">String</span>[] args) {
+    Greeter g1 = <span class="kw">new</span> <span class="fn">Greeter</span>(<span class="st">"Mira"</span>);
+    Greeter g2 = <span class="kw">new</span> <span class="fn">Greeter</span>(<span class="st">"Eloy"</span>);
+    g1.<span class="fn">greet</span>();
+    g2.<span class="fn">greet</span>();
+  }
+}</pre>
+    </div>
+  </div>
+  <div style="flex:0.8;display:flex;flex-direction:column;gap:12px;justify-content:center">
+    <div class="card">
+      <h3>Two objects, two states</h3>
+      <ul style="font-size:16px;color:var(--text-muted);line-height:1.8;padding-left:16px">
+        <li>g1.name = <strong style="color:var(--text)">"Mira"</strong></li>
+        <li>g2.name = <strong style="color:var(--text)">"Eloy"</strong></li>
+        <li>Each <code>greet()</code> prints its own name</li>
+        <li>This is why instance methods are powerful</li>
+      </ul>
+    </div>
+  </div>
+</div>
+`},
+
+// ── SLIDE 24: GTO 5 ───────────────────────────────────────────────────────
+{html: `
+<div class="eyebrow">Guess the Output · Q30</div>
+<div class="slide-title">What does this <span>print</span>?</div>
+<div style="flex:1;display:flex;gap:20px">
+  <div style="flex:1.2">
+    <div class="code-wrap" style="height:100%">
+      <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="kw">public class</span> <span class="cls">Vehicle</span> {
+  <span class="kw">private</span> <span class="ty">int</span> mileage = <span class="nm">0</span>;
+
+  <span class="kw">public void</span> <span class="fn">drive</span>(<span class="ty">int</span> km) {
+    <span class="kw">if</span> (km > <span class="nm">0</span>) mileage += km;
+  }
+
+  <span class="kw">public int</span> <span class="fn">getMileage</span>() {
+    <span class="kw">return</span> mileage;
+  }
+
+  <span class="kw">public static double</span> <span class="fn">milesToKm</span>(<span class="ty">double</span> mi) {
+    <span class="kw">return</span> mi * <span class="nm">1.60934</span>;
+  }
+
+  <span class="kw">public static void</span> <span class="fn">main</span>(<span class="ty">String</span>[] args) {
+    Vehicle v = <span class="kw">new</span> <span class="fn">Vehicle</span>();
+    v.<span class="fn">drive</span>(<span class="nm">100</span>);
+    System.out.<span class="fn">println</span>(v.<span class="fn">getMileage</span>());
+    System.out.<span class="fn">println</span>(Vehicle.<span class="fn">milesToKm</span>(<span class="nm">50</span>));
+  }
+}</pre>
+    </div>
+  </div>
+  <div style="flex:0.8;display:flex;flex-direction:column;gap:12px;justify-content:center">
+    <div class="card">
+      <h3>Two method types!</h3>
+      <ul style="font-size:16px;color:var(--text-muted);line-height:1.8;padding-left:16px">
+        <li><code>drive(100)</code> adds 100 to mileage</li>
+        <li><code>getMileage()</code> → instance method, returns <strong style="color:var(--text)">100</strong></li>
+        <li><code>milesToKm(50)</code> → static, returns <code>50 × 1.60934</code></li>
+        <li>Notice: static called via class name!</li>
+      </ul>
+    </div>
+    <div style="padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:16px;color:var(--text-muted)">
+      This mirrors your actual exam's Vehicle problem.
+    </div>
+  </div>
+</div>
+`},
+
+// ── SLIDE 25: ANSWER KEY — MCQ ────────────────────────────────────────────
+{html: `
+<div class="eyebrow">Answer Key</div>
+<div class="slide-title">Multiple Choice — <span>Answers & Explanations</span></div>
+<div style="flex:1;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-content:start">
+
+  <div class="ans-key-item">
+    <div class="num">Q1</div><div class="ans">C. static</div>
+    <div class="exp">The static keyword allows a method to be called on the class itself without any object.</div>
+  </div>
+  <div class="ans-key-item">
+    <div class="num">Q2</div><div class="ans">D. private</div>
+    <div class="exp">private is the most restrictive — only the declaring class can access it.</div>
+  </div>
+  <div class="ans-key-item">
+    <div class="num">Q3</div><div class="ans">C. package-private (default)</div>
+    <div class="exp">No modifier = default access, visible only within the same package.</div>
+  </div>
+  <div class="ans-key-item">
+    <div class="num">Q4</div><div class="ans">D. Encapsulation</div>
+    <div class="exp">Access modifiers enforce encapsulation — hiding implementation, exposing interface.</div>
+  </div>
+  <div class="ans-key-item">
+    <div class="num">Q5</div><div class="ans">C. Directly accessing an instance field</div>
+    <div class="exp">Static methods have no object context; accessing instance fields directly causes a compile error.</div>
+  </div>
+  <div class="ans-key-item">
+    <div class="num">Q6</div><div class="ans">B. protected</div>
+    <div class="exp">protected reaches subclasses across packages, but blocks unrelated external classes.</div>
+  </div>
+  <div class="ans-key-item">
+    <div class="num">Q7</div><div class="ans">C. Instance method</div>
+    <div class="exp">Called via an object (d), no static keyword — this is an instance method.</div>
+  </div>
+  <div class="ans-key-item">
+    <div class="num">Q8</div><div class="ans">B. The current object</div>
+    <div class="exp">this refers to the specific object the method is running on.</div>
+  </div>
+  <div class="ans-key-item">
+    <div class="num">Q9</div><div class="ans">C. Solver.calculate();</div>
+    <div class="exp">Static methods are called via the class name — no object required.</div>
+  </div>
+  <div class="ans-key-item">
+    <div class="num">Q10</div><div class="ans">B. Static method</div>
+    <div class="exp">A pure calculation with no object state = static. Like Math.sqrt(), milesToKm() is stateless.</div>
+  </div>
+
+</div>
+`},
+
+// ── SLIDE 26: ANSWER KEY — IDENTIFICATION ────────────────────────────────
+{html: `
+<div class="eyebrow">Answer Key</div>
+<div class="slide-title">Identification — <span>Answers Q11–25</span></div>
+<div style="flex:1;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start">
+
+  <div class="ans-key-item"><div class="num">Q11</div><div class="ans">static</div><div class="exp">The keyword that makes a method belong to the class, not an object.</div></div>
+  <div class="ans-key-item"><div class="num">Q12</div><div class="ans">private</div><div class="exp">Most restrictive — class eyes only.</div></div>
+  <div class="ans-key-item"><div class="num">Q13</div><div class="ans">default (package-private)</div><div class="exp">Writing nothing gives package-level access automatically.</div></div>
+  <div class="ans-key-item"><div class="num">Q14</div><div class="ans">Encapsulation</div><div class="exp">Hiding data and controlling access is encapsulation.</div></div>
+  <div class="ans-key-item"><div class="num">Q15</div><div class="ans">Instance Method</div><div class="exp">Requires new — belongs to a specific object.</div></div>
+  <div class="ans-key-item"><div class="num">Q16</div><div class="ans">this</div><div class="exp">this is the reference to the current object inside instance methods.</div></div>
+  <div class="ans-key-item"><div class="num">Q17</div><div class="ans">Field (instance variable)</div><div class="exp">A class-level variable that stores an object's state.</div></div>
+  <div class="ans-key-item"><div class="num">Q18</div><div class="ans">protected</div><div class="exp">Bridges the gap — package + subclasses, nothing else.</div></div>
+  <div class="ans-key-item"><div class="num">Q19</div><div class="ans">Static Method</div><div class="exp">Called directly on the class — ClassName.method().</div></div>
+  <div class="ans-key-item"><div class="num">Q20</div><div class="ans">private</div><div class="exp">Balance is private — only the BankAccount class can touch it.</div></div>
+  <div class="ans-key-item"><div class="num">Q21</div><div class="ans">protected</div><div class="exp">Protected reaches subclasses in other packages.</div></div>
+  <div class="ans-key-item"><div class="num">Q22</div><div class="ans">Instance Method</div><div class="exp">takePhoto() needs a Smartphone object — it's an instance method.</div></div>
+  <div class="ans-key-item"><div class="num">Q23</div><div class="ans">public</div><div class="exp">public = anyone anywhere can read it.</div></div>
+  <div class="ans-key-item"><div class="num">Q24</div><div class="ans">Instantiation / Object creation</div><div class="exp">Using new creates a new object on the heap — called instantiation.</div></div>
+  <div class="ans-key-item"><div class="num">Q25</div><div class="ans">protected</div><div class="exp">protected is specifically designed to allow cross-package inheritance access.</div></div>
+
+</div>
+`},
+
+// ── SLIDE 27: ANSWER KEY — GTO ────────────────────────────────────────────
+{html: `
+<div class="eyebrow">Answer Key</div>
+<div class="slide-title">Guess the Output — <span>Answers Q26–30</span></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;overflow-y:auto">
+
+  <div class="ans-key-item" style="border-left-color:var(--static-yellow)">
+    <div class="num">Q26 — Counter</div>
+    <div class="output-box">3</div>
+    <div class="exp" style="margin-top:8px">increment() is called 3 times; each call does count++ on the shared static field. Final value: 3.</div>
+  </div>
+
+  <div class="ans-key-item" style="border-left-color:var(--instance-cyan)">
+    <div class="num">Q27 — Car</div>
+    <div class="output-box">200 Vios</div>
+    <div class="exp" style="margin-top:8px">c.speed is reassigned to 200 before show() prints it. model stays "Vios".</div>
+  </div>
+
+  <div class="ans-key-item" style="border-left-color:var(--private-red)">
+    <div class="num">Q28 — Animal</div>
+    <div class="output-box">Roar</div>
+    <div class="exp" style="margin-top:8px">private sound is accessible inside its own class. makeSound() prints its value "Roar". No error.</div>
+  </div>
+
+  <div class="ans-key-item" style="border-left-color:var(--protected-purple)">
+    <div class="num">Q29 — Greeter</div>
+    <div class="output-box">Hello, Mira!<br>Hello, Eloy!</div>
+    <div class="exp" style="margin-top:8px">Two separate objects, each with their own name field. g1 prints Mira, g2 prints Eloy.</div>
+  </div>
+
+  <div class="ans-key-item" style="border-left-color:var(--public-green)">
+    <div class="num">Q30 — Vehicle</div>
+    <div class="output-box">100<br>80.467</div>
+    <div class="exp" style="margin-top:8px">getMileage() returns 100 (int). milesToKm(50) = 50 × 1.60934 = 80.467. Java prints double as 80.467.</div>
+  </div>
+
+</div>
+`},
+
+// ── SLIDE 28: FINAL SLIDE ─────────────────────────────────────────────────
+{html: `
+<div class="hero">
+  <svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Graduation cap celebration">
+    <circle cx="50" cy="50" r="48" fill="rgba(63,185,80,0.1)" stroke="#3fb950" stroke-width="1.5"/>
+    <text x="50" y="66" text-anchor="middle" font-size="48">🎓</text>
+  </svg>
+  <div class="hero-title" style="font-size:clamp(30px,4vw,50px)">You're Ready.</div>
+  <div class="final-quote">
+    <strong>"OOP is not hard.</strong><br>
+    Practice makes it click. Keep coding — every line gets you closer."
+  </div>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:20px">
+    <div style="padding:10px 20px;background:var(--surface);border:1px solid rgba(255,166,87,0.4);border-radius:10px;font-size:16px;color:var(--static-yellow)">⚡ static = class-level</div>
+    <div style="padding:10px 20px;background:var(--surface);border:1px solid rgba(57,211,83,0.4);border-radius:10px;font-size:16px;color:var(--instance-cyan)">🟢 instance = object-level</div>
+    <div style="padding:10px 20px;background:var(--surface);border:1px solid rgba(248,81,73,0.4);border-radius:10px;font-size:16px;color:var(--private-red)">🔒 private → protected → public</div>
+  </div>
+  <div style="font-size:16px;color:var(--text-subtle);margin-top:16px">Good luck on your midterms! ☕</div>
+</div>
+`},
+
+]; // end slides array
+
+// ── Navigation ──────────────────────────────────────────────────────────────
+let current = 0;
+const deck = document.getElementById('deck');
+const bar = document.getElementById('progress-bar');
+const counter = document.getElementById('counter');
+
+function buildSlides() {
+  slides.forEach((s, i) => {
+    const el = document.createElement('div');
+    el.className = 'slide' + (i === 0 ? ' active' : '');
+    el.innerHTML = s.html;
+    deck.appendChild(el);
+  });
+}
+
+function go(dir) {
+  const els = document.querySelectorAll('.slide');
+  const next = current + dir;
+  if (next < 0 || next >= slides.length) return;
+  els[current].classList.remove('active');
+  els[current].classList.add(dir > 0 ? 'exit-left' : 'exit-right');
+  setTimeout(() => { els[current].classList.remove('exit-left', 'exit-right'); }, 380);
+  current = next;
+  els[current].classList.add('active');
+  updateUI();
+}
+
+function goTo(n) {
+  const els = document.querySelectorAll('.slide');
+  els[current].classList.remove('active');
+  current = Math.max(0, Math.min(n, slides.length - 1));
+  els[current].classList.add('active');
+  updateUI();
+}
+
+function updateUI() {
+  const pct = ((current) / (slides.length - 1)) * 100;
+  bar.style.width = pct + '%';
+  counter.textContent = (current + 1) + ' / ' + slides.length;
+}
+
+// ── Keyboard ──────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') go(1);
+  else if (e.key === 'ArrowLeft') go(-1);
+  else if (e.key === 'Home') goTo(0);
+  else if (e.key === 'End') goTo(slides.length - 1);
+  else if (e.key === '?') toggleOverlay();
+});
+
+// ── Mouse buttons ─────────────────────────────────────────────────────────
+document.addEventListener('mousedown', e => {
+  if (e.button === 3) { e.preventDefault(); e.stopImmediatePropagation(); go(1); }
+  if (e.button === 4) { e.preventDefault(); e.stopImmediatePropagation(); go(-1); }
+}, true);
+document.addEventListener('contextmenu', e => { e.preventDefault(); go(1); });
+
+// ── Touch/swipe ───────────────────────────────────────────────────────────
+let touchX = 0;
+document.addEventListener('touchstart', e => { touchX = e.changedTouches[0].clientX; });
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchX;
+  if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+});
+
+// ── Overlay ───────────────────────────────────────────────────────────────
+function toggleOverlay() {
+  document.getElementById('overlay').classList.toggle('show');
+}
+document.getElementById('overlay').addEventListener('click', () => {
+  document.getElementById('overlay').classList.remove('show');
+});
+
+// ── Copy button ───────────────────────────────────────────────────────────
+function copyCode(btn) {
+  const pre = btn.closest('.code-wrap').querySelector('pre');
+  const text = pre.innerText || pre.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1800);
+  });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+buildSlides();
+updateUI();
+</script>
+</body>
+</html>

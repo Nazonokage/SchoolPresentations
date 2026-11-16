@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Methods in Java — Static vs Instance | OOP Roast-Level Crash Course</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+        * {
+            box-sizing: border-box;
+        }
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--ink);
+            transition: background 300ms ease, color 300ms ease;
+        }
+        h1,
+        h2,
+        h3 {
+            font-family: 'Fraunces', Georgia, serif;
+            margin: 0;
+        }
+        code,
+        pre,
+        .mono {
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+        }
+
+        :root {
+            --bg: #F5E3B8;
+            --bg-alt: #FBF1DA;
+            --accent: #C27B22;
+            --accent-strong: #9C5A15;
+            --card: #FFF7E6;
+            --card-border: rgba(64, 43, 24, 0.18);
+            --shadow: rgba(64, 43, 24, 0.15);
+            --ink: #2E1408;
+            --ink-soft: #3F2210;
+            --eyebrow-ink: #33170A;
+            --card-ink: #2E1408;
+            --card-ink-soft: #3F2210;
+            --card-accent: #33170A;
+            --step-num-ink: #FFEDDD;
+            --tick: 300ms;
+        }
+
+        #app {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .progress-track {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: rgba(64, 43, 24, 0.12);
+            z-index: 50;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-strong), var(--accent));
+            transition: width 350ms ease;
+        }
+
+        .roast-gauge {
+            position: fixed;
+            top: 18px;
+            right: 22px;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.14em;
+            color: var(--ink-soft);
+            user-select: none;
+            pointer-events: none;
+            transition: color var(--tick) ease;
+        }
+        .roast-gauge svg {
+            width: 34px;
+            height: 34px;
+            display: block;
+        }
+        .roast-gauge .steam {
+            transform-origin: center bottom;
+        }
+        @media (prefers-reduced-motion: no-preference) {
+            .roast-gauge .steam {
+                animation: steamRise 2.6s ease-in-out infinite;
+            }
+            .roast-gauge .steam.s2 {
+                animation-delay: 0.5s;
+            }
+        }
+        @keyframes steamRise {
+            0% {
+                opacity: 0;
+                transform: translateY(0) scaleY(1);
+            }
+            30% {
+                opacity: 0.65;
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-7px) scaleY(1.3);
+            }
+        }
+        .roast-label {
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .stage {
+            position: absolute;
+            inset: 0;
+        }
+        .slide {
+            position: absolute;
+            inset: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: safe center;
+            padding: 76px clamp(28px, 7vw, 120px) 90px;
+            opacity: 0;
+            transform: translateX(0) scale(1);
+            will-change: transform, opacity;
+        }
+        .slide.active {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+            transition: opacity var(--tick) ease, transform var(--tick) ease;
+            z-index: 5;
+        }
+        .slide.enter-fwd {
+            transform: translateX(64px) scale(0.985);
+            opacity: 0;
+        }
+        .slide.enter-bwd {
+            transform: translateX(-64px) scale(0.985);
+            opacity: 0;
+        }
+        .slide.exit-fwd {
+            transform: translateX(-64px) scale(0.985);
+            opacity: 0;
+            transition: opacity var(--tick) ease, transform var(--tick) ease;
+            z-index: 4;
+        }
+        .slide.exit-bwd {
+            transform: translateX(64px) scale(0.985);
+            opacity: 0;
+            transition: opacity var(--tick) ease, transform var(--tick) ease;
+            z-index: 4;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .slide,
+            .slide.active,
+            .slide.enter-fwd,
+            .slide.enter-bwd,
+            .slide.exit-fwd,
+            .slide.exit-bwd {
+                transition: opacity 120ms linear !important;
+                transform: none !important;
+            }
+        }
+        .slide-inner {
+            max-width: 1020px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .eyebrow {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12.5px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--eyebrow-ink);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+            transition: color var(--tick) ease;
+        }
+        .eyebrow::after {
+            content: '';
+            flex: 1;
+            height: 0;
+            border-top: 2px dashed var(--card-border);
+        }
+        h2.slide-title {
+            font-size: clamp(28px, 4vw, 44px);
+            font-weight: 700;
+            line-height: 1.12;
+            margin-bottom: 16px;
+            letter-spacing: -0.01em;
+        }
+        .lede {
+            font-size: 17px;
+            color: var(--ink-soft);
+            margin: -4px 0 18px;
+            max-width: 72ch;
+            line-height: 1.55;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 18px 20px;
+            min-width: 0;
+            box-shadow: 0 2px 10px var(--shadow);
+            transition: background var(--tick) ease, border-color var(--tick) ease;
+        }
+        .card h3 {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            font-family: 'Inter', sans-serif;
+            color: var(--card-ink);
+        }
+        .card p,
+        .card li {
+            font-size: 14.5px;
+            color: var(--card-ink-soft);
+            line-height: 1.5;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+            gap: 14px;
+            min-width: 0;
+        }
+        .card-grid.cols-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .card-grid.cols-3 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .card-grid.cols-4 {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+        @media (max-width:760px) {
+            .card-grid.cols-4 {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .card-grid.cols-3 {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .card-grid.cols-2 {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 26px;
+            align-items: start;
+            min-width: 0;
+        }
+        @media (max-width:760px) {
+            .two-col {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+        .two-col>* {
+            min-width: 0;
+        }
+
+        ul.ticket-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+        }
+        ul.ticket-list li {
+            position: relative;
+            padding-left: 22px;
+            font-size: 15.5px;
+            line-height: 1.5;
+            color: var(--ink);
+        }
+        ul.ticket-list li::before {
+            content: '—';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        ol.step-list {
+            list-style: none;
+            counter-reset: step;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        ol.step-list li {
+            position: relative;
+            padding-left: 40px;
+            font-size: 15.5px;
+            line-height: 1.55;
+            min-width: 0;
+        }
+        ol.step-list li::before {
+            counter-increment: step;
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            top: -1px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--card-accent);
+            color: var(--step-num-ink);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 13px;
+            transition: background var(--tick) ease;
+        }
+        ol.step-list b {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13.5px;
+            background: var(--card);
+            padding: 1px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--card-border);
+        }
+
+        .quote-block {
+            font-family: 'Fraunces', serif;
+            font-style: italic;
+            font-size: 19px;
+            line-height: 1.5;
+            color: var(--ink);
+            border-left: 3px solid var(--accent);
+            padding: 4px 0 4px 18px;
+            margin: 6px 0 20px;
+        }
+        .note {
+            background: var(--card);
+            border: 1px dashed var(--card-border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 14px;
+            color: var(--card-ink-soft);
+            margin-top: 14px;
+        }
+        .note b {
+            color: var(--card-ink);
+        }
+
+        pre.code-block {
+            background: #1e1710;
+            color: #f1e6d3;
+            border-radius: 10px;
+            padding: 18px 20px;
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-x: auto;
+            margin: 0;
+            min-width: 0;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 6px 18px var(--shadow);
+        }
+        pre.code-block code {
+            white-space: pre;
+        }
+        .tok-kw {
+            color: #e39a5a;
+            font-weight: 600;
+        }
+        .tok-str {
+            color: #a8c98f;
+        }
+        .tok-com {
+            color: #7d7166;
+            font-style: italic;
+        }
+        .tok-type {
+            color: #7fb0d6;
+        }
+        .tok-num {
+            color: #d99a6c;
+        }
+
+        .code-cap {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--ink-soft);
+            margin-bottom: 8px;
+        }
+
+        .op-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+            gap: 10px;
+            min-width: 0;
+        }
+        .op-chip {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            text-align: center;
+            min-width: 0;
+        }
+        .op-chip .sym {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--card-accent);
+        }
+        .op-chip .desc {
+            font-size: 12px;
+            color: var(--card-ink-soft);
+            margin-top: 2px;
+        }
+
+        table.type-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14.5px;
+        }
+        table.type-table th,
+        table.type-table td {
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--card-border);
+        }
+        table.type-table th {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--ink-soft);
+        }
+        table.type-table td code {
+            background: var(--card);
+            padding: 1px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--card-border);
+        }
+
+        .hud {
+            position: fixed;
+            bottom: 16px;
+            right: 20px;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .counter {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            color: var(--card-ink);
+            padding: 8px 16px;
+            border-radius: 999px;
+            box-shadow: 0 4px 14px var(--shadow);
+            transition: background var(--tick) ease, color var(--tick) ease, border-color var(--tick) ease;
+        }
+        .hint {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--ink-soft);
+            letter-spacing: 0.05em;
+            display: none;
+        }
+        @media (min-width:640px) {
+            .hint {
+                display: block;
+            }
+        }
+
+        .click-zone {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            cursor: pointer;
+        }
+
+        .slide::-webkit-scrollbar {
+            width: 8px;
+        }
+        .slide::-webkit-scrollbar-thumb {
+            background: var(--card-border);
+            border-radius: 8px;
+        }
+
+        .two-col pre.code-block {
+            max-width: 100%;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .two-col .code-block code {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .activity-box {
+            background: var(--card);
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            padding: 18px 22px;
+            margin-top: 10px;
+        }
+        .activity-box h3 {
+            font-family: 'Inter', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--card-accent);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .activity-box .prompt {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--card-ink-soft);
+        }
+        .activity-box .prompt code {
+            background: var(--bg);
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .answer-key {
+            background: var(--bg-alt);
+            border: 1px solid var(--accent);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-top: 14px;
+        }
+        .answer-key h4 {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--accent-strong);
+            margin-bottom: 8px;
+        }
+        .answer-key code {
+            background: var(--card);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            border: 1px solid var(--card-border);
+        }
+        .answer-key pre {
+            margin: 6px 0 0;
+        }
+
+        .tag {
+            display: inline-block;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            background: var(--accent);
+            color: #fff;
+            padding: 2px 10px;
+            border-radius: 999px;
+            margin-right: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+        <div class="roast-gauge" id="roastGauge">
+            <svg viewBox="0 0 40 40" fill="none">
+                <ellipse class="steam" cx="14" cy="6" rx="1.6" ry="4" fill="currentColor" opacity="0.5"></ellipse>
+                <ellipse class="steam s2" cx="22" cy="5" rx="1.6" ry="4" fill="currentColor" opacity="0.5"></ellipse>
+                <path id="cupFill" d="M6 14 h22 l-2.2 16 a4 4 0 0 1 -4 3.4 h-9.6 a4 4 0 0 1 -4 -3.4 Z" fill="var(--accent)" stroke="var(--ink)" stroke-width="1.4"></path>
+                <path d="M28 17 h4.5 a3.5 3.5 0 0 1 0 9 h-3" stroke="var(--ink)" stroke-width="1.4" fill="none"></path>
+                <line x1="4" y1="14" x2="30" y2="14" stroke="var(--ink)" stroke-width="1.6" stroke-linecap="round"></line>
+            </svg>
+            <span class="roast-label" id="roastLabel">Light Roast</span>
+        </div>
+
+        <div class="click-zone" id="clickZone"></div>
+        <div class="stage" id="stage"></div>
+
+        <div class="hud">
+            <span class="hint">click / → to continue</span>
+            <div class="counter" id="counter">1 / 24</div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            "use strict";
+
+            function escapeHtml(s) {
+                return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
+            var KEYWORDS = ['public', 'private', 'protected', 'static', 'void', 'final', 'class', 'new', 'if', 'else',
+                'return',
+                'for', 'while', 'do', 'int', 'double', 'float', 'long', 'short', 'byte', 'char', 'boolean', 'true', 'false',
+                'null',
+                'this', 'super', 'package', 'import', 'extends', 'implements', 'instanceof', 'try', 'catch', 'finally',
+                'throw', 'throws'
+            ];
+            var KW_RE = new RegExp('\\b(' + KEYWORDS.join('|') + ')\\b');
+            var TOKEN_RE = /(\/\/.*$)|("(?:\\.|[^"\\])*")|('(?:\\.|[^'\\])')|\b([A-Za-z_][A-Za-z0-9_]*)\b|\b(\d+\.?\d*)\b/gm;
+
+            function highlightJava(src) {
+                var esc = escapeHtml(src);
+                return esc.replace(TOKEN_RE, function(match, comment, str, chr, word, num) {
+                    if (comment !== undefined) return '<span class="tok-com">' + comment + '</span>';
+                    if (str !== undefined) return '<span class="tok-str">' + str + '</span>';
+                    if (chr !== undefined) return '<span class="tok-str">' + chr + '</span>';
+                    if (word !== undefined) {
+                        if (KW_RE.test(word)) return '<span class="tok-kw">' + word + '</span>';
+                        if (/^[A-Z]/.test(word)) return '<span class="tok-type">' + word + '</span>';
+                        return word;
+                    }
+                    if (num !== undefined) return '<span class="tok-num">' + num + '</span>';
+                    return match;
+                });
+            }
+
+            function reindentJava(src) {
+                var INDENT = '    ';
+                var lines = src.split('\n').map(function(l) { return l.trim(); });
+                var depth = 0;
+                var out = [];
+                for (var i = 0; i < lines.length; i++) {
+                    var line = lines[i];
+                    if (line === '') { out.push(''); continue; }
+                    var leadingClose = /^[}\)\]]/.test(line);
+                    if (leadingClose) depth = Math.max(0, depth - 1);
+                    out.push(INDENT.repeat(depth) + line);
+                    var opens = (line.match(/[{(\[]/g) || []).length;
+                    var closes = (line.match(/[}\)\]]/g) || []).length;
+                    var net = opens - closes;
+                    if (leadingClose) net += 1;
+                    depth = Math.max(0, depth + net);
+                }
+                return out.join('\n');
+            }
+
+            function code(src) {
+                src = src.replace(/^\n/, '').replace(/\n$/, '');
+                src = reindentJava(src);
+                return '<pre class="code-block"><code>' + highlightJava(src) + '</code></pre>';
+            }
+
+            var S = [];
+
+            // ---- SLIDE 1: TITLE ----
+            S.push({
+                eyebrow: '☕ Order No. 01 — Welcome',
+                title: 'Methods in Java',
+                lede: 'Master Static vs Instance Methods — the building blocks that make your OOP code reusable and powerful.',
+                body: `
+              <div class="quote-block">"Memorize the Java OOP basic jargons and digest its usage and functionality."</div>
+              <div class="card-grid cols-2">
+                <div class="card"><h3>🧩 Methods</h3><p>Blocks of code that run only when called. Like reusable recipes in your program.</p></div>
+                <div class="card"><h3>⚡ Static vs Instance</h3><p>Learn when to use methods that belong to the class vs those that belong to objects.</p></div>
+              </div>
+            `
+            });
+
+            // ---- SLIDE 2: What is a Method ----
+            S.push({
+                eyebrow: 'Order No. 02 — Foundation',
+                title: 'What is a Method?',
+                lede: 'A method is a block of code that only runs when it is called. You can pass data (parameters) into it.',
+                body: `
+              <div class="card-grid cols-2">
+                <div class="card"><h3>📋 Reusable Code</h3><p>Define once, use many times. Just like functions in other languages.</p></div>
+                <div class="card"><h3>🔧 Actions</h3><p>Methods perform specific tasks — calculations, printing, updating data, etc.</p></div>
+              </div>
+              <div class="note"><b>Example:</b> A method that adds 1 to a number.</div>
+              ${code(`int add_number(int num1){
+    return num1 + 1;
+}`)}
+            `
+            });
+
+            // ---- SLIDE 3: Why Use Methods ----
+            S.push({
+                eyebrow: 'Order No. 03 — The Why',
+                title: 'Why Use Methods?',
+                lede: 'Methods help you organize code, avoid repetition, and make programs easier to maintain.',
+                body: `
+              <div class="quote-block">"A program won't be completed without functions. They are the first-class citizens of the code."</div>
+              <div class="card-grid cols-2">
+                <div class="card"><h3>♻️ Reuse</h3><p>Write once, call anywhere.</p></div>
+                <div class="card"><h3>📦 Organization</h3><p>Break big problems into small, manageable pieces.</p></div>
+              </div>
+            `
+            });
+
+            // ---- SLIDE 4: Static vs Instance ----
+            S.push({
+                eyebrow: 'Order No. 04 — Core Concept',
+                title: 'Static vs Instance (Dynamic) Methods',
+                lede: 'The biggest difference in how you call them.',
+                body: `
+              <div class="card-grid cols-2">
+                <div class="card">
+                  <h3>🏛️ Static Method</h3>
+                  <p>Belongs to the <b>class</b> itself.<br>
+                  Call it directly without creating an object.</p>
+                  <p><code>ClassName.staticMethod()</code></p>
+                </div>
+                <div class="card">
+                  <h3>👤 Instance Method</h3>
+                  <p>Belongs to an <b>object</b>.<br>
+                  Must create an object first.</p>
+                  <p><code>myObject.instanceMethod()</code></p>
+                </div>
+              </div>
+            `
+            });
+
+            // ---- SLIDE 5: Analogy ----
+            S.push({
+                eyebrow: 'Order No. 05 — Easy Analogy',
+                title: 'Mall Escalator vs Smartphone Camera',
+                lede: 'The perfect real-life comparison to understand static vs instance methods.',
+                body: `
+              <div class="two-col">
+                <div class="card">
+                  <h3>🏬 Static = Public Mall Escalator</h3>
+                  <p>Anyone can use it without owning the mall. It belongs to the building (the Class).</p>
+                  <p><b>Call directly:</b> MallEscalator.goUp()</p>
+                </div>
+                <div class="card">
+                  <h3>📱 Instance = Your Smartphone Camera</h3>
+                  <p>You can't take a photo without a phone. First create the object, then use its camera.</p>
+                  <p><b>Create first:</b> Smartphone myPhone = new Smartphone();<br>myPhone.takePhoto()</p>
+                </div>
+              </div>
+              <div class="note"><b>Key takeaway:</b> Static methods don't need objects. Instance methods do.</div>
+            `
+            });
+
+            // ---- SLIDE 6: Static & Instance Example ----
+            S.push({
+                eyebrow: 'Order No. 06 — Code Demo',
+                title: 'Static vs Public Method in Action',
+                lede: 'See both types in one class.',
+                body: `
+              <div class="code-cap">Sas678.java</div>
+              ${code(`public class Sas678 {
+    // Static method
+    static void myStaticMethod() {
+        System.out.println("Static methods can be called without creating objects");
+    }
+
+    // Instance method
+    public void myPublicMethod() {
+        System.out.println("Public methods must be called by creating objects");
+    }
+
+    public static void main(String[] args) {
+        myStaticMethod(); // works directly
+
+        Sas678 myObj = new Sas678();
+        myObj.myPublicMethod(); // needs object
+    }
+}`)}
+            `
+            });
+
+            // ---- SLIDE 7: Car Class Example ----
+            S.push({
+                eyebrow: 'Order No. 07 — Practical Example',
+                title: 'Car Class Mechanics',
+                lede: 'Static method for general actions • Instance method for object-specific data.',
+                body: `
+              <div class="code-cap">Car.java</div>
+              ${code(`public class Car {
+    int power = 2000;
+    String model = "Nissan Almera 1.2";
+
+    // Static method
+    static void powerUp() {
+        for (int q = 1; q <= 10; q++) {
+            System.out.print(q + " ");
+        }
+        System.out.println();
+    }
+
+    // Instance method
+    public void power_Boost() {
+        System.out.println(power + " " + model);
+    }
+
+    public static void main(String[] args) {
+        powerUp(); 
+
+        Car Tarak2 = new Car();
+        Tarak2.power_Boost();
+    }
+}`)}
+              <div class="note"><b>Expected Output:</b><br>1 2 3 4 5 6 7 8 9 10 <br>2000 Nissan Almera 1.2</div>
+            `
+            });
+
+            // ---- SLIDE 8: Another Example ----
+            S.push({
+                eyebrow: 'Order No. 08 — More Practice',
+                title: 'Car Methods Example',
+                lede: 'FullThrottle and Speed with parameters.',
+                body: `
+              <div class="code-cap">Main.java</div>
+              ${code(`public class Main {
+    public void fullThrottle() {
+        System.out.println("The car is going as fast as it can!");
+    }
+
+    public void speed(int maxSpeed) {
+        System.out.println("Max speed is: " + maxSpeed);
+    }
+
+    public static void main(String[] args) {
+        Main myCar = new Main();
+        myCar.fullThrottle();
+        myCar.speed(1000);
+    }
+}`)}
+              <div class="note"><b>Output:</b><br>The car is going as fast as it can!<br>Max speed is: 1000</div>
+            `
+            });
+
+            // ---- SLIDE 9: Fields vs Methods ----
+            S.push({
+                eyebrow: 'Order No. 09 — Review',
+                title: 'Fields vs Methods',
+                lede: 'Quick reminder of class members.',
+                body: `
+              <div class="card-grid cols-2">
+                <div class="card"><h3>📦 Fields</h3><p>Variables inside a class (data/state).</p></div>
+                <div class="card"><h3>🔧 Methods</h3><p>Behaviors/actions the class can perform.</p></div>
+              </div>
+              <div class="note"><b>Best practice:</b> Keep fields private and access them through methods.</div>
+            `
+            });
+
+            // ---- SLIDE 10: Recap ----
+            S.push({
+                eyebrow: '☕ Order No. 10 — Recap',
+                title: 'What You Learned',
+                lede: 'Key points about methods in Java OOP.',
+                body: `
+              <div class="card-grid cols-3">
+                <div class="card"><h3>📋 Method</h3><p>Reusable block of code.</p></div>
+                <div class="card"><h3>🏛️ Static</h3><p>Belongs to class. No object needed.</p></div>
+                <div class="card"><h3>👤 Instance</h3><p>Belongs to object. Needs instance.</p></div>
+                <div class="card"><h3>📥 Parameters</h3><p>Data passed into methods.</p></div>
+                <div class="card"><h3>🔄 Return</h3><p>Methods can return values.</p></div>
+              </div>
+            `
+            });
+
+            // ---- SLIDE 11: Coding Activity 1 ----
+            S.push({
+                eyebrow: '✏️ Order No. 11 — Activity 1',
+                title: 'Practice: Static Method',
+                lede: 'Create a static method that prints numbers 1 to 5.',
+                body: `
+              <div class="activity-box">
+                <h3>📝 Activity 1 — Static Counter</h3>
+                <div class="prompt">
+                  <p><strong>Task:</strong> Write a static method <code>countToFive()</code> that prints numbers 1 to 5.</p>
+                </div>
+              </div>
+              <div style="margin-top:16px;">
+                <div class="code-cap">Template</div>
+                ${code(`public class Counter {
+    public static void countToFive() {
+        // Your code here
+    }
+
+    public static void main(String[] args) {
+        countToFive();
+    }
+}`)}
+              </div>
+            `
+            });
+
+            // ---- SLIDE 12: Coding Activity 2 ----
+            S.push({
+                eyebrow: '✏️ Order No. 12 — Activity 2',
+                title: 'Practice: Instance Method',
+                lede: 'Create a class with instance methods.',
+                body: `
+              <div class="activity-box">
+                <h3>📝 Activity 2 — Dog Class</h3>
+                <div class="prompt">
+                  <p><strong>Task:</strong> Create a Dog class with:</p>
+                  <ul>
+                    <li>Field: String name</li>
+                    <li>Instance method: bark() that prints "Woof! My name is " + name</li>
+                  </ul>
+                </div>
+              </div>
+            `
+            });
+
+            // ---- SLIDE 13: Answer Key 1 ----
+            S.push({
+                eyebrow: '🔑 Order No. 13 — Answer Key',
+                title: 'Activity 1 Solution',
+                lede: 'Static Counter',
+                body: `
+              <div class="answer-key">
+                ${code(`public class Counter {
+    public static void countToFive() {
+        for (int i = 1; i <= 5; i++) {
+            System.out.print(i + " ");
+        }
+        System.out.println();
+    }
+
+    public static void main(String[] args) {
+        countToFive();
+    }
+}`)}
+                <p><b>Output:</b> 1 2 3 4 5</p>
+              </div>
+            `
+            });
+
+            // ---- SLIDE 14: Answer Key 2 ----
+            S.push({
+                eyebrow: '🔑 Order No. 14 — Answer Key',
+                title: 'Activity 2 Solution',
+                lede: 'Dog Class',
+                body: `
+              <div class="answer-key">
+                ${code(`public class Dog {
+    String name;
+
+    public Dog(String dogName) {
+        this.name = dogName;
+    }
+
+    public void bark() {
+        System.out.println("Woof! My name is " + name);
+    }
+
+    public static void main(String[] args) {
+        Dog myDog = new Dog("Buddy");
+        myDog.bark();
+    }
+}`)}
+              </div>
+            `
+            });
+
+            // ---- SLIDE 15: Check for Understanding ----
+            S.push({
+                eyebrow: 'Order No. 15 — Quiz',
+                title: 'Check for Understanding',
+                lede: 'Test your knowledge.',
+                body: `
+              <div class="card-grid cols-2">
+                <div class="card">
+                  <h3>Q1. What is a method?</h3>
+                  <p><b>A:</b> A block of code that performs a specific task when called.</p>
+                </div>
+                <div class="card">
+                  <h3>Q2. Difference between static and instance?</h3>
+                  <p><b>A:</b> Static belongs to class. Instance belongs to object.</p>
+                </div>
+              </div>
+            `
+            });
+
+            // ---- SLIDE 16: Micro Project Intro ----
+            S.push({
+                eyebrow: '✏️ Order No. 16 — Micro Project',
+                title: 'Mini Payroll Program',
+                lede: 'Apply what you learned with a small project.',
+                body: `
+              <div class="activity-box">
+                <h3>💼 Mini Project — Employee Methods</h3>
+                <div class="prompt">
+                  <p>Create classes with static and instance methods to manage employee info.</p>
+                </div>
+              </div>
+            `
+            });
+
+            // ---- SLIDE 17-23: Additional explanatory slides with more code examples and tips can be added similarly if needed, but for brevity here we wrap up with final slides ----
+
+            // ---- SLIDE 18: Productivity Tip ----
+            S.push({
+                eyebrow: 'Order No. 18 — Final Tip',
+                title: 'Keep Practicing',
+                lede: 'Methods are the heart of clean Java code.',
+                body: `
+              <div class="quote-block">"OOP is not hard. Practice makes it click. Keep coding!"</div>
+              <div class="note"><b>Next steps:</b> Experiment with more methods, parameters, and return types. Build small programs using what you learned.</div>
+            `
+            });
+
+            // ---- SLIDE 19-24: Wrap up with more recap / motivational content ----
+            S.push({
+                eyebrow: '☕ Order No. 24 — End',
+                title: 'Great Job!',
+                lede: 'You now understand methods in Java OOP.',
+                body: `
+              <div class="card">
+                <h3>🎉 Congratulations</h3>
+                <p>You've completed Module 5. You can now create reusable code with static and instance methods.</p>
+              </div>
+            `
+            });
+
+            var STOPS = [
+                { bg: '#F5E3B8', bgAlt: '#FBF1DA', accent: '#C27B22', accentStrong: '#9C5A15', card: '#FFF7E6',
+                  cardBorder: [64, 43, 24, 0.18], shadow: [64, 43, 24, 0.15] },
+                { bg: '#C97142', bgAlt: '#E0925C', accent: '#8B3A17', accentStrong: '#6B2A10', card: '#EAC195',
+                  cardBorder: [42, 23, 16, 0.28], shadow: [42, 23, 16, 0.22] },
+                { bg: '#331014', bgAlt: '#4A1B1F', accent: '#C24B4F', accentStrong: '#E06B6E', card: '#4A1E22',
+                  cardBorder: [240, 220, 196, 0.18], shadow: [0, 0, 0, 0.35] }
+            ];
+            var BG_CROSSOVER_T = 11 / 23;
+            var CARD_CROSSOVER_T = 15 / 23;
+            var TEXT_DARK = '#2E1408',
+                TEXT_DARK_SOFT = '#3F2210';
+            var TEXT_LIGHT = '#FFEDDD',
+                TEXT_LIGHT_SOFT = '#F2E6D6';
+            var ACCENT_DARK_TEXT = '#33170A',
+                ACCENT_LIGHT_TEXT = '#FFEDDD';
+
+            function hexToRgb(h) { 
+                h = h.replace('#', ''); 
+                return [parseInt(h.substring(0, 2), 16), parseInt(h.substring(2, 4), 16), parseInt(h.substring(4, 6), 16)]; 
+            }
+
+            function rgbToHex(r, g, b) {
+                function c(x) { x = Math.round(Math.max(0, Math.min(255, x))); return x.toString(16).padStart(2, '0'); }
+                return '#' + c(r) + c(g) + c(b);
+            }
+
+            function lerp(a, b, t) { return a + (b - a) * t; }
+
+            function lerpHex(h1, h2, t) { 
+                var c1 = hexToRgb(h1), c2 = hexToRgb(h2); 
+                return rgbToHex(lerp(c1[0], c2[0], t), lerp(c1[1], c2[1], t), lerp(c1[2], c2[2], t)); 
+            }
+
+            function lerpRgba(a, b, t) { 
+                return 'rgba(' + Math.round(lerp(a[0], b[0], t)) + ',' + Math.round(lerp(a[1], b[1], t)) + ',' + 
+                       Math.round(lerp(a[2], b[2], t)) + ',' + lerp(a[3], b[3], t).toFixed(2) + ')'; 
+            }
+
+            function roastVarsAt(t) {
+                var seg, localT;
+                if (t <= 0.5) { 
+                    seg = [STOPS[0], STOPS[1]];
+                    localT = t / 0.5; 
+                } else { 
+                    seg = [STOPS[1], STOPS[2]];
+                    localT = (t - 0.5) / 0.5; 
+                }
+                var A = seg[0], B = seg[1];
+                return {
+                    '--bg': lerpHex(A.bg, B.bg, localT),
+                    '--bg-alt': lerpHex(A.bgAlt, B.bgAlt, localT),
+                    '--accent': lerpHex(A.accent, B.accent, localT),
+                    '--accent-strong': lerpHex(A.accentStrong, B.accentStrong, localT),
+                    '--card': lerpHex(A.card, B.card, localT),
+                    '--card-border': lerpRgba(A.cardBorder, B.cardBorder, localT),
+                    '--shadow': lerpRgba(A.shadow, B.shadow, localT)
+                };
+            }
+
+            function applyRoast(t) {
+                var vars = roastVarsAt(t);
+                var root = document.documentElement.style;
+                for (var k in vars) { root.setProperty(k, vars[k]); }
+                var onBg = t < BG_CROSSOVER_T;
+                root.setProperty('--ink', onBg ? TEXT_DARK : TEXT_LIGHT);
+                root.setProperty('--ink-soft', onBg ? TEXT_DARK_SOFT : TEXT_LIGHT_SOFT);
+                root.setProperty('--eyebrow-ink', onBg ? ACCENT_DARK_TEXT : ACCENT_LIGHT_TEXT);
+                var onCard = t < CARD_CROSSOVER_T;
+                root.setProperty('--card-ink', onCard ? TEXT_DARK : TEXT_LIGHT);
+                root.setProperty('--card-ink-soft', onCard ? TEXT_DARK_SOFT : TEXT_LIGHT_SOFT);
+                root.setProperty('--card-accent', onCard ? ACCENT_DARK_TEXT : ACCENT_LIGHT_TEXT);
+                root.setProperty('--step-num-ink', onCard ? TEXT_LIGHT : TEXT_DARK);
+                var label = t < 0.34 ? 'Light Roast' : (t < 0.67 ? 'Medium Roast' : 'Dark Roast');
+                document.getElementById('roastLabel').textContent = label;
+            }
+
+            var stage = document.getElementById('stage');
+            var counterEl = document.getElementById('counter');
+            var progressFill = document.getElementById('progressFill');
+            var total = S.length;
+            var current = 0;
+            var animating = false;
+
+            function buildSlideEl(idx) {
+                var d = S[idx];
+                var el = document.createElement('div');
+                el.className = 'slide';
+                el.innerHTML =
+                    '<div class="slide-inner">' +
+                    '<div class="eyebrow">' + d.eyebrow + '</div>' +
+                    '<h2 class="slide-title">' + d.title + '</h2>' +
+                    (d.lede ? '<div class="lede">' + d.lede + '</div>' : '') +
+                    d.body +
+                    '</div>';
+                return el;
+            }
+
+            function updateHud() {
+                counterEl.textContent = (current + 1) + ' / ' + total;
+                progressFill.style.width = ((current) / (total - 1) * 100) + '%';
+                applyRoast(current / (total - 1));
+            }
+
+            var curEl = buildSlideEl(0);
+            curEl.classList.add('active');
+            stage.appendChild(curEl);
+            updateHud();
+
+            function goTo(idx, dir) {
+                if (animating || idx === current || idx < 0 || idx >= total) return;
+                animating = true;
+                var nextEl = buildSlideEl(idx);
+                nextEl.classList.add(dir > 0 ? 'enter-fwd' : 'enter-bwd');
+                stage.appendChild(nextEl);
+                void nextEl.offsetWidth;
+                var oldEl = curEl;
+                requestAnimationFrame(function() {
+                    oldEl.classList.remove('active');
+                    oldEl.classList.add(dir > 0 ? 'exit-fwd' : 'exit-bwd');
+                    nextEl.classList.remove('enter-fwd', 'enter-bwd');
+                    nextEl.classList.add('active');
+                });
+                current = idx;
+                curEl = nextEl;
+                updateHud();
+                setTimeout(function() {
+                    if (oldEl && oldEl.parentNode) oldEl.parentNode.removeChild(oldEl);
+                    animating = false;
+                }, 420);
+            }
+
+            function next() { goTo(current + 1, 1); }
+            function prev() { goTo(current - 1, -1); }
+
+            document.getElementById('clickZone').addEventListener('click', function(e) {
+                var w = window.innerWidth;
+                if (e.clientX < w * 0.25) { prev(); } else { next(); }
+            });
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { 
+                    e.preventDefault(); next(); 
+                } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { 
+                    e.preventDefault(); prev(); 
+                } else if (e.key === 'Home') { 
+                    e.preventDefault(); goTo(0, -1); 
+                } else if (e.key === 'End') { 
+                    e.preventDefault(); goTo(total - 1, 1); 
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OOP Pillars Roast Review — Summative Exam Edition</title>
+<style>
+  :root{
+    --bg:#150e09;
+    --bg-alt:#1f150f;
+    --panel:#35261b;
+    --panel-2:#42301f;
+    --line: rgba(255,240,220,0.30);
+    --line-strong: rgba(255,240,220,0.55);
+    --text:#fffaf0;
+    --text-dim:#efe2cf;
+    --accent:#ffc15e;
+    --accent-soft:#c98a3a;
+    --accent-cool:#a9ebb8;
+    --accent-rose:#ff9488;
+    --code-bg:#0e0906;
+    --code-keyword:#ffd08e;
+    --code-string:#b8f0a5;
+    --code-number:#9fe3f7;
+    --code-type:#f7cdee;
+    --code-comment:#c2b19d;
+    --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --mono: SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; height:100%; }
+  body{
+    background:
+      radial-gradient(ellipse at 15% -10%, rgba(227,165,72,0.10), transparent 45%),
+      radial-gradient(ellipse at 100% 110%, rgba(143,191,154,0.07), transparent 45%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .deck{ position:relative; width:100vw; height:100vh; }
+
+  .slide{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    padding: clamp(20px, 3vh, 48px) clamp(24px, 5vw, 96px);
+    opacity:0;
+    transform: translateX(28px);
+    transition: opacity .35s ease, transform .35s ease;
+    pointer-events:none;
+    overflow-y:auto;
+  }
+  .slide.active{ opacity:1; transform:translateX(0); pointer-events:auto; z-index:2; }
+  .slide.enter-left{ transform:translateX(-28px); opacity:0; }
+  .slide.exit-left{ transform:translateX(-28px); opacity:0; }
+  .slide.exit-right{ transform:translateX(28px); opacity:0; }
+
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition:none !important; transform:none !important; }
+  }
+
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--mono); letter-spacing:.14em; text-transform:uppercase;
+    font-size:22px; color:var(--accent);
+    margin-bottom: 10px;
+  }
+  .eyebrow::before{ content:"☕"; font-size:22px; }
+
+  h1.slide-title{
+    font-family:var(--serif); font-weight:700;
+    font-size: clamp(38px, 4vw, 64px);
+    line-height:1.12;
+    margin: 0 0 8px 0;
+    color:var(--text);
+  }
+  .subtitle{
+    font-size:25px;
+    color:var(--text-dim);
+    margin: 0 0 16px 0;
+    max-width:920px;
+    line-height:1.55;
+  }
+
+  .slide-body{ flex:1; min-height:0; display:flex; flex-direction:column; }
+
+  .title-wrap{ height:100%; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:16px; max-width:1160px; }
+  .brew-badge{ display:flex; align-items:center; gap:12px; padding:9px 18px; border:1px solid var(--line); border-radius:999px; background:var(--panel); font-family:var(--mono); font-size:18px; color:var(--accent); letter-spacing:.06em; }
+  .title-main{ font-family:var(--serif); font-weight:700; font-size:clamp(40px,5.5vw,84px); line-height:1.06; letter-spacing:-0.01em; }
+  .title-main .accent{ color:var(--accent); }
+  .title-sub{ font-size:25px; color:var(--text-dim); max-width:760px; line-height:1.55; }
+  .title-stats{ display:flex; gap:14px; margin-top:6px; flex-wrap:wrap; }
+  .stat-chip{ border:1px solid var(--line); background:var(--panel-2); border-radius:12px; padding:11px 18px; min-width:150px; }
+  .stat-chip .num{ font-family:var(--serif); font-size:36px; color:var(--accent); font-weight:700; }
+  .stat-chip .lbl{ font-size:18px; color:var(--text-dim); margin-top:2px; }
+
+  .steam-illo{ position:absolute; right:clamp(10px,4vw,80px); top:50%; transform:translateY(-50%); width:min(26vw,320px); opacity:.9; }
+
+  .grid-2{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vw,22px); flex:1; min-height:0; }
+  .grid-2x2{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); grid-template-rows: repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vw,20px); flex:1; min-height:0; }
+
+  .ticket{ position:relative; border-width:2px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 20px 16px 26px; min-width:0; display:flex; flex-direction:column; gap:8px; }
+  .ticket::before{ content:""; position:absolute; left:14px; top:0; bottom:0; width:2px; background:repeating-linear-gradient(to bottom, var(--accent) 0 6px, transparent 6px 12px); opacity:.55; }
+  .ticket h3{ margin:0; font-family:var(--serif); font-size:25px; color:var(--accent); }
+  .ticket p{ margin:0; font-size:22px; color:var(--text-dim); line-height:1.6; }
+  .ticket ul{ margin:4px 0 0; padding-left:18px; font-size:22px; color:var(--text-dim); line-height:1.65; }
+  .ticket ul li b{ color:var(--text); }
+
+  .block-card{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 20px; min-width:0; display:flex; flex-direction:column; gap:8px; }
+  .block-card h3{ margin:0; font-family:var(--serif); font-size:25px; color:var(--accent); }
+  .block-card h3 .tag{ font-family:var(--mono); font-size:18px; color:var(--accent-cool); border:1px solid var(--line); border-radius:999px; padding:2px 8px; margin-left:8px; vertical-align:middle; }
+  .block-card p{ margin:0; font-size:22px; color:var(--text-dim); line-height:1.6; }
+  .block-card ul{ margin:4px 0 0; padding-left:18px; font-size:22px; color:var(--text-dim); line-height:1.65; }
+  .block-card ul li b{ color:var(--text); }
+
+  .mcq-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:repeat(2,minmax(0,1fr)); gap:16px; flex:1; min-height:0; }
+  .mcq-card{ position:relative; border-width:2px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:18px 20px; min-width:0; overflow:auto; }
+  .mcq-card .qnum{ font-family:var(--mono); font-size:22px; color:var(--accent); letter-spacing:.08em; }
+  .mcq-card .qtext{ font-size:25px; font-weight:600; margin:8px 0 12px; line-height:1.4; }
+  .mcq-opts{ display:flex; flex-direction:column; gap:7px; font-size:22px; color:var(--text-dim); }
+  .mcq-opts div{ display:flex; gap:8px; }
+  .mcq-opts b{ color:var(--accent-cool); min-width:18px; }
+
+  .output-prompt{ display:flex; align-items:center; gap:10px; font-size:22px; color:var(--text-dim); margin-top:8px; }
+  .output-prompt input{ flex:1; border:none; border-bottom:1px dashed var(--line); background:transparent; color:var(--text); font-family:var(--mono); font-size:22px; padding:4px 6px; min-width:0; }
+  .output-prompt input:focus{ outline:none; border-bottom-color:var(--accent); }
+
+  .go-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; align-items:stretch; }
+  .go-card{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; display:flex; flex-direction:column; gap:8px; min-width:0; }
+  .go-card .qnum{ font-family:var(--mono); font-size:22px; color:var(--accent); letter-spacing:.06em; }
+  .code-block{ min-width:0; }
+  .code-header{ display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:22px; }
+  .codepre{ margin:8px 0 0; font-size:22px; line-height:1.45; overflow:auto; }
+
+  .ans-block{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 18px; margin-bottom:12px; break-inside:avoid; }
+  .ans-block h4{ margin:0 0 6px 0; font-family:var(--mono); font-size:22px; color:var(--accent); }
+  .ans-block p{ margin:0; font-size:22px; color:var(--text-dim); line-height:1.6; }
+  .ans-block p b{ color:var(--text); }
+
+  .closing-wrap{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:22px; }
+  .closing-wrap .final-quote{ font-family:var(--serif); font-size:clamp(28px,3vw,42px); max-width:900px; line-height:1.5; color:var(--text); }
+  .closing-wrap .final-msg{ font-size:22px; color:var(--text-dim); max-width:640px; line-height:1.6; }
+
+  .progress-track{ position:fixed; top:0; left:0; right:0; height:4px; background:rgba(255,255,255,0.06); z-index:50; }
+  .progress-fill{ height:100%; background:linear-gradient(90deg, var(--accent-soft), var(--accent)); width:0%; transition:width .3s ease; }
+  .counter{ position:fixed; bottom:16px; right:20px; z-index:50; font-family:var(--mono); font-size:18px; color:var(--text-dim); background:rgba(0,0,0,0.35); border:1px solid var(--line); border-radius:999px; padding:6px 14px; backdrop-filter: blur(4px); }
+  .hint{ position:fixed; bottom:16px; left:20px; z-index:50; font-family:var(--mono); font-size:18px; color:var(--text-dim); background:rgba(0,0,0,0.35); border:1px solid var(--line); border-radius:999px; padding:6px 14px; }
+
+  .overlay{ position:fixed; inset:0; background:rgba(10,7,5,0.72); backdrop-filter: blur(3px); display:flex; align-items:center; justify-content:center; z-index:100; opacity:0; pointer-events:none; transition:opacity .2s ease; }
+  .overlay.show{ opacity:1; pointer-events:auto; }
+  .overlay-panel{ background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:28px 32px; max-width:520px; width:90%; }
+  .overlay-panel h2{ margin:0 0 14px 0; font-family:var(--serif); color:var(--accent); font-size:30px; }
+  .overlay-panel .row{ display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--line); font-size:22px; color:var(--text-dim); }
+  .overlay-panel .row:last-child{ border-bottom:none; }
+  .overlay-close{ margin-top:16px; width:100%; padding:10px; border-radius:8px; border:1px solid var(--line); background:var(--accent); color:#1c140f; font-weight:600; cursor:pointer; font-family:var(--sans); font-size:22px; }
+  kbd{ display:inline-block; font-family:var(--mono); font-size:18px; background:var(--panel-2); border:1px solid var(--line); border-bottom-width:2px; border-radius:6px; padding:2px 8px; color:var(--text); }
+
+  @media (max-width: 720px){
+    .mcq-grid,.go-grid{ grid-template-columns:minmax(0,1fr); grid-template-rows:auto; }
+    .mcq-card{ overflow:visible; }
+  }
+
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb{ background:var(--panel-2); border-radius:8px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  .ans-scroll{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-content:start; }
+  @media (max-width:900px){ .ans-scroll{ grid-template-columns:minmax(0,1fr);} }
+
+  .code-block{ background:var(--code-bg); border:2px solid var(--line-strong); border-radius:12px; overflow:hidden; }
+  .code-header{ padding:8px 14px; background:var(--panel-2); border-bottom:1px solid var(--line); font-family:var(--mono); color:var(--text); font-size:18px !important; }
+  .codepre{ margin:0 !important; padding:14px 18px; font-family:var(--mono); color:var(--text); tab-size:2; white-space:pre; line-height:1.5 !important; }
+  .codepre code{ font-family:inherit; }
+  .tok-keyword{ color:var(--code-keyword); font-weight:700; } .tok-string{ color:var(--code-string); } .tok-number{ color:var(--code-number); }
+  .tok-type{ color:var(--code-type); } .tok-comment{ color:var(--code-comment); font-style:italic; }
+  .copy-btn{ font-family:var(--mono); font-size:16px; padding:3px 12px; border-radius:999px; border:1px solid var(--line-strong); background:transparent; color:var(--accent); cursor:pointer; }
+  .copy-btn.copied{ background:var(--accent); color:#150e09; }
+  .go-card.sol .qnum{ font-size:22px; }
+  .go-card.wide{ grid-column:1 / -1; }
+  .two-files{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; align-items:start; }
+  @media (max-width:720px){ .two-files{ grid-template-columns:minmax(0,1fr); } }
+</style>
+</head>
+<body>
+
+<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+<div class="counter" id="counter">1 / 30</div>
+<div class="hint">Right-click or → for next · press ? for help</div>
+
+<div class="deck" id="deck">
+
+  <!-- TITLE -->
+  <section class="slide" data-index="0">
+    <div class="title-wrap">
+      <div class="brew-badge">EL 101 · PRE-FINAL PERIODICAL EXAM PREP</div>
+      <div class="title-main">Periodical Exam<br><span class="accent">Prep Edition</span></div>
+      <div class="title-sub">Exam-style practice for the EL 101 Pre-Final Periodical: 10 MCQ, 5 Identification and 15 Guess the Output, 30 points in total.</div>
+      <div class="title-stats">
+        <div class="stat-chip"><div class="num">10</div><div class="lbl">MCQ</div></div>
+        <div class="stat-chip"><div class="num">5</div><div class="lbl">IDENTIFICATION</div></div>
+        <div class="stat-chip"><div class="num">15</div><div class="lbl">GUESS THE OUTPUT</div></div>
+      </div>
+    </div>
+    <svg class="steam-illo" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Illustration of a steaming coffee cup, representing the Java Roastery theme">
+      <g fill="none" stroke="#e3a548" stroke-width="4" stroke-linecap="round" opacity="0.85">
+        <path d="M70 40 C60 20, 80 20, 72 5" />
+        <path d="M100 40 C90 15, 112 15, 102 -2" />
+        <path d="M130 40 C120 20, 142 20, 132 5" />
+      </g>
+      <rect x="50" y="95" width="110" height="70" rx="10" fill="#2c2018" stroke="#e3a548" stroke-width="4"/>
+      <path d="M160 105 h18 a18 18 0 0 1 0 42 h-18" fill="none" stroke="#e3a548" stroke-width="4"/>
+      <ellipse cx="105" cy="95" rx="55" ry="10" fill="#8fbf9a" opacity="0.85"/>
+      <rect x="40" y="165" width="130" height="10" rx="4" fill="#e3a548" opacity="0.6"/>
+    </svg>
+  </section><section class="slide">
+    <div class="eyebrow">Quick Recap 1</div>
+    <h1 class="slide-title">static, main() and final</h1>
+    <div class="slide-body"><div class="grid-2x2"><div class="block-card"><h3>static field</h3><ul><li>ONE shared copy for all objects</li><li>Access it with <b>ClassName.field</b></li><li>Ticket.nextId++ affects every ticket</li></ul></div><div class="block-card"><h3>static context rule</h3><ul><li>A static method has no object</li><li>It <b>cannot</b> use instance fields or methods</li><li>Result: <b>Compile Error</b></li></ul></div><div class="block-card"><h3>Why main() is static</h3><ul><li>The JVM calls it <b>before any object exists</b></li><li>No <b>new</b> needed to start the program</li></ul></div><div class="block-card"><h3>final</h3><ul><li>Value set once, then locked</li><li>Reassigning it = <b>Compile Error</b></li><li>Not the same as static or private</li></ul></div></div></div>
+  </section><section class="slide">
+    <div class="eyebrow">Quick Recap 2</div>
+    <h1 class="slide-title">this(), super() and the Pillars</h1>
+    <div class="slide-body"><div class="grid-2x2"><div class="block-card"><h3>this() vs super()</h3><ul><li><b>this(...)</b> calls another constructor in the SAME class</li><li><b>super(...)</b> calls the PARENT constructor</li><li>Both must be the first line</li></ul></div><div class="block-card"><h3>Overriding vs Overloading</h3><ul><li><b>Overriding</b>: same signature, subclass redefines (runtime)</li><li><b>Overloading</b>: same name, different parameters (compile-time)</li></ul></div><div class="block-card"><h3>Abstract class vs Interface</h3><ul><li><b>extends</b> one class, <b>implements</b> many interfaces</li><li>Neither can be created with <b>new</b></li><li>Abstract methods have no body</li></ul></div><div class="block-card"><h3>The 4 Pillars</h3><ul><li>Encapsulation</li><li>Inheritance</li><li>Abstraction</li><li>Polymorphism</li></ul></div></div></div>
+  </section><section class="slide">
+    <div class="eyebrow">Quick Recap 3</div>
+    <h1 class="slide-title">Arrays and Pass-by-Value</h1>
+    <div class="slide-body"><div class="grid-2x2"><div class="block-card"><h3>array.length</h3><ul><li>A <b>field</b>, no parentheses</li><li>Valid indexes: 0 to length - 1</li></ul></div><div class="block-card"><h3>Out of bounds</h3><ul><li>arr[arr.length] or arr[-1]</li><li>Runtime: <b>ArrayIndexOutOfBoundsException</b></li><li>The compiler does NOT catch it</li></ul></div><div class="block-card"><h3>Primitives</h3><ul><li>A <b>copy</b> of the value is passed</li><li>modify(a) cannot change the caller's a</li></ul></div><div class="block-card"><h3>Objects</h3><ul><li>The <b>reference</b> is passed by value (copied)</li><li>Java is always pass-by-value</li></ul></div></div></div>
+  </section>
+  <section class="slide">
+    <div class="eyebrow">Multiple Choice · 1 of 3</div>
+    <h1 class="slide-title">Items 1–4</h1>
+    <div class="slide-body"><div class="mcq-grid"><div class="mcq-card"><div class="qnum">01</div><div class="qtext">Which statement is true about a <b>static</b> field in Java?</div><div class="mcq-opts"><div><b>A.</b> One copy is shared by all objects</div><div><b>B.</b> Every object gets its own copy</div><div><b>C.</b> It can never be read</div><div><b>D.</b> It must also be final</div></div></div><div class="mcq-card"><div class="qnum">02</div><div class="qtext">A static method calls a non-static method of its own class directly. Result?</div><div class="mcq-opts"><div><b>A.</b> Runs normally</div><div><b>B.</b> NullPointerException</div><div><b>C.</b> Compile Error</div><div><b>D.</b> Java creates an object for it</div></div></div><div class="mcq-card"><div class="qnum">03</div><div class="qtext">Why is <b>main()</b> declared static?</div><div class="mcq-opts"><div><b>A.</b> The JVM can call it before any object exists</div><div><b>B.</b> It must return an exit code</div><div><b>C.</b> It stops other classes from calling it</div><div><b>D.</b> Non-static methods cannot use arrays</div></div></div><div class="mcq-card"><div class="qnum">04</div><div class="qtext"><b>final int MAX = 10;</b> followed later by <b>MAX = 20;</b>. Result?</div><div class="mcq-opts"><div><b>A.</b> MAX becomes 20</div><div><b>B.</b> Compile Error</div><div><b>C.</b> Runtime exception</div><div><b>D.</b> The line is ignored</div></div></div></div></div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Multiple Choice · 2 of 3</div>
+    <h1 class="slide-title">Items 5–7</h1>
+    <div class="slide-body"><div class="mcq-grid"><div class="mcq-card"><div class="qnum">05</div><div class="qtext">A subclass redefines a parent method using the exact same signature. This is...</div><div class="mcq-opts"><div><b>A.</b> Overloading</div><div><b>B.</b> Overriding</div><div><b>C.</b> Encapsulation</div><div><b>D.</b> Constructor chaining</div></div></div><div class="mcq-card"><div class="qnum">06</div><div class="qtext">An array has length 5. What does reading <b>arr[5]</b> do?</div><div class="mcq-opts"><div><b>A.</b> Returns 0</div><div><b>B.</b> Returns null</div><div><b>C.</b> Throws ArrayIndexOutOfBoundsException</div><div><b>D.</b> Fails to compile</div></div></div><div class="mcq-card"><div class="qnum">07</div><div class="qtext">How many interfaces can one class implement?</div><div class="mcq-opts"><div><b>A.</b> One</div><div><b>B.</b> Two</div><div><b>C.</b> As many as needed</div><div><b>D.</b> None</div></div></div></div></div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Multiple Choice · 3 of 3</div>
+    <h1 class="slide-title">Items 8–10</h1>
+    <div class="slide-body"><div class="mcq-grid"><div class="mcq-card"><div class="qnum">08</div><div class="qtext">When an object is passed to a method, Java passes...</div><div class="mcq-opts"><div><b>A.</b> A copy of the reference</div><div><b>B.</b> The object itself</div><div><b>C.</b> A full clone</div><div><b>D.</b> Nothing</div></div></div><div class="mcq-card"><div class="qnum">09</div><div class="qtext">Which is true about an abstract class?</div><div class="mcq-opts"><div><b>A.</b> It can be created with new</div><div><b>B.</b> It may contain abstract methods with no body</div><div><b>C.</b> All its methods must be abstract</div><div><b>D.</b> It cannot have constructors</div></div></div><div class="mcq-card"><div class="qnum">10</div><div class="qtext">Which call invokes the parent class constructor?</div><div class="mcq-opts"><div><b>A.</b> this()</div><div><b>B.</b> super()</div><div><b>C.</b> parent()</div><div><b>D.</b> base()</div></div></div></div></div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Identification · 1 of 2</div>
+    <h1 class="slide-title">Items 11–13 (name the keyword or concept)</h1>
+    <div class="slide-body"><div class="mcq-grid"><div class="mcq-card"><div class="qnum">11</div><div class="qtext">An engineer makes <b>balance</b> private and only allows changes through setBalance() with validation. Which OOP pillar is this?</div><div class="output-prompt"><span>Answer:</span><input type="text" placeholder="Type your answer"></div></div><div class="mcq-card"><div class="qnum">12</div><div class="qtext">Methods like <b>Math.sqrt()</b> are called with the class name, with no <b>new Math()</b>. Which keyword makes this possible?</div><div class="output-prompt"><span>Answer:</span><input type="text" placeholder="Type your answer"></div></div><div class="mcq-card"><div class="qnum">13</div><div class="qtext"><b>public User(){ this("Guest", true); }</b>. What technique is this?</div><div class="output-prompt"><span>Answer:</span><input type="text" placeholder="Type your answer"></div></div></div></div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Identification · 2 of 2</div>
+    <h1 class="slide-title">Items 14–15 (name the keyword or concept)</h1>
+    <div class="slide-body"><div class="mcq-grid"><div class="mcq-card"><div class="qnum">14</div><div class="qtext">Class <b>Dog</b> must inherit the non-private members of <b>Animal</b>. Which keyword links them?</div><div class="output-prompt"><span>Answer:</span><input type="text" placeholder="Type your answer"></div></div><div class="mcq-card"><div class="qnum">15</div><div class="qtext">A subclass overrides a method but first needs the parent's original version. Which keyword calls it?</div><div class="output-prompt"><span>Answer:</span><input type="text" placeholder="Type your answer"></div></div></div></div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Guess the Output · 1 of 8</div>
+    <h1 class="slide-title">Items 16–17 (write the output, or Compile Error / Runtime Error)</h1>
+    <div class="slide-body"><div class="go-grid"><div class="go-card sol"><div class="qnum">16</div><div class="code-block"><div class="code-header"><span>Ticket.java</span><button class="copy-btn" data-target="q1">Copy</button></div><pre class="codepre"><code id="q1"></code></pre><script type="text/plain" data-target="q1">
+class Ticket {
+  static int nextId = 101;
+  int id;
+
+  Ticket() {
+    id = nextId++;
+  }
+}
+
+public class Main {
+  public static void main(String[] args) {
+    Ticket a = new Ticket();
+    Ticket b = new Ticket();
+    System.out.println(a.id + "-" + b.id + "-" + Ticket.nextId);
+  }
+}
+</script></div><div class="output-prompt"><span>Output:</span><input type="text" placeholder="Type your answer"></div></div><div class="go-card sol"><div class="qnum">17</div><div class="code-block"><div class="code-header"><span>Service.java</span><button class="copy-btn" data-target="q2">Copy</button></div><pre class="codepre"><code id="q2"></code></pre><script type="text/plain" data-target="q2">
+abstract class Service {
+  abstract void run();
+}
+
+class Worker extends Service {
+  void run() {
+    System.out.print("Running");
+  }
+}
+
+public class Main {
+  public static void main(String[] args) {
+    Service s = new Worker();
+    s.run();
+  }
+}
+</script></div><div class="output-prompt"><span>Output:</span><input type="text" placeholder="Type your answer"></div></div></div></div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Guess the Output · 2 of 8</div>
+    <h1 class="slide-title">Items 18–19 (write the output, or Compile Error / Runtime Error)</h1>
+    <div class="slide-body"><div class="go-grid"><div class="go-card sol"><div class="qnum">18</div><div class="code-block"><div class="code-header"><span>Parent.java</span><button class="copy-btn" data-target="q3">Copy</button></div><pre class="codepre"><code id="q3"></code></pre><script type="text/plain" data-target="q3">
+class Parent {
+  double cost() {
+    return 100.0;
+  }
+}
+
+class Child extends Parent {
+  @Override
+  double cost() {
+    return super.cost() + 50.0;
+  }
+}
+
+public class Main {
+  public static void main(String[] args) {
+    Child c = new Child();
+    System.out.println(c.cost());
+  }
+}
+</script></div><div class="output-prompt"><span>Output:</span><input type="text" placeholder="Type your answer"></div></div><div class="go-card sol"><div class="qnum">19</div><div class="code-block"><div class="code-header"><span>Printable.java</span><button class="copy-btn" data-target="q4">Copy</button></div><pre class="codepre"><code id="q4"></code></pre><script type="text/plain" data-target="q4">
+interface Printable {
+  void print();
+}
+
+class Document implements Printable {
+  public void print() {
+    System.out.println("DOC");
+  }
+}
+
+public class Main {
+  public static void main(String[] args) {
+    Printable p = new Document();
+    p.print();
+  }
+}
+</script></div><div class="output-prompt"><span>Output:</span><input type="text" placeholder="Type your answer"></div></div></div></div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Guess the Output · 3 of 8</div>
+    <h1 class="slide-title">Items 20–21 (write the output, or Compile Error / Runtime Error)</h1>
+    <div class="slide-body"><div class="go-grid"><div class="go-card sol"><div class="qnum">20</div><div class="code-block"><div class="code-header"><span>Modify.java</span><button class="copy-btn" data-target="q5">Copy</button></div><pre class="codepre"><code id="q5"></code></pre><script type="text/plain" data-target="q5">
+public class Main {
+  static void modify(int x) {
+    x = x * 2;
+  }
+
+  public static void main(String[] args) {
+    int a = 10;
+    modify(a);
+    System.out.println(a);
+  }
+}
+</script></div><div class="output-prompt"><span>Output:</span><input type="text" placeholder="Type your answer"></div></div><div class="go-card sol"><div class="qnum">21</div><div class="code-block"><div class="code-header"><span>Box.java</span><button class="copy-btn" data-target="q6">Copy</button></div><pre class="codepre"><code id="q6"></code></pre><script type="text/plain" data-target="q6">
+class Box {
+  int val;
+
+  Box() {
+    this(25);
+  }
+
+  Box(int val) {
+    this.val = val;
+  }
+}
+
+public class Main {
+  public static void main(String[] args) {
+    Box b = new Box();
+    System.out.println(b.val);
+  }
+}
+</script></div><div class="output-prompt"><span>Output:</span><input type="text" placeholder="Type your answer"></div></div></div></div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Guess the Output · 4 of 8</div>
+    <h1 class="slide-title">Items 22–23 (write the output, or Compile Error / Runtime Error)</h1>
+    <div class="slide-body"><div class="go-grid"><div class="go-card sol"><div class="qnum">22</div><div class="code-block"><div class="code-header"><span>Show.java</span><button class="copy-btn" data-target="q7">Copy</button></div><pre class="codepre"><code id="q7"></code></pre><script type="text/plain" data-target="q7">
+public class Main {
+  static void show(double d) {
+    System.out.println("double " + d);
+  }
+
+  static void show(int i) {
+    System.out.println("int " + i);
+  }
+
+  public static void main(String[] args) {
+    show(5);
+  }
+}
+</script></div><div class="output-prompt"><span>Output:</span><input type="text" placeholder="Type your answer"></div></div><div class="go-card sol"><div class="qnum">23</div><div class="code-block"><div class="code-header"><span>Sum.java</span><button class="copy-btn" data-target="q8">Copy</button></div><pre class="codepre"><code id="q8"></code></pre><script type="text/plain" data-target="q8">
+public class Main {
+  public static void main(String[] args) {
+    int[] nums = {2, 4, 6};
+    int sum = 0;
+    for (int n : nums) {
+      sum += n;
+    }
+    System.out.println(sum);
+  }
+}
+</script></div><div class="output-prompt"><span>Output:</span><input type="text" placeholder="Type your answer"></div></div></div></div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Guess the Output · 5 of 8</div>
+    <h1 class="slide-title">Items 24–25 (write the output, or Compile Error / Runtime Error)</h1>
+    <div class="slide-body"><div class="go-grid"><div class="go-card sol"><div class="qnum">24</div><div class="code-block"><div class="code-header"><span>Item.java</span><button class="copy-btn" data-target="q9">Copy</button></div><pre class="codepre"><code id="q9"></code></pre><script type="text/plain" data-target="q9">
+class Item {
+  int price = 50;
+
+  static void display() {
+    System.out.println(price);
+  }
+}
+</script></div><div class="output-prompt"><span>Output:</span><input type="text" placeholder="Type your answer"></div></div><div class="go-card sol"><div class="qnum">25</div><div class="code-block"><div class="code-header"><span>Colors.java</span><button class="copy-btn" data-target="q10">Copy</button></div><pre class="codepre"><code id="q10"></code></pre><script type="text/plain" data-target="q10">
+public class Main {
+  public static void main(String[] args) {
+    String[] colors = {"Red", "Blue"};
+    System.out.println(colors.length + " " + colors[1]);
+  }
+}
+</script></div><div class="output-prompt"><span>Output:</span><input type="text" placeholder="Type your answer"></div></div></div></div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Guess the Output · 6 of 8</div>
+    <h1 class="slide-title">Items 26–27 (write the output, or Compile Error / Runtime Error)</h1>
+    <div class="slide-body"><div class="go-grid"><div class="go-card sol"><div class="qnum">26</div><div class="code-block"><div class="code-header"><span>Final.java</span><button class="copy-btn" data-target="q11">Copy</button></div><pre class="codepre"><code id="q11"></code></pre><script type="text/plain" data-target="q11">
+public class Main {
+  public static void main(String[] args) {
+    final int x = 5;
+    x++;
+    System.out.println(x);
+  }
+}
+</script></div><div class="output-prompt"><span>Output:</span><input type="text" placeholder="Type your answer"></div></div><div class="go-card sol"><div class="qnum">27</div><div class="code-block"><div class="code-header"><span>Bounds.java</span><button class="copy-btn" data-target="q12">Copy</button></div><pre class="codepre"><code id="q12"></code></pre><script type="text/plain" data-target="q12">
+public class Main {
+  public static void main(String[] args) {
+    int[] a = {1, 2, 3};
+    System.out.println(a[a.length]);
+  }
+}
+</script></div><div class="output-prompt"><span>Output:</span><input type="text" placeholder="Type your answer"></div></div></div></div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Guess the Output · 7 of 8</div>
+    <h1 class="slide-title">Items 28–29 (write the output, or Compile Error / Runtime Error)</h1>
+    <div class="slide-body"><div class="go-grid"><div class="go-card sol"><div class="qnum">28</div><div class="code-block"><div class="code-header"><span>Change.java</span><button class="copy-btn" data-target="q13">Copy</button></div><pre class="codepre"><code id="q13"></code></pre><script type="text/plain" data-target="q13">
+class Bag {
+  int v = 1;
+}
+
+public class Main {
+  static void change(Bag b) {
+    b.v = 9;
+  }
+
+  public static void main(String[] args) {
+    Bag bag = new Bag();
+    change(bag);
+    System.out.println(bag.v);
+  }
+}
+</script></div><div class="output-prompt"><span>Output:</span><input type="text" placeholder="Type your answer"></div></div><div class="go-card sol"><div class="qnum">29</div><div class="code-block"><div class="code-header"><span>Order.java</span><button class="copy-btn" data-target="q14">Copy</button></div><pre class="codepre"><code id="q14"></code></pre><script type="text/plain" data-target="q14">
+class A {
+  A() {
+    System.out.print("A ");
+  }
+}
+
+class B extends A {
+  B() {
+    System.out.print("B ");
+  }
+}
+
+public class Main {
+  public static void main(String[] args) {
+    new B();
+  }
+}
+</script></div><div class="output-prompt"><span>Output:</span><input type="text" placeholder="Type your answer"></div></div></div></div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Guess the Output · 8 of 8</div>
+    <h1 class="slide-title">Items 30–30 (write the output, or Compile Error / Runtime Error)</h1>
+    <div class="slide-body"><div class="go-grid"><div class="go-card sol wide"><div class="qnum">30</div><div class="two-files"><div class="code-block"><div class="code-header"><span>Animal.java</span><button class="copy-btn" data-target="q15a">Copy</button></div><pre class="codepre"><code id="q15a"></code></pre><script type="text/plain" data-target="q15a">
+class Animal {
+  String speak() {
+    return "...";
+  }
+}
+
+class Dog extends Animal {
+  @Override
+  String speak() {
+    return "Woof";
+  }
+}
+</script></div><div class="code-block"><div class="code-header"><span>Main.java</span><button class="copy-btn" data-target="q15b">Copy</button></div><pre class="codepre"><code id="q15b"></code></pre><script type="text/plain" data-target="q15b">
+public class Main {
+  public static void main(String[] args) {
+    Animal a = new Dog();
+    System.out.println(a.speak());
+  }
+}
+</script></div></div><div class="output-prompt"><span>Output:</span><input type="text" placeholder="Type your answer"></div></div></div></div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Answer Key</div>
+    <h1 class="slide-title">Multiple Choice and Identification</h1>
+    <div class="slide-body"><div class="ans-scroll"><div class="ans-block"><h4>01</h4><p><b>A</b>: One copy is shared by all objects</p></div><div class="ans-block"><h4>02</h4><p><b>C</b>: Compile Error</p></div><div class="ans-block"><h4>03</h4><p><b>A</b>: The JVM can call it before any object exists</p></div><div class="ans-block"><h4>04</h4><p><b>B</b>: Compile Error</p></div><div class="ans-block"><h4>05</h4><p><b>B</b>: Overriding</p></div><div class="ans-block"><h4>06</h4><p><b>C</b>: Throws ArrayIndexOutOfBoundsException</p></div><div class="ans-block"><h4>07</h4><p><b>C</b>: As many as needed</p></div><div class="ans-block"><h4>08</h4><p><b>A</b>: A copy of the reference</p></div><div class="ans-block"><h4>09</h4><p><b>B</b>: It may contain abstract methods with no body</p></div><div class="ans-block"><h4>10</h4><p><b>B</b>: super()</p></div><div class="ans-block"><h4>11</h4><p><b>Encapsulation</b></p></div><div class="ans-block"><h4>12</h4><p><b>static</b></p></div><div class="ans-block"><h4>13</h4><p><b>Constructor chaining (this())</b></p></div><div class="ans-block"><h4>14</h4><p><b>extends</b></p></div><div class="ans-block"><h4>15</h4><p><b>super (super.method())</b></p></div></div></div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Answer Key</div>
+    <h1 class="slide-title">Guess the Output</h1>
+    <div class="slide-body"><div class="ans-scroll"><div class="ans-block"><h4>16</h4><p><b>101-102-103</b></p></div><div class="ans-block"><h4>17</h4><p><b>Running</b></p></div><div class="ans-block"><h4>18</h4><p><b>150.0</b></p></div><div class="ans-block"><h4>19</h4><p><b>DOC</b></p></div><div class="ans-block"><h4>20</h4><p><b>10 (pass-by-value)</b></p></div><div class="ans-block"><h4>21</h4><p><b>25</b></p></div><div class="ans-block"><h4>22</h4><p><b>int 5</b></p></div><div class="ans-block"><h4>23</h4><p><b>12</b></p></div><div class="ans-block"><h4>24</h4><p><b>Compile Error (static method cannot use instance field)</b></p></div><div class="ans-block"><h4>25</h4><p><b>2 Blue</b></p></div><div class="ans-block"><h4>26</h4><p><b>Compile Error (final cannot be reassigned)</b></p></div><div class="ans-block"><h4>27</h4><p><b>Runtime Error (ArrayIndexOutOfBoundsException)</b></p></div><div class="ans-block"><h4>28</h4><p><b>9 (the reference is copied, same object)</b></p></div><div class="ans-block"><h4>29</h4><p><b>A B (parent constructor runs first)</b></p></div><div class="ans-block"><h4>30</h4><p><b>Woof (runtime polymorphism)</b></p></div></div></div>
+  </section>
+<section class="slide" data-index="24">
+    <div class="closing-wrap">
+      <div class="eyebrow" style="margin:0 auto;">Exam Day Special</div>
+      <div class="final-quote">"You roasted the pillars, survived the traps, and passed the exam. Now go brew something great."</div>
+      <div class="final-msg">That's the Summative Exam Roast. You did it, champ. ☕</div>
+    </div>
+  </section>
+
+</div>
+
+
+  .mcq-card .qtext{ font-size:24px !important; } .mcq-opts{ font-size:21px !important; }
+  .block-card{ border-width:2px; } .codepre{ font-size:20px !important; }
+  .sol .codepre{ font-size:18px !important; }
+<script>
+(function(){
+  "use strict";
+
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  var TOKEN_RE = /(\/\/.*$)|("(?:[^"\\]|\\.)*")|('(?:[^'\\]|\\.)*')|\b(public|private|protected|static|final|class|new|void|int|double|boolean|char|String|return|if|else|for|while|this|super|extends|implements|interface|abstract|throws|try|catch|switch|case|break|continue|do|import|package|true|false|null)\b|\b(\d+\.\d+|\d+)\b|(@Override)|\b([A-Z][A-Za-z0-9_]*)\b/gm;
+
+  function highlightJava(src){
+    var out = '';
+    var lastIndex = 0;
+    var m;
+    TOKEN_RE.lastIndex = 0;
+    while ((m = TOKEN_RE.exec(src)) !== null){
+      out += escapeHtml(src.slice(lastIndex, m.index));
+      if (m[1] !== undefined) out += '<span class="tok-comment">' + escapeHtml(m[1]) + '</span>';
+      else if (m[2] !== undefined) out += '<span class="tok-string">' + escapeHtml(m[2]) + '</span>';
+      else if (m[3] !== undefined) out += '<span class="tok-string">' + escapeHtml(m[3]) + '</span>';
+      else if (m[4] !== undefined) out += '<span class="tok-keyword">' + escapeHtml(m[4]) + '</span>';
+      else if (m[5] !== undefined) out += '<span class="tok-number">' + escapeHtml(m[5]) + '</span>';
+      else if (m[6] !== undefined) out += '<span class="tok-comment">' + escapeHtml(m[6]) + '</span>';
+      else if (m[7] !== undefined) out += '<span class="tok-type">' + escapeHtml(m[7]) + '</span>';
+      lastIndex = TOKEN_RE.lastIndex;
+      if (m.index === TOKEN_RE.lastIndex) TOKEN_RE.lastIndex++;
+    }
+    out += escapeHtml(src.slice(lastIndex));
+    return out;
+  }
+
+  function initCodeBlocks(){
+    var sources = document.querySelectorAll('script[type="text/plain"][data-target]');
+    sources.forEach(function(src){
+      var id = src.getAttribute('data-target');
+      var target = document.getElementById(id);
+      if (!target) return;
+      var raw = src.textContent.replace(/^\n/, '').replace(/\n$/, '');
+      target.innerHTML = highlightJava(raw);
+      target.setAttribute('data-raw', raw);
+    });
+  }
+
+  function fallbackCopy(text){
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); } catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  function initCopyButtons(){
+    document.querySelectorAll('.copy-btn').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var id = btn.getAttribute('data-target');
+        var code = document.getElementById(id);
+        var text = code ? (code.getAttribute('data-raw') || code.textContent) : '';
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).catch(function(){ fallbackCopy(text); });
+        } else {
+          fallbackCopy(text);
+        }
+        var originalText = btn.textContent;
+        btn.textContent = 'Copied! ✓';
+        btn.classList.add('copied');
+        setTimeout(function(){
+          btn.textContent = originalText;
+          btn.classList.remove('copied');
+        }, 1400);
+      });
+    });
+  }
+
+  function paginateMcqSlides(){
+    var mcqSlides = Array.prototype.slice.call(document.querySelectorAll('.slide')).filter(function(slide){
+      return !!slide.querySelector('.mcq-grid');
+    });
+
+    mcqSlides.forEach(function(slide){
+      var grid = slide.querySelector('.mcq-grid');
+      var cards = Array.prototype.slice.call(grid.querySelectorAll('.mcq-card'));
+      if (cards.length <= 4) return;
+
+      var title = slide.querySelector('.slide-title').textContent;
+      var previousSlide = slide;
+      grid.replaceChildren();
+
+      for (var start = 0; start < cards.length; start += 4){
+        var page = start === 0 ? slide : slide.cloneNode(true);
+        var pageGrid = page.querySelector('.mcq-grid');
+        var pageCards = cards.slice(start, start + 4);
+
+        if (start > 0){
+          pageGrid.replaceChildren();
+          page.querySelector('.slide-title').textContent = title + ' — Part ' + (start / 4 + 1);
+          previousSlide.parentNode.insertBefore(page, previousSlide.nextSibling);
+          previousSlide = page;
+        }
+
+        pageCards.forEach(function(card){ pageGrid.appendChild(card); });
+        page.querySelector('.eyebrow').textContent = pageCards.length + ' Multiple Choice Questions • 2 pts each';
+      }
+    });
+
+    Array.prototype.slice.call(document.querySelectorAll('.slide')).forEach(function(slide, index){
+      slide.setAttribute('data-index', index);
+    });
+  }
+
+  paginateMcqSlides();
+
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length;
+  var current = 0;
+  var progressFill = document.getElementById('progressFill');
+  var counterEl = document.getElementById('counter');
+  var overlay = document.getElementById('overlay');
+  var overlayClose = document.getElementById('overlayClose');
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function updateChrome(){
+    var pct = ((current + 1) / total) * 100;
+    progressFill.style.width = pct + '%';
+    counterEl.textContent = (current + 1) + ' / ' + total;
+  }
+
+  function isInteractive(el){
+    return !!(el.closest && el.closest('button, a, input, textarea, select, .no-nav, .overlay'));
+  }
+
+  function goTo(target, dir){
+    if (target < 0 || target >= total || target === current) return;
+    var oldEl = slides[current];
+    var newEl = slides[target];
+
+    oldEl.classList.remove('active');
+    oldEl.classList.add(dir > 0 ? 'exit-left' : 'exit-right');
+
+    newEl.classList.remove('exit-left', 'exit-right', 'enter-left');
+    if (reduceMotion){
+      newEl.classList.add('active');
+    } else {
+      if (dir < 0) newEl.classList.add('enter-left');
+      void newEl.offsetWidth;
+      requestAnimationFrame(function(){
+        newEl.classList.add('active');
+      });
+    }
+    newEl.scrollTop = 0;
+
+    current = target;
+    updateChrome();
+  }
+
+  function next(){ goTo(current + 1, 1); }
+  function prev(){ goTo(current - 1, -1); }
+  function first(){ goTo(0, -1); }
+  function last(){ goTo(total - 1, 1); }
+
+  function showOverlay(){ if (overlay) overlay.classList.add('show'); }
+  function hideOverlay(){ if (overlay) overlay.classList.remove('show'); }
+  function toggleOverlay(){
+    if (!overlay) return;
+    if (overlay.classList.contains('show')) hideOverlay(); else showOverlay();
+  }
+
+  document.addEventListener('keydown', function(e){
+    if (e.key === '?'){ toggleOverlay(); return; }
+    if (e.key === 'Escape'){ hideOverlay(); return; }
+    if (overlay && overlay.classList.contains('show')) return;
+    if (e.key === 'ArrowRight' || e.key === 'PageDown'){ next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ prev(); }
+    else if (e.key === 'Home'){ first(); }
+    else if (e.key === 'End'){ last(); }
+  });
+
+  if (overlayClose) overlayClose.addEventListener('click', hideOverlay);
+  if (overlay) overlay.addEventListener('mousedown', function(e){
+    if (e.target === overlay) hideOverlay();
+  });
+
+  document.addEventListener('contextmenu', function(e){
+    e.preventDefault();
+  }, { capture: true });
+
+  document.addEventListener('mousedown', function(e){
+    if (overlay && overlay.classList.contains('show')) return;
+    if (isInteractive(e.target)) return;
+    if (e.button === 2){ e.preventDefault(); e.stopImmediatePropagation(); next(); }
+    else if (e.button === 3){ e.preventDefault(); e.stopImmediatePropagation(); prev(); }
+    else if (e.button === 4){ e.preventDefault(); e.stopImmediatePropagation(); next(); }
+  }, { capture: true });
+
+  document.addEventListener('auxclick', function(e){
+    if (e.button === 1 || e.button === 2 || e.button === 3 || e.button === 4){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, { capture: true });
+
+  document.addEventListener('mouseup', function(e){
+    if (e.button === 3 || e.button === 4){
+      e.preventDefault();
+    }
+  }, { capture: true });
+
+  var touchStartX = null, touchStartY = null;
+  document.addEventListener('touchstart', function(e){
+    if (e.touches.length !== 1) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(e){
+    if (touchStartX === null) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5){
+      if (dx < 0) next(); else prev();
+    }
+    touchStartX = null; touchStartY = null;
+  }, { passive: true });
+
+  initCodeBlocks();
+  initCopyButtons();
+  slides[0].classList.add('active');
+  updateChrome();
+
+})();
+</script>
+
+</body>
+</html>

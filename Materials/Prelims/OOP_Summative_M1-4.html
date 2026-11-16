@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>☕ Java Roastery — OOP Summative (M1–4)</title>
+<style>
+  :root{
+    --bg:#1c140f;
+    --bg-alt:#251b14;
+    --panel:#2c2018;
+    --panel-2:#33261c;
+    --line: rgba(243,233,221,0.14);
+    --text:#f4ead9;
+    --text-dim:#c9b6a2;
+    --accent:#e3a548;
+    --accent-soft:#c98a3a;
+    --accent-cool:#8fbf9a;
+    --accent-rose:#d9776b;
+    --code-bg:#150f0b;
+    --code-keyword:#eab676;
+    --code-string:#9ecb8f;
+    --code-number:#8ec7dc;
+    --code-type:#e2b8d8;
+    --code-comment:#7a6a5c;
+    --ring: 0 0 0 3px rgba(227,165,72,0.35);
+    --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --mono: SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:
+      radial-gradient(ellipse at 15% -10%, rgba(227,165,72,0.10), transparent 45%),
+      radial-gradient(ellipse at 100% 110%, rgba(143,191,154,0.07), transparent 45%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .deck{ position:relative; width:100vw; height:100vh; }
+
+  .slide{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    padding: clamp(20px, 3vh, 48px) clamp(24px, 5vw, 96px);
+    opacity:0;
+    transform: translateX(28px);
+    transition: opacity .35s ease, transform .35s ease;
+    pointer-events:none;
+    overflow-y:auto;
+  }
+  .slide.active{ opacity:1; transform:translateX(0); pointer-events:auto; z-index:2; }
+  .slide.enter-left{ transform:translateX(-28px); opacity:0; }
+  .slide.exit-left{ transform:translateX(-28px); opacity:0; }
+  .slide.exit-right{ transform:translateX(28px); opacity:0; }
+
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition:none !important; transform:none !important; }
+  }
+
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--mono); letter-spacing:.14em; text-transform:uppercase;
+    font-size:clamp(12px,1.1vw,14px); color:var(--accent);
+    margin-bottom: 10px;
+  }
+  .eyebrow::before{ content:"☕"; font-size:14px; }
+
+  h1.slide-title{
+    font-family:var(--serif);
+    font-weight:700;
+    font-size: clamp(25px, 3.6vw, 52px);
+    line-height:1.1;
+    margin: 0 0 6px 0;
+    color:var(--text);
+  }
+  .subtitle{
+    font-size: clamp(15px, 1.3vw, 19px);
+    color:var(--text-dim);
+    margin: 0 0 18px 0;
+    max-width:900px;
+    line-height:1.5;
+  }
+
+  .slide-body{ flex:1; min-height:0; display:flex; flex-direction:column; }
+
+  /* ---------- TITLE SLIDE ---------- */
+  .title-wrap{
+    height:100%; display:flex; flex-direction:column; align-items:flex-start; justify-content:center;
+    gap: 18px; max-width:1200px;
+  }
+  .brew-badge{
+    display:flex; align-items:center; gap:14px;
+    padding: 10px 18px; border:1px solid var(--line); border-radius:999px;
+    background:var(--panel); font-family:var(--mono); font-size:14px; color:var(--accent);
+  }
+  .title-main{
+    font-family:var(--serif); font-weight:700;
+    font-size: clamp(34px, 5.6vw, 78px);
+    line-height:1.04; letter-spacing:-0.01em;
+  }
+  .title-main .accent{ color:var(--accent); }
+  .title-sub{ font-size:clamp(16px,1.6vw,22px); color:var(--text-dim); max-width:760px; line-height:1.55; }
+  .title-stats{ display:flex; gap:14px; margin-top:8px; flex-wrap:wrap; }
+  .stat-chip{
+    border:1px solid var(--line); background:var(--panel-2); border-radius:12px;
+    padding:12px 18px; min-width:140px;
+  }
+  .stat-chip .num{ font-family:var(--serif); font-size:28px; color:var(--accent); font-weight:700; }
+  .stat-chip .lbl{ font-size:13px; color:var(--text-dim); margin-top:2px; }
+
+  .steam-illo{ position:absolute; right:clamp(10px,4vw,80px); top:50%; transform:translateY(-50%); width:min(30vw,360px); opacity:.9; }
+
+  /* ---------- INSTRUCTIONS ---------- */
+  .howto-grid{ display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:16px; margin-top:6px; }
+  .howto-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px 20px;
+    min-width:0;
+  }
+  .howto-card h3{ margin:0 0 8px 0; font-family:var(--serif); font-size:18px; color:var(--accent); }
+  .howto-card p{ margin:0; font-size:15px; color:var(--text-dim); line-height:1.55; }
+  kbd{
+    display:inline-block; font-family:var(--mono); font-size:13px; background:var(--panel-2);
+    border:1px solid var(--line); border-bottom-width:2px; border-radius:6px; padding:2px 8px; color:var(--text);
+  }
+
+  /* ---------- SECTION LABEL BAR ---------- */
+  .section-tag{
+    display:inline-flex; align-self:flex-start; gap:8px; align-items:center;
+    background:var(--panel-2); border:1px solid var(--line); border-radius:999px;
+    padding:6px 14px; font-family:var(--mono); font-size:13px; color:var(--accent-cool);
+    margin-bottom:14px;
+  }
+
+  /* ---------- MC CARDS ---------- */
+  .mc-grid{
+    display:grid; grid-template-columns: minmax(0,1fr); gap: clamp(10px,1.6vh,16px);
+    flex:1; min-height:0;
+  }
+  .ticket{
+    position:relative;
+    background: var(--panel);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding: 14px 20px 16px 20px;
+    display:flex; flex-direction:column; gap:8px;
+    min-width:0;
+  }
+  .ticket::before{
+    content:""; position:absolute; left:14px; top:0; bottom:0; width:2px;
+    background: repeating-linear-gradient(to bottom, var(--accent) 0 6px, transparent 6px 12px);
+    opacity:.55;
+  }
+  .ticket .qnum{
+    font-family:var(--mono); font-size:12px; color:var(--accent); letter-spacing:.08em;
+  }
+  .ticket .qtext{
+    font-size: clamp(15px, 1.15vw, 18px); font-weight:600; line-height:1.4; padding-left:10px;
+  }
+  .opts{
+    display:grid; grid-template-columns: 1fr 1fr; gap:6px 18px; padding-left:10px;
+    font-size: clamp(14px, 1.02vw, 16px); color:var(--text-dim);
+  }
+  .opts div{ display:flex; gap:8px; }
+  .opts b{ color:var(--accent-cool); min-width:16px; }
+
+  /* ---------- GUESS OUTPUT ---------- */
+  .go-grid{
+    display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vw,22px);
+    flex:1; min-height:0;
+  }
+  @media (max-width: 900px){
+    .go-grid{ grid-template-columns: minmax(0,1fr); }
+  }
+  .go-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding: 14px 18px 16px; display:flex; flex-direction:column; gap:10px; min-width:0;
+  }
+  .go-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .go-head .qnum{ font-family:var(--mono); font-size:13px; color:var(--accent); }
+  .go-head .concept{
+    font-family:var(--mono); font-size:11px; color:var(--accent-cool);
+    border:1px solid var(--line); border-radius:999px; padding:3px 10px;
+  }
+  .code-block{
+    background:var(--code-bg); border:1px solid var(--line); border-radius:10px; overflow:hidden;
+  }
+  .code-header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:7px 12px; background:var(--panel-2); border-bottom:1px solid var(--line);
+    font-family:var(--mono); font-size:12px; color:var(--text-dim);
+  }
+  .copy-btn{
+    font-family:var(--sans); font-size:12px; color:var(--text);
+    background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    padding:4px 10px; cursor:pointer; transition:background .15s ease, color .15s ease;
+  }
+  .copy-btn:hover{ background:var(--accent); color:#1c140f; border-color:var(--accent); }
+  .copy-btn.copied{ background:var(--accent-cool); color:#1c140f; border-color:var(--accent-cool); }
+  pre.codepre{
+    margin:0; padding: 10px 14px; max-height: 52vh; overflow:auto;
+    font-family:var(--mono); font-size: clamp(12.5px, .95vw, 14.5px); line-height:1.55;
+  }
+  code .tok-keyword{ color:var(--code-keyword); }
+  code .tok-string{ color:var(--code-string); }
+  code .tok-number{ color:var(--code-number); }
+  code .tok-type{ color:var(--code-type); }
+  code .tok-comment{ color:var(--code-comment); font-style:italic; }
+
+  .ask-line{
+    display:flex; align-items:center; gap:10px; font-size:14px; color:var(--text-dim);
+  }
+  .ask-line b{ color:var(--text); }
+  .ans-scratch{
+    flex:1; border:none; border-bottom:1px dashed var(--line); background:transparent;
+    color:var(--text); font-family:var(--mono); font-size:14px; padding:4px 6px;
+  }
+  .ans-scratch:focus{ outline:none; border-bottom-color:var(--accent); }
+
+  /* ---------- RECAP ---------- */
+  .recap-grid{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:16px; }
+  .recap-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px 22px;
+  }
+  .recap-card h3{ margin:0 0 10px 0; font-family:var(--serif); color:var(--accent); font-size:19px; }
+  .recap-card ul{ margin:0; padding-left:18px; color:var(--text-dim); font-size:15px; line-height:1.7; }
+  .recap-card ul li b{ color:var(--text); }
+
+  /* ---------- ANSWERS ---------- */
+  .ans-scroll{ flex:1; min-height:0; overflow-y:auto; padding-right:8px; }
+  .ans-section-title{
+    font-family:var(--mono); text-transform:uppercase; letter-spacing:.1em;
+    font-size:14px; color:var(--accent-cool);
+    margin: 4px 0 12px 0; padding-bottom:8px; border-bottom:1px solid var(--line);
+  }
+  .ans-section-title:first-child{ margin-top:0; }
+  .ans-cols{ columns: 2; column-gap:28px; margin-bottom: 22px; }
+  .ans-block{ break-inside:avoid; margin-bottom:14px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px 16px; }
+  .ans-block h4{ margin:0 0 6px 0; font-size:14px; font-family:var(--mono); color:var(--accent); }
+  .ans-block p{ margin:0; font-size:13.5px; color:var(--text-dim); line-height:1.55; }
+  .ans-block p b{ color:var(--text); }
+  .ans-block pre{ margin:6px 0 0; font-family:var(--mono); font-size:12.5px; color:var(--accent-cool); background:var(--code-bg); padding:6px 10px; border-radius:6px; }
+
+  /* ---------- CHROME: progress + counter ---------- */
+  .progress-track{
+    position:fixed; top:0; left:0; right:0; height:4px; background:rgba(255,255,255,0.06); z-index:50;
+  }
+  .progress-fill{
+    height:100%; background:linear-gradient(90deg, var(--accent-soft), var(--accent));
+    width:0%; transition: width .3s ease;
+  }
+  .counter{
+    position:fixed; bottom:16px; right:20px; z-index:50;
+    font-family:var(--mono); font-size:13px; color:var(--text-dim);
+    background:rgba(0,0,0,0.35); border:1px solid var(--line); border-radius:999px; padding:6px 14px;
+    backdrop-filter: blur(4px);
+  }
+  .hint{
+    position:fixed; bottom:16px; left:20px; z-index:50;
+    font-family:var(--mono); font-size:12px; color:var(--text-dim);
+    background:rgba(0,0,0,0.35); border:1px solid var(--line); border-radius:999px; padding:6px 14px;
+  }
+
+  /* ---------- SHORTCUTS OVERLAY ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(10,7,5,0.72); backdrop-filter: blur(3px);
+    display:flex; align-items:center; justify-content:center; z-index:100;
+    opacity:0; pointer-events:none; transition:opacity .2s ease;
+  }
+  .overlay.show{ opacity:1; pointer-events:auto; }
+  .overlay-panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:28px 32px;
+    max-width:520px; width:90%;
+  }
+  .overlay-panel h2{ margin:0 0 14px 0; font-family:var(--serif); color:var(--accent); font-size:22px; }
+  .overlay-panel .row{ display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--line); font-size:14px; color:var(--text-dim); }
+  .overlay-panel .row:last-child{ border-bottom:none; }
+  .overlay-close{
+    margin-top:16px; width:100%; padding:10px; border-radius:8px; border:1px solid var(--line);
+    background:var(--accent); color:#1c140f; font-weight:600; cursor:pointer; font-family:var(--sans); font-size:14px;
+  }
+
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb{ background:var(--panel-2); border-radius:8px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+
+  @media (max-width: 900px){
+    .howto-grid{ grid-template-columns: 1fr; }
+    .opts{ grid-template-columns: 1fr; }
+    .recap-grid{ grid-template-columns: 1fr; }
+    .ans-cols{ columns: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+<div class="counter" id="counter">1 / 18</div>
+<div class="hint">Right-click or → for next · press ? for help</div>
+
+<div class="deck" id="deck">
+
+  <!-- 0: TITLE -->
+  <section class="slide" data-index="0">
+    <div class="title-wrap">
+      <div class="brew-badge">PRELIM SUMMATIVE · MODULES 1–4</div>
+      <div class="title-main">The Java Roastery<br><span class="accent">OOP Summative</span></div>
+      <div class="title-sub">30 items brewed from your reviewer: 15 Multiple Choice + 15 Guess-the-Output, code written half in Tagalog para may kaunting sabor. No pressure — just brew, trace, at tuklasin ang output.</div>
+      <div class="title-stats">
+        <div class="stat-chip"><div class="num">15</div><div class="lbl">Multiple Choice</div></div>
+        <div class="stat-chip"><div class="num">15</div><div class="lbl">Guess the Output</div></div>
+        <div class="stat-chip"><div class="num">M1–4</div><div class="lbl">Coverage only</div></div>
+      </div>
+    </div>
+    <svg class="steam-illo" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg" aria-label="Illustration of a steaming coffee cup, representing the Java Roastery theme" role="img">
+      <g fill="none" stroke="#e3a548" stroke-width="4" stroke-linecap="round" opacity="0.85">
+        <path d="M70 40 C60 20, 80 20, 72 5" />
+        <path d="M100 40 C90 15, 112 15, 102 -2" />
+        <path d="M130 40 C120 20, 142 20, 132 5" />
+      </g>
+      <rect x="50" y="95" width="110" height="70" rx="10" fill="#2c2018" stroke="#e3a548" stroke-width="4"/>
+      <path d="M160 105 h18 a18 18 0 0 1 0 42 h-18" fill="none" stroke="#e3a548" stroke-width="4"/>
+      <ellipse cx="105" cy="95" rx="55" ry="10" fill="#8fbf9a" opacity="0.85"/>
+      <rect x="40" y="165" width="130" height="10" rx="4" fill="#e3a548" opacity="0.6"/>
+    </svg>
+  </section>
+
+  <!-- 1: INSTRUCTIONS -->
+  <section class="slide" data-index="1">
+    <div class="eyebrow">Before we brew</div>
+    <h1 class="slide-title">How to Navigate</h1>
+    <p class="subtitle">This deck runs on right-click and keyboard — left-click stays free for selecting text and hitting buttons.</p>
+    <div class="slide-body">
+      <div class="howto-grid">
+        <div class="howto-card">
+          <h3>Move Forward / Back</h3>
+          <p><kbd>→</kbd> or right-click anywhere advances. <kbd>←</kbd> or your mouse's "Back" side button goes back. Front side button also advances.</p>
+        </div>
+        <div class="howto-card">
+          <h3>Jump Around</h3>
+          <p><kbd>Home</kbd> jumps to the first slide, <kbd>End</kbd> jumps to the last. Swipe left/right on mobile.</p>
+        </div>
+        <div class="howto-card">
+          <h3>Need a Reminder?</h3>
+          <p>Press <kbd>?</kbd> anytime to pull up this shortcut list again. <kbd>Esc</kbd> closes it.</p>
+        </div>
+        <div class="howto-card">
+          <h3>Multiple Choice</h3>
+          <p>Read each order ticket and pick your answer mentally (or aloud, kung may kasama ka). Answers are revealed only on the final slide.</p>
+        </div>
+        <div class="howto-card">
+          <h3>Guess the Output</h3>
+          <p>Trace the Taglish code carefully. There's a scratch line under each snippet if you want to jot your guess before flipping to the Answers slide.</p>
+        </div>
+        <div class="howto-card">
+          <h3>Copy Any Code</h3>
+          <p>Every code block has a Copy button — top right of its header — for pasting into your own IDE to test.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2: MC 1-3 -->
+  <section class="slide" data-index="2">
+    <div class="section-tag">Activity 1 · Multiple Choice</div>
+    <h1 class="slide-title">Round 1 — Foundations & OOP Basics</h1>
+    <div class="slide-body">
+      <div class="mc-grid">
+        <div class="ticket">
+          <div class="qnum">ORDER #01</div>
+          <div class="qtext">Which best describes an <b>algorithm</b>?</div>
+          <div class="opts">
+            <div><b>A.</b> Random lines of code with no order</div>
+            <div><b>B.</b> A sequence of well-defined steps that solve a problem</div>
+            <div><b>C.</b> A type of variable</div>
+            <div><b>D.</b> A Java-only keyword</div>
+          </div>
+        </div>
+        <div class="ticket">
+          <div class="qnum">ORDER #02</div>
+          <div class="qtext">In the Class/Object analogy, a <b>class</b> is best compared to:</div>
+          <div class="opts">
+            <div><b>A.</b> A finished cookie</div>
+            <div><b>B.</b> A cookie cutter</div>
+            <div><b>C.</b> The oven</div>
+            <div><b>D.</b> The person eating the cookie</div>
+          </div>
+        </div>
+        <div class="ticket">
+          <div class="qnum">ORDER #03</div>
+          <div class="qtext">Which OOP pillar means "bundling data + methods together, protecting data from outside tampering"?</div>
+          <div class="opts">
+            <div><b>A.</b> Abstraction</div>
+            <div><b>B.</b> Inheritance</div>
+            <div><b>C.</b> Encapsulation</div>
+            <div><b>D.</b> Polymorphism</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3: MC 4-6 -->
+  <section class="slide" data-index="3">
+    <div class="section-tag">Activity 1 · Multiple Choice</div>
+    <h1 class="slide-title">Round 2 — Classes, Objects & Constructors</h1>
+    <div class="slide-body">
+      <div class="mc-grid">
+        <div class="ticket">
+          <div class="qnum">ORDER #04</div>
+          <div class="qtext">What is the correct syntax to create an object <code>myObj</code> from class <code>MyClass</code>?</div>
+          <div class="opts">
+            <div><b>A.</b> <code>class MyClass = new myObj();</code></div>
+            <div><b>B.</b> <code>MyClass myObj = new MyClass();</code></div>
+            <div><b>C.</b> <code>new myObj = MyClass();</code></div>
+            <div><b>D.</b> <code>MyClass = myObj.new();</code></div>
+          </div>
+        </div>
+        <div class="ticket">
+          <div class="qnum">ORDER #05</div>
+          <div class="qtext">A constructor's name in Java must:</div>
+          <div class="opts">
+            <div><b>A.</b> Start with lowercase</div>
+            <div><b>B.</b> Match the class name exactly</div>
+            <div><b>C.</b> Always be <code>init()</code></div>
+            <div><b>D.</b> Contain a return type</div>
+          </div>
+        </div>
+        <div class="ticket">
+          <div class="qnum">ORDER #06</div>
+          <div class="qtext">What does the keyword <code>this</code> refer to inside a class?</div>
+          <div class="opts">
+            <div><b>A.</b> The class itself</div>
+            <div><b>B.</b> The current object instance</div>
+            <div><b>C.</b> A static method</div>
+            <div><b>D.</b> Nothing — it's optional decoration</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4: MC 7-9 -->
+  <section class="slide" data-index="4">
+    <div class="section-tag">Activity 1 · Multiple Choice</div>
+    <h1 class="slide-title">Round 3 — Fields, Variables & the Dot Operator</h1>
+    <div class="slide-body">
+      <div class="mc-grid">
+        <div class="ticket">
+          <div class="qnum">ORDER #07</div>
+          <div class="qtext">A <b>field</b> declared directly inside a class (outside any method) is also known as:</div>
+          <div class="opts">
+            <div><b>A.</b> A local variable</div>
+            <div><b>B.</b> An attribute / instance variable</div>
+            <div><b>C.</b> A parameter</div>
+            <div><b>D.</b> A loop counter</div>
+          </div>
+        </div>
+        <div class="ticket">
+          <div class="qnum">ORDER #08</div>
+          <div class="qtext">What does the dot ( <code>.</code> ) operator do in <code>myCar.model</code>?</div>
+          <div class="opts">
+            <div><b>A.</b> Ends a statement</div>
+            <div><b>B.</b> Accesses an object's field or method</div>
+            <div><b>C.</b> Multiplies two numbers</div>
+            <div><b>D.</b> Declares a new class</div>
+          </div>
+        </div>
+        <div class="ticket">
+          <div class="qnum">ORDER #09</div>
+          <div class="qtext">Given <code>int[] presyo = {10, 20, 30};</code> — what does <code>presyo.length</code> return?</div>
+          <div class="opts">
+            <div><b>A.</b> 30</div>
+            <div><b>B.</b> 3</div>
+            <div><b>C.</b> An error, arrays have no length</div>
+            <div><b>D.</b> 0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5: MC 10-12 -->
+  <section class="slide" data-index="5">
+    <div class="section-tag">Activity 1 · Multiple Choice</div>
+    <h1 class="slide-title">Round 4 — Encapsulation & State</h1>
+    <div class="slide-body">
+      <div class="mc-grid">
+        <div class="ticket">
+          <div class="qnum">ORDER #10</div>
+          <div class="qtext">A getter method is typically used to:</div>
+          <div class="opts">
+            <div><b>A.</b> Set a private field's value</div>
+            <div><b>B.</b> Return/read a private field's value</div>
+            <div><b>C.</b> Delete an object</div>
+            <div><b>D.</b> Create a new class</div>
+          </div>
+        </div>
+        <div class="ticket">
+          <div class="qnum">ORDER #11</div>
+          <div class="qtext">Why do we usually make fields <code>private</code> and use getters/setters?</div>
+          <div class="opts">
+            <div><b>A.</b> Because <code>public</code> fields cause syntax errors</div>
+            <div><b>B.</b> To control and validate access to the data</div>
+            <div><b>C.</b> Java requires it to compile</div>
+            <div><b>D.</b> It makes the program run faster</div>
+          </div>
+        </div>
+        <div class="ticket">
+          <div class="qnum">ORDER #12</div>
+          <div class="qtext"><b>State</b>, in OOP terms, refers to:</div>
+          <div class="opts">
+            <div><b>A.</b> Its unique memory address</div>
+            <div><b>B.</b> The data an object holds (its fields' values)</div>
+            <div><b>C.</b> Its method names only</div>
+            <div><b>D.</b> The country the server is hosted in</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6: MC 13-15 -->
+  <section class="slide" data-index="6">
+    <div class="section-tag">Activity 1 · Multiple Choice</div>
+    <h1 class="slide-title">Round 5 — Java Runtime & Class Members</h1>
+    <div class="slide-body">
+      <div class="mc-grid">
+        <div class="ticket">
+          <div class="qnum">ORDER #13</div>
+          <div class="qtext">Which of these is a <b>Data Member</b> (not a Function Member)?</div>
+          <div class="opts">
+            <div><b>A.</b> <code>printCheck()</code></div>
+            <div><b>B.</b> <code>Kape()</code> constructor</div>
+            <div><b>C.</b> <code>int x;</code></div>
+            <div><b>D.</b> <code>describe()</code></div>
+          </div>
+        </div>
+        <div class="ticket">
+          <div class="qnum">ORDER #14</div>
+          <div class="qtext">Java achieves "write once, run anywhere" because of:</div>
+          <div class="opts">
+            <div><b>A.</b> Magic</div>
+            <div><b>B.</b> The JVM interpreting compiled bytecode</div>
+            <div><b>C.</b> It only runs on Windows</div>
+            <div><b>D.</b> It skips compiling entirely</div>
+          </div>
+        </div>
+        <div class="ticket">
+          <div class="qnum">ORDER #15</div>
+          <div class="qtext">If an <code>int</code> field is declared but never assigned a value, Java gives it a default of:</div>
+          <div class="opts">
+            <div><b>A.</b> <code>null</code></div>
+            <div><b>B.</b> <code>0</code></div>
+            <div><b>C.</b> <code>false</code></div>
+            <div><b>D.</b> A compile error</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7: GO 1-2 -->
+  <section class="slide" data-index="7">
+    <div class="section-tag">Activity 2 · Guess the Output</div>
+    <h1 class="slide-title">Brew Log #1 — Constructors in Action</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+
+        <div class="go-card">
+          <div class="go-head"><span class="qnum">ITEM #01</span><span class="concept">field reassignment</span></div>
+          <div class="code-block">
+            <div class="code-header"><span>Aso.java</span><button class="copy-btn" data-target="code1">Copy</button></div>
+            <pre class="codepre"><code id="code1"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code1">public class Aso {
+    String pangalan = "Bantay";
+
+    void tahol() {
+        System.out.println(pangalan + ": Aw! Aw! Kumain na ba ako?");
+    }
+
+    public static void main(String[] args) {
+        Aso ako = new Aso();
+        ako.pangalan = "Bruno";
+        ako.tahol();
+    }
+}</script>
+          <div class="ask-line"><b>Ano ang output?</b><input class="ans-scratch" type="text" placeholder="isulat ang hula mo dito..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="go-head"><span class="qnum">ITEM #02</span><span class="concept">constructor + method</span></div>
+          <div class="code-block">
+            <div class="code-header"><span>Kape.java</span><button class="copy-btn" data-target="code2">Copy</button></div>
+            <pre class="codepre"><code id="code2"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code2">public class Kape {
+    String laki;
+    String lasa;
+
+    public Kape(String laki, String lasa) {
+        this.laki = laki;
+        this.lasa = lasa;
+    }
+
+    void ilarawan() {
+        System.out.println("Isang " + laki + " na kape, lasang " + lasa + ".");
+    }
+
+    public static void main(String[] args) {
+        Kape order = new Kape("Grande", "Matapang");
+        order.ilarawan();
+    }
+}</script>
+          <div class="ask-line"><b>Ano ang output?</b><input class="ans-scratch" type="text" placeholder="isulat ang hula mo dito..."></div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 8: GO 3-4 -->
+  <section class="slide" data-index="8">
+    <div class="section-tag">Activity 2 · Guess the Output</div>
+    <h1 class="slide-title">Brew Log #2 — Getters, Setters & Arrays</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+
+        <div class="go-card">
+          <div class="go-head"><span class="qnum">ITEM #03</span><span class="concept">getter/setter validation</span></div>
+          <div class="code-block">
+            <div class="code-header"><span>PresyoNgKape.java</span><button class="copy-btn" data-target="code3">Copy</button></div>
+            <pre class="codepre"><code id="code3"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code3">public class Presyo_ng_Kape {
+    private double presyo;
+
+    public double kunPresyo() {
+        return presyo;
+    }
+
+    public void itakdaPresyo(double bago) {
+        if (bago >= 0) {
+            presyo = bago;
+        }
+    }
+
+    public static void main(String[] args) {
+        Presyo_ng_Kape kape = new Presyo_ng_Kape();
+        kape.itakdaPresyo(150);
+        kape.itakdaPresyo(-50); // dapat tanggihan!
+        System.out.println("Presyo: " + kape.kunPresyo());
+    }
+}</script>
+          <div class="ask-line"><b>Ano ang output?</b><input class="ans-scratch" type="text" placeholder="isulat ang hula mo dito..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="go-head"><span class="qnum">ITEM #04</span><span class="concept">array + loop sum</span></div>
+          <div class="code-block">
+            <div class="code-header"><span>BentaTracker.java</span><button class="copy-btn" data-target="code4">Copy</button></div>
+            <pre class="codepre"><code id="code4"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code4">public class BentaTracker {
+    public static void main(String[] args) {
+        int[] benta = {120, 95, 200};
+        int kabuuan = 0;
+
+        for (int i = 0; i < benta.length; i++) {
+            kabuuan = kabuuan + benta[i];
+        }
+        System.out.println("Kabuuang Benta: " + kabuuan);
+    }
+}</script>
+          <div class="ask-line"><b>Ano ang output?</b><input class="ans-scratch" type="text" placeholder="isulat ang hula mo dito..."></div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 9: GO 5-6 -->
+  <section class="slide" data-index="9">
+    <div class="section-tag">Activity 2 · Guess the Output</div>
+    <h1 class="slide-title">Brew Log #3 — Methods Calling Methods</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+
+        <div class="go-card">
+          <div class="go-head"><span class="qnum">ITEM #05</span><span class="concept">method reuse + array</span></div>
+          <div class="code-block">
+            <div class="code-header"><span>BentaTracker2.java</span><button class="copy-btn" data-target="code5">Copy</button></div>
+            <pre class="codepre"><code id="code5"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code5">public class BentaTracker2 {
+    static int kabuuanNgBenta(int[] arr) {
+        int total = 0;
+        for (int i = 0; i < arr.length; i++) {
+            total += arr[i];
+        }
+        return total;
+    }
+
+    static double average(int[] arr) {
+        return (double) kabuuanNgBenta(arr) / arr.length;
+    }
+
+    public static void main(String[] args) {
+        int[] benta = {100, 200, 300, 400};
+        System.out.println("Average: " + average(benta));
+    }
+}</script>
+          <div class="ask-line"><b>Ano ang output?</b><input class="ans-scratch" type="text" placeholder="isulat ang hula mo dito..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="go-head"><span class="qnum">ITEM #06</span><span class="concept">object independence</span></div>
+          <div class="code-block">
+            <div class="code-header"><span>Sapatos.java</span><button class="copy-btn" data-target="code6">Copy</button></div>
+            <pre class="codepre"><code id="code6"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code6">public class Sapatos {
+    String kulay;
+
+    public Sapatos(String kulay) {
+        this.kulay = kulay;
+    }
+
+    public static void main(String[] args) {
+        Sapatos adidas = new Sapatos("itim");
+        Sapatos nike = new Sapatos("puti");
+
+        adidas.kulay = "pula"; // binago lang ito
+
+        System.out.println(adidas.kulay + " " + nike.kulay);
+    }
+}</script>
+          <div class="ask-line"><b>Ano ang output?</b><input class="ans-scratch" type="text" placeholder="isulat ang hula mo dito..."></div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 10: GO 7-8 -->
+  <section class="slide" data-index="10">
+    <div class="section-tag">Activity 2 · Guess the Output</div>
+    <h1 class="slide-title">Brew Log #4 — Defaults & Overriding</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+
+        <div class="go-card">
+          <div class="go-head"><span class="qnum">ITEM #07</span><span class="concept">default field values</span></div>
+          <div class="code-block">
+            <div class="code-header"><span>DefaultCheck.java</span><button class="copy-btn" data-target="code7">Copy</button></div>
+            <pre class="codepre"><code id="code7"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code7">public class DefaultCheck {
+    int balde;
+    String pangalan;
+
+    public static void main(String[] args) {
+        DefaultCheck item = new DefaultCheck();
+        System.out.println(item.balde + " " + item.pangalan);
+    }
+}</script>
+          <div class="ask-line"><b>Ano ang output?</b><input class="ans-scratch" type="text" placeholder="isulat ang hula mo dito..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="go-head"><span class="qnum">ITEM #08</span><span class="concept">toString override</span></div>
+          <div class="code-block">
+            <div class="code-header"><span>Tao.java</span><button class="copy-btn" data-target="code8">Copy</button></div>
+            <pre class="codepre"><code id="code8"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code8">public class Tao {
+    String pangalan;
+
+    public Tao(String pangalan) {
+        this.pangalan = pangalan;
+    }
+
+    public String toString() {
+        return "Tao: " + pangalan;
+    }
+
+    public static void main(String[] args) {
+        Tao juan = new Tao("Juan");
+        System.out.println(juan);
+    }
+}</script>
+          <div class="ask-line"><b>Ano ang output?</b><input class="ans-scratch" type="text" placeholder="isulat ang hula mo dito..."></div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 11: GO 9-10 -->
+  <section class="slide" data-index="11">
+    <div class="section-tag">Activity 2 · Guess the Output</div>
+    <h1 class="slide-title">Brew Log #5 — Conditionals & Loops</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+
+        <div class="go-card">
+          <div class="go-head"><span class="qnum">ITEM #09</span><span class="concept">if / else if / else</span></div>
+          <div class="code-block">
+            <div class="code-header"><span>CheckPangalan.java</span><button class="copy-btn" data-target="code9">Copy</button></div>
+            <pre class="codepre"><code id="code9"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code9">public class CheckPangalan {
+    public static void main(String[] args) {
+        String pangalan = "Maria";
+
+        if (pangalan.equals("Juan")) {
+            System.out.println("Kumusta, Juan!");
+        } else if (pangalan.equals("Maria")) {
+            System.out.println("Ang ganda mong pangalan, Maria!");
+        } else {
+            System.out.println("Sino ka?");
+        }
+    }
+}</script>
+          <div class="ask-line"><b>Ano ang output?</b><input class="ans-scratch" type="text" placeholder="isulat ang hula mo dito..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="go-head"><span class="qnum">ITEM #10</span><span class="concept">for loop countdown</span></div>
+          <div class="code-block">
+            <div class="code-header"><span>Countdown.java</span><button class="copy-btn" data-target="code10">Copy</button></div>
+            <pre class="codepre"><code id="code10"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code10">public class Countdown {
+    public static void main(String[] args) {
+        for (int i = 3; i >= 1; i--) {
+            System.out.println("Paalis na sa " + i + "...");
+        }
+        System.out.println("Umalis na!");
+    }
+}</script>
+          <div class="ask-line"><b>Ano ang output?</b><input class="ans-scratch" type="text" placeholder="isulat ang hula mo dito..."></div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 12: GO 11-12 -->
+  <section class="slide" data-index="12">
+    <div class="section-tag">Activity 2 · Guess the Output</div>
+    <h1 class="slide-title">Brew Log #6 — Array Scanning & String Gotchas</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+
+        <div class="go-card">
+          <div class="go-head"><span class="qnum">ITEM #11</span><span class="concept">array max scan</span></div>
+          <div class="code-block">
+            <div class="code-header"><span>HighestPresyo.java</span><button class="copy-btn" data-target="code11">Copy</button></div>
+            <pre class="codepre"><code id="code11"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code11">public class HighestPresyo {
+    static int getHighest(int[] arr) {
+        int pinakamataas = arr[0];
+        for (int i = 1; i < arr.length; i++) {
+            if (arr[i] > pinakamataas) {
+                pinakamataas = arr[i];
+            }
+        }
+        return pinakamataas;
+    }
+
+    public static void main(String[] args) {
+        int[] presyo = {85, 120, 60, 150, 99};
+        System.out.println("Pinakamahal: " + getHighest(presyo));
+    }
+}</script>
+          <div class="ask-line"><b>Ano ang output?</b><input class="ans-scratch" type="text" placeholder="isulat ang hula mo dito..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="go-head"><span class="qnum">ITEM #12</span><span class="concept">string concatenation order</span></div>
+          <div class="code-block">
+            <div class="code-header"><span>ConcatGotcha.java</span><button class="copy-btn" data-target="code12">Copy</button></div>
+            <pre class="codepre"><code id="code12"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code12">public class ConcatGotcha {
+    public static void main(String[] args) {
+        System.out.println(1 + 2 + " kape");
+        System.out.println("kape " + 1 + 2);
+    }
+}</script>
+          <div class="ask-line"><b>Ano ang output?</b><input class="ans-scratch" type="text" placeholder="isulat ang hula mo dito..."></div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 13: GO 13-14 -->
+  <section class="slide" data-index="13">
+    <div class="section-tag">Activity 2 · Guess the Output</div>
+    <h1 class="slide-title">Brew Log #7 — Booleans & Internal Calls</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+
+        <div class="go-card">
+          <div class="go-head"><span class="qnum">ITEM #13</span><span class="concept">method calling a getter</span></div>
+          <div class="code-block">
+            <div class="code-header"><span>KapeOrder.java</span><button class="copy-btn" data-target="code13">Copy</button></div>
+            <pre class="codepre"><code id="code13"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code13">public class KapeOrder {
+    private double presyo = 99.5;
+
+    double getPresyo() {
+        return presyo;
+    }
+
+    void ilarawan() {
+        System.out.println("Ang presyo ng order mo ay " + getPresyo() + " pesos.");
+    }
+
+    public static void main(String[] args) {
+        KapeOrder order = new KapeOrder();
+        order.ilarawan();
+    }
+}</script>
+          <div class="ask-line"><b>Ano ang output?</b><input class="ans-scratch" type="text" placeholder="isulat ang hula mo dito..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="go-head"><span class="qnum">ITEM #14</span><span class="concept">boolean default value</span></div>
+          <div class="code-block">
+            <div class="code-header"><span>WalangLaman.java</span><button class="copy-btn" data-target="code14">Copy</button></div>
+            <pre class="codepre"><code id="code14"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code14">public class WalangLaman {
+    boolean mayLaman;
+
+    public static void main(String[] args) {
+        WalangLaman baso = new WalangLaman();
+
+        if (baso.mayLaman) {
+            System.out.println("May laman ang baso!");
+        } else {
+            System.out.println("Walang laman, tabi lang.");
+        }
+    }
+}</script>
+          <div class="ask-line"><b>Ano ang output?</b><input class="ans-scratch" type="text" placeholder="isulat ang hula mo dito..."></div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 14: GO 15 (solo, bonus-style) -->
+  <section class="slide" data-index="14">
+    <div class="section-tag">Activity 2 · Guess the Output</div>
+    <h1 class="slide-title">Brew Log #8 — Array of Objects (Boss Level ☕)</h1>
+    <div class="slide-body">
+      <div class="go-grid" style="grid-template-columns:minmax(0,1fr);">
+
+        <div class="go-card">
+          <div class="go-head"><span class="qnum">ITEM #15</span><span class="concept">array of objects + getter loop</span></div>
+          <div class="code-block">
+            <div class="code-header"><span>OrderList.java</span><button class="copy-btn" data-target="code15">Copy</button></div>
+            <pre class="codepre"><code id="code15"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code15">public class OrderList {
+    public static void main(String[] args) {
+        Kape2[] mgaOrder = new Kape2[3];
+        mgaOrder[0] = new Kape2(100);
+        mgaOrder[1] = new Kape2(150);
+        mgaOrder[2] = new Kape2(200);
+
+        double kabuuan = 0;
+        for (int i = 0; i < mgaOrder.length; i++) {
+            kabuuan += mgaOrder[i].getPresyo();
+        }
+        System.out.println("Total Bill: " + kabuuan);
+    }
+}
+
+class Kape2 {
+    private double presyo;
+
+    public Kape2(double presyo) {
+        this.presyo = presyo;
+    }
+
+    double getPresyo() {
+        return presyo;
+    }
+}</script>
+          <div class="ask-line"><b>Ano ang output?</b><input class="ans-scratch" type="text" placeholder="isulat ang hula mo dito..."></div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 15: RECAP -->
+  <section class="slide" data-index="15">
+    <div class="eyebrow">Palamig muna</div>
+    <h1 class="slide-title">Recap Before the Reveal</h1>
+    <p class="subtitle">Here's everything this summative just quizzed you on — a fast last look before checking your answers.</p>
+    <div class="slide-body">
+      <div class="recap-grid">
+        <div class="recap-card">
+          <h3>Concepts Tested — Multiple Choice</h3>
+          <ul>
+            <li><b>Foundations:</b> algorithms, compiler, JVM/bytecode</li>
+            <li><b>OOP core:</b> class vs object, the 4 pillars (light touch)</li>
+            <li><b>Building objects:</b> constructors, <code>this</code>, the dot operator</li>
+            <li><b>Structure:</b> fields vs local variables, Data vs Function Members</li>
+            <li><b>Encapsulation:</b> getters/setters, why <code>private</code> matters</li>
+            <li><b>State:</b> what an object "has" vs "does", default values</li>
+          </ul>
+        </div>
+        <div class="recap-card">
+          <h3>Concepts Tested — Guess the Output</h3>
+          <ul>
+            <li><b>Constructors</b> setting up fields on <code>new</code></li>
+            <li><b>Getters/setters</b> with validation logic (reject bad input)</li>
+            <li><b>Arrays</b> — looping, summing, averaging, finding the max</li>
+            <li><b>Methods calling methods</b> (reuse instead of repeating logic)</li>
+            <li><b>Object independence</b> — two objects, same class, separate state</li>
+            <li><b>Defaults, <code>toString()</code>, conditionals, and loops</b> tying it together</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16: ANSWERS — MULTIPLE CHOICE -->
+  <section class="slide" data-index="16">
+    <div class="eyebrow">The final receipt · Page 1 of 2</div>
+    <h1 class="slide-title">Answer Key — Multiple Choice (15 items)</h1>
+    <div class="slide-body">
+      <div class="ans-scroll">
+        <div class="ans-cols">
+
+          <div class="ans-block"><h4>MC #01</h4><p><b>B.</b> An algorithm is a sequence of well-defined steps that solve a problem.</p></div>
+          <div class="ans-block"><h4>MC #02</h4><p><b>B.</b> A class is the cookie cutter (template); objects are the cookies made from it.</p></div>
+          <div class="ans-block"><h4>MC #03</h4><p><b>C.</b> Encapsulation bundles data + methods and protects data from outside tampering.</p></div>
+          <div class="ans-block"><h4>MC #04</h4><p><b>B.</b> Correct syntax: <code>ClassName obj = new ClassName();</code></p></div>
+          <div class="ans-block"><h4>MC #05</h4><p><b>B.</b> A constructor's name must match its class name exactly.</p></div>
+          <div class="ans-block"><h4>MC #06</h4><p><b>B.</b> <code>this</code> refers to the current object instance.</p></div>
+          <div class="ans-block"><h4>MC #07</h4><p><b>B.</b> A field is also called an attribute or instance variable.</p></div>
+          <div class="ans-block"><h4>MC #08</h4><p><b>B.</b> The dot operator accesses an object's field or method.</p></div>
+          <div class="ans-block"><h4>MC #09</h4><p><b>B.</b> <code>presyo.length</code> returns <code>3</code> — the number of elements.</p></div>
+          <div class="ans-block"><h4>MC #10</h4><p><b>B.</b> A getter returns/reads a private field's value.</p></div>
+          <div class="ans-block"><h4>MC #11</h4><p><b>B.</b> Getters/setters let you control and validate access to data.</p></div>
+          <div class="ans-block"><h4>MC #12</h4><p><b>B.</b> State = the data an object holds, defined by its fields.</p></div>
+          <div class="ans-block"><h4>MC #13</h4><p><b>C.</b> <code>int x;</code> is a Data Member (a field); the rest are Function Members.</p></div>
+          <div class="ans-block"><h4>MC #14</h4><p><b>B.</b> The JVM interprets compiled bytecode on any platform.</p></div>
+          <div class="ans-block"><h4>MC #15</h4><p><b>B.</b> An unset <code>int</code> field defaults to <code>0</code>.</p></div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 17: ANSWERS — GUESS THE OUTPUT -->
+  <section class="slide" data-index="17">
+    <div class="eyebrow">The final receipt · Page 2 of 2</div>
+    <h1 class="slide-title">Answer Key — Guess the Output (15 items)</h1>
+    <div class="slide-body">
+      <div class="ans-scroll">
+        <div class="ans-cols">
+
+          <div class="ans-block"><h4>GO #01 — Aso.java</h4><p><code>ako.pangalan</code> is reassigned to <code>"Bruno"</code> before <code>tahol()</code> runs.</p><pre>Bruno: Aw! Aw! Kumain na ba ako?</pre></div>
+          <div class="ans-block"><h4>GO #02 — Kape.java</h4><p>Constructor sets <code>laki</code>/<code>lasa</code>, then <code>ilarawan()</code> prints them.</p><pre>Isang Grande na kape, lasang Matapang.</pre></div>
+          <div class="ans-block"><h4>GO #03 — Presyo_ng_Kape.java</h4><p>Setter rejects <code>-50</code> since it fails <code>bago &gt;= 0</code>, so <code>presyo</code> stays <code>150</code>.</p><pre>Presyo: 150.0</pre></div>
+          <div class="ans-block"><h4>GO #04 — BentaTracker.java</h4><p>Loop sums <code>120 + 95 + 200</code>.</p><pre>Kabuuang Benta: 415</pre></div>
+          <div class="ans-block"><h4>GO #05 — BentaTracker2.java</h4><p>Sum = 1000, divided by 4 elements (cast to <code>double</code>).</p><pre>Average: 250.0</pre></div>
+          <div class="ans-block"><h4>GO #06 — Sapatos.java</h4><p>Only <code>adidas.kulay</code> was changed — <code>nike</code> is a separate object, untouched.</p><pre>pula puti</pre></div>
+          <div class="ans-block"><h4>GO #07 — DefaultCheck.java</h4><p>Unset <code>int</code> defaults to <code>0</code>; unset <code>String</code> (an object reference) defaults to <code>null</code>.</p><pre>0 null</pre></div>
+          <div class="ans-block"><h4>GO #08 — Tao.java</h4><p><code>println(juan)</code> implicitly calls the overridden <code>toString()</code>.</p><pre>Tao: Juan</pre></div>
+          <div class="ans-block"><h4>GO #09 — CheckPangalan.java</h4><p><code>pangalan</code> is <code>"Maria"</code>, matching the second <code>else if</code> branch.</p><pre>Ang ganda mong pangalan, Maria!</pre></div>
+          <div class="ans-block"><h4>GO #10 — Countdown.java</h4><p>Loop runs from <code>3</code> down to <code>1</code>, then the final line prints once, outside the loop.</p><pre>Paalis na sa 3...
+Paalis na sa 2...
+Paalis na sa 1...
+Umalis na!</pre></div>
+          <div class="ans-block"><h4>GO #11 — HighestPresyo.java</h4><p>The loop scans and keeps the largest value it has seen — <code>150</code> is the max in the array.</p><pre>Pinakamahal: 150</pre></div>
+          <div class="ans-block"><h4>GO #12 — ConcatGotcha.java</h4><p>Left-to-right evaluation: numbers before a string add up first; after a string, everything becomes text concatenation.</p><pre>3 kape
+kape 12</pre></div>
+          <div class="ans-block"><h4>GO #13 — KapeOrder.java</h4><p><code>ilarawan()</code> calls <code>getPresyo()</code> internally to fetch the private field's value.</p><pre>Ang presyo ng order mo ay 99.5 pesos.</pre></div>
+          <div class="ans-block"><h4>GO #14 — WalangLaman.java</h4><p>An unset <code>boolean</code> field defaults to <code>false</code>, so the <code>else</code> branch runs.</p><pre>Walang laman, tabi lang.</pre></div>
+          <div class="ans-block"><h4>GO #15 — OrderList.java</h4><p>Three <code>Kape2</code> objects are stored in an array; the loop calls <code>getPresyo()</code> on each and adds it up: <code>100 + 150 + 200 = 450</code>.</p><pre>Total Bill: 450.0</pre></div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- Shortcuts overlay -->
+<div class="overlay" id="overlay">
+  <div class="overlay-panel">
+    <h2>Keyboard & Mouse Shortcuts</h2>
+    <div class="row"><span>Next slide</span><span><kbd>→</kbd> / right-click / front side button</span></div>
+    <div class="row"><span>Previous slide</span><span><kbd>←</kbd> / back side button</span></div>
+    <div class="row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="row"><span>Show this panel</span><span><kbd>?</kbd></span></div>
+    <div class="row"><span>Close this panel</span><span><kbd>Esc</kbd></span></div>
+    <button class="overlay-close" id="overlayClose">Balik sa Slides</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- Syntax highlighter (single-pass tokenizer) ---------------- */
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  var TOKEN_RE = /(\/\/.*$)|("(?:[^"\\]|\\.)*")|('(?:[^'\\]|\\.)*')|\b(public|private|protected|static|final|class|new|void|int|double|boolean|char|String|return|if|else|for|while|this|true|false|null|import)\b|\b(\d+\.\d+|\d+)\b|\b([A-Z][A-Za-z0-9_]*)\b/gm;
+
+  function highlightJava(src){
+    var out = '';
+    var lastIndex = 0;
+    var m;
+    TOKEN_RE.lastIndex = 0;
+    while ((m = TOKEN_RE.exec(src)) !== null){
+      out += escapeHtml(src.slice(lastIndex, m.index));
+      if (m[1] !== undefined) out += '<span class="tok-comment">' + escapeHtml(m[1]) + '</span>';
+      else if (m[2] !== undefined) out += '<span class="tok-string">' + escapeHtml(m[2]) + '</span>';
+      else if (m[3] !== undefined) out += '<span class="tok-string">' + escapeHtml(m[3]) + '</span>';
+      else if (m[4] !== undefined) out += '<span class="tok-keyword">' + escapeHtml(m[4]) + '</span>';
+      else if (m[5] !== undefined) out += '<span class="tok-number">' + escapeHtml(m[5]) + '</span>';
+      else if (m[6] !== undefined) out += '<span class="tok-type">' + escapeHtml(m[6]) + '</span>';
+      lastIndex = TOKEN_RE.lastIndex;
+      if (m.index === TOKEN_RE.lastIndex) TOKEN_RE.lastIndex++;
+    }
+    out += escapeHtml(src.slice(lastIndex));
+    return out;
+  }
+
+  function initCodeBlocks(){
+    var sources = document.querySelectorAll('script[type="text/plain"][data-target]');
+    sources.forEach(function(src){
+      var id = src.getAttribute('data-target');
+      var target = document.getElementById(id);
+      if (!target) return;
+      var raw = src.textContent.replace(/^\n/, '').replace(/\n$/, '');
+      target.innerHTML = highlightJava(raw);
+      target.setAttribute('data-raw', raw);
+    });
+  }
+
+  function fallbackCopy(text){
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); } catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  function initCopyButtons(){
+    document.querySelectorAll('.copy-btn').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var id = btn.getAttribute('data-target');
+        var code = document.getElementById(id);
+        var text = code ? (code.getAttribute('data-raw') || code.textContent) : '';
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).catch(function(){ fallbackCopy(text); });
+        } else {
+          fallbackCopy(text);
+        }
+        var originalText = btn.textContent;
+        btn.textContent = 'Copied! ✓';
+        btn.classList.add('copied');
+        setTimeout(function(){
+          btn.textContent = originalText;
+          btn.classList.remove('copied');
+        }, 1400);
+      });
+    });
+  }
+
+  /* ---------------- Slide navigation ---------------- */
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length;
+  var current = 0;
+  var progressFill = document.getElementById('progressFill');
+  var counterEl = document.getElementById('counter');
+  var overlay = document.getElementById('overlay');
+  var overlayClose = document.getElementById('overlayClose');
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function updateChrome(){
+    var pct = ((current + 1) / total) * 100;
+    progressFill.style.width = pct + '%';
+    counterEl.textContent = (current + 1) + ' / ' + total;
+  }
+
+  function isInteractive(el){
+    return !!(el.closest && el.closest('button, a, input, textarea, select, .no-nav, .overlay'));
+  }
+
+  function goTo(target, dir){
+    if (target < 0 || target >= total || target === current) return;
+    var oldEl = slides[current];
+    var newEl = slides[target];
+
+    oldEl.classList.remove('active');
+    oldEl.classList.add(dir > 0 ? 'exit-left' : 'exit-right');
+
+    newEl.classList.remove('exit-left', 'exit-right', 'enter-left');
+    if (reduceMotion){
+      newEl.classList.add('active');
+    } else {
+      if (dir < 0) newEl.classList.add('enter-left'); // dir > 0 uses the default right-offset state
+      void newEl.offsetWidth; // force reflow so the transition below actually animates
+      requestAnimationFrame(function(){
+        newEl.classList.add('active');
+      });
+    }
+    newEl.scrollTop = 0;
+
+    current = target;
+    updateChrome();
+  }
+
+  function next(){ goTo(current + 1, 1); }
+  function prev(){ goTo(current - 1, -1); }
+  function first(){ goTo(0, -1); }
+  function last(){ goTo(total - 1, 1); }
+
+  function showOverlay(){ overlay.classList.add('show'); }
+  function hideOverlay(){ overlay.classList.remove('show'); }
+  function toggleOverlay(){
+    if (overlay.classList.contains('show')) hideOverlay(); else showOverlay();
+  }
+
+  /* Keyboard */
+  document.addEventListener('keydown', function(e){
+    if (e.key === '?' ){ toggleOverlay(); return; }
+    if (e.key === 'Escape'){ hideOverlay(); return; }
+    if (overlay.classList.contains('show')) return;
+    if (e.key === 'ArrowRight' || e.key === 'PageDown'){ next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ prev(); }
+    else if (e.key === 'Home'){ first(); }
+    else if (e.key === 'End'){ last(); }
+  });
+
+  overlayClose.addEventListener('click', hideOverlay);
+  overlay.addEventListener('mousedown', function(e){
+    if (e.target === overlay) hideOverlay();
+  });
+
+  /* Right-click + side buttons, capture phase, single-trigger */
+  document.addEventListener('contextmenu', function(e){
+    e.preventDefault();
+  }, { capture: true });
+
+  document.addEventListener('mousedown', function(e){
+    if (overlay.classList.contains('show')) return;
+    if (isInteractive(e.target)) return;
+
+    if (e.button === 2){ // right click
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    } else if (e.button === 3){ // back side button
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      prev();
+    } else if (e.button === 4){ // forward side button
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    }
+  }, { capture: true });
+
+  document.addEventListener('auxclick', function(e){
+    if (e.button === 1 || e.button === 2 || e.button === 3 || e.button === 4){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, { capture: true });
+
+  document.addEventListener('mouseup', function(e){
+    if (e.button === 3 || e.button === 4){
+      e.preventDefault();
+    }
+  }, { capture: true });
+
+  /* Swipe (mobile) */
+  var touchStartX = null, touchStartY = null;
+  document.addEventListener('touchstart', function(e){
+    if (e.touches.length !== 1) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(e){
+    if (touchStartX === null) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5){
+      if (dx < 0) next(); else prev();
+    }
+    touchStartX = null; touchStartY = null;
+  }, { passive: true });
+
+  /* Init */
+  initCodeBlocks();
+  initCopyButtons();
+  slides[0].classList.add('active');
+  updateChrome();
+
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Foundry — Module 8A: Methods & Arrays — Core Mechanics</title>
+<style>
+  :root{
+    --ink:#0e141b;
+    --ink-2:#141c25;
+    --panel:#182230;
+    --panel-2:#1e2b3b;
+    --line: rgba(211,229,247,0.14);
+    --line-strong: rgba(211,229,247,0.28);
+    --paper:#eef4fb;
+    --graphite:#93a7bc;
+    --copper:#e8935a;
+    --copper-soft:#c97a45;
+    --cyan:#5ec8f2;
+    --rose:#e2726a;
+    --code-bg:#0a0f14;
+    --code-keyword:#e8ac6f;
+    --code-string:#8bd17c;
+    --code-number:#7ec6e6;
+    --code-type:#c9a8e6;
+    --code-comment:#5d7085;
+    --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --mono: SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; height:100%; }
+  body{
+    background:
+      repeating-linear-gradient(0deg, rgba(94,200,242,0.045) 0px, rgba(94,200,242,0.045) 1px, transparent 1px, transparent 42px),
+      repeating-linear-gradient(90deg, rgba(94,200,242,0.045) 0px, rgba(94,200,242,0.045) 1px, transparent 1px, transparent 42px),
+      radial-gradient(ellipse at 10% -10%, rgba(232,147,90,0.10), transparent 45%),
+      radial-gradient(ellipse at 100% 110%, rgba(94,200,242,0.08), transparent 45%),
+      var(--ink);
+    color:var(--paper);
+    font-family:var(--sans);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .deck{ position:relative; width:100vw; height:100vh; }
+
+  .slide{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    padding: clamp(20px, 3vh, 46px) clamp(24px, 5vw, 92px);
+    opacity:0;
+    transform: translateX(28px);
+    transition: opacity .35s ease, transform .35s ease;
+    pointer-events:none;
+    overflow-y:auto;
+  }
+  .slide.active{ opacity:1; transform:translateX(0); pointer-events:auto; z-index:2; }
+  .slide.enter-left{ transform:translateX(-28px); opacity:0; }
+  .slide.exit-left{ transform:translateX(-28px); opacity:0; }
+  .slide.exit-right{ transform:translateX(28px); opacity:0; }
+
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition:none !important; transform:none !important; }
+  }
+
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:10px;
+    font-family:var(--mono); letter-spacing:.14em; text-transform:uppercase;
+    font-size:clamp(16px, 1.05vw, 16px); color:var(--copper);
+    margin-bottom: 10px; padding-bottom:8px;
+    border-bottom: 1px dashed var(--line-strong);
+    width:fit-content;
+  }
+  .eyebrow::before{ content:"◆"; font-size:16px; color:var(--cyan); }
+
+  h1.slide-title{
+    font-family:var(--serif); font-weight:700;
+    font-size: clamp(25px, 3.3vw, 46px);
+    line-height:1.14;
+    margin: 0 0 8px 0;
+    color:var(--paper);
+  }
+  .subtitle{
+    font-size: clamp(16px, 1.2vw, 18px);
+    color:var(--graphite);
+    margin: 0 0 16px 0;
+    max-width:920px;
+    line-height:1.55;
+  }
+
+  .slide-body{ flex:1; min-height:0; display:flex; flex-direction:column; }
+
+  /* ---------- Registration-mark card (signature element) ---------- */
+  .spec-card{
+    position:relative;
+    background: var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding: 16px 20px;
+  }
+  .spec-card::before, .spec-card::after{
+    content:""; position:absolute; width:14px; height:14px; pointer-events:none;
+  }
+  .spec-card::before{
+    top:-1px; left:-1px; border-top:2px solid var(--cyan); border-left:2px solid var(--cyan);
+  }
+  .spec-card::after{
+    bottom:-1px; right:-1px; border-bottom:2px solid var(--cyan); border-right:2px solid var(--cyan);
+  }
+
+  /* ---------- TITLE SLIDE ---------- */
+  .title-wrap{
+    height:100%; display:flex; flex-direction:column; align-items:flex-start; justify-content:center;
+    gap: 16px; max-width:1160px;
+  }
+  .brew-badge{
+    display:flex; align-items:center; gap:12px;
+    padding: 9px 18px; border:1px solid var(--line); border-radius:4px;
+    background:var(--panel); font-family:var(--mono); font-size:16px; color:var(--copper);
+    letter-spacing:.08em;
+  }
+  .title-main{
+    font-family:var(--serif); font-weight:700;
+    font-size: clamp(32px, 5vw, 68px);
+    line-height:1.06; letter-spacing:-0.01em;
+  }
+  .title-main .accent{ color:var(--copper); }
+  .title-sub{ font-size:clamp(16px, 1.5vw, 20px); color:var(--graphite); max-width:760px; line-height:1.55; }
+  .title-stats{ display:flex; gap:14px; margin-top:6px; flex-wrap:wrap; }
+  .stat-chip{
+    border:1px solid var(--line); background:var(--panel-2); border-radius:6px;
+    padding:11px 18px; min-width:150px;
+  }
+  .stat-chip .num{ font-family:var(--serif); font-size:26px; color:var(--copper); font-weight:700; }
+  .stat-chip .lbl{ font-size:16px; color:var(--graphite); margin-top:2px; font-family:var(--mono); }
+
+  .draft-illo{ position:absolute; right:clamp(10px,4vw,80px); top:50%; transform:translateY(-50%); width:min(26vw,320px); opacity:.92; }
+
+  /* ---------- GENERIC GRIDS ---------- */
+  .grid-2{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vw,22px); flex:1; min-height:0; }
+  .grid-2 > .code-block{ min-height:0; }
+  .grid-2 > .code-block > .codepre{ max-height:none !important; }
+  .grid-2x2{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); grid-template-rows: repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vw,20px); flex:1; min-height:0; }
+  .grid-3{ display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: clamp(12px,1.6vw,20px); flex:1; min-height:0; }
+  .grid-3x2{ display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); grid-template-rows: repeat(2, minmax(0,1fr)); gap: clamp(10px,1.4vw,16px); flex:1; min-height:0; }
+  @media (max-width:900px){ .grid-2, .grid-2x2, .grid-3, .grid-3x2{ grid-template-columns: minmax(0,1fr); } }
+
+  .block-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding: 16px 20px; min-width:0; display:flex; flex-direction:column; gap:8px;
+  }
+  .block-card h3{ margin:0; font-family:var(--serif); font-size:19px; color:var(--copper); }
+  .block-card h3 .tag{ font-family:var(--mono); font-size:16px; color:var(--cyan); border:1px solid var(--line); border-radius:4px; padding:2px 8px; margin-left:8px; vertical-align:middle; }
+  .block-card p{ margin:0; font-size:16px; color:var(--graphite); line-height:1.6; }
+  .block-card ul{ margin:4px 0 0; padding-left:18px; font-size:16px; color:var(--graphite); line-height:1.65; }
+  .block-card ul li b{ color:var(--paper); }
+
+  /* ---------- CODE BLOCKS ---------- */
+  .code-block{ background:var(--code-bg); border:1px solid var(--line); border-radius:10px; overflow:hidden; display:flex; flex-direction:column; min-height:0; }
+  .code-header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:7px 12px; background:var(--panel-2); border-bottom:1px solid var(--line);
+    font-family:var(--mono); font-size:16px; color:var(--graphite);
+  }
+  .copy-btn{
+    font-family:var(--sans); font-size:16px; color:var(--paper);
+    background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    padding:4px 10px; cursor:pointer; transition:background .15s ease, color .15s ease;
+  }
+  .copy-btn:hover{ background:var(--copper); color:#0e141b; border-color:var(--copper); }
+  .copy-btn.copied{ background:var(--cyan); color:#0e141b; border-color:var(--cyan); }
+  pre.codepre{
+    margin:0; padding: 10px 14px; max-height: 50vh; overflow:auto; flex:1 1 auto; min-height:0;
+    font-family:var(--mono); font-size: clamp(16px, .92vw, 16px); line-height:1.55;
+  }
+  code .tok-keyword{ color:var(--code-keyword); }
+  code .tok-string{ color:var(--code-string); }
+  code .tok-number{ color:var(--code-number); }
+  code .tok-type{ color:var(--code-type); }
+  code .tok-comment{ color:var(--code-comment); font-style:italic; }
+
+  /* ---------- METHOD ANATOMY SCHEMATIC ---------- */
+  .anatomy-sig{
+    font-family:var(--mono); font-size:clamp(16px, 1.35vw, 20px);
+    background:var(--code-bg); border:1px solid var(--line); border-radius:10px;
+    padding:18px 22px; line-height:1.9; overflow-x:auto; white-space:pre;
+  }
+  .anatomy-sig .seg{ padding:2px 4px; border-radius:4px; }
+  .seg-mod{ background:rgba(232,147,90,0.18); color:var(--copper); }
+  .seg-static{ background:rgba(94,200,242,0.16); color:var(--cyan); }
+  .seg-ret{ background:rgba(139,209,124,0.16); color:var(--code-string); }
+  .seg-name{ background:rgba(201,168,230,0.18); color:var(--code-type); }
+  .seg-param{ background:rgba(126,198,230,0.14); color:var(--code-number); }
+  .anatomy-legend{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; margin-top:14px; }
+  .leg-item{ border:1px dashed var(--line-strong); border-radius:8px; padding:9px 10px; font-size:16px; color:var(--graphite); }
+  .leg-item .dot{ display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:6px; }
+  @media (max-width:1100px){ .anatomy-legend{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+  /* ---------- MEMORY / DIAGRAM BOXES ---------- */
+  .mem-row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .mem-box{
+    font-family:var(--mono); font-size:16px; background:var(--panel-2); border:1px solid var(--line-strong);
+    border-radius:6px; padding:10px 14px; text-align:center; min-width:70px;
+  }
+  .mem-box .idx{ font-size:16px; color:var(--cyan); margin-top:4px; }
+  .mem-arrow{ color:var(--copper); font-size:20px; }
+
+  /* ---------- TABLES ---------- */
+  table.cmp{ width:100%; border-collapse:collapse; font-size:16px; }
+  table.cmp th, table.cmp td{ text-align:left; padding:10px 14px; border-bottom:1px solid var(--line); vertical-align:top; }
+  table.cmp th{ font-family:var(--mono); font-size:16px; letter-spacing:.06em; text-transform:uppercase; color:var(--cyan); border-bottom:1px solid var(--line-strong); }
+  table.cmp td b{ color:var(--paper); }
+  table.cmp tr:last-child td{ border-bottom:none; }
+
+  /* ---------- MCQ TICKETS ---------- */
+  .mcq-grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vh,18px); flex:1; min-height:0; }
+  .mcq-grid.odd-last > :last-child{ grid-column: 1 / -1; max-width:640px; margin:0 auto; width:100%; }
+  @media (max-width:900px){ .mcq-grid{ grid-template-columns:minmax(0,1fr); } .mcq-grid.odd-last > :last-child{ max-width:none; } }
+  .mcq-card{ position:relative; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 20px; }
+  .mcq-card .qnum{ font-family:var(--mono); font-size:16px; color:var(--copper); letter-spacing:.08em; }
+  .mcq-card .qtext{ font-size:clamp(16px, 1.1vw, 17.5px); font-weight:600; margin:6px 0 10px; line-height:1.4; }
+  .mcq-opts{ display:flex; flex-direction:column; gap:6px; font-size:16px; color:var(--graphite); }
+  .mcq-opts div{ display:flex; gap:8px; }
+  .mcq-opts b{ color:var(--cyan); min-width:18px; }
+  .output-prompt{ display:flex; align-items:center; gap:10px; font-size:16px; color:var(--graphite); margin-top:8px; }
+  .output-prompt input{ flex:1; border:none; border-bottom:1px dashed var(--line); background:transparent; color:var(--paper); font-family:var(--mono); font-size:16px; padding:4px 6px; }
+  .output-prompt input:focus{ outline:none; border-bottom-color:var(--copper); }
+  .go-grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap: clamp(12px,1.6vw,20px); flex:1; min-height:0; }
+  .go-grid.solo{ grid-template-columns:minmax(0,1fr); }
+  @media (max-width:900px){ .go-grid{ grid-template-columns:minmax(0,1fr); } }
+  .go-card{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 18px; display:flex; flex-direction:column; gap:8px; min-width:0; }
+  .go-card .qnum{ font-family:var(--mono); font-size:16px; color:var(--copper); letter-spacing:.06em; }
+
+  /* ---------- QUOTES ---------- */
+  .quote-wrap{ flex:1; display:flex; flex-direction:column; justify-content:center; gap:30px; max-width:1100px; }
+  .quote-block{ position:relative; padding-left:28px; }
+  .quote-block::before{ content:"“"; position:absolute; left:-6px; top:-18px; font-family:var(--serif); font-size:64px; color:var(--copper); opacity:.6; }
+  .quote-block p{ font-family:var(--serif); font-size:clamp(18px, 2vw, 26px); line-height:1.5; margin:0 0 8px; color:var(--paper); }
+  .quote-block span{ font-family:var(--mono); font-size:16px; color:var(--cyan); }
+
+  /* ---------- ANSWER KEY ---------- */
+  .ans-scroll{ flex:1; min-height:0; overflow-y:auto; padding-right:8px; }
+  .ans-block{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 18px; margin-bottom:12px; break-inside:avoid; }
+  .ans-block h4{ margin:0 0 6px 0; font-family:var(--mono); font-size:16px; color:var(--copper); }
+  .ans-block p{ margin:0; font-size:16px; color:var(--graphite); line-height:1.6; }
+  .ans-block p b{ color:var(--paper); }
+
+  /* ---------- CLOSING ---------- */
+  .closing-wrap{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:22px; }
+  .closing-wrap .final-quote{ font-family:var(--serif); font-size:clamp(20px, 2.4vw, 32px); max-width:900px; line-height:1.5; color:var(--paper); }
+  .closing-wrap .final-msg{ font-size:16px; color:var(--graphite); max-width:640px; line-height:1.6; }
+
+  /* ---------- CHROME ---------- */
+  .progress-track{ position:fixed; top:0; left:0; right:0; height:4px; background:rgba(255,255,255,0.06); z-index:50; }
+  .progress-fill{ height:100%; background:linear-gradient(90deg, var(--copper-soft), var(--copper)); width:0%; transition:width .3s ease; }
+  .counter{
+    position:fixed; bottom:16px; right:20px; z-index:50;
+    font-family:var(--mono); font-size:16px; color:var(--graphite);
+    background:rgba(0,0,0,0.35); border:1px solid var(--line); border-radius:6px; padding:6px 14px;
+    backdrop-filter: blur(4px);
+  }
+  .hint{
+    position:fixed; bottom:16px; left:20px; z-index:50;
+    font-family:var(--mono); font-size:16px; color:var(--graphite);
+    background:rgba(0,0,0,0.35); border:1px solid var(--line); border-radius:6px; padding:6px 14px;
+  }
+
+  .overlay{
+    position:fixed; inset:0; background:rgba(6,9,12,0.75); backdrop-filter: blur(3px);
+    display:flex; align-items:center; justify-content:center; z-index:100;
+    opacity:0; pointer-events:none; transition:opacity .2s ease;
+  }
+  .overlay.show{ opacity:1; pointer-events:auto; }
+  .overlay-panel{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:28px 32px; max-width:520px; width:90%; }
+  .overlay-panel h2{ margin:0 0 14px 0; font-family:var(--serif); color:var(--copper); font-size:22px; }
+  .overlay-panel .row{ display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--line); font-size:16px; color:var(--graphite); }
+  .overlay-panel .row:last-child{ border-bottom:none; }
+  .overlay-close{ margin-top:16px; width:100%; padding:10px; border-radius:8px; border:1px solid var(--line); background:var(--copper); color:#0e141b; font-weight:600; cursor:pointer; font-family:var(--sans); font-size:16px; }
+  kbd{ display:inline-block; font-family:var(--mono); font-size:16px; background:var(--panel-2); border:1px solid var(--line); border-bottom-width:2px; border-radius:6px; padding:2px 8px; color:var(--paper); }
+
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb{ background:var(--panel-2); border-radius:8px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+</style>
+</head>
+<body>
+
+<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+<div class="counter" id="counter">1 / 14</div>
+<div class="hint">Right-click or → for next · press ? for help</div>
+
+<div class="deck" id="deck">
+  <!-- 0: TITLE -->
+  <section class="slide" data-index="0">
+    <div class="title-wrap">
+      <div class="brew-badge">MODULE 8A · JAVA CORE MECHANICS</div>
+      <div class="title-main">Methods &amp; Arrays<br><span class="accent">Core Mechanics</span></div>
+      <div class="title-sub">How Java methods actually execute, how arguments are passed, how overloading works at compile time, and how arrays hold data in contiguous memory — the foundation everything else in this module builds on.</div>
+      <div class="title-stats">
+        <div class="stat-chip"><div class="num">2</div><div class="lbl">Core Topics</div></div>
+        <div class="stat-chip"><div class="num">10+</div><div class="lbl">Worked Examples</div></div>
+        <div class="stat-chip"><div class="num">2</div><div class="lbl">Skill Checks</div></div>
+      </div>
+    </div>
+    <svg class="draft-illo" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Illustration of a drafting compass and blueprint ruler">
+      <g fill="none" stroke="#5ec8f2" stroke-width="3" opacity="0.9">
+        <circle cx="120" cy="120" r="86" stroke-dasharray="4 6"/>
+        <line x1="120" y1="34" x2="120" y2="206"/>
+        <line x1="34" y1="120" x2="206" y2="120"/>
+      </g>
+      <g stroke="#e8935a" stroke-width="6" stroke-linecap="round">
+        <line x1="120" y1="60" x2="80" y2="190"/>
+        <line x1="120" y1="60" x2="160" y2="190"/>
+      </g>
+      <circle cx="120" cy="60" r="9" fill="#e8935a"/>
+      <circle cx="80" cy="190" r="6" fill="#eef4fb"/>
+      <circle cx="160" cy="190" r="6" fill="#eef4fb"/>
+    </svg>
+  </section>
+
+  <!-- 1: LESSON ROADMAP -->
+  <section class="slide" data-index="1">
+    <div class="eyebrow">Section A · Lesson Preview</div>
+    <h1 class="slide-title">Two Building Blocks for This Deck</h1>
+    <p class="subtitle">Scalable Java starts with clean modularization and deliberate memory management. Part 1 focuses on the two workhorses you’ll use every day.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="block-card">
+          <h3>Methods</h3>
+          <p>Self-contained blocks of code designed to perform one specific operation. They promote reuse — write the logic once, call it wherever it's needed. You’ll see pass-by-value, overloading, and signature anatomy.</p>
+        </div>
+        <div class="block-card">
+          <h3>Arrays</h3>
+          <p>Linear data structures storing a fixed-size, sequential collection of elements of the same type — indexed slots sitting in contiguous memory. Declaration, iteration, and the classic pitfalls.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+<!-- 2: METHOD ANATOMY -->
+  <section class="slide" data-index="2">
+    <div class="eyebrow">Section B.1 · Method Structure</div>
+    <h1 class="slide-title">Anatomy of a Method Signature</h1>
+    <p class="subtitle">Every Java method signature declares five things, in order: who can call it, whether it needs an object, what it hands back, its name, and what it needs from you.</p>
+    <div class="slide-body">
+      <div class="anatomy-sig"><span class="seg seg-mod">[Access Modifier]</span> <span class="seg seg-static">[Static/Non-Static]</span> <span class="seg seg-ret">[Return Type]</span> <span class="seg seg-name">methodName</span>(<span class="seg seg-param">ParameterType param1, ...</span>) {
+    <span class="tok-comment">// Method body logic</span>
+    <span class="tok-keyword">return</span> value; <span class="tok-comment">// Required if Return Type isn't 'void'</span>
+}</div>
+      <div class="anatomy-legend">
+        <div class="leg-item"><span class="dot" style="background:var(--copper)"></span><b>Access Modifier</b><br>Who's allowed to call this: <code>public</code>, <code>private</code>, <code>protected</code>, or default.</div>
+        <div class="leg-item"><span class="dot" style="background:var(--cyan)"></span><b>Static / Non-Static</b><br><code>static</code> belongs to the class itself; non-static needs an object instance to run.</div>
+        <div class="leg-item"><span class="dot" style="background:var(--code-string)"></span><b>Return Type</b><br>The data type sent back to the caller — or <code>void</code> if nothing is returned.</div>
+        <div class="leg-item"><span class="dot" style="background:var(--code-type)"></span><b>Method Name</b><br>The identifier used to call it — conventionally a verb, like <code>calculateTotal</code>.</div>
+        <div class="leg-item"><span class="dot" style="background:var(--code-number)"></span><b>Parameters</b><br>The inputs the method needs to do its job, each with its own type.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3: PASS-BY-VALUE DEEP DIVE -->
+  <section class="slide" data-index="3">
+    <div class="eyebrow">Rule 1 of 3 · Execution Behavior</div>
+    <h1 class="slide-title">Pass-by-Value: What Actually Gets Copied</h1>
+    <p class="subtitle">Java <b style="color:var(--paper)">always</b> passes arguments by value — but what counts as "the value" differs for primitives versus object references.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="spec-card" style="display:flex; flex-direction:column; gap:10px;">
+          <h3 style="margin:0; font-family:var(--serif); color:var(--copper); font-size:17px;">Primitives — the literal is copied</h3>
+          <div class="code-block">
+            <div class="code-header"><span>PassByValueDemo.java</span><button class="copy-btn" data-target="code1">Copy</button></div>
+            <pre class="codepre"><code id="code1"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code1">public class PassByValueDemo {
+    static void tryToDouble(int number) {
+        number = number * 2; // changes only the local copy
+    }
+
+    public static void main(String[] args) {
+        int score = 10;
+        tryToDouble(score);
+        System.out.println(score); // still 10
+    }
+}</script>
+          <div class="mem-row">
+            <div class="mem-box">score = 10<div class="idx">main()</div></div>
+            <span class="mem-arrow">→ copy →</span>
+            <div class="mem-box">number = 10 → 20<div class="idx">tryToDouble()</div></div>
+          </div>
+        </div>
+
+        <div class="spec-card" style="display:flex; flex-direction:column; gap:10px;">
+          <h3 style="margin:0; font-family:var(--serif); color:var(--copper); font-size:17px;">Object references — the address is copied</h3>
+          <div class="code-block">
+            <div class="code-header"><span>ReferenceDemo.java</span><button class="copy-btn" data-target="code2">Copy</button></div>
+            <pre class="codepre"><code id="code2"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code2">public class ReferenceDemo {
+    static void relabel(StringBuilder label) {
+        label.append(" (edited)"); // mutates the SAME object
+    }
+
+    static void reassign(StringBuilder label) {
+        label = new StringBuilder("Brand New"); // only the local copy points elsewhere
+    }
+
+    public static void main(String[] args) {
+        StringBuilder tag = new StringBuilder("Original");
+        relabel(tag);
+        System.out.println(tag); // Original (edited)
+        reassign(tag);
+        System.out.println(tag); // still Original (edited)
+    }
+}</script>
+          <p style="margin:0; font-size:16px; color:var(--graphite); line-height:1.55;"><b style="color:var(--paper)">Rule of thumb:</b> change what's <i>inside</i> the box a reference points to, and the caller sees it. Swap the reference for a brand-new box, and the caller never finds out.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4: METHOD OVERLOADING CONCEPT -->
+  <section class="slide" data-index="4">
+    <div class="eyebrow">Rule 2 of 3 · Reusability</div>
+    <h1 class="slide-title">Method Overloading — Same Name, Different Signatures</h1>
+    <p class="subtitle">Multiple methods can share the exact same name as long as their parameter lists differ. Java figures out which version to run at <b style="color:var(--paper)">compile time</b>, based on the arguments you pass.</p>
+    <div class="slide-body">
+      <div class="grid-2" style="flex:0 0 auto;">
+        <div class="block-card">
+          <h3 style="font-size:17px;">What's Allowed to Differ</h3>
+          <ul>
+            <li><b>Number</b> of parameters — one argument vs. three</li>
+            <li><b>Order</b> of parameter types — <code>(String, int)</code> vs. <code>(int, String)</code></li>
+            <li><b>Type</b> of parameters — <code>int</code> vs. <code>double</code> vs. <code>String</code></li>
+          </ul>
+        </div>
+        <div class="block-card">
+          <h3 style="font-size:17px;">What Does <i>Not</i> Count</h3>
+          <ul>
+            <li>Return type <b>alone</b> — two methods with identical parameters but different return types will not compile</li>
+            <li>Parameter <b>names</b> — the compiler only cares about types and order, not what you call them</li>
+            <li>Access modifier alone — <code>public</code> vs <code>private</code> doesn't create a valid overload</li>
+          </ul>
+        </div>
+      </div>
+      <div class="code-block" style="margin-top:12px; flex:1; min-height:0;">
+        <div class="code-header"><span>MethodOverloading.java</span><button class="copy-btn" data-target="code15">Copy</button></div>
+        <pre class="codepre" style="max-height:none;"><code id="code15"></code></pre>
+      </div>
+        <script type="text/plain" data-target="code15">class Printer {
+    void print(String message)       { System.out.println(message); }
+    void print(String message, int n) { System.out.println(message.repeat(n)); }
+    void print(int number)            { System.out.println(number); }
+}
+
+    public class MethodOverloading {
+      public static void main(String[] args) {
+        Printer printer = new Printer();
+        printer.print("Hello");       // chooses print(String)
+        printer.print("Hi", 3);       // chooses print(String, int)
+        printer.print(2026);          // chooses print(int)
+      }
+      // Java selects the method at compile time from the argument types.
+    }</script>
+    </div>
+  </section>
+
+  <!-- 5: OVERLOADING CODE + PITFALL -->
+  <section class="slide" data-index="5">
+    <div class="eyebrow">Worked Example</div>
+    <h1 class="slide-title">Dynamic Pricing with Overloaded Methods</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>PricingCalculator.java</span><button class="copy-btn" data-target="code3">Copy</button></div>
+          <pre class="codepre"><code id="code3"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code3">public class PricingCalculator {
+
+    // Calculate total for a single item
+    public static double calculateTotal(double price) {
+        return price;
+    }
+
+    // Overloaded: total with item quantity
+    public static double calculateTotal(double price, int quantity) {
+        return price * quantity;
+    }
+
+    // Overloaded: quantity + a percent discount
+    public static double calculateTotal(double price, int quantity, double discountRate) {
+        double subtotal = price * quantity;
+        return subtotal - (subtotal * discountRate);
+    }
+
+    public static void main(String[] args) {
+        double singleItem = calculateTotal(49.99);
+        double bulkItems = calculateTotal(25.00, 4);
+        double discountedBulk = calculateTotal(100.00, 2, 0.15); // 15% discount
+
+        System.out.println("Single Item: $" + singleItem);
+        System.out.println("Bulk Total: $" + bulkItems);
+        System.out.println("Discounted Total: $" + discountedBulk);
+    }
+}</script>
+
+        <div class="spec-card" style="display:flex; flex-direction:column; gap:10px;">
+          <h3 style="margin:0; font-family:var(--serif); color:var(--rose); font-size:17px;">⚠ Watch Out: Overload Ambiguity</h3>
+          <p style="margin:0; font-size:16px; color:var(--graphite); line-height:1.6;">Calling <code>calculateTotal(25.00, 4)</code> matches <code>(double, int)</code> exactly — no ambiguity. But if you also declare an <code>(int, int)</code> overload, and call it with two whole numbers like <code>calculateTotal(25, 4)</code>, Java prefers the <b style="color:var(--paper)">exact match</b> over widening an <code>int</code> to a <code>double</code>.</p>
+          <div class="code-block">
+            <div class="code-header"><span>ambiguity.java</span><button class="copy-btn" data-target="code4">Copy</button></div>
+            <pre class="codepre"><code id="code4"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code4">// If BOTH overloads exist:
+static double calculateTotal(double price, int qty) { ... }
+static double calculateTotal(int price, int qty)    { ... }
+
+calculateTotal(25, 4);
+// Java picks (int, int) — an exact match
+// beats widening int -> double.</script>
+          <p style="margin:0; font-size:16px; color:var(--graphite); line-height:1.55;"><b style="color:var(--paper)">Takeaway:</b> when in doubt, be explicit about literal types (<code>25.0</code> vs <code>25</code>) so the overload you expect is the one that actually runs.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6: ARRAYS - DECLARATION & MEMORY MODEL -->
+  <section class="slide" data-index="6">
+    <div class="eyebrow">Section B.2 · Arrays</div>
+    <h1 class="slide-title">Declaring, Allocating &amp; Visualizing Arrays</h1>
+    <p class="subtitle">An array reserves a fixed number of same-type slots in contiguous memory, numbered from <code>0</code>. Once created, that slot count never changes.</p>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>arrays-basics.java</span><button class="copy-btn" data-target="code5">Copy</button></div>
+          <pre class="codepre"><code id="code5"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code5">// Declare and allocate an array of integers
+int[] scores = new int[5]; // 5 slots, default value 0
+scores[0] = 88;
+scores[1] = 92;
+scores[2] = 79;
+scores[3] = 95;
+scores[4] = 84;
+
+// Array literal instantiation — declare + fill in one line
+String[] languages = {"Java", "Python", "C++", "JavaScript"};</script>
+
+        <div class="spec-card" style="display:flex; flex-direction:column; gap:14px;">
+          <h3 style="margin:0; font-family:var(--serif); color:var(--copper); font-size:17px;">What <code>scores</code> Looks Like in Memory</h3>
+          <div class="mem-row">
+            <div class="mem-box">88<div class="idx">[0]</div></div>
+            <div class="mem-box">92<div class="idx">[1]</div></div>
+            <div class="mem-box">79<div class="idx">[2]</div></div>
+            <div class="mem-box">95<div class="idx">[3]</div></div>
+            <div class="mem-box">84<div class="idx">[4]</div></div>
+          </div>
+          <p style="margin:0; font-size:16px; color:var(--graphite); line-height:1.6;">Five boxes, indexed <code>0</code> through <code>4</code>. <code>scores.length</code> reports <code>5</code> — note it's a field, not a method, so no parentheses. Asking for <code>scores[5]</code> reaches one box past the end and crashes (more on that shortly).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7: ARRAY ITERATION -->
+  <section class="slide" data-index="7">
+    <div class="eyebrow">Traversal Techniques</div>
+    <h1 class="slide-title">Standard For-Loop vs. Enhanced For-Each</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="code-block">
+          <div class="code-header"><span>ArrayOperations.java</span><button class="copy-btn" data-target="code6">Copy</button></div>
+          <pre class="codepre"><code id="code6"></code></pre>
+        </div>
+        <script type="text/plain" data-target="code6">public class ArrayOperations {
+    public static void main(String[] args) {
+        int[] scores = {88, 92, 79, 95, 84};
+        String[] languages = {"Java", "Python", "C++", "JavaScript"};
+
+        System.out.println("=== Standard For-Loop ===");
+        for (int i = 0; i < scores.length; i++) {
+            System.out.println("Score at index " + i + ": " + scores[i]);
+        }
+
+        System.out.println("\n=== Enhanced For-Each Loop ===");
+        for (String lang : languages) {
+            System.out.println("Language: " + lang);
+        }
+    }
+}</script>
+
+        <div class="block-card">
+          <h3 style="font-size:17px;">Which One Should You Use?</h3>
+          <table class="cmp">
+            <tr><th>Standard <code>for</code></th><th>Enhanced <code>for-each</code></th></tr>
+            <tr><td>Gives you the <b>index</b> — needed to modify elements or print position</td><td>Cleaner, shorter syntax — no index bookkeeping</td></tr>
+            <tr><td>Can iterate backwards, skip elements, or loop a fixed count</td><td>Read-only traversal, always front to back</td></tr>
+            <tr><td>Slightly more room for off-by-one mistakes</td><td>Impossible to go out of bounds — the loop handles it</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8: ARRAY PITFALLS + 2D PREVIEW -->
+  <section class="slide" data-index="8">
+    <div class="eyebrow">Going Further</div>
+    <h1 class="slide-title">Common Array Pitfalls (and a Peek at 2D Arrays)</h1>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="spec-card" style="display:flex; flex-direction:column; gap:10px;">
+          <h3 style="margin:0; font-family:var(--serif); color:var(--rose); font-size:17px;">ArrayIndexOutOfBoundsException</h3>
+          <div class="code-block">
+            <div class="code-header"><span>outOfBounds.java</span><button class="copy-btn" data-target="code7">Copy</button></div>
+            <pre class="codepre"><code id="code7"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code7">int[] nums = {10, 20, 30};
+System.out.println(nums[3]);
+// throws ArrayIndexOutOfBoundsException
+// valid indices for a length-3 array are 0, 1, 2</script>
+          <p style="margin:0; font-size:16px; color:var(--graphite); line-height:1.6;">Valid indices run from <code>0</code> to <code>length - 1</code>. This is a <b style="color:var(--paper)">runtime</b> error, not a compile error — the code compiles fine and only crashes when that line actually executes.</p>
+        </div>
+
+        <div class="spec-card" style="display:flex; flex-direction:column; gap:10px;">
+          <h3 style="margin:0; font-family:var(--serif); color:var(--copper); font-size:17px;">Sneak Peek: 2D Arrays</h3>
+          <div class="code-block">
+            <div class="code-header"><span>seatMap.java</span><button class="copy-btn" data-target="code8">Copy</button></div>
+            <pre class="codepre"><code id="code8"></code></pre>
+          </div>
+          <script type="text/plain" data-target="code8">int[][] seatMap = {
+    {1, 1, 0},
+    {0, 1, 1}
+};
+System.out.println(seatMap[1][2]);
+// row index 1, column index 2 -> 1</script>
+          <p style="margin:0; font-size:16px; color:var(--graphite); line-height:1.6;">A 2D array is simply an <b style="color:var(--paper)">array of arrays</b> — perfect for grids like seat maps, tic-tac-toe boards, or spreadsheets. Access with two indices: <code>[row][column]</code>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ACTIVITY MCQ -->
+  <section class="slide" data-index="9">
+    <div class="eyebrow">Activity 1 of 2 · Multiple Choice (5 × 1 pt)</div>
+    <h1 class="slide-title">Multiple Choice — Test Yourself</h1>
+    <p class="subtitle">Five questions covering method signatures, pass-by-value, overloading, and arrays. Answers are on the Answer Key slide at the end of this deck.</p>
+    <div class="slide-body">
+      <div class="mcq-grid" style="grid-template-columns: repeat(2, minmax(0,1fr));">
+        <div class="mcq-card">
+          <div class="qnum">QUESTION 01 · 1 pt</div>
+          <div class="qtext">In Java, what is actually copied when you pass a primitive (like <code>int</code>) to a method?</div>
+          <div class="mcq-opts">
+            <div><b>A.</b> A reference to the original variable</div>
+            <div><b>B.</b> The literal value itself</div>
+            <div><b>C.</b> The memory address of the variable</div>
+            <div><b>D.</b> Nothing — primitives are passed by reference</div>
+          </div>
+        </div>
+        <div class="mcq-card">
+          <div class="qnum">QUESTION 02 · 1 pt</div>
+          <div class="qtext">Which of the following is a valid way to create two overloaded methods?</div>
+          <div class="mcq-opts">
+            <div><b>A.</b> Same name and parameters, different return types</div>
+            <div><b>B.</b> Same name, different number or type of parameters</div>
+            <div><b>C.</b> Same name and parameters, different access modifiers</div>
+            <div><b>D.</b> Same name and parameters, different parameter names only</div>
+          </div>
+        </div>
+        <div class="mcq-card">
+          <div class="qnum">QUESTION 03 · 1 pt</div>
+          <div class="qtext">How do you get the number of elements in an array named <code>scores</code>?</div>
+          <div class="mcq-opts">
+            <div><b>A.</b> <code>scores.length()</code></div>
+            <div><b>B.</b> <code>scores.size()</code></div>
+            <div><b>C.</b> <code>scores.length</code></div>
+            <div><b>D.</b> <code>scores.count</code></div>
+          </div>
+        </div>
+        <div class="mcq-card">
+          <div class="qnum">QUESTION 04 · 1 pt</div>
+          <div class="qtext">What happens if you access <code>arr[arr.length]</code> on a non-empty array?</div>
+          <div class="mcq-opts">
+            <div><b>A.</b> Returns the last element</div>
+            <div><b>B.</b> Returns <code>0</code> or <code>null</code></div>
+            <div><b>C.</b> Throws <code>ArrayIndexOutOfBoundsException</code> at runtime</div>
+            <div><b>D.</b> Causes a compile-time error</div>
+          </div>
+        </div>
+        <div class="mcq-card" style="grid-column: 1 / -1; max-width: 640px; margin: 0 auto; width: 100%;">
+          <div class="qnum">QUESTION 05 · 1 pt</div>
+          <div class="qtext">When should you prefer a standard <code>for</code> loop over an enhanced for-each loop?</div>
+          <div class="mcq-opts">
+            <div><b>A.</b> When you only need to read each element once, front to back</div>
+            <div><b>B.</b> When you need the index, or must modify elements, or iterate backwards</div>
+            <div><b>C.</b> When the array is empty</div>
+            <div><b>D.</b> Enhanced for-each is always preferred; the standard loop is obsolete</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GO ROUND 1 -->
+  <section class="slide" data-index="10">
+    <div class="eyebrow">Activity 2 of 2 · Guess the Output (4 × 1 pt)</div>
+    <h1 class="slide-title">Round 1 — Pass-by-Value &amp; Overloading</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+        <div class="go-card">
+          <div class="qnum">ITEM 01 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>PassByValue.java</span><button class="copy-btn" data-target="p1go1">Copy</button></div>
+            <pre class="codepre"><code id="p1go1"></code></pre>
+          </div>
+          <script type="text/plain" data-target="p1go1">public class Test {
+    static void bump(int n) {
+        n = n + 10;
+    }
+
+    public static void main(String[] args) {
+        int score = 40;
+        bump(score);
+        System.out.println(score);
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="qnum">ITEM 02 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>Overload.java</span><button class="copy-btn" data-target="p1go2">Copy</button></div>
+            <pre class="codepre"><code id="p1go2"></code></pre>
+          </div>
+          <script type="text/plain" data-target="p1go2">public class Test {
+    static void print(int x) {
+        System.out.println("int " + x);
+    }
+    static void print(double x) {
+        System.out.println("double " + x);
+    }
+
+    public static void main(String[] args) {
+        print(3.14);
+        print(7);
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GO ROUND 2 -->
+  <section class="slide" data-index="11">
+    <div class="eyebrow">Activity 2 of 2 · Guess the Output (4 × 1 pt)</div>
+    <h1 class="slide-title">Round 2 — Arrays</h1>
+    <div class="slide-body">
+      <div class="go-grid">
+        <div class="go-card">
+          <div class="qnum">ITEM 03 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>ArrayLoop.java</span><button class="copy-btn" data-target="p1go3">Copy</button></div>
+            <pre class="codepre"><code id="p1go3"></code></pre>
+          </div>
+          <script type="text/plain" data-target="p1go3">public class Test {
+    public static void main(String[] args) {
+        int[] nums = {2, 4, 6};
+        int product = 1;
+        for (int n : nums) {
+            product *= n;
+        }
+        System.out.println(product);
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+
+        <div class="go-card">
+          <div class="qnum">ITEM 04 · 1 pt</div>
+          <div class="code-block">
+            <div class="code-header"><span>Bounds.java</span><button class="copy-btn" data-target="p1go4">Copy</button></div>
+            <pre class="codepre"><code id="p1go4"></code></pre>
+          </div>
+          <script type="text/plain" data-target="p1go4">public class Test {
+    public static void main(String[] args) {
+        String[] langs = {"Java", "Python"};
+        System.out.println(langs.length);
+        System.out.println(langs[1]);
+        // System.out.println(langs[2]); // what would this do?
+    }
+}</script>
+          <div class="output-prompt"><b>Output?</b><input type="text" placeholder="type your guess..."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ANSWER KEY -->
+  <section class="slide" data-index="12">
+    <div class="eyebrow">The Final Receipt · Part 1</div>
+    <h1 class="slide-title">Answer Key</h1>
+    <div class="slide-body">
+      <div class="ans-scroll">
+        <div class="ans-block">
+          <h4>MCQ 01</h4>
+          <p><b>B.</b> The literal value itself. Java always passes by value; for primitives the value is copied, so changes inside the method stay local.</p>
+        </div>
+        <div class="ans-block">
+          <h4>MCQ 02</h4>
+          <p><b>B.</b> Same name, different number or type of parameters. Return type or access modifier alone does not create a valid overload.</p>
+        </div>
+        <div class="ans-block">
+          <h4>MCQ 03</h4>
+          <p><b>C.</b> <code>scores.length</code> — it is a public final field, not a method, so no parentheses.</p>
+        </div>
+        <div class="ans-block">
+          <h4>MCQ 04</h4>
+          <p><b>C.</b> Throws <code>ArrayIndexOutOfBoundsException</code> at runtime. Valid indices are <code>0</code> through <code>length - 1</code>.</p>
+        </div>
+        <div class="ans-block">
+          <h4>MCQ 05</h4>
+          <p><b>B.</b> When you need the index, must modify elements, or iterate backwards. For-each is cleaner for simple forward, read-only traversal.</p>
+        </div>
+        <div class="ans-block">
+          <h4>GO #01 — PassByValue.java</h4>
+          <p><code>bump</code> only changes its local copy of the parameter.</p>
+          <pre style="font-family:var(--mono); font-size:16px; color:var(--cyan); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">40</pre>
+        </div>
+        <div class="ans-block">
+          <h4>GO #02 — Overload.java</h4>
+          <p>Exact-match overloads win: <code>3.14</code> → double, <code>7</code> → int.</p>
+          <pre style="font-family:var(--mono); font-size:16px; color:var(--cyan); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">double 3.14
+int 7</pre>
+        </div>
+        <div class="ans-block">
+          <h4>GO #03 — ArrayLoop.java</h4>
+          <p>Product of the three elements: <code>2 × 4 × 6</code>.</p>
+          <pre style="font-family:var(--mono); font-size:16px; color:var(--cyan); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">48</pre>
+        </div>
+        <div class="ans-block">
+          <h4>GO #04 — Bounds.java</h4>
+          <p>Prints the length and the second element. The commented line would throw <code>ArrayIndexOutOfBoundsException</code>.</p>
+          <pre style="font-family:var(--mono); font-size:16px; color:var(--cyan); background:var(--code-bg); padding:6px 10px; border-radius:6px; margin:6px 0 0;">2
+Python</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CLOSING PART 1 -->
+  <section class="slide" data-index="13">
+    <div class="closing-wrap">
+      <div class="eyebrow" style="margin:0 auto;">End of Part 1</div>
+      <div class="final-quote">"Methods give you reusable actions. Arrays give you ordered storage. Master both and the rest of OOP becomes far easier to build."</div>
+      <div class="final-msg">You just finished the Methods &amp; Arrays skill check (5 MC + 4 Guess-the-Output). Next up in Part 2: Encapsulation, Constructors, Inheritance, Abstract Classes, Interfaces, the Guided Drill, and the full skill-check set with answer keys. See you there. 🛠️</div>
+    </div>
+  </section>
+
+</div>
+
+<!-- Shortcuts overlay -->
+<div class="overlay" id="overlay">
+  <div class="overlay-panel">
+    <h2>Keyboard &amp; Mouse Shortcuts</h2>
+    <div class="row"><span>Next slide</span><span><kbd>→</kbd> / right-click / front side button</span></div>
+    <div class="row"><span>Previous slide</span><span><kbd>←</kbd> / back side button</span></div>
+    <div class="row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="row"><span>Show this panel</span><span><kbd>?</kbd></span></div>
+    <div class="row"><span>Close this panel</span><span><kbd>Esc</kbd></span></div>
+    <button class="overlay-close" id="overlayClose">Back to Slides</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- Syntax highlighter (single-pass tokenizer) ---------------- */
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  var TOKEN_RE = /(\/\/.*$)|("(?:[^"\\]|\\.)*")|('(?:[^'\\]|\\.)*')|\b(public|private|protected|static|final|class|new|void|int|double|boolean|char|String|return|if|else|for|while|this|super|extends|true|false|null|import|throws)\b|\b(\d+\.\d+|\d+)\b|\b([A-Z][A-Za-z0-9_]*)\b/gm;
+
+  function highlightJava(src){
+    var out = '';
+    var lastIndex = 0;
+    var m;
+    TOKEN_RE.lastIndex = 0;
+    while ((m = TOKEN_RE.exec(src)) !== null){
+      out += escapeHtml(src.slice(lastIndex, m.index));
+      if (m[1] !== undefined) out += '<span class="tok-comment">' + escapeHtml(m[1]) + '</span>';
+      else if (m[2] !== undefined) out += '<span class="tok-string">' + escapeHtml(m[2]) + '</span>';
+      else if (m[3] !== undefined) out += '<span class="tok-string">' + escapeHtml(m[3]) + '</span>';
+      else if (m[4] !== undefined) out += '<span class="tok-keyword">' + escapeHtml(m[4]) + '</span>';
+      else if (m[5] !== undefined) out += '<span class="tok-number">' + escapeHtml(m[5]) + '</span>';
+      else if (m[6] !== undefined) out += '<span class="tok-type">' + escapeHtml(m[6]) + '</span>';
+      lastIndex = TOKEN_RE.lastIndex;
+      if (m.index === TOKEN_RE.lastIndex) TOKEN_RE.lastIndex++;
+    }
+    out += escapeHtml(src.slice(lastIndex));
+    return out;
+  }
+
+  function initCodeBlocks(){
+    var sources = document.querySelectorAll('script[type="text/plain"][data-target]');
+    sources.forEach(function(src){
+      var id = src.getAttribute('data-target');
+      var target = document.getElementById(id);
+      if (!target) return;
+      var raw = src.textContent.replace(/^\n/, '').replace(/\n$/, '');
+      target.innerHTML = highlightJava(raw);
+      target.setAttribute('data-raw', raw);
+    });
+  }
+
+  function fallbackCopy(text){
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); } catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  function initCopyButtons(){
+    document.querySelectorAll('.copy-btn').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var id = btn.getAttribute('data-target');
+        var code = document.getElementById(id);
+        var text = code ? (code.getAttribute('data-raw') || code.textContent) : '';
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).catch(function(){ fallbackCopy(text); });
+        } else {
+          fallbackCopy(text);
+        }
+        var originalText = btn.textContent;
+        btn.textContent = 'Copied! ✓';
+        btn.classList.add('copied');
+        setTimeout(function(){
+          btn.textContent = originalText;
+          btn.classList.remove('copied');
+        }, 1400);
+      });
+    });
+  }
+
+  /* ---------------- Slide navigation ---------------- */
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length;
+  var current = 0;
+  var progressFill = document.getElementById('progressFill');
+  var counterEl = document.getElementById('counter');
+  var overlay = document.getElementById('overlay');
+  var overlayClose = document.getElementById('overlayClose');
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function updateChrome(){
+    var pct = ((current + 1) / total) * 100;
+    progressFill.style.width = pct + '%';
+    counterEl.textContent = (current + 1) + ' / ' + total;
+  }
+
+  function isInteractive(el){
+    return !!(el.closest && el.closest('button, a, input, textarea, select, .no-nav, .overlay'));
+  }
+
+  function goTo(target, dir){
+    if (target < 0 || target >= total || target === current) return;
+    var oldEl = slides[current];
+    var newEl = slides[target];
+
+    oldEl.classList.remove('active');
+    oldEl.classList.add(dir > 0 ? 'exit-left' : 'exit-right');
+
+    newEl.classList.remove('exit-left', 'exit-right', 'enter-left');
+    if (reduceMotion){
+      newEl.classList.add('active');
+    } else {
+      if (dir < 0) newEl.classList.add('enter-left'); // dir > 0 uses the default right-offset state
+      void newEl.offsetWidth; // force reflow so the transition below actually animates
+      requestAnimationFrame(function(){
+        newEl.classList.add('active');
+      });
+    }
+    newEl.scrollTop = 0;
+
+    current = target;
+    updateChrome();
+  }
+
+  function next(){ goTo(current + 1, 1); }
+  function prev(){ goTo(current - 1, -1); }
+  function first(){ goTo(0, -1); }
+  function last(){ goTo(total - 1, 1); }
+
+  function showOverlay(){ overlay.classList.add('show'); }
+  function hideOverlay(){ overlay.classList.remove('show'); }
+  function toggleOverlay(){
+    if (overlay.classList.contains('show')) hideOverlay(); else showOverlay();
+  }
+
+  /* Keyboard */
+  document.addEventListener('keydown', function(e){
+    if (e.key === '?' ){ toggleOverlay(); return; }
+    if (e.key === 'Escape'){ hideOverlay(); return; }
+    if (overlay.classList.contains('show')) return;
+    if (e.key === 'ArrowRight' || e.key === 'PageDown'){ next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ prev(); }
+    else if (e.key === 'Home'){ first(); }
+    else if (e.key === 'End'){ last(); }
+  });
+
+  overlayClose.addEventListener('click', hideOverlay);
+  overlay.addEventListener('mousedown', function(e){
+    if (e.target === overlay) hideOverlay();
+  });
+
+  /* Right-click + side buttons, capture phase, single-trigger */
+  document.addEventListener('contextmenu', function(e){
+    e.preventDefault();
+  }, { capture: true });
+
+  document.addEventListener('mousedown', function(e){
+    if (overlay.classList.contains('show')) return;
+    if (isInteractive(e.target)) return;
+
+    if (e.button === 2){ // right click
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    } else if (e.button === 3){ // back side button
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      prev();
+    } else if (e.button === 4){ // forward side button
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      next();
+    }
+  }, { capture: true });
+
+  document.addEventListener('auxclick', function(e){
+    if (e.button === 1 || e.button === 2 || e.button === 3 || e.button === 4){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, { capture: true });
+
+  document.addEventListener('mouseup', function(e){
+    if (e.button === 3 || e.button === 4){
+      e.preventDefault();
+    }
+  }, { capture: true });
+
+  /* Swipe (mobile) */
+  var touchStartX = null, touchStartY = null;
+  document.addEventListener('touchstart', function(e){
+    if (e.touches.length !== 1) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(e){
+    if (touchStartX === null) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5){
+      if (dx < 0) next(); else prev();
+    }
+    touchStartX = null; touchStartY = null;
+  }, { passive: true });
+
+  /* Init */
+  initCodeBlocks();
+  initCopyButtons();
+  slides[0].classList.add('active');
+  updateChrome();
+
+})();
+</script>
+
+</body>
+</html>

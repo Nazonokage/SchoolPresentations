@@ -1,0 +1,2241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Module 4 — Java Objects &amp; Class Members — Roast-Level Crash Course</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+        * {
+            box-sizing: border-box;
+        }
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--ink);
+            transition: background 300ms ease, color 300ms ease;
+        }
+        h1,
+        h2,
+        h3 {
+            font-family: 'Fraunces', Georgia, serif;
+            margin: 0;
+        }
+        code,
+        pre,
+        .mono {
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+        }
+
+        :root {
+            --bg: #F5E3B8;
+            --bg-alt: #FBF1DA;
+            --accent: #C27B22;
+            --accent-strong: #9C5A15;
+            --card: #FFF7E6;
+            --card-border: rgba(64, 43, 24, 0.18);
+            --shadow: rgba(64, 43, 24, 0.15);
+            --ink: #2E1408;
+            --ink-soft: #3F2210;
+            --eyebrow-ink: #33170A;
+            --card-ink: #2E1408;
+            --card-ink-soft: #3F2210;
+            --card-accent: #33170A;
+            --step-num-ink: #FFEDDD;
+            --success-ink: #1C4225;
+            --tick: 300ms;
+        }
+
+        #app {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .progress-track {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: rgba(64, 43, 24, 0.12);
+            z-index: 50;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-strong), var(--accent));
+            transition: width 350ms ease;
+        }
+
+        .roast-gauge {
+            position: fixed;
+            top: 18px;
+            right: 22px;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.14em;
+            color: var(--ink-soft);
+            user-select: none;
+            pointer-events: none;
+            transition: color var(--tick) ease;
+        }
+        .roast-gauge svg {
+            width: 34px;
+            height: 34px;
+            display: block;
+        }
+        .roast-gauge .steam {
+            transform-origin: center bottom;
+        }
+        @media (prefers-reduced-motion: no-preference) {
+            .roast-gauge .steam {
+                animation: steamRise 2.6s ease-in-out infinite;
+            }
+            .roast-gauge .steam.s2 {
+                animation-delay: 0.5s;
+            }
+        }
+        @keyframes steamRise {
+            0% {
+                opacity: 0;
+                transform: translateY(0) scaleY(1);
+            }
+            30% {
+                opacity: 0.65;
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-7px) scaleY(1.3);
+            }
+        }
+        .roast-label {
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .stage {
+            position: absolute;
+            inset: 0;
+        }
+        .slide {
+            position: absolute;
+            inset: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: safe center;
+            padding: 76px clamp(28px, 7vw, 120px) 90px;
+            opacity: 0;
+            transform: translateX(0) scale(1);
+            will-change: transform, opacity;
+        }
+        .slide.active {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+            transition: opacity var(--tick) ease, transform var(--tick) ease;
+            z-index: 5;
+        }
+        .slide.enter-fwd {
+            transform: translateX(64px) scale(0.985);
+            opacity: 0;
+        }
+        .slide.enter-bwd {
+            transform: translateX(-64px) scale(0.985);
+            opacity: 0;
+        }
+        .slide.exit-fwd {
+            transform: translateX(-64px) scale(0.985);
+            opacity: 0;
+            transition: opacity var(--tick) ease, transform var(--tick) ease;
+            z-index: 4;
+        }
+        .slide.exit-bwd {
+            transform: translateX(64px) scale(0.985);
+            opacity: 0;
+            transition: opacity var(--tick) ease, transform var(--tick) ease;
+            z-index: 4;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .slide,
+            .slide.active,
+            .slide.enter-fwd,
+            .slide.enter-bwd,
+            .slide.exit-fwd,
+            .slide.exit-bwd {
+                transition: opacity 120ms linear !important;
+                transform: none !important;
+            }
+        }
+        .slide-inner {
+            max-width: 1060px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .eyebrow {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12.5px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--eyebrow-ink);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+            transition: color var(--tick) ease;
+        }
+        .eyebrow::after {
+            content: '';
+            flex: 1;
+            height: 0;
+            border-top: 2px dashed var(--card-border);
+        }
+        h2.slide-title {
+            font-size: clamp(28px, 4vw, 44px);
+            font-weight: 700;
+            line-height: 1.12;
+            margin-bottom: 16px;
+            letter-spacing: -0.01em;
+        }
+        .lede {
+            font-size: 17px;
+            color: var(--ink-soft);
+            margin: -4px 0 18px;
+            max-width: 72ch;
+            line-height: 1.55;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 18px 20px;
+            min-width: 0;
+            box-shadow: 0 2px 10px var(--shadow);
+            transition: background var(--tick) ease, border-color var(--tick) ease;
+        }
+        .card h3 {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            font-family: 'Inter', sans-serif;
+            color: var(--card-ink);
+        }
+        .card p,
+        .card li {
+            font-size: 14.5px;
+            color: var(--card-ink-soft);
+            line-height: 1.5;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+            gap: 14px;
+            min-width: 0;
+        }
+        .card-grid.cols-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .card-grid.cols-3 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .card-grid.cols-4 {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+        @media (max-width:760px) {
+            .card-grid.cols-4 {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .card-grid.cols-3 {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .card-grid.cols-2 {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 26px;
+            align-items: start;
+            min-width: 0;
+        }
+        @media (max-width:760px) {
+            .two-col {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+        .two-col>* {
+            min-width: 0;
+        }
+
+        ul.ticket-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+        }
+        ul.ticket-list li {
+            position: relative;
+            padding-left: 22px;
+            font-size: 15.5px;
+            line-height: 1.5;
+            color: var(--ink);
+        }
+        ul.ticket-list li::before {
+            content: '—';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        ol.step-list {
+            list-style: none;
+            counter-reset: step;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        ol.step-list li {
+            position: relative;
+            padding-left: 40px;
+            font-size: 15.5px;
+            line-height: 1.55;
+            min-width: 0;
+        }
+        ol.step-list li::before {
+            counter-increment: step;
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            top: -1px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--card-accent);
+            color: var(--step-num-ink);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 13px;
+            transition: background var(--tick) ease;
+        }
+        ol.step-list b {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13.5px;
+            background: var(--card);
+            padding: 1px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--card-border);
+        }
+
+        .quote-block {
+            font-family: 'Fraunces', serif;
+            font-style: italic;
+            font-size: 19px;
+            line-height: 1.5;
+            color: var(--ink);
+            border-left: 3px solid var(--accent);
+            padding: 4px 0 4px 18px;
+            margin: 6px 0 20px;
+        }
+        .note {
+            background: var(--card);
+            border: 1px dashed var(--card-border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 14px;
+            color: var(--card-ink-soft);
+            margin-top: 14px;
+        }
+        .note b {
+            color: var(--card-ink);
+        }
+
+        pre.code-block {
+            background: #1e1710;
+            color: #f1e6d3;
+            border-radius: 0 0 10px 10px;
+            padding: 18px 20px;
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-x: auto;
+            margin: 0;
+            min-width: 0;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 6px 18px var(--shadow);
+        }
+
+        .code-wrap {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px var(--shadow);
+        }
+        .code-wrap pre.code-block {
+            border-radius: 0 0 10px 10px;
+            box-shadow: none;
+        }
+        .code-wrap-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255,255,255,0.08);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            padding: 6px 12px;
+            background: #2a1e14;
+        }
+        .code-wrap-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 600;
+            color: #d99a6c;
+            letter-spacing: 0.04em;
+        }
+        .copy-btn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #f1e6d3;
+            padding: 3px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 150ms ease;
+            position: relative;
+            z-index: 10;
+        }
+        .copy-btn:hover {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+        .copy-btn.copied {
+            background: #4a8c5c;
+            color: #fff;
+            border-color: #4a8c5c;
+        }
+        pre.code-block code {
+            white-space: pre;
+        }
+        .tok-kw {
+            color: #e39a5a;
+            font-weight: 600;
+        }
+        .tok-str {
+            color: #a8c98f;
+        }
+        .tok-com {
+            color: #7d7166;
+            font-style: italic;
+        }
+        .tok-type {
+            color: #7fb0d6;
+        }
+        .tok-num {
+            color: #d99a6c;
+        }
+
+        .code-cap {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--ink-soft);
+            margin-bottom: 8px;
+        }
+
+        .op-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+            gap: 10px;
+            min-width: 0;
+        }
+        .op-chip {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            text-align: center;
+            min-width: 0;
+        }
+        .op-chip .sym {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--card-accent);
+        }
+        .op-chip .desc {
+            font-size: 12px;
+            color: var(--card-ink-soft);
+            margin-top: 2px;
+        }
+
+        .hud {
+            position: fixed;
+            bottom: 16px;
+            right: 20px;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .counter {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            color: var(--card-ink);
+            padding: 8px 16px;
+            border-radius: 999px;
+            box-shadow: 0 4px 14px var(--shadow);
+            transition: background var(--tick) ease, color var(--tick) ease, border-color var(--tick) ease;
+        }
+        .hint {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--ink-soft);
+            letter-spacing: 0.05em;
+            display: none;
+        }
+        @media (min-width:640px) {
+            .hint {
+                display: block;
+            }
+        }
+
+        .click-zone {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            cursor: pointer;
+        }
+
+        .slide::-webkit-scrollbar {
+            width: 8px;
+        }
+        .slide::-webkit-scrollbar-thumb {
+            background: var(--card-border);
+            border-radius: 8px;
+        }
+
+        .two-col pre.code-block {
+            max-width: 100%;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .two-col .code-block code {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .activity-box {
+            background: var(--card);
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            padding: 18px 22px;
+            margin-top: 10px;
+        }
+        .activity-box h3 {
+            font-family: 'Inter', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--card-accent);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .activity-box .prompt {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--card-ink-soft);
+        }
+        .activity-box .prompt code {
+            background: var(--bg);
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .answer-key {
+            background: var(--bg-alt);
+            border: 1px solid var(--accent);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-top: 14px;
+        }
+        .answer-key h4 {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--card-ink);
+            margin-bottom: 8px;
+        }
+        .answer-key .answer-pill {
+            display: inline-block;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            color: var(--success-ink);
+        }
+        .answer-key code {
+            background: var(--card);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            border: 1px solid var(--card-border);
+        }
+        .answer-key pre {
+            margin: 6px 0 0;
+        }
+        .answer-key pre.code-block code {
+            background: none;
+            padding: 0;
+            border: none;
+            border-radius: 0;
+            font-size: 14px;
+        }
+
+        .tag {
+            display: inline-block;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            background: var(--accent);
+            color: #fff;
+            padding: 2px 10px;
+            border-radius: 999px;
+            margin-right: 6px;
+        }
+        .tag.green {
+            background: #4a8c5c;
+        }
+        .tag.blue {
+            background: #3f7a9e;
+        }
+        .tag.purple {
+            background: #7a5f9e;
+        }
+        .tag.orange {
+            background: #c27b3a;
+        }
+
+        .quiz-option {
+            display: block;
+            padding: 6px 0 6px 28px;
+            position: relative;
+            font-size: 14.5px;
+            line-height: 1.5;
+            color: var(--card-ink-soft);
+        }
+        .quiz-option::before {
+            content: '';
+            position: absolute;
+            left: 4px;
+            top: 10px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid var(--card-border);
+            background: var(--card);
+        }
+        .quiz-option.correct::before {
+            background: #4a8c5c;
+            border-color: #4a8c5c;
+        }
+        .quiz-option.correct::after {
+            content: '✓';
+            position: absolute;
+            left: 6px;
+            top: 7px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .quiz-option.wrong::before {
+            background: #b14a4a;
+            border-color: #b14a4a;
+        }
+        .quiz-option.wrong::after {
+            content: '✗';
+            position: absolute;
+            left: 6px;
+            top: 7px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .hierarchy-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 0;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .hierarchy-diagram .top {
+            background: var(--accent);
+            color: #fff;
+            padding: 8px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        .hierarchy-diagram .connector {
+            width: 2px;
+            height: 24px;
+            background: var(--accent-strong);
+            margin: 2px 0;
+        }
+        .hierarchy-diagram .bottom {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .hierarchy-diagram .bottom span {
+            background: var(--card);
+            border: 2px solid var(--accent);
+            padding: 6px 18px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--card-ink);
+        }
+
+        .file-tree {
+            background: #1e1710;
+            border-radius: 10px;
+            padding: 18px 22px;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 6px 18px var(--shadow);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            line-height: 1.9;
+            color: #f1e6d3;
+        }
+        .file-tree .ft-row {
+            white-space: pre;
+        }
+        .file-tree .ft-folder {
+            color: #e39a5a;
+            font-weight: 700;
+        }
+        .file-tree .ft-file {
+            color: #7fb0d6;
+        }
+        .file-tree .ft-comment {
+            color: #7d7166;
+            font-style: italic;
+        }
+
+        .file-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+        .file-tabs .tab {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 600;
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            padding: 4px 14px;
+            border-radius: 999px;
+            color: var(--card-ink-soft);
+        }
+        .file-tabs .tab.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+
+        /* ----- code-breakdown panel ----- */
+        .code-breakdown {
+            background: #f5efe8;
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin-top: 10px;
+            font-size: 13.5px;
+            line-height: 1.75;
+            color: #1e1710;
+            border-left: 4px solid var(--accent);
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+        }
+        .code-breakdown .bd-title {
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--accent-strong);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .code-breakdown .bd-row {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(64,43,24,0.08);
+        }
+        .code-breakdown .bd-row:last-child { border-bottom: none; }
+        .code-breakdown .bd-num {
+            flex-shrink: 0;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .code-breakdown .bd-text { flex: 1; font-size: 13.5px; color: #1e1710; line-height: 1.6; }
+        .code-breakdown strong { color: #2E1408; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+        .code-breakdown .highlight {
+            background: rgba(255,255,240,0.85);
+            padding: 1px 6px;
+            border-radius: 4px;
+            border: 1px solid rgba(64,43,24,0.22);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12.5px;
+            color: #1e1710;
+        }
+        .code-breakdown .highlight code { background: transparent; padding: 0; border: none; color: inherit; }
+        .code-breakdown code {
+            background: rgba(255,255,255,0.6);
+            padding: 0 4px;
+            border-radius: 3px;
+            font-size: 12.5px;
+            color: #1e1710;
+        }
+
+        /* ----- memory / object diagram ----- */
+        .mem-diagram {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .mem-box {
+            background: #1e1710;
+            border-radius: 10px;
+            overflow: hidden;
+            min-width: 160px;
+            flex: 1;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+        }
+        .mem-box .mem-header {
+            background: var(--accent);
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 6px 12px;
+        }
+        .mem-box .mem-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+        }
+        .mem-box .mem-row:last-child { border-bottom: none; }
+        .mem-box .mem-key { color: #7fb0d6; }
+        .mem-box .mem-val { color: #a8c98f; }
+
+        /* ----- execution flow ----- */
+        .exec-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            margin-top: 10px;
+        }
+        .exec-flow .ef-step {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 14px;
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            font-size: 13.5px;
+            color: var(--card-ink);
+            margin-bottom: 2px;
+        }
+        .exec-flow .ef-step .ef-n {
+            width: 22px; height: 22px; border-radius: 50%;
+            background: var(--accent-strong); color: #fff;
+            font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .exec-flow .ef-arrow {
+            text-align: center;
+            color: var(--accent);
+            font-size: 16px;
+            line-height: 1;
+            margin: 0 0 2px 22px;
+        }
+
+        /* ----- comparison table ----- */
+        .cmp-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        .cmp-table th {
+            background: var(--accent);
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            padding: 8px 14px;
+            text-align: left;
+        }
+        .cmp-table td {
+            padding: 8px 14px;
+            border-bottom: 1px solid var(--card-border);
+            color: var(--card-ink-soft);
+            background: var(--card);
+            vertical-align: top;
+        }
+        .cmp-table tr:last-child td { border-bottom: none; }
+        .cmp-table td:first-child { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--card-accent); font-size: 13px; }
+
+        /* ----- concept pill ----- */
+        .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .pill {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;
+            padding: 4px 12px; border-radius: 999px;
+            background: var(--card); border: 1px solid var(--card-border); color: var(--card-accent);
+        }
+        .pill.green { border-color: #4a8c5c; color: #1C4225; }
+        .pill.blue  { border-color: #3f7a9e; color: #1e4a66; }
+        .pill.amber { border-color: var(--accent); color: var(--accent-strong); }
+
+        /* ----- analogy strip ----- */
+        .analogy-strip {
+            display: flex; align-items: center; gap: 0;
+            background: var(--card); border: 1px solid var(--card-border); border-radius: 10px;
+            overflow: hidden; margin-top: 10px;
+        }
+        .analogy-strip .an-block {
+            flex: 1; padding: 14px 18px; text-align: center;
+            font-size: 14px; color: var(--card-ink-soft); line-height: 1.45;
+        }
+        .analogy-strip .an-block strong { display: block; font-size: 15px; color: var(--card-ink); margin-bottom: 4px; }
+        .analogy-strip .an-sep {
+            width: 1px; align-self: stretch; background: var(--card-border);
+        }
+        .analogy-strip .an-arrow {
+            padding: 0 10px; color: var(--accent); font-size: 22px; flex-shrink: 0;
+        }
+
+        /* ----- key rule callout ----- */
+        .rule-box {
+            background: rgba(194,123,34,0.12);
+            border: 1.5px solid var(--accent);
+            border-radius: 10px;
+            padding: 12px 18px;
+            font-size: 14px;
+            color: var(--card-ink);
+            margin-top: 12px;
+            line-height: 1.6;
+        }
+        .rule-box b { color: var(--accent-strong); }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+        <div class="roast-gauge" id="roastGauge">
+            <svg viewBox="0 0 40 40" fill="none">
+                <ellipse class="steam" cx="14" cy="6" rx="1.6" ry="4" fill="currentColor" opacity="0.5"></ellipse>
+                <ellipse class="steam s2" cx="22" cy="5" rx="1.6" ry="4" fill="currentColor" opacity="0.5"></ellipse>
+                <path id="cupFill" d="M6 14 h22 l-2.2 16 a4 4 0 0 1 -4 3.4 h-9.6 a4 4 0 0 1 -4 -3.4 Z" fill="var(--accent)" stroke="var(--ink)" stroke-width="1.4"></path>
+                <path d="M28 17 h4.5 a3.5 3.5 0 0 1 0 9 h-3" stroke="var(--ink)" stroke-width="1.4" fill="none"></path>
+                <line x1="4" y1="14" x2="30" y2="14" stroke="var(--ink)" stroke-width="1.6" stroke-linecap="round"></line>
+            </svg>
+            <span class="roast-label" id="roastLabel">Light Roast</span>
+        </div>
+
+        <div class="click-zone" id="clickZone"></div>
+        <div class="stage" id="stage"></div>
+
+        <div class="hud">
+            <span class="hint">click / → to continue</span>
+            <div class="counter" id="counter">1 / 18</div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            "use strict";
+
+            function escapeHtml(s) {
+                return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
+            var KEYWORDS = ['public', 'private', 'protected', 'static', 'void', 'final', 'class', 'new', 'if', 'else',
+                'return',
+                'for', 'while', 'do', 'int', 'double', 'float', 'long', 'short', 'byte', 'char', 'boolean', 'true', 'false',
+                'null',
+                'this', 'super', 'package', 'import', 'extends', 'implements', 'instanceof', 'try', 'catch', 'finally',
+                'throw', 'throws', 'abstract'
+            ];
+            var KW_RE = new RegExp('\\b(' + KEYWORDS.join('|') + ')\\b');
+            var TOKEN_RE = /(\/\/.*$)|("(?:\\.|[^"\\])*")|('(?:\\.|[^'\\])')|\b([A-Za-z_][A-Za-z0-9_]*)\b|\b(\d+\.?\d*)\b/gm;
+
+            function highlightJava(src) {
+                var esc = escapeHtml(src);
+                return esc.replace(TOKEN_RE, function(match, comment, str, chr, word, num) {
+                    if (comment !== undefined) return '<span class="tok-com">' + comment + '</span>';
+                    if (str !== undefined) return '<span class="tok-str">' + str + '</span>';
+                    if (chr !== undefined) return '<span class="tok-str">' + chr + '</span>';
+                    if (word !== undefined) {
+                        if (KW_RE.test(word)) return '<span class="tok-kw">' + word + '</span>';
+                        if (/^[A-Z]/.test(word)) return '<span class="tok-type">' + word + '</span>';
+                        return word;
+                    }
+                    if (num !== undefined) return '<span class="tok-num">' + num + '</span>';
+                    return match;
+                });
+            }
+
+            function reindentJava(src) {
+                var INDENT = '    ';
+                var lines = src.split('\n').map(function(l) { return l.trim(); });
+                var depth = 0;
+                var out = [];
+                for (var i = 0; i < lines.length; i++) {
+                    var line = lines[i];
+                    if (line === '') { out.push(''); continue; }
+                    var leadingClose = /^[}\)\]]/.test(line);
+                    if (leadingClose) depth = Math.max(0, depth - 1);
+                    out.push(INDENT.repeat(depth) + line);
+                    var opens = (line.match(/[{(\[]/g) || []).length;
+                    var closes = (line.match(/[}\)\]]/g) || []).length;
+                    var net = opens - closes;
+                    if (leadingClose) net += 1;
+                    depth = Math.max(0, depth + net);
+                }
+                return out.join('\n');
+            }
+
+            var codeBlockId = 0;
+            function code(src, label) {
+                src = src.replace(/^\n/, '').replace(/\n$/, '');
+                src = reindentJava(src);
+                var id = 'cb-' + (codeBlockId++);
+                var headerLabel = label || '';
+                return '<div class="code-wrap">' +
+                    '<div class="code-wrap-header">' +
+                      (headerLabel ? '<span class="code-wrap-label">' + headerLabel + '</span>' : '<span></span>') +
+                      '<button class="copy-btn" data-copy="' + id + '">Copy</button>' +
+                    '</div>' +
+                    '<pre class="code-block"><code id="' + id + '">' + highlightJava(src) + '</code></pre>' +
+                  '</div>';
+            }
+
+            var S = [];
+
+            // ---- SLIDE 1: TITLE ----
+            S.push({
+                eyebrow: '🧩 Module 04 — Java Objects & Class Members',
+                title: 'Understanding Objects, Fields, and Methods',
+                lede: 'Dive deeper into the anatomy of Java classes. Learn about fields, methods, constructors, and the dot operator that brings them to life.',
+                body: `
+              <div class="quote-block">"An object is a physical <em>and</em> logical entity. A class is a logical entity only — it exists only on paper until you create an object from it."</div>
+              <div class="card-grid cols-2">
+                <div class="card">
+                  <h3>📋 Class (Blueprint)</h3>
+                  <p>A <b>template</b> that defines structure. Like an architectural drawing — it tells you how many rooms a house will have, but it isn't a house you can live in yet.</p>
+                  <div class="pill-row">
+                    <span class="pill amber">logical only</span>
+                    <span class="pill amber">no memory used</span>
+                    <span class="pill amber">written once</span>
+                  </div>
+                </div>
+                <div class="card">
+                  <h3>🏠 Object (Instance)</h3>
+                  <p>The <b>real thing</b> built from the blueprint. Each object lives in memory and holds its own actual data values.</p>
+                  <div class="pill-row">
+                    <span class="pill green">physical + logical</span>
+                    <span class="pill green">uses memory</span>
+                    <span class="pill green">many per class</span>
+                  </div>
+                </div>
+              </div>
+              <div class="analogy-strip">
+                <div class="an-block"><strong>🍪 Cookie Cutter</strong>The class — defines the shape, created once</div>
+                <div class="an-arrow">→</div>
+                <div class="an-block"><strong>🍪🍪🍪 Cookies</strong>The objects — each one is a unique baked instance</div>
+                <div class="an-sep"></div>
+                <div class="an-block"><strong>📐 Car Blueprint</strong>The class — one design on paper</div>
+                <div class="an-arrow">→</div>
+                <div class="an-block"><strong>🚗🚗 Cars</strong>The objects — each car has its own color &amp; plate</div>
+              </div>
+            `
+            });
+
+            // ---- SLIDE 2: 3 Characteristics ----
+            S.push({
+                eyebrow: 'Order No. 02 — Object Anatomy',
+                title: '3 Main Characteristics of Java Objects',
+                lede: 'Every object in Java has three defining traits. Think of them as the "what it has", "what it does", and "who it is".',
+                body: `
+              <div class="card-grid cols-3">
+                <div class="card">
+                  <h3>📊 State — "What it has"</h3>
+                  <p>The <b>data stored inside</b> the object. Defined by <b>fields</b> (also called attributes or instance variables).</p>
+                  <div class="code-breakdown" style="margin-top:10px;">
+                    <div class="bd-title">🚗 Car Example</div>
+                    <div class="bd-row"><span class="bd-text"><strong>model</strong> = "Mustang"</span></div>
+                    <div class="bd-row"><span class="bd-text"><strong>color</strong> = "Red"</span></div>
+                    <div class="bd-row"><span class="bd-text"><strong>year</strong> = 1969</span></div>
+                  </div>
+                </div>
+                <div class="card">
+                  <h3>⚙️ Behavior — "What it does"</h3>
+                  <p>The <b>actions the object can perform</b>. Defined by <b>methods</b>.</p>
+                  <div class="code-breakdown" style="margin-top:10px;">
+                    <div class="bd-title">🚗 Car Example</div>
+                    <div class="bd-row"><span class="bd-text"><strong>fullThrottle()</strong> — accelerate</span></div>
+                    <div class="bd-row"><span class="bd-text"><strong>brake()</strong> — slow down</span></div>
+                    <div class="bd-row"><span class="bd-text"><strong>honk()</strong> — beep the horn</span></div>
+                  </div>
+                </div>
+                <div class="card">
+                  <h3>🆔 Identity — "Who it is"</h3>
+                  <p>A <b>unique reference</b> the JVM uses to tell one object from another, even if two objects have the same data.</p>
+                  <div class="code-breakdown" style="margin-top:10px;">
+                    <div class="bd-title">🚗 Car Example</div>
+                    <div class="bd-row"><span class="bd-text">Two red Mustangs → same state, but <strong>different memory addresses</strong></span></div>
+                    <div class="bd-row"><span class="bd-text">Like two identical twins — same looks, different people</span></div>
+                  </div>
+                </div>
+              </div>
+              <div class="rule-box"><b>📌 Quick Rule:</b> State = fields (data), Behavior = methods (functions), Identity = unique memory reference. You'll use State and Behavior most often in code.</div>
+            `
+            });
+
+            // ---- SLIDE 3: Smartphone Analogy ----
+            S.push({
+                eyebrow: 'Order No. 03 — Real-world Object',
+                title: 'Analogy: A Smartphone as an Object',
+                lede: 'Map a real-world smartphone to Java concepts. This makes it easy to recognize fields and methods when you write your own classes.',
+                body: `
+              <div class="two-col">
+                <div>
+                  ${code(`public class Smartphone {
+                      // State (Fields)
+                      String brand = "Apple";
+                      String color = "Black";
+                      int battery  = 85;
+
+                      // Behavior (Methods)
+                      void takePhoto() { ... }
+                      void sendMessage() { ... }
+                      void chargeBattery() { ... }
+                  }`)}
+                  <div class="code-breakdown" style="margin-top:10px;">
+                    <div class="bd-title">📖 Field vs Method — At a Glance</div>
+                    <div class="bd-row">
+                      <span class="bd-num">①</span>
+                      <span class="bd-text"><strong>Fields</strong> are nouns — they store <em>things</em>: brand, color, battery level.</span>
+                    </div>
+                    <div class="bd-row">
+                      <span class="bd-num">②</span>
+                      <span class="bd-text"><strong>Methods</strong> are verbs — they <em>do things</em>: takePhoto, sendMessage, charge.</span>
+                    </div>
+                    <div class="bd-row">
+                      <span class="bd-num">③</span>
+                      <span class="bd-text"><strong>Identity:</strong> Every phone that comes off the same model line has a unique IMEI — just like two objects of the same class have different memory addresses.</span>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div class="card-grid cols-1" style="display:flex;flex-direction:column;gap:12px;">
+                    <div class="card">
+                      <h3>📊 State (Fields)</h3>
+                      <div class="mem-diagram">
+                        <div class="mem-box" style="flex:1;">
+                          <div class="mem-header">myPhone : Smartphone</div>
+                          <div class="mem-row"><span class="mem-key">brand</span><span class="mem-val">"Apple"</span></div>
+                          <div class="mem-row"><span class="mem-key">color</span><span class="mem-val">"Black"</span></div>
+                          <div class="mem-row"><span class="mem-key">battery</span><span class="mem-val">85</span></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="card">
+                      <h3>⚙️ Behavior (Methods)</h3>
+                      <ul class="ticket-list">
+                        <li><code>takePhoto()</code> — captures an image</li>
+                        <li><code>sendMessage()</code> — sends a text</li>
+                        <li><code>chargeBattery()</code> — increases battery %</li>
+                      </ul>
+                    </div>
+                    <div class="card">
+                      <h3>🆔 Identity (Reference)</h3>
+                      <p>Two identical black iPhones still have different IMEIs — just like two <code>Smartphone</code> objects with the same data live at different memory addresses.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `
+            });
+
+            // ---- SLIDE 4: Class Members Overview ----
+            S.push({
+                eyebrow: 'Order No. 04 — Class Anatomy',
+                title: 'Class Members: The Building Blocks',
+                lede: 'Everything defined inside a class is a "member". Here are the four types you\'ll use constantly.',
+                body: `
+              <div class="card-grid cols-4">
+                <div class="card">
+                  <h3>📦 Fields</h3>
+                  <p>Variables that store the <b>state</b> of an object. Each object gets its own copy.</p>
+                  <div style="margin-top:8px;">${code(`String model;
+int year;`)}</div>
+                </div>
+                <div class="card">
+                  <h3>📝 Properties</h3>
+                  <p><b>Getters/setters</b> that control access to private fields. The safe door to your data.</p>
+                  <div style="margin-top:8px;">${code(`String getModel() {
+    return model;
+}`)}</div>
+                </div>
+                <div class="card">
+                  <h3>⚡ Methods</h3>
+                  <p>Code blocks that define <b>behavior</b> — what the object can do when called.</p>
+                  <div style="margin-top:8px;">${code(`void fullThrottle() {
+    System.out.println(...);
+}`)}</div>
+                </div>
+                <div class="card">
+                  <h3>🔧 Constructors</h3>
+                  <p>Run <b>automatically</b> when you use <code>new</code>. Sets the object's initial state.</p>
+                  <div style="margin-top:8px;">${code(`Car(String m) {
+    model = m;
+}`)}</div>
+                </div>
+              </div>
+              <table class="cmp-table" style="margin-top:14px;">
+                <tr><th>Member</th><th>Keyword</th><th>When does it run?</th><th>Purpose</th></tr>
+                <tr><td>Field</td><td><code>String model;</code></td><td>Exists as long as the object lives</td><td>Store data (state)</td></tr>
+                <tr><td>Method</td><td><code>void drive()</code></td><td>When explicitly called</td><td>Define behavior</td></tr>
+                <tr><td>Constructor</td><td><code>Car() {}</code></td><td>Automatically on <code>new Car()</code></td><td>Initialize state</td></tr>
+                <tr><td>Property</td><td><code>getModel()</code></td><td>When explicitly called</td><td>Safe field access</td></tr>
+              </table>
+            `
+            });
+
+            // ---- SLIDE 5: Structural Example ----
+            S.push({
+                eyebrow: 'Order No. 05 — Code Anatomy',
+                title: 'Structural Example of a Class',
+                lede: 'Every class has the same skeleton. Let\'s dissect one line by line so you know exactly what each piece does.',
+                body: `
+              <div class="two-col">
+                <div>
+                  <div class="code-cap">Example — Data.java</div>
+                  ${code(`public class Data {
+                      // ① Fields (Data Members)
+                      public int x;
+                      public boolean check;
+
+                      // ② Constructor
+                      public Data() {
+                          check = true;  // sets initial state
+                      }
+
+                      // ③ Method (Function Member)
+                      public void printCheck() {
+                          if (this.check) {
+                              System.out.println("Check is true");
+                          }
+                      }
+                  }`)}
+                </div>
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                  <div class="card">
+                    <h3>📌 Line-by-Line Breakdown</h3>
+                    <div class="code-breakdown">
+                      <div class="bd-row">
+                        <span class="bd-num">①</span>
+                        <span class="bd-text"><strong>Fields</strong> — <code>public int x</code> and <code>public boolean check</code> are the object's <em>storage slots</em>. Each object gets its own copy of these.</span>
+                      </div>
+                      <div class="bd-row">
+                        <span class="bd-num">②</span>
+                        <span class="bd-text"><strong>Constructor</strong> — <code>public Data()</code> runs the moment you write <code>new Data()</code>. Here it sets <code>check = true</code> so every new object starts with check already on.</span>
+                      </div>
+                      <div class="bd-row">
+                        <span class="bd-num">③</span>
+                        <span class="bd-text"><strong>Method</strong> — <code>printCheck()</code> is a behavior. It only runs when you explicitly call it on an object. <code>this.check</code> refers to <em>this</em> object's check field.</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <h3>🗂 Two Categories of Members</h3>
+                    <table class="cmp-table">
+                      <tr><th>Category</th><th>Examples</th></tr>
+                      <tr><td>Data Members</td><td>Fields: <code>x</code>, <code>check</code></td></tr>
+                      <tr><td>Function Members</td><td>Methods + Constructors: <code>Data()</code>, <code>printCheck()</code></td></tr>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            `
+            });
+
+            // ---- SLIDE 6: Data vs Function Members ----
+            S.push({
+                eyebrow: 'Order No. 06 — Members Breakdown',
+                title: 'Data Members vs. Function Members',
+                lede: 'All class members fall into one of two buckets. Knowing which is which instantly tells you whether something stores data or runs logic.',
+                body: `
+              <div class="two-col">
+                <div>
+                  <div class="card">
+                    <h3>📊 Data Members — "What it stores"</h3>
+                    <p>Variables defined directly inside a class. They hold the <b>state</b> of an object.</p>
+                    <ul class="ticket-list" style="margin-top:8px;">
+                      <li>Can be <b>primitive</b>: <code>int</code>, <code>double</code>, <code>boolean</code>, <code>char</code></li>
+                      <li>Can be a <b>class type</b>: <code>String</code>, <code>Car</code>, <code>Scanner</code></li>
+                      <li>Every object gets its <b>own copy</b> of each field</li>
+                    </ul>
+                    ${code(`public class Person {
+                        String name;      // class type
+                        int age;          // primitive
+                        boolean active;   // primitive
+                    }`)}
+                  </div>
+                </div>
+                <div>
+                  <div class="card">
+                    <h3>⚙️ Function Members — "What it does"</h3>
+                    <p>Methods and constructors that contain executable logic and define an object's <b>behavior</b>.</p>
+                    <ul class="ticket-list" style="margin-top:8px;">
+                      <li><b>Methods</b> run when you explicitly call them</li>
+                      <li><b>Constructors</b> run automatically on <code>new</code></li>
+                      <li>Can receive parameters and return values</li>
+                    </ul>
+                    ${code(`public class Person {
+                        // Method (function member)
+                        public void greet() {
+                            System.out.println("Hi, I'm " + name);
+                        }
+                        // Constructor (function member)
+                        public Person(String n) {
+                            name = n; // sets data member
+                        }
+                    }`)}
+                  </div>
+                </div>
+              </div>
+              <div class="rule-box" style="margin-top:12px;"><b>💡 Easy test:</b> If it stores a value → Data Member. If it contains <code>{}</code> with runnable code → Function Member. Fields and methods together are called <b>"Class Members"</b>.</div>
+            `
+            });
+
+            // ---- SLIDE 7: Dot Operator ----
+            S.push({
+                eyebrow: 'Order No. 07 — Accessing Members',
+                title: 'The Dot (.) Operator',
+                lede: 'The dot operator is the bridge between an object and its members. Think of it as saying: "Hey, <em>this specific object</em> — give me your field / run your method."',
+                body: `
+              <div class="two-col">
+                <div>
+                  <div class="code-cap">Syntax</div>
+                  ${code(`// Access a FIELD
+objectName.fieldName;
+
+// Call a METHOD
+objectName.methodName();`)}
+                  <div style="margin-top:12px;">
+                    <div class="code-cap">Full Example</div>
+                    ${code(`Car myCar = new Car();    // create object
+myCar.model = "Mustang"; // set a field
+myCar.year  = 1969;      // set another field
+myCar.fullThrottle();    // call a method`)}
+                  </div>
+                  <div class="code-breakdown" style="margin-top:10px;">
+                    <div class="bd-title">🔍 Reading the dot operator</div>
+                    <div class="bd-row"><span class="bd-num">①</span><span class="bd-text"><strong>myCar</strong> — the specific object (instance) we're targeting</span></div>
+                    <div class="bd-row"><span class="bd-num">②</span><span class="bd-text"><strong>.</strong> — "go inside this object and…"</span></div>
+                    <div class="bd-row"><span class="bd-num">③</span><span class="bd-text"><strong>model</strong> — "…reach the model field" (or <code>fullThrottle()</code> for a method)</span></div>
+                  </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                  <div class="card">
+                    <h3>🔑 Three Steps to Using Dot Operator</h3>
+                    <div class="exec-flow">
+                      <div class="ef-step"><span class="ef-n">1</span>Create an object: <code>Car myCar = new Car();</code></div>
+                      <div class="ef-arrow">↓</div>
+                      <div class="ef-step"><span class="ef-n">2</span>Type the object name + dot: <code>myCar.</code></div>
+                      <div class="ef-arrow">↓</div>
+                      <div class="ef-step"><span class="ef-n">3</span>Add the field or method: <code>myCar.model</code> or <code>myCar.fullThrottle()</code></div>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <h3>⚠️ Common Mistake</h3>
+                    ${code(`// ❌ Wrong — can't use class name directly
+Car.model = "Mustang";
+
+// ✅ Correct — use the object instance
+myCar.model = "Mustang";`)}
+                    <p style="margin-top:8px;font-size:13.5px;color:var(--card-ink-soft);">The dot operator works on <b>objects</b> (instances), not on the class name itself.</p>
+                  </div>
+                </div>
+              </div>
+            `
+            });
+
+            // ---- SLIDE 8: Hands-on Car Class (DETAILED) ----
+            S.push({
+                eyebrow: '🧪 Order No. 08 — Hands-on Practice',
+                title: 'Creating a Car Class (Detailed)',
+                lede: 'Two files, one class, two objects. Let\'s trace every line so you can see exactly what happens in memory when you run this program.',
+                body: `
+              <div class="two-col">
+                <div>
+                  <div class="code-cap">📄 Blueprint — Car.java</div>
+                  ${code(`public class Car {
+                      // Fields (State)
+                      public String model;
+                      public String color;
+                      public int maxSpeed;
+                      public int year;
+
+                      // Method (Behavior)
+                      public void fullThrottle() {
+                          System.out.println(
+                              model + " is going as fast as it can!"
+                          );
+                      }
+                  }`)}
+                  <div class="code-breakdown" style="margin-top:10px;">
+                    <div class="bd-title">📖 Car.java breakdown</div>
+                    <div class="bd-row"><span class="bd-num">①</span><span class="bd-text"><strong>public class Car</strong> — defines the blueprint. No memory used yet.</span></div>
+                    <div class="bd-row"><span class="bd-num">②</span><span class="bd-text"><strong>Fields</strong> (<code>model</code>, <code>color</code>, <code>year</code>) — each object will get its own copy of these.</span></div>
+                    <div class="bd-row"><span class="bd-num">③</span><span class="bd-text"><strong>void fullThrottle()</strong> — <code>void</code> means it returns nothing. It just prints a message using the object's own <code>model</code>.</span></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="code-cap">▶️ Execution — MainProgram.java</div>
+                  ${code(`public class MainProgram {
+                      public static void main(String[] args) {
+                          Car ford = new Car();   // object 1
+                          ford.model = "Mustang";
+                          ford.color = "red";
+                          ford.year  = 1969;
+
+                          Car honda = new Car();  // object 2
+                          honda.model = "Brio";
+                          honda.color = "orange";
+                          honda.year  = 2019;
+
+                          System.out.println(ford.model);  // Mustang
+                          System.out.println(honda.model); // Brio
+                          honda.fullThrottle();
+                          // → "Brio is going as fast as it can!"
+                      }
+                  }`)}
+                  <div class="code-breakdown" style="margin-top:10px;">
+                    <div class="bd-title">📖 What's in memory after setup?</div>
+                    <div class="bd-row"><span class="bd-num">①</span><span class="bd-text"><code>new Car()</code> reserves a slot in memory and returns a reference stored in <strong>ford</strong> or <strong>honda</strong>.</span></div>
+                    <div class="bd-row"><span class="bd-num">②</span><span class="bd-text"><strong>ford</strong> and <strong>honda</strong> are completely independent — changing <code>ford.model</code> never affects <code>honda.model</code>.</span></div>
+                    <div class="bd-row"><span class="bd-num">③</span><span class="bd-text"><code>honda.fullThrottle()</code> — Java goes inside <em>honda's</em> data, so it prints "Brio", not "Mustang".</span></div>
+                  </div>
+                  <div class="mem-diagram" style="margin-top:10px;">
+                    <div class="mem-box">
+                      <div class="mem-header">ford : Car</div>
+                      <div class="mem-row"><span class="mem-key">model</span><span class="mem-val">"Mustang"</span></div>
+                      <div class="mem-row"><span class="mem-key">color</span><span class="mem-val">"red"</span></div>
+                      <div class="mem-row"><span class="mem-key">year</span><span class="mem-val">1969</span></div>
+                    </div>
+                    <div class="mem-box">
+                      <div class="mem-header">honda : Car</div>
+                      <div class="mem-row"><span class="mem-key">model</span><span class="mem-val">"Brio"</span></div>
+                      <div class="mem-row"><span class="mem-key">color</span><span class="mem-val">"orange"</span></div>
+                      <div class="mem-row"><span class="mem-key">year</span><span class="mem-val">2019</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `
+            });
+
+            // ---- SLIDE 9: Activities (NO ANSWERS) ----
+            S.push({
+                eyebrow: '✏️ Order No. 09 — Skill-building',
+                title: 'Activities: Extend the Car Class',
+                lede: 'Time to code! Follow each exercise step by step. The answer key is on the next slide — try it yourself first.',
+                body: `
+              <div class="activity-box">
+                <h3>🚗 Exercise 1 — Test the Car Class</h3>
+                <div class="prompt">
+                  <p>Copy the <code>Car</code> and <code>MainProgram</code> code from the previous slide into your IDE or an online compiler (like <b>OnlineGDB</b> or <b>Replit</b>). Run it and check the output.</p>
+                  <p style="margin-top:8px;"><strong>Expected Output:</strong></p>
+                  <pre style="background:var(--bg);padding:8px 14px;border-radius:6px;font-family:monospace;font-size:13px;color:var(--ink);">Mustang
+Brio
+Brio is going as fast as it can!</pre>
+                </div>
+              </div>
+
+              <div class="activity-box" style="margin-top:14px;">
+                <h3>🚗 Exercise 2 — Add a <code>company</code> Field</h3>
+                <div class="prompt">
+                  <p style="margin-bottom:12px;">You'll modify the Car class to store which company made the car. Follow these steps:</p>
+
+                  <div class="code-breakdown" style="margin-bottom:12px;">
+                    <div class="bd-title">📋 Step-by-Step Instructions</div>
+                    <div class="bd-row">
+                      <span class="bd-num">①</span>
+                      <span class="bd-text"><b>Open your Car class</b> — Find where the existing fields are (<code>model</code>, <code>color</code>, etc.).</span>
+                    </div>
+                    <div class="bd-row">
+                      <span class="bd-num">②</span>
+                      <span class="bd-text"><b>Add a new field</b> — Right below the existing fields, type: <code>public String company;</code></span>
+                    </div>
+                    <div class="bd-row">
+                      <span class="bd-num">③</span>
+                      <span class="bd-text"><b>Go to MainProgram</b> — After the line <code>ford.year = 1969;</code>, add: <code>ford.company = "Ford";</code></span>
+                    </div>
+                    <div class="bd-row">
+                      <span class="bd-num">④</span>
+                      <span class="bd-text"><b>Do the same for honda</b> — Add: <code>honda.company = "Honda";</code></span>
+                    </div>
+                    <div class="bd-row">
+                      <span class="bd-num">⑤</span>
+                      <span class="bd-text"><b>Print it</b> — Add: <code>System.out.println(ford.model + " " + ford.company);</code></span>
+                    </div>
+                  </div>
+
+                  <p><b>📄 Starter Code</b> — here's the Car class with a blank for you to fill in:</p>
+                  ${code(`public class Car {
+                      public String model;
+                      public String color;
+                      public int maxSpeed;
+                      public int year;
+                      // TODO: Add a new String field called "company" here
+
+                      public void fullThrottle() {
+                          System.out.println(model + " is going as fast as it can!");
+                      }
+                  }`, 'Car.java — Starter')}
+
+                  <div style="margin-top:10px;">
+                  ${code(`public class MainProgram {
+                      public static void main(String[] args) {
+                          Car ford = new Car();
+                          ford.model = "Mustang";
+                          ford.color = "red";
+                          ford.year  = 1969;
+                          // TODO: Set ford.company to "Ford"
+
+                          Car honda = new Car();
+                          honda.model = "Brio";
+                          honda.color = "orange";
+                          honda.year  = 2019;
+                          // TODO: Set honda.company to "Honda"
+
+                          // TODO: Print ford's model + company
+                          // TODO: Print honda's model + company
+                      }
+                  }`, 'MainProgram.java — Starter')}
+                  </div>
+
+                  <p style="margin-top:10px;"><b>🖥 Expected Output after you're done:</b></p>
+                  <pre style="background:var(--bg);padding:8px 14px;border-radius:6px;font-family:monospace;font-size:13px;color:var(--ink);">Mustang Ford
+Brio Honda</pre>
+                </div>
+              </div>
+              <div class="note"><b>⏳ Try it yourself!</b> Replace every <code>// TODO</code> with real code. The full solution is on the next slide — no peeking until you've tried!</div>
+            `
+            });
+
+      // ---- SLIDE 10: Activity Answer Key ----
+      S.push({
+        eyebrow: '🔑 Order No. 10 — Answer Key',
+        title: 'Activities — Solutions',
+        lede: 'Check your work. Read the breakdown carefully — understanding <em>why</em> each line exists is more important than just getting the right output.',
+        body: `
+          <div class="two-col">
+            <div>
+              <div class="code-cap">✅ Modified Car.java + MainProgram.java</div>
+              ${code(`public class Car {
+                  public String model;
+                  public String color;
+                  public int maxSpeed;
+                  public int year;
+                  public String company; // ← NEW FIELD
+
+                  public void fullThrottle() {
+                      System.out.println(model + " is going as fast as it can!");
+                  }
+              }
+
+              public class MainProgram {
+                  public static void main(String[] args) {
+                      Car ford = new Car();
+                      ford.model   = "Mustang";
+                      ford.color   = "red";
+                      ford.year    = 1969;
+                      ford.company = "Ford"; // ← ASSIGN NEW FIELD
+
+                      Car honda = new Car();
+                      honda.model   = "Brio";
+                      honda.color   = "orange";
+                      honda.year    = 2019;
+                      honda.company = "Honda";
+
+                      // Output: "Mustang Ford"
+                      System.out.println(ford.model + " " + ford.company);
+                      // Output: "Brio Honda"
+                      System.out.println(honda.model + " " + honda.company);
+                  }
+              }`)}
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div class="card answer-key">
+                <h4>📖 Step-by-Step Explanation</h4>
+                <div class="code-breakdown">
+                  <div class="bd-row"><span class="bd-num">①</span><span class="bd-text"><code>public String company;</code> — A new <strong>field</strong> added to the class. Every Car object now has a <code>company</code> slot.</span></div>
+                  <div class="bd-row"><span class="bd-num">②</span><span class="bd-text"><code>ford.company = "Ford";</code> — Dot operator assigns "Ford" only to the <strong>ford</strong> object's company field. Honda's is still empty at this point.</span></div>
+                  <div class="bd-row"><span class="bd-num">③</span><span class="bd-text"><code>ford.model + " " + ford.company</code> — String concatenation: joins "Mustang", a space, and "Ford" into <strong>"Mustang Ford"</strong>.</span></div>
+                  <div class="bd-row"><span class="bd-num">④</span><span class="bd-text">Both objects (<strong>ford</strong> and <strong>honda</strong>) use the same blueprint but hold <em>different values</em> — this is the core idea of object instances.</span></div>
+                </div>
+              </div>
+              <div class="card">
+                <h3>🖥 Expected Output</h3>
+                <pre style="background:#1e1710;color:#a8c98f;border-radius:8px;padding:12px 16px;font-size:14px;margin:0;">Mustang Ford
+Brio Honda</pre>
+              </div>
+              <div class="mem-diagram">
+                <div class="mem-box">
+                  <div class="mem-header">ford : Car</div>
+                  <div class="mem-row"><span class="mem-key">model</span><span class="mem-val">"Mustang"</span></div>
+                  <div class="mem-row"><span class="mem-key">company</span><span class="mem-val">"Ford"</span></div>
+                </div>
+                <div class="mem-box">
+                  <div class="mem-header">honda : Car</div>
+                  <div class="mem-row"><span class="mem-key">model</span><span class="mem-val">"Brio"</span></div>
+                  <div class="mem-row"><span class="mem-key">company</span><span class="mem-val">"Honda"</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `
+      });
+
+      // ---- SLIDE 11: FAQ ----
+      S.push({
+        eyebrow: '❓ Order No. 11 — FAQs',
+        title: 'Lesson Wrap-Up — Frequently Asked Questions',
+        lede: 'The three questions students ask most about classes and objects — answered clearly with code.',
+        body: `
+          <div class="card-grid cols-2" style="margin-bottom:14px;">
+            <div class="card">
+              <h3>❓ Field vs Property — what's the difference?</h3>
+              <p><b>Fields</b> are the raw storage variables inside a class. They're usually kept <code>private</code> so outside code can't tamper with them directly.</p>
+              <p style="margin-top:8px;"><b>Properties</b> are <b>getter/setter methods</b> that act as a controlled door to those fields. They let you validate or transform data before it's stored.</p>
+              <div class="rule-box" style="margin-top:8px;"><b>Analogy:</b> A field is a safe. A property is the combination lock on the safe — it controls access.</div>
+            </div>
+            <div class="card">
+              <h3>📌 Field + Property in Code</h3>
+              ${code(`public class Person {
+                  // Field (private — locked away)
+                  private String name;
+
+                  // Getter (read the field)
+                  public String getName() {
+                      return name;
+                  }
+
+                  // Setter (write the field safely)
+                  public void setName(String n) {
+                      if (n != null) name = n; // validation!
+                  }
+              }`)}
+              <div class="code-breakdown" style="margin-top:8px;">
+                <div class="bd-row"><span class="bd-num">①</span><span class="bd-text"><code>private String name</code> — raw field, hidden from outside</span></div>
+                <div class="bd-row"><span class="bd-num">②</span><span class="bd-text"><code>getName()</code> — getter, lets you safely <em>read</em> the name</span></div>
+                <div class="bd-row"><span class="bd-num">③</span><span class="bd-text"><code>setName()</code> — setter with a <code>null</code> check before storing</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="card-grid cols-2">
+            <div class="card">
+              <h3>❓ Can I create more than one object from the same class?</h3>
+              <p>Yes! That's the whole point of a class. You can create as many objects as you need — each one lives in its own memory slot with its own data.</p>
+              ${code(`Car ford  = new Car(); // object 1
+Car honda = new Car(); // object 2
+Car bmw   = new Car(); // object 3`)}
+            </div>
+            <div class="card">
+              <h3>❓ What happens if I don't set a field's value?</h3>
+              <p>Java sets a <b>default value</b> automatically:</p>
+              <table class="cmp-table" style="margin-top:6px;">
+                <tr><th>Type</th><th>Default</th></tr>
+                <tr><td>int / double</td><td>0 / 0.0</td></tr>
+                <tr><td>boolean</td><td>false</td></tr>
+                <tr><td>String / Object</td><td>null</td></tr>
+              </table>
+            </div>
+          </div>
+        `
+      });
+
+      // ---- SLIDE 12: Summary ----
+      S.push({
+        eyebrow: '📌 Order No. 12 — Summary',
+        title: 'Module 4 — What You Learned',
+        lede: 'Six concepts, one module. Here\'s your cheat-sheet — if you can explain each row in your own words, you\'ve got this.',
+        body: `
+          <div class="card-grid cols-3" style="margin-bottom:14px;">
+            <div class="card">
+              <h3>🧩 Class vs Object</h3>
+              <p>Class = logical blueprint (no memory). Object = physical instance (uses memory).</p>
+              <div style="margin-top:8px;">${code(`Car blueprint; // class
+Car ford = new Car(); // object`)}</div>
+            </div>
+            <div class="card">
+              <h3>📊 State, Behavior, Identity</h3>
+              <p><b>State</b> = fields. <b>Behavior</b> = methods. <b>Identity</b> = unique memory reference.</p>
+              <div class="pill-row" style="margin-top:8px;">
+                <span class="pill amber">state = has</span>
+                <span class="pill amber">behavior = does</span>
+                <span class="pill amber">identity = who</span>
+              </div>
+            </div>
+            <div class="card">
+              <h3>📦 Class Members</h3>
+              <p>Everything inside a class: <b>Fields</b> (store data), <b>Methods</b> (run logic), <b>Constructors</b> (initialize), <b>Properties</b> (getter/setter).</p>
+            </div>
+            <div class="card">
+              <h3>🔗 Dot Operator</h3>
+              <p>The bridge between an object and its members.</p>
+              <div style="margin-top:8px;">${code(`ford.model = "Mustang";
+ford.fullThrottle();`)}</div>
+            </div>
+            <div class="card">
+              <h3>🚗 Car Class Practice</h3>
+              <p>Created a class with fields + a method, instantiated two objects, assigned different values to each, called methods via dot operator.</p>
+            </div>
+            <div class="card">
+              <h3>🔒 Field vs Property</h3>
+              <p><code>private</code> fields + <code>public</code> getters/setters = safe data access. The setter can validate before storing.</p>
+            </div>
+          </div>
+          <div class="quote-block">"A class is the cookie cutter — an object is the actual cookie. You bake as many as you need."</div>
+          <div class="note"><b>🎯 Next up:</b> Quiz time! Test yourself on the 5 questions that follow.</div>
+        `
+      });
+
+      // ---- SLIDE 13: Check for Understanding (NO ANSWERS) ----
+      S.push({
+        eyebrow: '📝 Order No. 13 — Check for Understanding',
+        title: 'Quiz: What is the Output?',
+        lede: 'Read the code below and pick what you think the program prints. Don\'t overthink it — just follow the dots!',
+        body: `
+          <div class="two-col">
+            <div>
+              <div class="code-cap">📄 Student Program</div>
+              ${code(`class Student {
+                  int id;
+                  String name;
+              }
+
+              public class TestStudent2 {
+                  public static void main(String args[]) {
+                      Student s1 = new Student();
+                      s1.id   = 101;
+                      s1.name = "Juan Cruz";
+                      System.out.println(s1.id + " " + s1.name);
+                  }
+              }`, 'TestStudent2.java')}
+            </div>
+            <div>
+              <div class="card">
+                <h3>❓ What does this program print?</h3>
+                <div class="quiz-option">A. &nbsp;<code>101 JuanCruz</code></div>
+                <div class="quiz-option">B. &nbsp;<code>101 Juan Cruz</code></div>
+                <div class="quiz-option">C. &nbsp;<code>id: 101 name: Juan Cruz</code></div>
+                <div class="quiz-option">D. &nbsp;Compilation Error</div>
+              </div>
+              <div class="card" style="margin-top:12px;">
+                <h3>💡 Hints to Help You</h3>
+                <ul class="ticket-list">
+                  <li>Look at the <code>println</code> line — what values does it join together?</li>
+                  <li>What is <code>s1.id</code>? → It's <strong>101</strong> (an integer).</li>
+                  <li>What is <code>" "</code>? → Just a <strong>space character</strong> in quotes.</li>
+                  <li>What is <code>s1.name</code>? → It's <strong>"Juan Cruz"</strong> (already has a space inside).</li>
+                  <li>The <code>+</code> operator <strong>joins them</strong> left to right into one line of text.</li>
+                </ul>
+              </div>
+              <div class="note" style="margin-top:12px;"><b>⏳ Pick your answer!</b> All answers are revealed on the last slide.</div>
+            </div>
+          </div>
+        `
+      });
+
+      // ---- SLIDE 14: MCQ 2 (Question) ----
+      S.push({
+        eyebrow: '📝 Order No. 14 — Multiple Choice',
+        title: 'Quiz: Which one is a Data Member?',
+        lede: 'Identify which of the following is a <em>data member</em> (field) in a Java class.',
+        body: `
+          <div class="two-col">
+            <div>
+              <div class="code-cap">📄 Examine this class</div>
+              ${code(`public class Animal {
+                  String species;
+                  int legs;
+
+                  public Animal(String s, int l) {
+                      species = s;
+                      legs = l;
+                  }
+
+                  public void describe() {
+                      System.out.println(species + " has " + legs + " legs");
+                  }
+              }`, 'Animal.java')}
+            </div>
+            <div>
+              <div class="card">
+                <h3>❓ Which of the following is a <em>data member</em>?</h3>
+                <div class="quiz-option">A. &nbsp;<code>Animal(String s, int l)</code></div>
+                <div class="quiz-option">B. &nbsp;<code>describe()</code></div>
+                <div class="quiz-option">C. &nbsp;<code>int legs</code></div>
+                <div class="quiz-option">D. &nbsp;<code>System.out.println(...)</code></div>
+              </div>
+              <div class="card" style="margin-top:12px;">
+                <h3>💡 Hints</h3>
+                <ul class="ticket-list">
+                  <li>Data members <strong>store values</strong> — they are variable declarations inside a class.</li>
+                  <li>Function members contain <code>{}</code> with runnable code.</li>
+                  <li>Constructors share the class name and run automatically on <code>new</code>.</li>
+                </ul>
+              </div>
+              <div class="note" style="margin-top:12px;"><b>⏳ Pick your answer!</b> All answers are revealed on the last slide.</div>
+            </div>
+          </div>
+        `
+      });
+
+      // ---- SLIDE 15: MCQ 3 (Question) ----
+      S.push({
+        eyebrow: '📝 Order No. 15 — Multiple Choice',
+        title: 'Quiz: What does the dot operator do?',
+        lede: 'Pick the most accurate description of what the dot (<code>.</code>) operator does in Java.',
+        body: `
+          <div class="two-col">
+            <div>
+              <div class="code-cap">📄 Code Snippet</div>
+              ${code(`Car myCar = new Car();
+myCar.model  = "Civic";
+myCar.year   = 2022;
+myCar.fullThrottle();`, 'DotOperator.java')}
+              <div class="card" style="margin-top:12px;">
+                <h3>💡 Hints</h3>
+                <ul class="ticket-list">
+                  <li>The dot operator appears between an <strong>object name</strong> and a <strong>member name</strong>.</li>
+                  <li>You can use it to both <em>read</em> and <em>write</em> fields, and to <em>call</em> methods.</li>
+                  <li>It always requires an object <strong>instance</strong> on the left side, not the class name.</li>
+                </ul>
+              </div>
+            </div>
+            <div>
+              <div class="card">
+                <h3>❓ What does the dot (<code>.</code>) operator do?</h3>
+                <div class="quiz-option">A. &nbsp;Creates a new object in memory</div>
+                <div class="quiz-option">B. &nbsp;Accesses a member (field or method) of a specific object</div>
+                <div class="quiz-option">C. &nbsp;Declares a new class</div>
+                <div class="quiz-option">D. &nbsp;Compares two objects for equality</div>
+              </div>
+              <div class="note" style="margin-top:12px;"><b>⏳ Pick your answer!</b> All answers are revealed on the last slide.</div>
+            </div>
+          </div>
+        `
+      });
+
+      // ---- SLIDE 16: MCQ 4 (Question) ----
+      S.push({
+        eyebrow: '📝 Order No. 16 — Multiple Choice',
+        title: 'Quiz: Spot the Bug',
+        lede: 'One of the code snippets below has a bug. Which one will <em>not</em> compile or produce wrong output — and why?',
+        body: `
+          <div class="card-grid cols-2" style="margin-bottom:14px;">
+            <div class="card">
+              <h3>Option A</h3>
+              ${code(`Car ford = new Car();
+ford.model = "Mustang";
+System.out.println(ford.model);`)}
+            </div>
+            <div class="card">
+              <h3>Option B</h3>
+              ${code(`Car ford = new Car();
+Car.model = "Mustang";
+System.out.println(Car.model);`)}
+            </div>
+            <div class="card">
+              <h3>Option C</h3>
+              ${code(`Car ford = new Car();
+ford.model = "Mustang";
+ford.fullThrottle();`)}
+            </div>
+            <div class="card">
+              <h3>Option D</h3>
+              ${code(`Car ford = new Car();
+ford.model = "Mustang";
+ford.year  = 1969;`)}
+            </div>
+          </div>
+          <div class="card">
+            <h3>❓ Which snippet has a bug (won't compile or produces a mistake)?</h3>
+            <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:8px;">
+              <div class="quiz-option">A</div>
+              <div class="quiz-option">B</div>
+              <div class="quiz-option">C</div>
+              <div class="quiz-option">D</div>
+            </div>
+          </div>
+          <div class="note" style="margin-top:12px;"><b>💡 Hint:</b> Remember — the dot operator works on <em>objects</em> (instances), not on the class name itself. All answers are revealed on the last slide.</div>
+        `
+      });
+
+      // ---- SLIDE 17: MCQ 5 (Question) ----
+      S.push({
+        eyebrow: '📝 Order No. 17 — Multiple Choice',
+        title: 'Quiz: What is the Output?',
+        lede: 'Two objects, same class, different values. Trace through the code and predict exactly what gets printed.',
+        body: `
+          <div class="two-col">
+            <div>
+              <div class="code-cap">📄 Code to trace</div>
+              ${code(`class Box {
+                  String color;
+                  int size;
+              }
+
+              public class TestBox {
+                  public static void main(String[] args) {
+                      Box b1 = new Box();
+                      b1.color = "red";
+                      b1.size  = 10;
+
+                      Box b2 = new Box();
+                      b2.color = "blue";
+                      b2.size  = 20;
+
+                      System.out.println(b2.color + " " + b1.size);
+                  }
+              }`, 'TestBox.java')}
+            </div>
+            <div>
+              <div class="card">
+                <h3>❓ What does this program print?</h3>
+                <div class="quiz-option">A. &nbsp;<code>red 10</code></div>
+                <div class="quiz-option">B. &nbsp;<code>blue 20</code></div>
+                <div class="quiz-option">C. &nbsp;<code>blue 10</code></div>
+                <div class="quiz-option">D. &nbsp;<code>red 20</code></div>
+              </div>
+              <div class="card" style="margin-top:12px;">
+                <h3>💡 Hints</h3>
+                <ul class="ticket-list">
+                  <li><code>b1</code> and <code>b2</code> are <strong>completely separate</strong> objects — changing one never affects the other.</li>
+                  <li>Read the <code>println</code> carefully: it uses <code>b2.color</code> first, then <code>b1.size</code>.</li>
+                  <li>What are the actual stored values of each field?</li>
+                </ul>
+              </div>
+              <div class="note" style="margin-top:12px;"><b>⏳ Pick your answer!</b> All answers are revealed on the last slide.</div>
+            </div>
+          </div>
+        `
+      });
+
+      // placeholder to keep context — removed individual answer slides below
+      // ---- SLIDE 18: Combined Answer Key ----
+      S.push({
+        eyebrow: '🔑 Order No. 18 — All Quiz Answers',
+        title: 'Quiz Answer Key',
+        lede: 'All five quiz answers in one place. Check your picks and read the explanations for anything you missed.',
+        body: `
+          <div style="display:flex;flex-direction:column;gap:14px;">
+
+            <div class="card answer-key">
+              <h4>Q1 (Slide 13) — What does this program print? &nbsp;<span class="tag">Student class</span></h4>
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0;">
+                <span class="answer-pill" style="font-size:15px;">✅ B — <code>101 Juan Cruz</code></span>
+              </div>
+              <div class="code-breakdown">
+                <div class="bd-row"><span class="bd-num">①</span><span class="bd-text"><code>s1.id</code> = 101, <code>s1.name</code> = "Juan Cruz" (space is already inside the string).</span></div>
+                <div class="bd-row"><span class="bd-num">②</span><span class="bd-text"><code>101 + " " + "Juan Cruz"</code> concatenates to <strong>"101 Juan Cruz"</strong>. A is wrong because the space is not lost; C adds labels you never wrote; D is wrong because the syntax is valid.</span></div>
+              </div>
+            </div>
+
+            <div class="card answer-key">
+              <h4>Q2 (Slide 14) — Which one is a Data Member? &nbsp;<span class="tag">Animal class</span></h4>
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0;">
+                <span class="answer-pill" style="font-size:15px;">✅ C — <code>int legs</code></span>
+              </div>
+              <div class="code-breakdown">
+                <div class="bd-row"><span class="bd-num">①</span><span class="bd-text"><code>int legs</code> is a field — a bare variable declared in the class body. It stores data, making it a <strong>data member</strong>.</span></div>
+                <div class="bd-row"><span class="bd-num">②</span><span class="bd-text">A is the constructor (function member); B is a method (function member); D is a statement inside a method — not a member at all.</span></div>
+              </div>
+            </div>
+
+            <div class="card answer-key">
+              <h4>Q3 (Slide 15) — What does the dot operator do? &nbsp;<span class="tag">Dot operator</span></h4>
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0;">
+                <span class="answer-pill" style="font-size:15px;">✅ B — Accesses a member (field or method) of a specific object</span>
+              </div>
+              <div class="code-breakdown">
+                <div class="bd-row"><span class="bd-num">①</span><span class="bd-text">The dot is the bridge: <code>object.member</code>. It reaches inside an object to read/write fields or call methods.</span></div>
+                <div class="bd-row"><span class="bd-num">②</span><span class="bd-text">A (<code>new</code> keyword) creates objects; C (<code>class</code> keyword) declares classes; D (<code>==</code> / <code>.equals()</code>) compares objects.</span></div>
+              </div>
+            </div>
+
+            <div class="card answer-key">
+              <h4>Q4 (Slide 16) — Spot the Bug &nbsp;<span class="tag">Instance vs Class</span></h4>
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0;">
+                <span class="answer-pill" style="font-size:15px;">✅ B — <code>Car.model = "Mustang"</code> uses the class name, not an object</span>
+              </div>
+              <div class="code-breakdown">
+                <div class="bd-row"><span class="bd-num">①</span><span class="bd-text"><code>model</code> is an instance field — it must be accessed via an object variable (<code>ford.model</code>), never the class name (<code>Car.model</code>).</span></div>
+                <div class="bd-row"><span class="bd-num">②</span><span class="bd-text">Options A, C, and D all correctly use <code>ford.</code> as the object reference — no bug there.</span></div>
+              </div>
+            </div>
+
+            <div class="card answer-key">
+              <h4>Q5 (Slide 17) — What is the Output? &nbsp;<span class="tag">Box class</span></h4>
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0;">
+                <span class="answer-pill" style="font-size:15px;">✅ C — <code>blue 10</code></span>
+              </div>
+              <div class="code-breakdown">
+                <div class="bd-row"><span class="bd-num">①</span><span class="bd-text"><code>b2.color</code> = "blue" and <code>b1.size</code> = 10. The println mixes fields from <em>different</em> objects on purpose.</span></div>
+                <div class="bd-row"><span class="bd-num">②</span><span class="bd-text">A uses b1.color ("red" — wrong object for color); B uses b2.size (20 — wrong object for size); D combines both wrong fields.</span></div>
+              </div>
+            </div>
+
+          </div>
+          <div class="note" style="margin-top:14px;"><b>🎯 How'd you do?</b> 5/5 = you're cooking. Anything below that — re-read the hint on the question slide, then try explaining the answer out loud in your own words.</div>
+        `
+      });
+
+      // ---- roast interpolation ----
+      var STOPS = [
+        { bg: '#F5E3B8', bgAlt: '#FBF1DA', accent: '#C27B22', accentStrong: '#9C5A15', card: '#FFF7E6',
+          cardBorder: [64, 43, 24, 0.18], shadow: [64, 43, 24, 0.15] },
+        { bg: '#C97142', bgAlt: '#E0925C', accent: '#8B3A17', accentStrong: '#6B2A10', card: '#EAC195',
+          cardBorder: [42, 23, 16, 0.28], shadow: [42, 23, 16, 0.22] },
+        { bg: '#331014', bgAlt: '#4A1B1F', accent: '#C24B4F', accentStrong: '#E06B6E', card: '#4A1E22',
+          cardBorder: [240, 220, 196, 0.18], shadow: [0, 0, 0, 0.35] }
+      ];
+      var BG_CROSSOVER_T = 11 / 21;
+      var CARD_CROSSOVER_T = 15 / 21;
+      var TEXT_DARK = '#2E1408',
+        TEXT_DARK_SOFT = '#3F2210';
+      var TEXT_LIGHT = '#FFEDDD',
+        TEXT_LIGHT_SOFT = '#F2E6D6';
+      var ACCENT_DARK_TEXT = '#33170A',
+        ACCENT_LIGHT_TEXT = '#FFEDDD';
+      var SUCCESS_DARK = '#1C4225',
+        SUCCESS_LIGHT = '#9FE6AC';
+
+      function hexToRgb(h) { h = h.replace('#', ''); return [parseInt(h.substring(0, 2), 16), parseInt(h.substring(2, 4),
+            16), parseInt(h.substring(4, 6), 16)]; }
+
+      function rgbToHex(r, g, b) {
+        function c(x) { x = Math.round(Math.max(0, Math.min(255, x))); return x.toString(16).padStart(2, '0'); }
+        return '#' + c(r) + c(g) + c(b);
+      }
+
+      function lerp(a, b, t) { return a + (b - a) * t; }
+
+      function lerpHex(h1, h2, t) { var c1 = hexToRgb(h1),
+          c2 = hexToRgb(h2); return rgbToHex(lerp(c1[0], c2[0], t), lerp(c1[1], c2[1], t), lerp(c1[2], c2[2], t)); }
+
+      function lerpRgba(a, b, t) { return 'rgba(' + Math.round(lerp(a[0], b[0], t)) + ',' + Math.round(lerp(a[1], b[1],
+          t)) + ',' + Math.round(lerp(a[2], b[2], t)) + ',' + lerp(a[3], b[3], t).toFixed(2) + ')'; }
+
+      function roastVarsAt(t) {
+        var seg, localT;
+        if (t <= 0.5) { seg = [STOPS[0], STOPS[1]];
+          localT = t / 0.5; } else { seg = [STOPS[1], STOPS[2]];
+          localT = (t - 0.5) / 0.5; }
+        var A = seg[0],
+          B = seg[1];
+        return {
+          '--bg': lerpHex(A.bg, B.bg, localT),
+          '--bg-alt': lerpHex(A.bgAlt, B.bgAlt, localT),
+          '--accent': lerpHex(A.accent, B.accent, localT),
+          '--accent-strong': lerpHex(A.accentStrong, B.accentStrong, localT),
+          '--card': lerpHex(A.card, B.card, localT),
+          '--card-border': lerpRgba(A.cardBorder, B.cardBorder, localT),
+          '--shadow': lerpRgba(A.shadow, B.shadow, localT)
+        };
+      }
+
+      function applyRoast(t) {
+        var vars = roastVarsAt(t);
+        var root = document.documentElement.style;
+        for (var k in vars) { root.setProperty(k, vars[k]); }
+        var onBg = t < BG_CROSSOVER_T;
+        root.setProperty('--ink', onBg ? TEXT_DARK : TEXT_LIGHT);
+        root.setProperty('--ink-soft', onBg ? TEXT_DARK_SOFT : TEXT_LIGHT_SOFT);
+        root.setProperty('--eyebrow-ink', onBg ? ACCENT_DARK_TEXT : ACCENT_LIGHT_TEXT);
+        var onCard = t < CARD_CROSSOVER_T;
+        root.setProperty('--card-ink', onCard ? TEXT_DARK : TEXT_LIGHT);
+        root.setProperty('--card-ink-soft', onCard ? TEXT_DARK_SOFT : TEXT_LIGHT_SOFT);
+        root.setProperty('--card-accent', onCard ? ACCENT_DARK_TEXT : ACCENT_LIGHT_TEXT);
+        root.setProperty('--step-num-ink', onCard ? TEXT_LIGHT : TEXT_DARK);
+        root.setProperty('--success-ink', onCard ? SUCCESS_DARK : SUCCESS_LIGHT);
+        var label = t < 0.34 ? 'Light Roast' : (t < 0.67 ? 'Medium Roast' : 'Dark Roast');
+        document.getElementById('roastLabel').textContent = label;
+      }
+
+      // ---- render & navigate ----
+      var stage = document.getElementById('stage');
+      var counterEl = document.getElementById('counter');
+      var progressFill = document.getElementById('progressFill');
+      var total = S.length;
+      var current = 0;
+      var animating = false;
+
+      function buildSlideEl(idx) {
+        var d = S[idx];
+        var el = document.createElement('div');
+        el.className = 'slide';
+        el.innerHTML =
+          '<div class="slide-inner">' +
+          '<div class="eyebrow">' + d.eyebrow + '</div>' +
+          '<h2 class="slide-title">' + d.title + '</h2>' +
+          (d.lede ? '<div class="lede">' + d.lede + '</div>' : '') +
+          d.body +
+          '</div>';
+        return el;
+      }
+
+      function updateHud() {
+        counterEl.textContent = (current + 1) + ' / ' + total;
+        progressFill.style.width = ((current) / (total - 1) * 100) + '%';
+        applyRoast(current / (total - 1));
+      }
+
+      var curEl = buildSlideEl(0);
+      curEl.classList.add('active');
+      stage.appendChild(curEl);
+      updateHud();
+
+      function goTo(idx, dir) {
+        if (animating || idx === current || idx < 0 || idx >= total) return;
+        animating = true;
+        var nextEl = buildSlideEl(idx);
+        nextEl.classList.add(dir > 0 ? 'enter-fwd' : 'enter-bwd');
+        stage.appendChild(nextEl);
+        void nextEl.offsetWidth;
+        var oldEl = curEl;
+        requestAnimationFrame(function() {
+          oldEl.classList.remove('active');
+          oldEl.classList.add(dir > 0 ? 'exit-fwd' : 'exit-bwd');
+          nextEl.classList.remove('enter-fwd', 'enter-bwd');
+          nextEl.classList.add('active');
+        });
+        current = idx;
+        curEl = nextEl;
+        updateHud();
+        setTimeout(function() {
+          if (oldEl && oldEl.parentNode) oldEl.parentNode.removeChild(oldEl);
+          animating = false;
+        }, 420);
+      }
+
+      function next() { goTo(current + 1, 1); }
+
+      function prev() { goTo(current - 1, -1); }
+
+      document.getElementById('clickZone').addEventListener('click', function(e) {
+        var w = window.innerWidth;
+        if (e.clientX < w * 0.25) { prev(); } else { next(); }
+      });
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault();
+          next(); } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault();
+          prev(); } else if (e.key === 'Home') { e.preventDefault();
+          goTo(0, -1); } else if (e.key === 'End') { e.preventDefault();
+          goTo(total - 1, 1); } else if (e.key === 'ArrowUp') { e.preventDefault();
+          prev(); } else if (e.key === 'ArrowDown') { e.preventDefault();
+          next(); }
+      });
+      // ─── copy button handler ───
+      document.addEventListener('click', function(e) {
+        var btn = e.target.closest ? e.target.closest('.copy-btn') : null;
+        if (!btn) return;
+        e.stopPropagation();
+        var targetId = btn.getAttribute('data-copy');
+        var codeEl = document.getElementById(targetId);
+        if (!codeEl) return;
+        var text = codeEl.textContent;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function() {
+            btn.textContent = 'Copied!';
+            btn.classList.add('copied');
+            setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+          });
+        } else {
+          var ta = document.createElement('textarea');
+          ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+          document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(err) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          btn.classList.add('copied');
+          setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+        }
+      });
+
+    })();
+</script>
+</body>
+</html>
