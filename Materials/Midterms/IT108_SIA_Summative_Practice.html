@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT108 SIA · 30-Item Summative Practice</title>
+<style>
+  :root {
+    --bg: #0B0F14;
+    --panel: #121A24;
+    --panel-2: #0F161F;
+    --line: #22303F;
+    --line-soft: #1A2532;
+    --text: #E7EDF3;
+    --text-dim: #AEC0D4;
+    --text-faint: #7A8B9E;
+    --teal: #2DD4BF;
+    --teal-dim: #1B7A70;
+    --amber: #F2A65A;
+    --danger: #F2745A;
+    --radius: 10px;
+    --font-display: 'IBM Plex Mono', 'SFMono-Regular', Menlo, Consolas, monospace;
+    --font-body: 'IBM Plex Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; min-width: 0; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text);
+    font-family: var(--font-body); overflow: hidden; -webkit-font-smoothing: antialiased;
+  }
+  body {
+    background-image:
+      radial-gradient(circle at 12% 12%, rgba(45,212,191,0.06), transparent 42%),
+      radial-gradient(circle at 88% 88%, rgba(242,166,90,0.05), transparent 42%);
+  }
+  #progress-track { position: fixed; top: 0; left: 0; right: 0; height: 3px; background: var(--line-soft); z-index: 100; }
+  #progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--teal), var(--amber)); transition: width .3s ease; }
+  #counter {
+    position: fixed; right: 22px; bottom: 18px; z-index: 100; font-family: var(--font-display);
+    font-size: 16px; color: var(--text-dim); letter-spacing: 0.05em; background: rgba(18,26,36,0.75);
+    padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; backdrop-filter: blur(6px);
+  }
+  #hint {
+    position: fixed; left: 22px; bottom: 18px; z-index: 100; font-family: var(--font-display); font-size: 16px;
+    color: var(--text-faint); letter-spacing: 0.03em;
+  }
+  #hint kbd {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 2px 8px;
+    color: var(--text-dim); font-family: var(--font-display); font-size: 15px;
+  }
+  #stage { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+  .slide {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    padding: clamp(24px, 3.5vh, 48px) clamp(36px, 5.5vw, 96px);
+    opacity: 0; transform: translateX(48px); pointer-events: none;
+    transition: opacity .35s ease, transform .35s ease;
+  }
+  .slide.active { opacity: 1; transform: translateX(0); pointer-events: auto; z-index: 2; }
+  .slide.prep-left { transform: translateX(-48px); opacity: 0; }
+  .slide.prep-right { transform: translateX(48px); opacity: 0; }
+  .slide.exit-left { transform: translateX(-48px); opacity: 0; }
+  .slide.exit-right { transform: translateX(48px); opacity: 0; }
+  @media (prefers-reduced-motion: reduce) {
+    .slide { transition: opacity .01s linear; transform: none !important; }
+  }
+  .slide.overflow-ok { overflow-y: auto; }
+  .eyebrow {
+    font-family: var(--font-display); font-size: 16px; letter-spacing: 0.2em; color: var(--teal);
+    text-transform: uppercase; display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+  }
+  .eyebrow::before {
+    content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--teal);
+    box-shadow: 0 0 0 3px rgba(45,212,191,0.15);
+  }
+  .eyebrow .trace {
+    flex: 1; height: 1px;
+    background: repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 11px);
+  }
+  h1.title {
+    font-family: var(--font-display); font-weight: 700; font-size: clamp(26px, 3.4vw, 42px);
+    letter-spacing: -0.01em; margin: 0 0 clamp(12px, 1.8vh, 22px) 0; color: var(--text); line-height: 1.15;
+  }
+  h1.title .accent { color: var(--amber); }
+  .lede {
+    font-size: clamp(16px, 1.15vw, 19px); color: var(--text-dim); max-width: 920px; line-height: 1.55; margin-bottom: 16px;
+  }
+  .content { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 14px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: stretch; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px 18px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .card h3 {
+    margin: 0; font-size: 18px; color: var(--text); font-family: var(--font-display); font-weight: 600;
+  }
+  .card p { margin: 0; font-size: 16px; color: var(--text-dim); line-height: 1.5; }
+  .card .tag {
+    align-self: flex-start; font-family: var(--font-display); font-size: 13px; letter-spacing: 0.08em;
+    color: var(--teal); border: 1px solid var(--teal-dim); padding: 2px 10px; border-radius: 999px; text-transform: uppercase;
+  }
+  ul.bullets { margin: 0; padding-left: 20px; color: var(--text-dim); font-size: 16px; line-height: 1.65; }
+  ul.bullets li { margin-bottom: 6px; }
+  ul.bullets li b, ul.bullets li strong { color: var(--text); }
+  .quote-block {
+    border-left: 3px solid var(--amber); background: var(--panel); border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 16px 20px; font-style: italic; color: var(--text); font-size: clamp(16px, 1.25vw, 20px); line-height: 1.6;
+  }
+  table.term-table { width: 100%; border-collapse: collapse; font-size: 16px; }
+  table.term-table th {
+    text-align: left; font-family: var(--font-display); font-size: 14px; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--teal); border-bottom: 1px solid var(--line); padding: 8px 10px;
+  }
+  table.term-table td {
+    border-bottom: 1px solid var(--line-soft); padding: 9px 10px; color: var(--text-dim); vertical-align: top;
+  }
+  table.term-table td b { color: var(--text); }
+  .node {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 12px 16px; text-align: center; font-size: 16px; color: var(--text); min-width: 120px;
+  }
+  .node.hi { border-color: var(--teal-dim); box-shadow: 0 0 0 3px rgba(45,212,191,0.08); }
+  .node .n-label {
+    font-family: var(--font-display); font-size: 13px; color: var(--teal); letter-spacing: 0.06em;
+    text-transform: uppercase; display: block; margin-bottom: 4px;
+  }
+  .flow-row { display: flex; align-items: center; justify-content: center; gap: 0; flex-wrap: wrap; }
+  .arrow-h {
+    width: clamp(28px, 3.5vw, 56px); height: 2px;
+    background: repeating-linear-gradient(90deg, var(--teal) 0 6px, transparent 6px 10px); position: relative;
+  }
+  .arrow-h::after {
+    content: ''; position: absolute; right: -1px; top: -4px;
+    border: 5px solid transparent; border-left-color: var(--teal);
+  }
+  .code-wrap {
+    position: relative; background: #0D1319; border: 1px solid var(--line); border-radius: var(--radius);
+    overflow: hidden; display: flex; flex-direction: column; min-height: 0; flex: 1;
+  }
+  .code-head {
+    display: flex; align-items: center; justify-content: space-between; padding: 8px 14px;
+    border-bottom: 1px solid var(--line); background: #0F161F; flex-shrink: 0;
+  }
+  .code-lang {
+    font-family: var(--font-display); font-size: 14px; letter-spacing: 0.08em; color: var(--text-dim); text-transform: uppercase;
+  }
+  .copy-btn {
+    font-family: var(--font-display); font-size: 14px; color: var(--text-dim); background: var(--panel);
+    border: 1px solid var(--line); border-radius: 6px; padding: 5px 12px; cursor: pointer; transition: all .15s;
+  }
+  .copy-btn:hover { color: var(--teal); border-color: var(--teal-dim); }
+  .copy-btn.copied { color: var(--teal); border-color: var(--teal); }
+  .code-body { padding: 14px 16px; overflow: auto; font-size: 15px; line-height: 1.55; flex: 1; min-height: 0; }
+  .code-body pre { margin: 0; white-space: pre; font-family: var(--font-display); }
+  .tok-key { color: #6FA8DC; } .tok-str { color: var(--teal); } .tok-num { color: #C792EA; }
+  .tok-bool { color: #C792EA; } .tok-punc { color: var(--text-faint); } .tok-comment { color: var(--text-faint); font-style: italic; }
+  .tok-fn { color: #D2A8FF; }
+  .qa-list { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+  .qa-item {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px;
+  }
+  .qa-item .qnum { font-family: var(--font-display); color: var(--amber); font-size: 15px; margin-right: 8px; }
+  .qa-item .qtext { color: var(--text); font-size: 16px; }
+  .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; margin-top: 8px; }
+  .choice { font-size: 16px; color: var(--text-dim); }
+  .choice b { color: var(--teal); font-family: var(--font-display); margin-right: 6px; }
+  .answers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 24px; overflow-y: auto; }
+  .ans-block h4 {
+    font-family: var(--font-display); color: var(--teal); font-size: 15px; letter-spacing: 0.06em;
+    text-transform: uppercase; margin: 0 0 8px 0;
+  }
+  .ans-item { font-size: 15px; color: var(--text-dim); margin-bottom: 6px; line-height: 1.45; }
+  .ans-item b { color: var(--text); }
+  .recap-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .recap-grid .card { align-items: center; text-align: center; }
+  .recap-grid .num { font-family: var(--font-display); font-size: 24px; color: var(--amber); }
+  .title-slide { align-items: center; justify-content: center; text-align: center; }
+  .title-slide .kicker {
+    font-family: var(--font-display); color: var(--teal); letter-spacing: 0.28em; font-size: 16px;
+    margin-bottom: 18px; text-transform: uppercase;
+  }
+  .title-slide h1 {
+    font-family: var(--font-display); font-size: clamp(34px, 5.5vw, 64px); margin: 0; line-height: 1.1;
+  }
+  .title-slide h1 .accent { color: var(--amber); }
+  .title-slide .sub {
+    margin-top: 18px; color: var(--text-dim); font-size: clamp(16px, 1.25vw, 20px); max-width: 720px;
+  }
+  .title-slide .trace-line {
+    margin-top: 36px; width: min(560px, 55vw); height: 1px;
+    background: repeating-linear-gradient(90deg, var(--line) 0 8px, transparent 8px 14px); position: relative;
+  }
+  .title-slide .trace-line::before, .title-slide .trace-line::after {
+    content: ''; position: absolute; top: -3px; width: 7px; height: 7px; border-radius: 50%; background: var(--teal);
+  }
+  .title-slide .trace-line::before { left: 0; }
+  .title-slide .trace-line::after { right: 0; }
+  #shortcuts-modal {
+    position: fixed; inset: 0; background: rgba(5,8,12,0.78); backdrop-filter: blur(3px); z-index: 200;
+    display: none; align-items: center; justify-content: center;
+  }
+  #shortcuts-modal.show { display: flex; }
+  #shortcuts-modal .box {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 28px 34px;
+    max-width: 460px; width: 90%;
+  }
+  #shortcuts-modal h2 { font-family: var(--font-display); font-size: 20px; margin: 0 0 16px 0; color: var(--teal); }
+  #shortcuts-modal .row {
+    display: flex; justify-content: space-between; font-size: 16px; color: var(--text-dim);
+    padding: 8px 0; border-bottom: 1px solid var(--line-soft);
+  }
+  #shortcuts-modal .row kbd {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 3px 10px;
+    color: var(--text); font-family: var(--font-display);
+  }
+  #shortcuts-modal .close-hint { margin-top: 16px; font-size: 15px; color: var(--text-faint); text-align: center; }
+  .diagram-wrap { display: flex; justify-content: center; align-items: center; padding: 8px 0; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 14px; }
+  .badge {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px;
+    font-size: 16px; font-family: var(--font-display); color: var(--text-dim);
+  }
+  .badge.teal { color: var(--teal); border-color: var(--teal-dim); }
+  .badge.amber { color: var(--amber); border-color: rgba(242,166,90,0.4); }
+  @media (max-width: 900px) {
+    .grid-2, .grid-3, .grid-4, .recap-grid, .answers-grid, .choices { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div id="progress-track"><div id="progress-fill"></div></div>
+<div id="counter">1 / 22</div>
+<div id="hint">Right-click / <kbd>→</kbd> next · <kbd>←</kbd> back · <kbd>?</kbd> shortcuts</div>
+<div id="stage"></div>
+<div id="shortcuts-modal">
+  <div class="box">
+    <h2>Keyboard &amp; Mouse Shortcuts</h2>
+    <div class="row"><span>Next slide</span><kbd>→</kbd></div>
+    <div class="row"><span>Previous slide</span><kbd>←</kbd></div>
+    <div class="row"><span>First / Last</span><kbd>Home</kbd> / <kbd>End</kbd></div>
+    <div class="row"><span>Next slide</span><span>Right-click</span></div>
+    <div class="row"><span>Next / Prev</span><span>Mouse 4 / 3</span></div>
+    <div class="row"><span>This panel</span><kbd>?</kbd></div>
+    <div class="close-hint">Press Esc or click outside to close</div>
+  </div>
+</div>
+<script>
+(function () {
+  "use strict";
+
+  const slides = [];
+
+  function S(html) { slides.push(html); }
+
+  // 1 Title
+  S(`
+  <section class="slide title-slide">
+    <div class="kicker">IT108 · System Integration &amp; Architecture</div>
+    <h1>30-Item Summative<br><span class="accent">Practice Exam</span></h1>
+    <div class="sub">A focused warm-up covering integration methods, SOA/REST, middleware, testing, usability, and Node.js API basics — before the real midterm.</div>
+    <div class="badge-row">
+      <span class="badge teal">25 MC / ID / ENUM</span>
+      <span class="badge amber">5 Guess-the-Output</span>
+      <span class="badge">Modules 5 · 6 · 8 · 10 · 11 · 12</span>
+    </div>
+    <div class="trace-line"></div>
+  </section>`);
+
+  // 2 How to use
+  S(`
+  <section class="slide">
+    <div class="eyebrow">Prep<span class="trace"></span></div>
+    <h1 class="title">How to Use This Deck</h1>
+    <div class="content grid-2">
+      <div class="card">
+        <span class="tag">Review First</span>
+        <h3>Concept slides</h3>
+        <p>Quick refreshers with diagrams. Skim if you already know the material; linger on anything that feels fuzzy.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Then Practice</span>
+        <h3>30 items</h3>
+        <p>Multiple choice, identification, enumeration, and Guess-the-Output (Node.js). Answers appear on the answer-key slides near the end.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Navigation</span>
+        <h3>Keyboard &amp; mouse</h3>
+        <p>→ or right-click for next · ← for back · ? for shortcuts · Home / End for first / last.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Goal</span>
+        <h3>Spot weak spots</h3>
+        <p>Treat misses as study targets for the actual midterm — especially ESB vs Star, REST constraints, and async messaging.</p>
+      </div>
+    </div>
+  </section>`);
+
+  // 3 Integration methods
+  S(`
+  <section class="slide">
+    <div class="eyebrow">Review · Module 5<span class="trace"></span></div>
+    <h1 class="title">Four Integration Methods</h1>
+    <div class="content grid-2">
+      <div class="card">
+        <span class="tag">01</span>
+        <h3>Point-to-Point</h3>
+        <p>Direct link between two systems. Simple, but every pair needs its own connection.</p>
+      </div>
+      <div class="card">
+        <span class="tag">02</span>
+        <h3>Vertical / Star</h3>
+        <p>Functional silos or full mesh. Star formula: <b>N(N−1)/2</b> — 10 systems = 45 links.</p>
+      </div>
+      <div class="card">
+        <span class="tag">03</span>
+        <h3>Horizontal (ESB)</h3>
+        <p>Central bus. Each system needs only one connection. Scales linearly.</p>
+      </div>
+      <div class="card">
+        <span class="tag">04</span>
+        <h3>Common Data Format</h3>
+        <p>Everyone converts to/from one shared format. Adding a system costs one converter.</p>
+      </div>
+    </div>
+  </section>`);
+
+  // 4 ESB diagram
+  S(`
+  <section class="slide">
+    <div class="eyebrow">Review · Module 5<span class="trace"></span></div>
+    <h1 class="title">Why ESB Beats Spaghetti</h1>
+    <div class="lede">Star mesh grows exponentially. A horizontal bus keeps connections equal to the number of systems.</div>
+    <div class="content diagram-wrap">
+      <svg viewBox="0 0 680 220" width="100%" style="max-width:720px;height:auto;" role="img" aria-label="ESB hub diagram">
+        <title>Enterprise Service Bus with four systems</title>
+        <rect x="240" y="90" width="200" height="44" rx="8" fill="#121A24" stroke="#1B7A70" stroke-width="2"/>
+        <text x="340" y="118" text-anchor="middle" fill="#2DD4BF" font-family="monospace" font-size="16">Enterprise Service Bus</text>
+        <rect x="40" y="20" width="120" height="40" rx="6" fill="#121A24" stroke="#22303F"/>
+        <text x="100" y="45" text-anchor="middle" fill="#E7EDF3" font-size="15">System A</text>
+        <rect x="520" y="20" width="120" height="40" rx="6" fill="#121A24" stroke="#22303F"/>
+        <text x="580" y="45" text-anchor="middle" fill="#E7EDF3" font-size="15">System B</text>
+        <rect x="40" y="160" width="120" height="40" rx="6" fill="#121A24" stroke="#22303F"/>
+        <text x="100" y="185" text-anchor="middle" fill="#E7EDF3" font-size="15">System C</text>
+        <rect x="520" y="160" width="120" height="40" rx="6" fill="#121A24" stroke="#22303F"/>
+        <text x="580" y="185" text-anchor="middle" fill="#E7EDF3" font-size="15">System D</text>
+        <line x1="160" y1="40" x2="280" y2="100" stroke="#2DD4BF" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <line x1="520" y1="40" x2="400" y2="100" stroke="#2DD4BF" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <line x1="160" y1="180" x2="280" y2="120" stroke="#2DD4BF" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <line x1="520" y1="180" x2="400" y2="120" stroke="#2DD4BF" stroke-width="1.5" stroke-dasharray="4 3"/>
+      </svg>
+    </div>
+  </section>`);
+
+  // 5 SOA + REST
+  S(`
+  <section class="slide">
+    <div class="eyebrow">Review · Module 6<span class="trace"></span></div>
+    <h1 class="title">SOA Principles &amp; REST vs SOAP</h1>
+    <div class="content grid-2">
+      <div class="card">
+        <h3>SOA pillars</h3>
+        <ul class="bullets">
+          <li><b>Loose Coupling</b> — interface stable, internals free to change</li>
+          <li><b>Reusability</b> — services shared across apps</li>
+          <li><b>Interoperability</b> — open standards</li>
+          <li><b>Abstraction</b> — hide internal logic</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>REST vs SOAP</h3>
+        <ul class="bullets">
+          <li><b>SOAP</b> — strict protocol, XML only, heavy, enterprise security</li>
+          <li><b>REST</b> — style, multi-format (JSON preferred), HTTP verbs, lightweight</li>
+          <li>Microservices = fine-grained SOA with independent deploy + own DB</li>
+        </ul>
+      </div>
+    </div>
+  </section>`);
+
+  // 6 Middleware
+  S(`
+  <section class="slide">
+    <div class="eyebrow">Review · Module 8<span class="trace"></span></div>
+    <h1 class="title">Middleware &amp; Messaging</h1>
+    <div class="content">
+      <div class="flow-row" style="margin-bottom:12px;">
+        <div class="node hi"><span class="n-label">App</span>Clients</div>
+        <div class="arrow-h"></div>
+        <div class="node"><span class="n-label">Glue</span>Middleware / MOM</div>
+        <div class="arrow-h"></div>
+        <div class="node hi"><span class="n-label">Backend</span>Services · DB</div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Queue (Point-to-Point)</h3>
+          <p>One-to-one. Single consumer removes the message. Ideal for work queues.</p>
+        </div>
+        <div class="card">
+          <h3>Topic (Pub/Sub)</h3>
+          <p>One-to-many. Every active subscriber gets a copy. Ideal for events.</p>
+        </div>
+      </div>
+    </div>
+  </section>`);
+
+  // 7 Testing + Deploy
+  S(`
+  <section class="slide">
+    <div class="eyebrow">Review · Module 10<span class="trace"></span></div>
+    <h1 class="title">Testing Pyramid &amp; Deploy Strategies</h1>
+    <div class="content grid-2">
+      <div class="card">
+        <h3>Pyramid (bottom → top)</h3>
+        <ul class="bullets">
+          <li><b>Unit</b> — most tests, fastest, cheapest</li>
+          <li><b>Integration (SIT)</b> — component communication</li>
+          <li><b>Acceptance (UAT)</b> — fewest, business workflows</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Deployment</h3>
+        <ul class="bullets">
+          <li><b>Blue-Green</b> — two environments, instant switch, zero downtime</li>
+          <li><b>Canary</b> — small % of users first, limit blast radius</li>
+          <li><b>CI</b> — frequent merges + automated build/test</li>
+        </ul>
+      </div>
+    </div>
+  </section>`);
+
+  // 8 Usability + API
+  S(`
+  <section class="slide">
+    <div class="eyebrow">Review · Modules 11–12<span class="trace"></span></div>
+    <h1 class="title">Usability + REST APIs</h1>
+    <div class="content grid-2">
+      <div class="card">
+        <h3>Usability essentials</h3>
+        <ul class="bullets">
+          <li>ISO 9241-11: effectiveness, efficiency, satisfaction</li>
+          <li>5 requirements: learn, use, recall, low error, satisfaction</li>
+          <li><b>Slip</b> = right goal, wrong action · <b>Mistake</b> = wrong goal</li>
+          <li>SUS: 10 questions → score 0–100</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>REST essentials</h3>
+        <ul class="bullets">
+          <li>Constraints: Client-Server, Stateless, Cacheable, Layered</li>
+          <li>Verbs: GET · POST · PUT · PATCH · DELETE</li>
+          <li>Representation = Data + Metadata + Hypermedia links</li>
+          <li>API = intermediary between two applications</li>
+        </ul>
+      </div>
+    </div>
+  </section>`);
+
+  // 9 Recap
+  S(`
+  <section class="slide">
+    <div class="eyebrow">Recap<span class="trace"></span></div>
+    <h1 class="title">What to Carry Into the Exam</h1>
+    <div class="content recap-grid">
+      <div class="card"><div class="num">01</div><h3>SI methods</h3><p>P2P · Vertical/Star · Horizontal/ESB · Common Format</p></div>
+      <div class="card"><div class="num">02</div><h3>SOA / REST</h3><p>Loose coupling · JSON REST vs XML SOAP · Microservices</p></div>
+      <div class="card"><div class="num">03</div><h3>Middleware</h3><p>Queue vs Topic · Sync vs Async · ETL</p></div>
+      <div class="card"><div class="num">04</div><h3>QA / API</h3><p>Pyramid · Canary/Blue-Green · SUS · HTTP verbs</p></div>
+    </div>
+  </section>`);
+
+  // 10 MC 1-4
+  S(`
+  <section class="slide overflow-ok">
+    <div class="eyebrow">Practice · Multiple Choice<span class="trace"></span></div>
+    <h1 class="title">Items 1–4</h1>
+    <div class="content qa-list">
+      <div class="qa-item">
+        <span class="qnum">1</span><span class="qtext">System Integration is best defined as the process of</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> rewriting every legacy app from scratch</div>
+          <div class="choice"><b>B.</b> embedding existing &amp; new systems into a cohesive environment</div>
+          <div class="choice"><b>C.</b> replacing all databases with one warehouse</div>
+          <div class="choice"><b>D.</b> migrating exclusively to microservices</div>
+        </div>
+      </div>
+      <div class="qa-item">
+        <span class="qnum">2</span><span class="qtext">Connecting 10 systems with pure Star topology requires how many links?</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> 10</div><div class="choice"><b>B.</b> 20</div>
+          <div class="choice"><b>C.</b> 45</div><div class="choice"><b>D.</b> 90</div>
+        </div>
+      </div>
+      <div class="qa-item">
+        <span class="qnum">3</span><span class="qtext">Which method uses a central ESB so each system needs only one connection?</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> Point-to-Point</div><div class="choice"><b>B.</b> Vertical</div>
+          <div class="choice"><b>C.</b> Horizontal</div><div class="choice"><b>D.</b> Common Data Format</div>
+        </div>
+      </div>
+      <div class="qa-item">
+        <span class="qnum">4</span><span class="qtext">A direct “walkie-talkie” link between exactly two systems is</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> Horizontal</div><div class="choice"><b>B.</b> Point-to-Point</div>
+          <div class="choice"><b>C.</b> Common Data Format</div><div class="choice"><b>D.</b> EAI</div>
+        </div>
+      </div>
+    </div>
+  </section>`);
+
+  // 11 MC 5-8
+  S(`
+  <section class="slide overflow-ok">
+    <div class="eyebrow">Practice · Multiple Choice<span class="trace"></span></div>
+    <h1 class="title">Items 5–8</h1>
+    <div class="content qa-list">
+      <div class="qa-item">
+        <span class="qnum">5</span><span class="qtext">UN/EDIFACT is an international standard for</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> UML diagrams</div><div class="choice"><b>B.</b> JSON APIs</div>
+          <div class="choice"><b>C.</b> electronic data interchange</div><div class="choice"><b>D.</b> unit testing</div>
+        </div>
+      </div>
+      <div class="qa-item">
+        <span class="qnum">6</span><span class="qtext">SOA principle that hides internal logic behind a published interface</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> Loose Coupling</div><div class="choice"><b>B.</b> Reusability</div>
+          <div class="choice"><b>C.</b> Abstraction</div><div class="choice"><b>D.</b> Interoperability</div>
+        </div>
+      </div>
+      <div class="qa-item">
+        <span class="qnum">7</span><span class="qtext">Which statement is correct?</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> REST mandates XML; SOAP allows JSON</div>
+          <div class="choice"><b>B.</b> SOAP is a protocol; REST is an architectural style</div>
+          <div class="choice"><b>C.</b> REST has built-in WS-Security</div>
+          <div class="choice"><b>D.</b> SOAP is lighter for mobile apps</div>
+        </div>
+      </div>
+      <div class="qa-item">
+        <span class="qnum">8</span><span class="qtext">In microservices, databases are typically</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> centralized and shared</div><div class="choice"><b>B.</b> decentralized (database-per-service)</div>
+          <div class="choice"><b>C.</b> replaced by flat files</div><div class="choice"><b>D.</b> relational only</div>
+        </div>
+      </div>
+    </div>
+  </section>`);
+
+  // 12 MC 9-12
+  S(`
+  <section class="slide overflow-ok">
+    <div class="eyebrow">Practice · Multiple Choice<span class="trace"></span></div>
+    <h1 class="title">Items 9–12</h1>
+    <div class="content qa-list">
+      <div class="qa-item">
+        <span class="qnum">9</span><span class="qtext">Middleware is called “software glue” because it</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> forces one programming language</div>
+          <div class="choice"><b>B.</b> bridges OS/DB and apps, abstracting network details</div>
+          <div class="choice"><b>C.</b> stores every message forever</div>
+          <div class="choice"><b>D.</b> eliminates APIs</div>
+        </div>
+      </div>
+      <div class="qa-item">
+        <span class="qnum">10</span><span class="qtext">Publish/Subscribe delivers messages</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> one-to-one</div><div class="choice"><b>B.</b> one-to-many</div>
+          <div class="choice"><b>C.</b> many-to-one</div><div class="choice"><b>D.</b> zero-to-one</div>
+        </div>
+      </div>
+      <div class="qa-item">
+        <span class="qnum">11</span><span class="qtext">Main advantage of asynchronous messaging over synchronous RPC</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> tighter coupling</div>
+          <div class="choice"><b>B.</b> fails immediately if server offline</div>
+          <div class="choice"><b>C.</b> decoupling and fault tolerance</div>
+          <div class="choice"><b>D.</b> eliminates brokers</div>
+        </div>
+      </div>
+      <div class="qa-item">
+        <span class="qnum">12</span><span class="qtext">Largest volume of automated tests in the Testing Pyramid should be</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> UAT</div><div class="choice"><b>B.</b> Unit Testing</div>
+          <div class="choice"><b>C.</b> Manual exploratory</div><div class="choice"><b>D.</b> Performance</div>
+        </div>
+      </div>
+    </div>
+  </section>`);
+
+  // 13 MC 13-16
+  S(`
+  <section class="slide overflow-ok">
+    <div class="eyebrow">Practice · Multiple Choice<span class="trace"></span></div>
+    <h1 class="title">Items 13–16</h1>
+    <div class="content qa-list">
+      <div class="qa-item">
+        <span class="qnum">13</span><span class="qtext">Continuous Integration primarily means</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> developers never merge</div>
+          <div class="choice"><b>B.</b> frequent merges that trigger builds &amp; tests</div>
+          <div class="choice"><b>C.</b> replacing databases with APIs</div>
+          <div class="choice"><b>D.</b> shipping every commit to production</div>
+        </div>
+      </div>
+      <div class="qa-item">
+        <span class="qnum">14</span><span class="qtext">Small % of live users routed to a new version first is</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> Blue-Green</div><div class="choice"><b>B.</b> Rolling</div>
+          <div class="choice"><b>C.</b> Canary</div><div class="choice"><b>D.</b> Big-Bang</div>
+        </div>
+      </div>
+      <div class="qa-item">
+        <span class="qnum">15</span><span class="qtext">ISO 9241-11 defines usability with</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> ease of learning only</div>
+          <div class="choice"><b>B.</b> effectiveness, efficiency, satisfaction</div>
+          <div class="choice"><b>C.</b> productivity and cost only</div>
+          <div class="choice"><b>D.</b> low cost and high performance</div>
+        </div>
+      </div>
+      <div class="qa-item">
+        <span class="qnum">16</span><span class="qtext">User intends to confirm but taps Cancel because buttons are close — this is a</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> Mistake</div><div class="choice"><b>B.</b> Slip</div>
+          <div class="choice"><b>C.</b> Critical failure</div><div class="choice"><b>D.</b> System crash</div>
+        </div>
+      </div>
+    </div>
+  </section>`);
+
+  // 14 MC 17-20
+  S(`
+  <section class="slide overflow-ok">
+    <div class="eyebrow">Practice · Multiple Choice<span class="trace"></span></div>
+    <h1 class="title">Items 17–20</h1>
+    <div class="content qa-list">
+      <div class="qa-item">
+        <span class="qnum">17</span><span class="qtext">SUS produces a single score on the range</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> 1–5</div><div class="choice"><b>B.</b> 0–10</div>
+          <div class="choice"><b>C.</b> 0–100</div><div class="choice"><b>D.</b> 0–1000</div>
+        </div>
+      </div>
+      <div class="qa-item">
+        <span class="qnum">18</span><span class="qtext">An API is best described as</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> a programming language</div>
+          <div class="choice"><b>B.</b> a software intermediary that lets two apps communicate</div>
+          <div class="choice"><b>C.</b> a database schema</div>
+          <div class="choice"><b>D.</b> a physical cable</div>
+        </div>
+      </div>
+      <div class="qa-item">
+        <span class="qnum">19</span><span class="qtext">Which is NOT a formal REST constraint?</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> Statelessness</div><div class="choice"><b>B.</b> Cache-ability</div>
+          <div class="choice"><b>C.</b> Database Normalization</div><div class="choice"><b>D.</b> Client-Server</div>
+        </div>
+      </div>
+      <div class="qa-item">
+        <span class="qnum">20</span><span class="qtext">HTTP method used solely to retrieve a resource</span>
+        <div class="choices">
+          <div class="choice"><b>A.</b> POST</div><div class="choice"><b>B.</b> PUT</div>
+          <div class="choice"><b>C.</b> GET</div><div class="choice"><b>D.</b> DELETE</div>
+        </div>
+      </div>
+    </div>
+  </section>`);
+
+  // 15 ID 21-25
+  S(`
+  <section class="slide overflow-ok">
+    <div class="eyebrow">Practice · Identification<span class="trace"></span></div>
+    <h1 class="title">Items 21–25</h1>
+    <div class="content qa-list">
+      <div class="qa-item"><span class="qnum">21</span><span class="qtext">Two systems were linked by a single hard-coded connection that broke when an IP changed. Name the integration style.</span></div>
+      <div class="qa-item"><span class="qnum">22</span><span class="qtext">Every department system converts to/from one shared format so a new system needs only one converter. Which method?</span></div>
+      <div class="qa-item"><span class="qnum">23</span><span class="qtext">An “OrderPlaced” event is received independently by inventory, notification, and analytics. Name the messaging pattern.</span></div>
+      <div class="qa-item"><span class="qnum">24</span><span class="qtext">Nightly job pulls branch records, cleans addresses, loads a warehouse. Identify the technique.</span></div>
+      <div class="qa-item"><span class="qnum">25</span><span class="qtext">Geolocation, pricing, and payment each deploy separately with their own database. Name the architectural style.</span></div>
+    </div>
+  </section>`);
+
+  // 16 ENUM 26-28 + more ID
+  S(`
+  <section class="slide overflow-ok">
+    <div class="eyebrow">Practice · Identification &amp; Enumeration<span class="trace"></span></div>
+    <h1 class="title">Items 26–28</h1>
+    <div class="content qa-list">
+      <div class="qa-item"><span class="qnum">26</span><span class="qtext">User intends the correct birth date but types 2024 instead of 1994. Classify the error type.</span></div>
+      <div class="qa-item"><span class="qnum">27</span><span class="qtext">10-question survey rated 1–5 yields a score of 72. Which usability metric was used?</span></div>
+      <div class="qa-item"><span class="qnum">28</span><span class="qtext">Write the formula for the number of connections in Star/Spaghetti integration of N systems.</span></div>
+    </div>
+  </section>`);
+
+  // 17 GTO intro + 29
+  S(`
+  <section class="slide">
+    <div class="eyebrow">Practice · Guess the Output<span class="trace"></span></div>
+    <h1 class="title">Item 29 — Node.js HTTP</h1>
+    <div class="lede">What does the following program print to the console, and what status does a GET to any path return?</div>
+    <div class="content">
+      <div class="code-wrap" style="max-height: min(420px, 55vh);">
+        <div class="code-head">
+          <span class="code-lang">JavaScript · Node</span>
+          <button class="copy-btn" data-copy="gto29">Copy</button>
+        </div>
+        <div class="code-body"><pre id="gto29"></pre></div>
+      </div>
+    </div>
+  </section>`);
+
+  // 18 GTO 30
+  S(`
+  <section class="slide">
+    <div class="eyebrow">Practice · Guess the Output<span class="trace"></span></div>
+    <h1 class="title">Item 30 — JSON Response Shape</h1>
+    <div class="lede">A client POSTs <code style="color:var(--teal)">{"name":"Alex"}</code> to <code style="color:var(--teal)">/api/echo</code>. What is the exact JSON body returned on success?</div>
+    <div class="content">
+      <div class="code-wrap" style="max-height: min(420px, 55vh);">
+        <div class="code-head">
+          <span class="code-lang">JavaScript · Node</span>
+          <button class="copy-btn" data-copy="gto30">Copy</button>
+        </div>
+        <div class="code-body"><pre id="gto30"></pre></div>
+      </div>
+    </div>
+  </section>`);
+
+  // 19 Answer key MC
+  S(`
+  <section class="slide overflow-ok">
+    <div class="eyebrow">Answer Key<span class="trace"></span></div>
+    <h1 class="title">Multiple Choice 1–20</h1>
+    <div class="content answers-grid">
+      <div class="ans-block">
+        <h4>1–10</h4>
+        <div class="ans-item"><b>1 B</b> — cohesive environment definition</div>
+        <div class="ans-item"><b>2 C</b> — 10×9/2 = 45</div>
+        <div class="ans-item"><b>3 C</b> — Horizontal / ESB</div>
+        <div class="ans-item"><b>4 B</b> — Point-to-Point</div>
+        <div class="ans-item"><b>5 C</b> — electronic data interchange</div>
+        <div class="ans-item"><b>6 C</b> — Abstraction</div>
+        <div class="ans-item"><b>7 B</b> — protocol vs style</div>
+        <div class="ans-item"><b>8 B</b> — database-per-service</div>
+        <div class="ans-item"><b>9 B</b> — middleware glue</div>
+        <div class="ans-item"><b>10 B</b> — one-to-many</div>
+      </div>
+      <div class="ans-block">
+        <h4>11–20</h4>
+        <div class="ans-item"><b>11 C</b> — decoupling &amp; fault tolerance</div>
+        <div class="ans-item"><b>12 B</b> — Unit (pyramid base)</div>
+        <div class="ans-item"><b>13 B</b> — frequent merges + tests</div>
+        <div class="ans-item"><b>14 C</b> — Canary</div>
+        <div class="ans-item"><b>15 B</b> — ISO 9241-11 triad</div>
+        <div class="ans-item"><b>16 B</b> — Slip</div>
+        <div class="ans-item"><b>17 C</b> — SUS 0–100</div>
+        <div class="ans-item"><b>18 B</b> — intermediary</div>
+        <div class="ans-item"><b>19 C</b> — not a REST constraint</div>
+        <div class="ans-item"><b>20 C</b> — GET</div>
+      </div>
+    </div>
+  </section>`);
+
+  // 20 Answer key ID/ENUM/GTO
+  S(`
+  <section class="slide overflow-ok">
+    <div class="eyebrow">Answer Key<span class="trace"></span></div>
+    <h1 class="title">ID · ENUM · GTO 21–30</h1>
+    <div class="content answers-grid">
+      <div class="ans-block">
+        <h4>Identification / ENUM</h4>
+        <div class="ans-item"><b>21</b> Point-to-Point (or Star)</div>
+        <div class="ans-item"><b>22</b> Common Data Format Integration</div>
+        <div class="ans-item"><b>23</b> Publish/Subscribe (Topic)</div>
+        <div class="ans-item"><b>24</b> ETL</div>
+        <div class="ans-item"><b>25</b> Microservices</div>
+        <div class="ans-item"><b>26</b> Slip</div>
+        <div class="ans-item"><b>27</b> System Usability Scale (SUS)</div>
+        <div class="ans-item"><b>28</b> N(N−1)/2</div>
+      </div>
+      <div class="ans-block">
+        <h4>Guess the Output</h4>
+        <div class="ans-item"><b>29</b> Console: <code style="color:var(--teal)">Server running</code>. Every GET returns status <b>200</b> with body <code style="color:var(--teal)">{"status":"ok"}</code>.</div>
+        <div class="ans-item"><b>30</b> Success body: <code style="color:var(--teal)">{"received":{"name":"Alex"}}</code></div>
+      </div>
+    </div>
+  </section>`);
+
+  // 21 Quotes
+  S(`
+  <section class="slide">
+    <div class="eyebrow">Key Quotes<span class="trace"></span></div>
+    <h1 class="title">Remember These</h1>
+    <div class="content" style="gap:16px;">
+      <div class="quote-block">If databases are the memory of an enterprise and web applications are its face, middleware is the nervous system.</div>
+      <div class="quote-block">A system you haven't tested under load isn't finished — it's just untested.</div>
+      <div class="quote-block">The API is the new contract: it defines what a service can do, for whom, and under what conditions.</div>
+    </div>
+  </section>`);
+
+  // 22 Close
+  S(`
+  <section class="slide title-slide">
+    <div class="content" style="justify-content:center;align-items:center;gap:22px;">
+      <svg width="72" height="72" viewBox="0 0 72 72" role="img" aria-label="Celebration">
+        <circle cx="36" cy="36" r="32" fill="none" stroke="#2DD4BF" stroke-width="2"/>
+        <text x="36" y="44" text-anchor="middle" font-size="28">✓</text>
+      </svg>
+      <div class="kicker" style="margin:0;">You're set</div>
+      <h1 style="font-size:clamp(28px,4vw,48px);">Practice complete.<br><span class="accent">Go own the midterm.</span></h1>
+      <div class="sub" style="margin-top:0;">Review any misses, especially ESB vs Star, REST constraints, and the Node.js response shapes.</div>
+    </div>
+  </section>`);
+
+  // ---- render ----
+  const stage = document.getElementById('stage');
+  slides.forEach((html, i) => {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = html.trim();
+    const el = wrap.firstElementChild;
+    if (i === 0) el.classList.add('active');
+    stage.appendChild(el);
+  });
+
+  const all = Array.from(stage.querySelectorAll('.slide'));
+  const total = all.length;
+  let idx = 0;
+  const fill = document.getElementById('progress-fill');
+  const counter = document.getElementById('counter');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function update() {
+    fill.style.width = ((idx + 1) / total * 100) + '%';
+    counter.textContent = (idx + 1) + ' / ' + total;
+  }
+  update();
+
+  function goTo(n, dir) {
+    n = Math.max(0, Math.min(total - 1, n));
+    if (n === idx) return;
+    const cur = all[idx];
+    const next = all[n];
+    if (reduce) {
+      cur.classList.remove('active');
+      next.classList.add('active');
+      idx = n; update(); return;
+    }
+    cur.classList.remove('active');
+    cur.classList.add(dir > 0 ? 'exit-left' : 'exit-right');
+    next.classList.remove('exit-left', 'exit-right', 'prep-left', 'prep-right');
+    next.classList.add(dir > 0 ? 'prep-right' : 'prep-left');
+    void next.offsetWidth;
+    requestAnimationFrame(() => {
+      next.classList.remove('prep-left', 'prep-right');
+      next.classList.add('active');
+    });
+    setTimeout(() => cur.classList.remove('exit-left', 'exit-right'), 380);
+    idx = n; update();
+  }
+  function next() { goTo(idx + 1, 1); }
+  function prev() { goTo(idx - 1, -1); }
+
+  function isInteractive(el) {
+    return !!(el.closest && el.closest('button, a, input, textarea, select, [contenteditable="true"], .copy-btn'));
+  }
+
+  document.addEventListener('keydown', e => {
+    const modal = document.getElementById('shortcuts-modal');
+    if (e.key === '?') { modal.classList.toggle('show'); return; }
+    if (modal.classList.contains('show')) {
+      if (e.key === 'Escape') modal.classList.remove('show');
+      return;
+    }
+    if (e.key === 'ArrowRight') next();
+    else if (e.key === 'ArrowLeft') prev();
+    else if (e.key === 'Home') goTo(0, -1);
+    else if (e.key === 'End') goTo(total - 1, 1);
+  });
+
+  document.getElementById('shortcuts-modal').addEventListener('click', function (e) {
+    if (e.target === this) this.classList.remove('show');
+  });
+
+  let fired = false;
+  document.addEventListener('mousedown', e => {
+    if (isInteractive(e.target)) return;
+    if (e.button === 2) {
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (!fired) { next(); fired = true; }
+    } else if (e.button === 3) {
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (!fired) { prev(); fired = true; }
+    } else if (e.button === 4) {
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (!fired) { next(); fired = true; }
+    }
+  }, true);
+  document.addEventListener('mouseup', () => { fired = false; });
+  document.addEventListener('contextmenu', e => {
+    if (isInteractive(e.target)) return;
+    e.preventDefault();
+  });
+  document.addEventListener('auxclick', e => {
+    if (isInteractive(e.target)) return;
+    e.preventDefault();
+  });
+
+  let tx = 0, ty = 0;
+  document.addEventListener('touchstart', e => {
+    if (!e.touches || !e.touches.length) return;
+    tx = e.touches[0].clientX; ty = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    if (!e.changedTouches || !e.changedTouches.length) return;
+    const dx = e.changedTouches[0].clientX - tx;
+    const dy = e.changedTouches[0].clientY - ty;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (dx < 0) next(); else prev();
+    }
+  }, { passive: true });
+
+  // code samples + highlighting
+  const samples = {
+    gto29: `const http = require('http');\n\nconst server = http.createServer((req, res) => {\n  res.setHeader('Content-Type', 'application/json');\n  res.statusCode = 200;\n  res.end(JSON.stringify({ status: 'ok' }));\n});\n\nserver.listen(3000, () => {\n  console.log('Server running');\n});`,
+    gto30: `const http = require('http');\n\nconst server = http.createServer((req, res) => {\n  res.setHeader('Content-Type', 'application/json');\n  if (req.method === 'POST' && req.url === '/api/echo') {\n    let body = '';\n    req.on('data', chunk => { body += chunk; });\n    req.on('end', () => {\n      const parsed = JSON.parse(body);\n      res.statusCode = 200;\n      res.end(JSON.stringify({ received: parsed }));\n    });\n  } else {\n    res.statusCode = 404;\n    res.end(JSON.stringify({ error: 'Not Found' }));\n  }\n});\n\nserver.listen(3000);`
+  };
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function tokenizeJS(code) {
+    const re = /(\/\/[^\n]*)|(\`(?:\\.|[^\`\\])*\`)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|\b(async|await|function|const|let|var|try|catch|throw|new|return|if|typeof|require)\b|\b(true|false|null|undefined)\b|\b(\d+\.?\d*)\b|([{}()\[\],;:])/g;
+    return code.replace(re, (m, comment, template, str, kw, boolnull, num, punc) => {
+      if (comment) return '<span class="tok-comment">' + esc(comment) + '</span>';
+      if (template) return '<span class="tok-str">' + esc(template) + '</span>';
+      if (str) return '<span class="tok-str">' + esc(str) + '</span>';
+      if (kw) return '<span class="tok-key">' + esc(kw) + '</span>';
+      if (boolnull) return '<span class="tok-bool">' + esc(boolnull) + '</span>';
+      if (num) return '<span class="tok-num">' + esc(num) + '</span>';
+      if (punc) return '<span class="tok-punc">' + esc(punc) + '</span>';
+      return esc(m);
+    });
+  }
+
+  Object.keys(samples).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = tokenizeJS(samples[id]);
+  });
+
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-copy');
+      const text = samples[id] || '';
+      const done = () => {
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1200);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, () => { fallback(text); done(); });
+      } else { fallback(text); done(); }
+    });
+  });
+  function fallback(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+})();
+</script>
+</body>
+</html>

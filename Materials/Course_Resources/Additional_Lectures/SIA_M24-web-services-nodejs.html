@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Module 24 · Web Services, JSON &amp; Node.js Essentials</title>
+<style>
+  :root{
+    --bg:#171a21;
+    --bg-soft:#191d25;
+    --shadow-dark:#0c0e12;
+    --shadow-light:#242a35;
+    --text:#e9edf5;
+    --text-dim:#9aa4b6;
+    --text-faint:#6d7688;
+    --green:#7fd9a0;
+    --green-dim:#5aa878;
+    --amber:#f0c069;
+    --amber-dim:#c99a4c;
+    --blue:#6fb3e8;
+    --blue-dim:#4f86ad;
+    --pink:#e78fae;
+    --radius-lg:24px;
+    --radius-md:18px;
+    --radius-sm:12px;
+    --font-display: 'Poppins','Segoe UI',system-ui,-apple-system,sans-serif;
+    --font-body: 'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+    --font-mono: 'JetBrains Mono','Fira Code','Cascadia Code',ui-monospace,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--bg);}
+  body{
+    font-family:var(--font-body);
+    color:var(--text);
+    overflow:hidden;
+    -webkit-user-select:text;
+    user-select:text;
+  }
+  ::selection{background:var(--green-dim);color:#0c0e12;}
+
+  /* ---------- shared surfaces ---------- */
+  .raised{
+    background:var(--bg);
+    border-radius:var(--radius-md);
+    box-shadow: 9px 9px 18px var(--shadow-dark), -9px -9px 18px var(--shadow-light);
+  }
+  .inset{
+    background:var(--bg);
+    border-radius:var(--radius-md);
+    box-shadow: inset 6px 6px 12px var(--shadow-dark), inset -6px -6px 12px var(--shadow-light);
+  }
+  .chip{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:8px 16px;border-radius:999px;
+    background:var(--bg);
+    box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+    font-family:var(--font-mono);font-size:16px;color:var(--text-dim);
+  }
+
+  /* ---------- deck shell ---------- */
+  .deck{position:relative;width:100vw;height:100vh;overflow:hidden;}
+  .viewport{position:relative;width:100%;height:100%;}
+  .slide{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;
+    padding:56px 88px 40px;
+    opacity:0;pointer-events:none;
+    transition:opacity .35s ease, transform .35s ease;
+  }
+  .slide.active{opacity:1;transform:translateX(0);pointer-events:auto;z-index:2;}
+  .slide.from-right{transform:translateX(38px);opacity:0;}
+  .slide.from-left{transform:translateX(-38px);opacity:0;}
+  .slide.leaving-left{transform:translateX(-38px);opacity:0;z-index:1;}
+  .slide.leaving-right{transform:translateX(38px);opacity:0;z-index:1;}
+  @media (prefers-reduced-motion: reduce){
+    .slide{transition:opacity .01s linear !important;transform:none !important;}
+  }
+
+  .eyebrow{
+    font-family:var(--font-mono);font-size:16px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--green);font-weight:600;
+    display:flex;align-items:center;gap:10px;margin-bottom:10px;
+  }
+  .eyebrow .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);}
+  h1.title{
+    font-family:var(--font-display);font-weight:700;
+    font-size:clamp(28px,4vw,44px);line-height:1.15;margin:0 0 22px;color:var(--text);
+  }
+  .slide-body{flex:1;min-height:0;display:flex;flex-direction:column;gap:20px;}
+  p{font-size:17px;line-height:1.65;color:var(--text-dim);margin:0 0 12px;}
+  strong{color:var(--text);font-weight:600;}
+  a{color:var(--blue);}
+
+  /* ---------- chrome: progress + counter ---------- */
+  .progress-track{position:fixed;top:0;left:0;right:0;height:5px;background:var(--shadow-dark);z-index:50;}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--blue));transition:width .3s ease;width:3.7%;}
+  .counter{
+    position:fixed;bottom:22px;right:28px;z-index:50;
+    font-family:var(--font-mono);font-size:16px;color:var(--text-dim);
+    padding:8px 16px;border-radius:999px;background:var(--bg);
+    box-shadow:5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+  }
+  .hint{
+    position:fixed;bottom:22px;left:28px;z-index:50;
+    font-family:var(--font-mono);font-size:16px;color:var(--text-faint);
+  }
+
+  /* ---------- generic layout helpers ---------- */
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:24px;min-height:0;flex:1;}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;min-height:0;}
+  .stack{display:flex;flex-direction:column;gap:16px;min-height:0;}
+  .row{display:flex;gap:16px;align-items:center;}
+  .card{padding:22px 24px;min-width:0;}
+  .card h3{margin:0 0 8px;font-family:var(--font-display);font-size:19px;color:var(--text);}
+  .card p{margin:0;font-size:16px;}
+  .icon-badge{
+    width:46px;height:46px;border-radius:14px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--bg);box-shadow:5px 5px 10px var(--shadow-dark),-5px -5px 10px var(--shadow-light);
+  }
+  .icon{width:26px;height:26px;}
+  .badge-row{display:flex;gap:14px;flex-wrap:wrap;}
+  .badge-row .chip .icon{width:20px;height:20px;}
+
+  /* ---------- quote card ---------- */
+  .quote-card{
+    padding:26px 30px;display:flex;gap:18px;align-items:flex-start;
+  }
+  .quote-card .icon-badge{background:var(--bg);}
+  .quote-card blockquote{margin:0;font-size:19px;line-height:1.6;color:var(--text);font-style:italic;}
+  .quote-card cite{display:block;margin-top:10px;font-style:normal;font-family:var(--font-mono);font-size:15px;color:var(--text-faint);}
+
+  /* ---------- code + panel layout ---------- */
+  .code-row{display:grid;grid-template-columns:1.15fr 0.85fr;gap:22px;height:min(520px,58vh);min-height:0;}
+  .code-row.single{grid-template-columns:1fr;}
+  .code-card, .panel-card{
+    display:flex;flex-direction:column;height:100%;min-height:0;overflow:hidden;
+  }
+  .code-head{
+    flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
+    padding:12px 18px;border-bottom:1px solid var(--shadow-dark);
+  }
+  .code-head .fname{font-family:var(--font-mono);font-size:15px;color:var(--text-dim);}
+  .dots{display:flex;gap:7px;}
+  .dots span{width:10px;height:10px;border-radius:50%;background:var(--shadow-light);box-shadow:inset 1px 1px 2px var(--shadow-dark);}
+  .copy-btn{
+    font-family:var(--font-mono);font-size:14px;color:var(--text-dim);
+    padding:7px 14px;border-radius:10px;border:none;cursor:pointer;
+    background:var(--bg);box-shadow:4px 4px 8px var(--shadow-dark),-4px -4px 8px var(--shadow-light);
+    transition:all .15s ease;
+  }
+  .copy-btn:active, .copy-btn.copied{
+    box-shadow:inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+    color:var(--green);
+  }
+  pre{
+    flex:1;overflow:auto;min-height:0;margin:0;padding:18px 20px;
+    font-family:var(--font-mono);font-size:16px;line-height:1.6;
+  }
+  pre code{white-space:pre;}
+  .tok-com{color:var(--text-faint);}
+  .tok-kw{color:var(--pink);}
+  .tok-str{color:var(--amber);}
+  .tok-fn{color:var(--blue);}
+  .tok-num{color:var(--green);}
+  .panel-head{flex-shrink:0;padding:12px 18px;border-bottom:1px solid var(--shadow-dark);font-family:var(--font-mono);font-size:15px;color:var(--text-dim);}
+  .panel-body{flex:1;overflow:auto;min-height:0;padding:18px 20px;display:flex;flex-direction:column;gap:12px;}
+  .term-line{font-family:var(--font-mono);font-size:16px;color:var(--green);}
+  .term-line .muted{color:var(--text-faint);}
+
+  /* ---------- MCQ ---------- */
+  .mcq-card{padding:22px 24px;}
+  .mcq-q{font-size:17px;color:var(--text);margin:0 0 14px;font-weight:600;line-height:1.5;}
+  .mcq-opts{display:flex;flex-direction:column;gap:10px;list-style:none;padding:0;margin:0;}
+  .mcq-opts li{
+    display:flex;gap:10px;align-items:flex-start;
+    font-size:16px;color:var(--text-dim);padding:10px 14px;border-radius:12px;
+    background:var(--bg);box-shadow:inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+  }
+  .mcq-opts li .letter{font-family:var(--font-mono);color:var(--blue);font-weight:700;flex-shrink:0;}
+
+  /* ---------- answer key ---------- */
+  .ans-card{padding:20px 22px;}
+  .ans-card .qnum{font-family:var(--font-mono);color:var(--amber);font-size:15px;margin-bottom:6px;}
+  .ans-card .ans{font-size:16px;color:var(--text);font-weight:600;margin:0 0 6px;}
+  .ans-card .why{font-size:15px;color:var(--text-dim);margin:0;line-height:1.55;}
+
+  /* ---------- title slide ---------- */
+  .title-slide{justify-content:center;align-items:center;text-align:center;}
+  .title-slide .eyebrow{justify-content:center;}
+  .title-slide h1{font-size:clamp(36px,5.4vw,58px);max-width:920px;}
+  .title-slide .sub{font-size:19px;color:var(--text-dim);max-width:680px;margin:6px auto 30px;}
+  .title-hero{width:180px;height:180px;margin-bottom:8px;}
+
+  /* ---------- step tracker ---------- */
+  .tracker{display:flex;align-items:center;gap:0;margin-bottom:6px;}
+  .tracker .node{
+    width:34px;height:34px;border-radius:50%;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-mono);font-size:14px;font-weight:700;
+    background:var(--bg);box-shadow:4px 4px 8px var(--shadow-dark),-4px -4px 8px var(--shadow-light);
+    color:var(--text-faint);
+  }
+  .tracker .node.on{color:#0c0e12;background:var(--green);box-shadow:0 0 0 3px rgba(127,217,160,.18);}
+  .tracker .line{flex:1;height:3px;background:var(--shadow-dark);border-radius:2px;min-width:16px;}
+  .tracker .line.on{background:var(--green-dim);}
+
+  /* ---------- flow diagram box ---------- */
+  .flow-box{
+    display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;
+    padding:22px;
+  }
+  .flow-node{
+    display:flex;flex-direction:column;align-items:center;gap:8px;
+    padding:16px 18px;min-width:120px;
+  }
+  .flow-node span{font-size:14px;font-family:var(--font-mono);color:var(--text-dim);text-align:center;}
+  .flow-arrow{color:var(--text-faint);font-size:22px;}
+
+  /* ---------- utility ---------- */
+  .scroll-y{overflow-y:auto;min-height:0;}
+  .center-item{display:flex;justify-content:center;}
+  .max-w{max-width:640px;margin:0 auto;}
+
+  /* ---------- shortcuts overlay ---------- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(10,11,14,.72);
+    display:flex;align-items:center;justify-content:center;z-index:100;
+    opacity:0;pointer-events:none;transition:opacity .2s ease;
+  }
+  .overlay.show{opacity:1;pointer-events:auto;}
+  .overlay-card{padding:34px 40px;max-width:460px;width:90%;}
+  .overlay-card h2{margin:0 0 18px;font-family:var(--font-display);font-size:22px;}
+  .overlay-card .row{justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--shadow-dark);font-size:16px;color:var(--text-dim);}
+  .overlay-card .row:last-child{border-bottom:none;}
+  .overlay-card kbd{font-family:var(--font-mono);color:var(--green);background:var(--bg);padding:3px 9px;border-radius:8px;box-shadow:3px 3px 6px var(--shadow-dark),-3px -3px 6px var(--shadow-light);}
+
+  /* ---------- scrollbar ---------- */
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--shadow-light);border-radius:8px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+
+  @media (max-width:900px){
+    .slide{padding:36px 24px 30px;}
+    .grid-2, .code-row{grid-template-columns:1fr !important;height:auto !important;}
+    .code-row{gap:16px;}
+    .code-card, .panel-card{height:280px;}
+    .grid-3{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<svg style="display:none" aria-hidden="true">
+<defs>
+  <symbol id="i-node" viewBox="0 0 32 32"><path d="M16 3 27 9.5v13L16 29 5 22.5v-13Z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M16 3v26M5 9.5l11 6.5M27 9.5 16 16M5 22.5l11-6.5M27 22.5 16 16" stroke="currentColor" stroke-width="1.3" opacity=".55" fill="none"/></symbol>
+  <symbol id="i-json" viewBox="0 0 32 32"><path d="M12 5c-3 0-4 1.5-4 4v3c0 2-1 3-3 3.3 2 .3 3 1.3 3 3.3v3c0 2.5 1 4 4 4M20 5c3 0 4 1.5 4 4v3c0 2 1 3 3 3.3-2 .3-3 1.3-3 3.3v3c0 2.5-1 4-4 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-xml" viewBox="0 0 32 32"><path d="M12 9 5 16l7 7M20 9l7 7-7 7M18 7l-4 18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-soap" viewBox="0 0 32 32"><circle cx="12" cy="19" r="6" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="21" cy="10" r="4" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="22" cy="21" r="2.4" stroke="currentColor" stroke-width="1.6" fill="none"/></symbol>
+  <symbol id="i-wsdl" viewBox="0 0 32 32"><rect x="7" y="4" width="14" height="20" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><path d="M10 10h8M10 14h8M10 18h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="23" cy="23" r="4.2" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M23 20.5v1M23 24.5v1M20.5 23h1M24.5 23h1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+  <symbol id="i-uddi" viewBox="0 0 32 32"><rect x="5" y="6" width="22" height="20" rx="2.5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M9 12h14M9 16h14M9 20h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-rest" viewBox="0 0 32 32"><path d="M7 12a9 9 0 0 1 15.5-5.5M25 20a9 9 0 0 1-15.5 5.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M22 3v5h-5M10 29v-5h5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-fs" viewBox="0 0 32 32"><path d="M4 9a2 2 0 0 1 2-2h6l3 3h11a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/></symbol>
+  <symbol id="i-module" viewBox="0 0 32 32"><path d="M16 4 27 10v12L16 28 5 22V10Z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M16 4v10M16 14 5 10M16 14l11-4M16 14v14" stroke="currentColor" stroke-width="1.3" opacity=".55"/></symbol>
+  <symbol id="i-thread" viewBox="0 0 32 32"><path d="M5 16h6M11 16 20 8M11 16l9 8M20 8h7M20 24h7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-check" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" stroke="currentColor" stroke-width="2" fill="none"/><path d="M11 16.5 14.5 20 21 12.5" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-server" viewBox="0 0 32 32"><rect x="6" y="5" width="20" height="9" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><rect x="6" y="18" width="20" height="9" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="10.5" cy="9.5" r="1.4" fill="currentColor"/><circle cx="10.5" cy="22.5" r="1.4" fill="currentColor"/></symbol>
+  <symbol id="i-client" viewBox="0 0 32 32"><rect x="9" y="4" width="14" height="24" rx="2.5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M14 25h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" stroke="currentColor" stroke-width="2" fill="none"/><path d="M16 9v7l5 3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 32 32"><path d="M17 3 7 18h8l-2 11 12-17h-9Z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 32 32"><path d="M5 8a3 3 0 0 1 3-3h16a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H14l-6 5v-5H8a3 3 0 0 1-3-3Z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/></symbol>
+  <symbol id="i-house" viewBox="0 0 32 32"><path d="M5 15 16 5l11 10" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 13v13h16V13" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M13 26v-7h6v7" stroke="currentColor" stroke-width="1.6" fill="none"/></symbol>
+  <symbol id="i-sensor" viewBox="0 0 32 32"><circle cx="16" cy="16" r="3" fill="currentColor"/><path d="M11 16a5 5 0 0 1 10 0M8 16a8 8 0 0 1 16 0M21 16a5 5 0 0 1-10 0M24 16a8 8 0 0 1-16 0" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".8"/></symbol>
+  <symbol id="i-quote" viewBox="0 0 32 32"><path d="M9 10c-3 1.5-5 4-5 8 0 3 2 5 5 5s5-2 5-5c0-2.5-1.5-4-4-4.5C10.5 12 11.5 10.5 14 9.5L9 10Zm14 0c-3 1.5-5 4-5 8 0 3 2 5 5 5s5-2 5-5c0-2.5-1.5-4-4-4.5C24.5 12 25.5 10.5 28 9.5L23 10Z" fill="currentColor"/></symbol>
+  <symbol id="i-party" viewBox="0 0 32 32"><path d="M6 26 20 6l6 6-20 14Z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><circle cx="24" cy="6" r="1.6" fill="currentColor"/><circle cx="28" cy="12" r="1.4" fill="currentColor"/><circle cx="22" cy="3" r="1.2" fill="currentColor"/><path d="M11 21l2 2M14 18l2 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-book" viewBox="0 0 32 32"><path d="M6 6h9a3 3 0 0 1 3 3v17a2.5 2.5 0 0 0-2.5-2.5H6ZM26 6h-9a3 3 0 0 0-3 3v17a2.5 2.5 0 0 1 2.5-2.5H26Z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/></symbol>
+  <symbol id="i-target" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="16" cy="16" r="6" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="16" cy="16" r="1.6" fill="currentColor"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 32 32"><path d="M16 5 28 11l-12 6L4 11Z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M4 17l12 6 12-6M4 23l12 6 12-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/></symbol>
+  <symbol id="i-pipe" viewBox="0 0 32 32"><rect x="3" y="13" width="26" height="6" rx="3" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="9" cy="16" r="1.6" fill="currentColor"/><circle cx="16" cy="16" r="1.6" fill="currentColor"/><circle cx="23" cy="16" r="1.6" fill="currentColor"/></symbol>
+</defs>
+</svg>
+
+<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+<div class="counter" id="counter">1 / 27</div>
+<div class="hint">Right‑click or → for next · press ? for shortcuts</div>
+
+<div class="deck">
+  <div class="viewport" id="viewport">
+
+    <!-- 1: TITLE -->
+    <section class="slide title-slide active" data-index="0">
+      <svg class="title-hero" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>Node.js hexagon mark</title><use href="#i-node"/></svg>
+      <div class="eyebrow"><span class="dot"></span>MODULE 24</div>
+      <h1 class="title">Web Services, JSON &amp; Node.js Essentials</h1>
+      <p class="sub">The invisible plumbing that lets apps, browsers and smart devices talk to each other — and your first real dive into backend programming.</p>
+      <div class="badge-row" style="justify-content:center">
+        <span class="chip"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>Node.js</title><use href="#i-node"/></svg>Node.js</span>
+        <span class="chip"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--amber)"><title>JSON</title><use href="#i-json"/></svg>JSON</span>
+        <span class="chip"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--blue)"><title>REST</title><use href="#i-rest"/></svg>REST APIs</span>
+        <span class="chip"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--blue)"><title>fs module</title><use href="#i-fs"/></svg>fs module</span>
+      </div>
+    </section>
+
+    <!-- 2: PREVIEW & OBJECTIVES -->
+    <section class="slide" data-index="1">
+      <div class="eyebrow"><span class="dot"></span>A · Lesson Preview &amp; Review</div>
+      <h1 class="title">From Frameworks to Plumbing</h1>
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="raised card">
+            <div class="row" style="margin-bottom:10px">
+              <span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--blue)"><title>Review</title><use href="#i-layers"/></svg></span>
+              <h3 style="margin:0">Last session</h3>
+            </div>
+            <p>We explored <strong>Web Frameworks</strong> — pre‑built toolkits for building robust web applications.</p>
+            <p>Now we shift focus to the plumbing that lets those applications talk to <em>other</em> applications over the internet: <strong>Web Services</strong>, plus our first taste of backend code with <strong>Node.js</strong> and <strong>JSON</strong>.</p>
+          </div>
+          <div class="raised card">
+            <div class="row" style="margin-bottom:10px">
+              <span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>Objectives</title><use href="#i-target"/></svg></span>
+              <h3 style="margin:0">By the end, you can</h3>
+            </div>
+            <ul style="margin:0;padding-left:18px;font-size:16px;color:var(--text-dim);line-height:1.8">
+              <li>Explain the concept &amp; components of Web Services</li>
+              <li>Discuss real use cases of Web Services today</li>
+              <li>Read and write basic JSON data</li>
+              <li>Understand Node.js modules and the <code style="color:var(--green)">fs</code> API</li>
+            </ul>
+          </div>
+        </div>
+        <div class="quote-card raised">
+          <span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--amber)"><title>Quote</title><use href="#i-quote"/></svg></span>
+          <blockquote>Let's get started! APIs and Web Services are the invisible bridges that connect your mobile apps, web browsers, and smart devices to the massive data centers of the world.</blockquote>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3: WHAT ARE WEB SERVICES -->
+    <section class="slide" data-index="2">
+      <div class="eyebrow"><span class="dot"></span>B.1 · Main Lesson</div>
+      <h1 class="title">What Is a Web Service?</h1>
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="raised card">
+            <div class="row" style="margin-bottom:10px">
+              <span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--blue)"><title>Definition</title><use href="#i-server"/></svg></span>
+              <h3 style="margin:0">Plain definition</h3>
+            </div>
+            <p>Internet software that uses standardized messaging protocols, made available from a provider's web server for use by a client or other web‑based programs.</p>
+            <p>Scale ranges from massive enterprise systems (storage, CRM) down to tiny services like a single stock quote. Also called <strong>application services</strong>.</p>
+          </div>
+          <div class="raised card">
+            <div class="row" style="margin-bottom:10px">
+              <span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>Technical</title><use href="#i-module"/></svg></span>
+              <h3 style="margin:0">Technical definition</h3>
+            </div>
+            <p>A web service (WS) is either:</p>
+            <ul style="margin:0;padding-left:18px;font-size:16px;color:var(--text-dim);line-height:1.8">
+              <li>A service offered by one <strong>electronic device</strong> to another, over the internet, or</li>
+              <li>A <strong>server</strong> listening for requests on a network port, serving HTML, JSON, XML or images</li>
+            </ul>
+          </div>
+        </div>
+        <div class="quote-card inset">
+          <span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--pink)"><title>Misnomer</title><use href="#i-chat"/></svg></span>
+          <blockquote style="font-size:17px">The Misnomer: "Web" in Web Service is misleading — these are not for the graphical WWW people browse. They're <strong>machine‑to‑machine</strong> services running over the internet using standard protocols.</blockquote>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4: HOW WEB SERVICES WORK -->
+    <section class="slide" data-index="3">
+      <div class="eyebrow"><span class="dot"></span>B.1 · How They Work</div>
+      <h1 class="title">The Protocol Toolkit</h1>
+      <div class="slide-body">
+        <div class="grid-3">
+          <div class="raised card">
+            <div class="row" style="margin-bottom:8px"><span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--amber)"><title>XML</title><use href="#i-xml"/></svg></span><h3 style="margin:0">XML</h3></div>
+            <p>Tags, codes, and decodes the data being exchanged.</p>
+          </div>
+          <div class="raised card">
+            <div class="row" style="margin-bottom:8px"><span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--blue)"><title>SOAP</title><use href="#i-soap"/></svg></span><h3 style="margin:0">SOAP</h3></div>
+            <p>Transfers the data — lets different languages talk with minimal effort.</p>
+          </div>
+          <div class="raised card">
+            <div class="row" style="margin-bottom:8px"><span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>WSDL</title><use href="#i-wsdl"/></svg></span><h3 style="margin:0">WSDL</h3></div>
+            <p>Tells the client what the service includes and how to connect.</p>
+          </div>
+          <div class="raised card">
+            <div class="row" style="margin-bottom:8px"><span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--pink)"><title>UDDI</title><use href="#i-uddi"/></svg></span><h3 style="margin:0">UDDI</h3></div>
+            <p>A registry listing which services exist, so others can discover them.</p>
+          </div>
+          <div class="raised card">
+            <div class="row" style="margin-bottom:8px"><span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>REST</title><use href="#i-rest"/></svg></span><h3 style="margin:0">REST</h3></div>
+            <p>Lightweight, scalable style built on HTTP — often trades XML for JSON.</p>
+          </div>
+          <div class="inset card" style="display:flex;align-items:center;justify-content:center">
+            <p style="margin:0;text-align:center;font-size:15px">Not every web service uses all five — REST‑based APIs are the modern default.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5: CORE COMPONENTS -->
+    <section class="slide" data-index="4">
+      <div class="eyebrow"><span class="dot"></span>B.1 · Requirements</div>
+      <h1 class="title">Core Components of a Web Service</h1>
+      <div class="slide-body">
+        <div class="grid-2">
+          <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px">
+            <li class="raised row" style="padding:16px 18px"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>check</title><use href="#i-check"/></svg><span style="font-size:16px">Is <strong>accessible</strong> over the web</span></li>
+            <li class="raised row" style="padding:16px 18px"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>check</title><use href="#i-check"/></svg><span style="font-size:16px">Uses <strong>XML</strong> (increasingly <strong>JSON</strong>) for exchange</span></li>
+            <li class="raised row" style="padding:16px 18px"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>check</title><use href="#i-check"/></svg><span style="font-size:16px">Is <strong>interoperable</strong> across languages &amp; OSes</span></li>
+          </ul>
+          <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px">
+            <li class="raised row" style="padding:16px 18px"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>check</title><use href="#i-check"/></svg><span style="font-size:16px">Is <strong>self‑contained</strong> and self‑describing</span></li>
+            <li class="raised row" style="padding:16px 18px"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>check</title><use href="#i-check"/></svg><span style="font-size:16px">Is <strong>discoverable</strong> via a mechanism like UDDI</span></li>
+            <li class="inset row" style="padding:16px 18px"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--amber)"><title>note</title><use href="#i-target"/></svg><span style="font-size:15px;color:var(--text-dim)">Miss one of these and it's not really a "web service" in the formal sense.</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6: PRIMARY USE -->
+    <section class="slide" data-index="5">
+      <div class="eyebrow"><span class="dot"></span>B.1 · Why It Matters</div>
+      <h1 class="title">The Real Payoff: Reuse</h1>
+      <div class="slide-body" style="justify-content:center">
+        <div class="flow-box raised">
+          <div class="flow-node inset"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--blue)"><title>App A</title><use href="#i-client"/></svg><span>Mobile App</span></div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-node raised" style="border:none"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>Service</title><use href="#i-rest"/></svg><span>Currency<br>Conversion Service</span></div>
+          <span class="flow-arrow">←</span>
+          <div class="flow-node inset"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--blue)"><title>App B</title><use href="#i-client"/></svg><span>Web Dashboard</span></div>
+          <span class="flow-arrow">·</span>
+          <div class="flow-node inset"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--blue)"><title>App C</title><use href="#i-client"/></svg><span>Desktop Tool</span></div>
+        </div>
+        <div class="quote-card raised">
+          <span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--amber)"><title>pin</title><use href="#i-target"/></svg></span>
+          <blockquote>Beyond sharing data, the most common use of web services is <strong>reusing code and connecting existing programs</strong> — one service, many apps.</blockquote>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7: WHAT IS NODE.JS -->
+    <section class="slide" data-index="6">
+      <div class="eyebrow"><span class="dot"></span>B.2 · Main Lesson</div>
+      <h1 class="title">What Is Node.js?</h1>
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="raised card">
+            <div class="row" style="margin-bottom:10px"><span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>Node</title><use href="#i-node"/></svg></span><h3 style="margin:0">Runtime, not a browser</h3></div>
+            <p>An open‑source, cross‑platform <strong>runtime environment</strong> for running JavaScript <strong>outside the browser</strong> — used for server‑side, non‑blocking, event‑driven apps and APIs.</p>
+            <p>Built on <strong>Chrome's V8 engine</strong>: write frontend and backend in one language, one unified stack.</p>
+          </div>
+          <div class="raised" style="padding:20px">
+            <div class="flow-box" style="padding:6px">
+              <div class="flow-node inset"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--blue)"><title>Browser</title><use href="#i-client"/></svg><span>Browser<br>(JavaScript)</span></div>
+              <span class="flow-arrow">⇄</span>
+              <div class="flow-node inset"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>Server</title><use href="#i-server"/></svg><span>Node.js Server<br>(also JavaScript)</span></div>
+            </div>
+            <p style="text-align:center;font-size:15px;margin-top:6px">Same language, both sides — quick, easy, maintainable.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8: NODE FEATURES -->
+    <section class="slide" data-index="7">
+      <div class="eyebrow"><span class="dot"></span>B.2 · Key Features</div>
+      <h1 class="title">Why Node.js Feels Fast</h1>
+      <div class="slide-body">
+        <div class="grid-3">
+          <div class="raised card">
+            <div class="row" style="margin-bottom:8px"><span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>bolt</title><use href="#i-bolt"/></svg></span><h3 style="margin:0">Non‑blocking I/O</h3></div>
+            <p>Serves many concurrent events on a single thread without waiting on slow reads — fast &amp; scalable for data‑heavy work.</p>
+          </div>
+          <div class="raised card">
+            <div class="row" style="margin-bottom:8px"><span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--blue)"><title>chat</title><use href="#i-chat"/></svg></span><h3 style="margin:0">Built for real‑time</h3></div>
+            <p>Push‑based architecture — excels at web sockets, live chat, and real‑time collaboration.</p>
+          </div>
+          <div class="raised card">
+            <div class="row" style="margin-bottom:8px"><span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--amber)"><title>layers</title><use href="#i-layers"/></svg></span><h3 style="margin:0">Open source</h3></div>
+            <p>Constantly improved by a large, global developer community.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9: MODULES -->
+    <section class="slide" data-index="8">
+      <div class="eyebrow"><span class="dot"></span>B.3 · Node.js Modules</div>
+      <h1 class="title">Three Kinds of Modules</h1>
+      <div class="slide-body">
+        <div class="grid-3">
+          <div class="raised card">
+            <div class="row" style="margin-bottom:8px"><span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>core</title><use href="#i-module"/></svg></span><h3 style="margin:0">Core Modules</h3></div>
+            <p>Bare‑bones functionality built into Node.js — e.g. <code style="color:var(--green)">fs</code>, <code style="color:var(--green)">http</code>. Loads automatically at startup.</p>
+          </div>
+          <div class="raised card">
+            <div class="row" style="margin-bottom:8px"><span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--blue)"><title>local</title><use href="#i-fs"/></svg></span><h3 style="margin:0">Local Modules</h3></div>
+            <p>Modules <em>you</em> create inside your own app, splitting features into separate files/folders.</p>
+          </div>
+          <div class="raised card">
+            <div class="row" style="margin-bottom:8px"><span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--amber)"><title>third-party</title><use href="#i-layers"/></svg></span><h3 style="margin:0">Third‑Party Modules</h3></div>
+            <p>Code from other developers you import to extend your app — e.g. the <code style="color:var(--amber)">express</code> framework.</p>
+          </div>
+        </div>
+        <div class="quote-card inset">
+          <span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--pink)"><title>thread</title><use href="#i-thread"/></svg></span>
+          <blockquote style="font-size:16px">Worker Threads let CPU‑heavy tasks run in <strong>parallel</strong>, without disturbing the main event loop.</blockquote>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10: JSON -->
+    <section class="slide" data-index="9">
+      <div class="eyebrow"><span class="dot"></span>B.4 · Introduction to JSON</div>
+      <h1 class="title">JSON: Serialize &amp; Deserialize</h1>
+      <div class="slide-body">
+        <p style="max-width:760px">JavaScript Object Notation — a lightweight, text‑based format for storing and exchanging data, easy for humans to read and machines to parse. Born from JavaScript, used everywhere.</p>
+        <div class="flow-box raised">
+          <div class="flow-node inset"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--blue)"><title>object</title><use href="#i-module"/></svg><span>JS Object<br>{ title: "Node" }</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+            <span class="flow-arrow">→</span>
+            <span style="font-family:var(--font-mono);font-size:13px;color:var(--green)">JSON.stringify()</span>
+          </div>
+          <div class="flow-node raised"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--amber)"><title>json</title><use href="#i-json"/></svg><span>JSON String<br>'{"title":"Node"}'</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+            <span class="flow-arrow">→</span>
+            <span style="font-family:var(--font-mono);font-size:13px;color:var(--blue)">JSON.parse()</span>
+          </div>
+          <div class="flow-node inset"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--blue)"><title>object</title><use href="#i-module"/></svg><span>JS Object<br>(usable again)</span></div>
+        </div>
+        <div class="quote-card inset">
+          <span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--amber)"><title>tip</title><use href="#i-target"/></svg></span>
+          <blockquote style="font-size:16px">Pro‑tip: <code style="color:var(--amber)">JSON.stringify</code> and <code style="color:var(--amber)">JSON.parse</code> are globally available in Node.js — no install or require needed.</blockquote>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11: fs MODULE APIs -->
+    <section class="slide" data-index="10">
+      <div class="eyebrow"><span class="dot"></span>B.5 · The fs Module</div>
+      <h1 class="title">Three Ways to Touch a File</h1>
+      <div class="slide-body">
+        <div class="grid-3">
+          <div class="raised card">
+            <div class="row" style="margin-bottom:8px"><span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--pink)"><title>sync</title><use href="#i-clock"/></svg></span><h3 style="margin:0">Synchronous</h3></div>
+            <p><strong>Blocks</strong> the event loop until the file operation finishes. Function names end in <code style="color:var(--pink)">Sync</code>.</p>
+            <p style="font-family:var(--font-mono);font-size:14px;color:var(--text-faint);margin-top:8px">fs.readFileSync()</p>
+          </div>
+          <div class="raised card">
+            <div class="row" style="margin-bottom:8px"><span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>callback</title><use href="#i-bolt"/></svg></span><h3 style="margin:0">Callback API</h3></div>
+            <p><strong>Asynchronous</strong> — pass a callback as the final argument; execution keeps moving.</p>
+            <p style="font-family:var(--font-mono);font-size:14px;color:var(--text-faint);margin-top:8px">fs.readFile()</p>
+          </div>
+          <div class="raised card">
+            <div class="row" style="margin-bottom:8px"><span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--blue)"><title>promise</title><use href="#i-layers"/></svg></span><h3 style="margin:0">Promise‑based</h3></div>
+            <p><strong>Asynchronous</strong> — modern <code style="color:var(--blue)">async/await</code> syntax via <code style="color:var(--blue)">fs/promises</code>.</p>
+            <p style="font-family:var(--font-mono);font-size:14px;color:var(--text-faint);margin-top:8px">fs.readFile() .then()</p>
+          </div>
+        </div>
+        <p style="text-align:center;font-size:15px">All three read the same file — they just differ in whether Node.js waits around for the answer.</p>
+      </div>
+    </section>
+
+    <!-- 12: ANALOGY 1 -->
+    <section class="slide" data-index="11">
+      <div class="eyebrow"><span class="dot"></span>C · Analogy 1</div>
+      <h1 class="title">The Machine‑to‑Machine Messenger</h1>
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="raised" style="padding:20px">
+            <div class="flow-box" style="padding:6px">
+              <div class="flow-node inset"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--blue)"><title>Robot A</title><use href="#i-client"/></svg><span>Robot A<br>(phone user)</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center">
+                <svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green);width:30px;height:30px"><title>pipe</title><use href="#i-pipe"/></svg>
+                <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-faint)">JSON / XML</span>
+              </div>
+              <div class="flow-node inset"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--blue)"><title>Robot B</title><use href="#i-server"/></svg><span>Robot B<br>(weather server)</span></div>
+            </div>
+          </div>
+          <div class="raised card">
+            <p>Two automated factory robots, not two people. Instead of a human carrying paper between them, Web Services act like an <strong>automated pneumatic tube system</strong> shooting a standardized message from A to B.</p>
+            <p>Robot B reads the message, calculates the action, and shoots a reply back — <strong>no humans (browsers) required</strong> in the conversation.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 13: ANALOGY 2 -->
+    <section class="slide" data-index="12">
+      <div class="eyebrow"><span class="dot"></span>C · Analogy 2</div>
+      <h1 class="title">A Chef With Multiple Ovens</h1>
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="raised card">
+            <h3>Traditional server: one oven</h3>
+            <p>A chef with a single oven. If a cookie needs 10 minutes, the chef just <strong>stands there waiting</strong> (blocking I/O) — nothing else gets done.</p>
+          </div>
+          <div class="raised card">
+            <h3 style="color:var(--green)">Node.js: chef with a timer</h3>
+            <p>The chef sets a timer, then <strong>immediately</strong> chops vegetables, preps sauces, and answers the phone (event‑driven, non‑blocking). When the timer rings, the cookie comes out.</p>
+          </div>
+        </div>
+        <div class="flow-box raised">
+          <div class="flow-node inset"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--amber)"><title>clock</title><use href="#i-clock"/></svg><span>Set timer</span></div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-node inset"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>bolt</title><use href="#i-bolt"/></svg><span>Handle other tasks</span></div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-node inset"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--blue)"><title>check</title><use href="#i-check"/></svg><span>Timer rings, respond</span></div>
+        </div>
+        <p style="text-align:center;font-size:15px">This lets Node.js handle thousands of "cooking" requests at once without ever getting stuck.</p>
+      </div>
+    </section>
+
+    <!-- 14: USE CASES -->
+    <section class="slide" data-index="13">
+      <div class="eyebrow"><span class="dot"></span>C · Real‑World Use Cases</div>
+      <h1 class="title">Where This Shows Up</h1>
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="raised card">
+            <div class="row" style="margin-bottom:10px"><span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--blue)"><title>chat</title><use href="#i-chat"/></svg></span><h3 style="margin:0">Real‑time collaboration</h3></div>
+            <p>User A types in a shared doc → a JSON packet ships instantly to the server → Node.js pushes it to User B's browser in real time, <strong>no refresh needed</strong>. Perfect fit for event‑driven architecture.</p>
+          </div>
+          <div class="raised card">
+            <div class="row" style="margin-bottom:10px"><span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>house</title><use href="#i-house"/></svg></span><h3 style="margin:0">IoT smart home hub</h3></div>
+            <p>A Node.js hub collects JSON from temperature, door, and humidity sensors <strong>simultaneously</strong>, acting like a waiter — organizing data, saving it via <code style="color:var(--green)">fs</code>, and alerting the homeowner. Non‑blocking I/O means it never lags.</p>
+          </div>
+        </div>
+        <div class="flow-box raised">
+          <div class="flow-node inset"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--amber)"><title>sensor</title><use href="#i-sensor"/></svg><span>Temp sensor</span></div>
+          <div class="flow-node inset"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--amber)"><title>sensor</title><use href="#i-sensor"/></svg><span>Door sensor</span></div>
+          <div class="flow-node inset"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--amber)"><title>sensor</title><use href="#i-sensor"/></svg><span>Humidity sensor</span></div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-node raised"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>hub</title><use href="#i-house"/></svg><span>Node.js Hub</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 15: KEY QUOTES -->
+    <section class="slide" data-index="14">
+      <div class="eyebrow"><span class="dot"></span>Key Quotes</div>
+      <h1 class="title">Worth Remembering</h1>
+      <div class="slide-body">
+        <div class="quote-card raised">
+          <span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--pink)"><title>quote</title><use href="#i-quote"/></svg></span>
+          <div>
+            <blockquote>"Web" in Web Service is a misnomer — these are machine‑to‑machine services, not the graphical web people browse.</blockquote>
+            <cite>On the meaning of "Web Service"</cite>
+          </div>
+        </div>
+        <div class="quote-card raised">
+          <span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--amber)"><title>quote</title><use href="#i-quote"/></svg></span>
+          <div>
+            <blockquote>Beyond sharing data, the most common use of web services is reusing code and connecting existing programs.</blockquote>
+            <cite>On the primary use of Web Services</cite>
+          </div>
+        </div>
+        <div class="quote-card raised">
+          <span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>quote</title><use href="#i-quote"/></svg></span>
+          <div>
+            <blockquote><code style="color:var(--green)">JSON.stringify</code> and <code style="color:var(--green)">JSON.parse</code> are globally available in Node.js — you never need to install or require them.</blockquote>
+            <cite>On working with JSON</cite>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 16: FAQs -->
+    <section class="slide" data-index="15">
+      <div class="eyebrow"><span class="dot"></span>D · Wrap‑Up</div>
+      <h1 class="title">Frequently Asked Questions</h1>
+      <div class="slide-body scroll-y">
+        <div class="raised card">
+          <div class="row" style="margin-bottom:8px"><span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--blue)"><title>book</title><use href="#i-book"/></svg></span><h3 style="margin:0">Node.js vs. JSON — what's the difference?</h3></div>
+          <p><strong>Node.js</strong> is a runtime that executes JavaScript on a server. <strong>JSON</strong> is a text‑based data format. Node.js often uses JSON to move data — but one runs code, the other stores it.</p>
+        </div>
+        <div class="raised card">
+          <div class="row" style="margin-bottom:8px"><span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>book</title><use href="#i-book"/></svg></span><h3 style="margin:0">Why both sync and async APIs?</h3></div>
+          <p><strong>Synchronous</strong> is simpler but freezes the server while it waits. <strong>Asynchronous</strong> (callback/promise) lets Node.js keep serving other requests. Async is preferred in production.</p>
+        </div>
+        <div class="raised card">
+          <div class="row" style="margin-bottom:8px"><span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--amber)"><title>book</title><use href="#i-book"/></svg></span><h3 style="margin:0">What does module.exports do?</h3></div>
+          <p>It's a built‑in object you use in a local module to say exactly which functions or variables other files can <code style="color:var(--amber)">require()</code>. Skip it, and nothing is shared.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 17: GUIDED PROJECT STEP 1-2 -->
+    <section class="slide" data-index="16">
+      <div class="eyebrow"><span class="dot"></span>E · Guided Drill</div>
+      <h1 class="title">Build app.js — Steps 1 &amp; 2</h1>
+      <div class="tracker">
+        <div class="node on">1</div><div class="line on"></div>
+        <div class="node on">2</div><div class="line"></div>
+        <div class="node">3</div><div class="line"></div>
+        <div class="node">4</div><div class="line"></div>
+        <div class="node">5</div>
+      </div>
+      <div class="slide-body">
+        <div class="code-row">
+          <div class="code-card raised">
+            <div class="code-head"><div class="dots"><span></span><span></span><span></span></div><span class="fname">app.js</span><button class="copy-btn" data-copy="console.log('Hello Node.js!');">Copy</button></div>
+            <pre><code><span class="tok-com">// Step 1: Your first script</span>
+<span class="tok-fn">console</span>.log(<span class="tok-str">'Hello Node.js!'</span>);
+
+<span class="tok-com">// Step 2: Working with the fs module</span>
+<span class="tok-kw">const</span> fs = <span class="tok-fn">require</span>(<span class="tok-str">'fs'</span>);
+
+<span class="tok-com">// Write a string to a new file</span>
+fs.<span class="tok-fn">writeFileSync</span>(<span class="tok-str">'demo.txt'</span>, <span class="tok-str">'geeks'</span>);</code></pre>
+          </div>
+          <div class="panel-card raised">
+            <div class="panel-head">Terminal &amp; result</div>
+            <div class="panel-body">
+              <div class="term-line"><span class="muted">$</span> node app.js</div>
+              <div class="term-line">Hello Node.js!</div>
+              <p style="font-size:15px;margin-top:6px">Run it again after Step 2, and a new file named <strong>demo.txt</strong> appears in your project folder containing the word "geeks" — <code style="color:var(--green)">fs</code> just wrote to disk.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 18: GUIDED PROJECT STEP 3-4 -->
+    <section class="slide" data-index="17">
+      <div class="eyebrow"><span class="dot"></span>E · Guided Drill</div>
+      <h1 class="title">Local Modules &amp; JSON — Steps 3 &amp; 4</h1>
+      <div class="tracker">
+        <div class="node on">1</div><div class="line on"></div>
+        <div class="node on">2</div><div class="line on"></div>
+        <div class="node on">3</div><div class="line on"></div>
+        <div class="node on">4</div><div class="line"></div>
+        <div class="node">5</div>
+      </div>
+      <div class="slide-body">
+        <div class="code-row">
+          <div class="code-card raised">
+            <div class="code-head"><div class="dots"><span></span><span></span><span></span></div><span class="fname">index.js + app.js</span><button class="copy-btn" data-copy="module.exports = () => { console.log('This function uses ES6 arrow operator'); };">Copy</button></div>
+            <pre><code><span class="tok-com">// index.js — a Local Module</span>
+module.exports = () =&gt; {
+  <span class="tok-fn">console</span>.log(<span class="tok-str">'This function uses ES6 arrow operator'</span>);
+};
+
+<span class="tok-com">// app.js — import &amp; run it</span>
+<span class="tok-kw">const</span> index = <span class="tok-fn">require</span>(<span class="tok-str">'./index.js'</span>);
+index();</code></pre>
+          </div>
+          <div class="panel-card raised">
+            <div class="panel-head">Step 4 · Serialize &amp; deserialize</div>
+            <div class="panel-body">
+              <p style="font-size:15px;margin:0">Create a JS object, convert it to a JSON string, then convert it back:</p>
+              <div class="term-line">geeksJSON = JSON.stringify(geeksData)</div>
+              <div class="term-line">geeksObject = JSON.parse(geeksJSON)</div>
+              <p style="font-size:15px;margin:0">Result: <code style="color:var(--amber)">geeksObject.article</code> → <span style="color:var(--green)">"geeksforgeeks"</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 19: GUIDED PROJECT STEP 5 -->
+    <section class="slide" data-index="18">
+      <div class="eyebrow"><span class="dot"></span>E · Guided Drill</div>
+      <h1 class="title">Save Your Data — Step 5</h1>
+      <div class="tracker">
+        <div class="node on">1</div><div class="line on"></div>
+        <div class="node on">2</div><div class="line on"></div>
+        <div class="node on">3</div><div class="line on"></div>
+        <div class="node on">4</div><div class="line on"></div>
+        <div class="node on">5</div>
+      </div>
+      <div class="slide-body">
+        <div class="code-row">
+          <div class="code-card raised">
+            <div class="code-head"><div class="dots"><span></span><span></span><span></span></div><span class="fname">app.js</span><button class="copy-btn" data-copy="geeksObject.stack = 'js'; geeksObject.difficulty = 1; const dataJSON = JSON.stringify(geeksObject); fs.writeFileSync('data.json', dataJSON); console.log(geeksObject);">Copy</button></div>
+            <pre><code><span class="tok-com">// Add new properties</span>
+geeksObject.stack = <span class="tok-str">'js'</span>;
+geeksObject.difficulty = <span class="tok-num">1</span>;
+
+<span class="tok-com">// Convert &amp; write to a JSON file</span>
+<span class="tok-kw">const</span> dataJSON = JSON.<span class="tok-fn">stringify</span>(geeksObject);
+fs.<span class="tok-fn">writeFileSync</span>(<span class="tok-str">'data.json'</span>, dataJSON);
+
+<span class="tok-fn">console</span>.log(geeksObject);</code></pre>
+          </div>
+          <div class="panel-card raised">
+            <div class="panel-head">Terminal output</div>
+            <div class="panel-body">
+              <div class="term-line"><span class="muted">$</span> node app.js</div>
+              <div class="term-line">{ title: 'Node', article: 'geeksforgeeks',</div>
+              <div class="term-line">&nbsp;&nbsp;stack: 'js', difficulty: 1 }</div>
+              <p style="font-size:15px;margin-top:6px">Check your project folder — <strong>data.json</strong> now exists, holding the formatted JSON string.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 20: RECAP -->
+    <section class="slide" data-index="19">
+      <div class="eyebrow"><span class="dot"></span>Recap</div>
+      <h1 class="title">Key Takeaways</h1>
+      <div class="slide-body">
+        <div class="grid-2">
+          <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px">
+            <li class="raised row" style="padding:16px 18px"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--blue)"><title>ws</title><use href="#i-rest"/></svg><span style="font-size:16px"><strong>Web Services</strong> let apps talk via standard protocols (SOAP/REST) &amp; formats (XML/JSON)</span></li>
+            <li class="raised row" style="padding:16px 18px"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--green)"><title>node</title><use href="#i-node"/></svg><span style="font-size:16px"><strong>Node.js</strong> runs JS on the server — event‑driven, non‑blocking, built on V8</span></li>
+          </ul>
+          <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px">
+            <li class="raised row" style="padding:16px 18px"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--amber)"><title>module</title><use href="#i-module"/></svg><span style="font-size:16px"><strong>Modules</strong> come in three flavors: Core, Local, Third‑party</span></li>
+            <li class="raised row" style="padding:16px 18px"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--pink)"><title>json</title><use href="#i-json"/></svg><span style="font-size:16px"><strong>JSON</strong>: stringify() to save, parse() to read — and <code style="color:var(--green)">fs</code> does the reading/writing</span></li>
+          </ul>
+        </div>
+        <p style="text-align:center">Next up: put it to the test.</p>
+      </div>
+    </section>
+
+    <!-- 21: MCQ SET 1 -->
+    <section class="slide" data-index="20">
+      <div class="eyebrow"><span class="dot"></span>F · Skill‑Building Check · MCQ</div>
+      <h1 class="title">Multiple Choice — Part 1</h1>
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="mcq-card raised">
+            <p class="mcq-q">1. The term "web" in Web Services is a misnomer because they are primarily used for __________.</p>
+            <ul class="mcq-opts">
+              <li><span class="letter">A</span>Human‑to‑machine interaction using HTML</li>
+              <li><span class="letter">B</span>Machine‑to‑machine interaction using standardized protocols</li>
+              <li><span class="letter">C</span>Rendering high‑quality images in a browser</li>
+              <li><span class="letter">D</span>Serving static websites to the public</li>
+            </ul>
+          </div>
+          <div class="mcq-card raised">
+            <p class="mcq-q">2. What is UDDI used for in the context of Web Services?</p>
+            <ul class="mcq-opts">
+              <li><span class="letter">A</span>Describes the functions of a single web service</li>
+              <li><span class="letter">B</span>A registry where services list themselves to be discoverable</li>
+              <li><span class="letter">C</span>Transfers data between servers and clients</li>
+              <li><span class="letter">D</span>Converts JSON data into XML format</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 22: MCQ SET 2 -->
+    <section class="slide" data-index="21">
+      <div class="eyebrow"><span class="dot"></span>F · Skill‑Building Check · MCQ</div>
+      <h1 class="title">Multiple Choice — Part 2</h1>
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="mcq-card raised">
+            <p class="mcq-q">4. Which method converts a JS object to a string, and which converts it back?</p>
+            <ul class="mcq-opts">
+              <li><span class="letter">A</span>JSON.parse() / JSON.stringify()</li>
+              <li><span class="letter">B</span>JSON.stringify() / JSON.parse()</li>
+              <li><span class="letter">C</span>fs.readFile() / fs.writeFile()</li>
+              <li><span class="letter">D</span>JSON.toString() / JSON.fromString()</li>
+            </ul>
+          </div>
+          <div class="mcq-card raised">
+            <p class="mcq-q">5. Which module type has "bare‑bones" functionality that loads automatically when Node.js starts?</p>
+            <ul class="mcq-opts">
+              <li><span class="letter">A</span>Third Party Modules</li>
+              <li><span class="letter">B</span>Local Modules</li>
+              <li><span class="letter">C</span>Core Modules</li>
+              <li><span class="letter">D</span>External Modules</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 23: MCQ SET 3 -->
+    <section class="slide" data-index="22">
+      <div class="eyebrow"><span class="dot"></span>F · Skill‑Building Check · MCQ</div>
+      <h1 class="title">Multiple Choice — Part 3</h1>
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="mcq-card raised">
+            <p class="mcq-q">6. Which fs API lets code keep running without waiting for a file to finish reading?</p>
+            <ul class="mcq-opts">
+              <li><span class="letter">A</span>Synchronous API (readFileSync)</li>
+              <li><span class="letter">B</span>Blocking API</li>
+              <li><span class="letter">C</span>Asynchronous / Callback API (readFile)</li>
+              <li><span class="letter">D</span>Run‑time API</li>
+            </ul>
+          </div>
+          <div class="mcq-card raised">
+            <p class="mcq-q">7. Where is Node.js's event‑driven, non‑blocking nature most beneficial?</p>
+            <ul class="mcq-opts">
+              <li><span class="letter">A</span>Deep learning / AI training</li>
+              <li><span class="letter">B</span>Real‑time collaboration &amp; live chat apps</li>
+              <li><span class="letter">C</span>Offline desktop text editors</li>
+              <li><span class="letter">D</span>Static personal websites with no interaction</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 24: IDENTIFICATION -->
+    <section class="slide" data-index="23">
+      <div class="eyebrow"><span class="dot"></span>F · Skill‑Building Check · Identification</div>
+      <h1 class="title">Short Answer</h1>
+      <div class="slide-body" style="justify-content:center">
+        <div class="center-item">
+          <div class="mcq-card raised max-w" style="width:100%">
+            <p class="mcq-q" style="margin-bottom:0">3. Explain the difference between Node.js and JSON.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 25: ANSWER KEY PART 1 -->
+    <section class="slide" data-index="24">
+      <div class="eyebrow"><span class="dot"></span>Answer Key · Part 1</div>
+      <h1 class="title">Checking Your Work</h1>
+      <div class="slide-body scroll-y">
+        <div class="grid-2">
+          <div class="ans-card raised"><div class="qnum">Q1</div><p class="ans">B — Machine‑to‑machine interaction</p><p class="why">Web Services don't use the human‑facing WWW; they let machines talk via standard protocols like HTTP, SOAP, and REST.</p></div>
+          <div class="ans-card raised"><div class="qnum">Q2</div><p class="ans">B — A discoverable registry</p><p class="why">UDDI is the discovery mechanism that lets services list themselves so other programs can find them.</p></div>
+          <div class="ans-card raised"><div class="qnum">Q3</div><p class="ans">Node.js runs code; JSON stores data</p><p class="why">Node.js is a runtime for executing JavaScript server‑side. JSON is a lightweight text format for storing/transmitting data. Node.js uses JSON heavily, but they serve entirely different purposes.</p></div>
+          <div class="ans-card raised"><div class="qnum">Q4</div><p class="ans">B — stringify() then parse()</p><p class="why">JSON.stringify() serializes an object to a string; JSON.parse() deserializes a string back into an object.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 26: ANSWER KEY PART 2 -->
+    <section class="slide" data-index="25">
+      <div class="eyebrow"><span class="dot"></span>Answer Key · Part 2</div>
+      <h1 class="title">Checking Your Work</h1>
+      <div class="slide-body scroll-y">
+        <div class="grid-2">
+          <div class="ans-card raised"><div class="qnum">Q5</div><p class="ans">C — Core Modules</p><p class="why">Modules like fs, http, and path are built into the Node.js binary — no separate install needed.</p></div>
+          <div class="ans-card raised"><div class="qnum">Q6</div><p class="ans">C — Asynchronous / Callback API</p><p class="why">Callback (and Promise‑based) APIs don't block the event loop, so the server can keep handling other requests while a file is read.</p></div>
+          <div class="ans-card raised" style="grid-column:1/-1"><div class="qnum">Q7</div><p class="ans">B — Real‑time collaboration &amp; live chat</p><p class="why">Node.js was designed for push‑based, event‑driven work — it shines with live connections, real‑time collaboration tools, IoT sensors, and SPAs needing constant back‑and‑forth data.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 27: CLOSING -->
+    <section class="slide title-slide" data-index="26">
+      <svg class="title-hero" viewBox="0 0 32 32" role="img" style="color:var(--amber);width:100px;height:100px"><title>Celebration</title><use href="#i-party"/></svg>
+      <div class="eyebrow"><span class="dot"></span>That's a Wrap</div>
+      <h1 class="title">Great Work, Future Backend Dev</h1>
+      <div class="quote-card raised" style="max-width:640px;margin:0 auto 18px">
+        <span class="icon-badge"><svg class="icon" viewBox="0 0 32 32" role="img" style="color:var(--pink)"><title>quote</title><use href="#i-quote"/></svg></span>
+        <blockquote>The invisible bridges you learned today — Web Services, JSON, and Node.js — are what quietly power the apps you use every single day.</blockquote>
+      </div>
+      <p class="sub">See you in the next module!</p>
+    </section>
+
+  </div>
+</div>
+
+<div class="overlay" id="shortcutsOverlay">
+  <div class="overlay-card raised">
+    <h2>Keyboard shortcuts</h2>
+    <div class="row raised" style="box-shadow:none;background:none"><span>Next slide</span><kbd>→</kbd></div>
+    <div class="row" style="display:flex"><span>Previous slide</span><kbd>←</kbd></div>
+    <div class="row" style="display:flex"><span>First / Last slide</span><kbd>Home</kbd> <kbd>End</kbd></div>
+    <div class="row" style="display:flex"><span>Right‑click / Mouse btn 4</span><kbd>next</kbd></div>
+    <div class="row" style="display:flex"><span>Mouse button 3</span><kbd>prev</kbd></div>
+    <div class="row" style="display:flex"><span>Toggle this panel</span><kbd>?</kbd></div>
+    <div class="row" style="display:flex"><span>Close</span><kbd>Esc</kbd></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length;
+  var current = 0;
+  var progressFill = document.getElementById('progressFill');
+  var counter = document.getElementById('counter');
+  var overlay = document.getElementById('shortcutsOverlay');
+
+  function updateChrome(){
+    counter.textContent = (current + 1) + ' / ' + total;
+    progressFill.style.width = (((current + 1) / total) * 100) + '%';
+  }
+
+  function goTo(newIndex, dir){
+    if(newIndex < 0 || newIndex >= total || newIndex === current) return;
+    var oldSlide = slides[current];
+    var nextSlide = slides[newIndex];
+    oldSlide.classList.remove('active');
+    nextSlide.classList.remove('leaving-left','leaving-right','from-left','from-right','active');
+    if(dir === 'next'){
+      oldSlide.classList.add('leaving-left');
+      nextSlide.classList.add('from-right');
+    } else {
+      oldSlide.classList.add('leaving-right');
+      nextSlide.classList.add('from-left');
+    }
+    void nextSlide.offsetWidth;
+    nextSlide.classList.add('active');
+    nextSlide.classList.remove('from-right','from-left');
+    setTimeout(function(){
+      oldSlide.classList.remove('leaving-left','leaving-right');
+    }, 400);
+    current = newIndex;
+    updateChrome();
+  }
+
+  function next(){ goTo(current + 1, 'next'); }
+  function prev(){ goTo(current - 1, 'prev'); }
+  function first(){ goTo(0, 'prev'); }
+  function last(){ goTo(total - 1, 'next'); }
+
+  function toggleOverlay(force){
+    var show = force !== undefined ? force : !overlay.classList.contains('show');
+    overlay.classList.toggle('show', show);
+  }
+
+  document.addEventListener('contextmenu', function(e){
+    e.preventDefault();
+    next();
+  });
+
+  document.addEventListener('mousedown', function(e){
+    if(e.button === 3){ e.preventDefault(); e.stopImmediatePropagation(); prev(); }
+    else if(e.button === 4){ e.preventDefault(); e.stopImmediatePropagation(); next(); }
+  }, true);
+
+  document.addEventListener('keydown', function(e){
+    if(overlay.classList.contains('show') && e.key !== '?' && e.key !== 'Escape') return;
+    switch(e.key){
+      case 'ArrowRight': case 'PageDown': next(); break;
+      case 'ArrowLeft': case 'PageUp': prev(); break;
+      case 'Home': first(); break;
+      case 'End': last(); break;
+      case '?': toggleOverlay(); break;
+      case 'Escape': toggleOverlay(false); break;
+    }
+  });
+
+  var touchStartX = null;
+  document.addEventListener('touchstart', function(e){
+    touchStartX = e.changedTouches[0].clientX;
+  }, {passive:true});
+  document.addEventListener('touchend', function(e){
+    if(touchStartX === null) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    if(Math.abs(dx) > 50){ dx < 0 ? next() : prev(); }
+    touchStartX = null;
+  }, {passive:true});
+
+  overlay.addEventListener('click', function(e){
+    if(e.target === overlay) toggleOverlay(false);
+  });
+
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest ? e.target.closest('.copy-btn') : null;
+    if(!btn) return;
+    var text = btn.getAttribute('data-copy') || '';
+    var done = function(){
+      var orig = 'Copy';
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(function(){ btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done).catch(done);
+    } else {
+      done();
+    }
+  });
+
+  updateChrome();
+})();
+</script>
+
+</body>
+</html>

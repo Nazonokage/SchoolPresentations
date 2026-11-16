@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIA M23 – Web Frameworks</title>
+<style>
+  :root {
+    --bg:  #191c22;
+    --bg2: #1e2229;
+    --card: #242b34;
+    --sd: #10141a;   /* shadow dark */
+    --sl: #2e3849;   /* shadow light */
+    --a1: #7c3aed;   /* deep violet  — Django/framework */
+    --a2: #38bdf8;   /* sky blue     — client-side */
+    --a3: #34d399;   /* green        — correct/code */
+    --a4: #fb923c;   /* amber        — tip/warning */
+    --a5: #f472b6;   /* pink         — Ruby/Rails */
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --danger: #f87171;
+    --warn: #fbbf24;
+    --r: 20px;
+    --rs: 12px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);}
+
+  /* ── progress + counter ── */
+  #pb{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--a1),var(--a2),var(--a3));transition:width .35s;z-index:999;}
+  #ctr{position:fixed;bottom:14px;right:20px;font-size:16px;color:var(--muted);z-index:999;}
+
+  /* ── deck / slides ── */
+  #deck{width:100%;height:100%;position:relative;}
+  .slide{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;justify-content:center;align-items:center;
+    padding:34px 50px;
+    opacity:0;pointer-events:none;
+    transition:opacity .35s ease,transform .35s ease;
+    transform:translateX(60px);
+  }
+  .slide.active {opacity:1;pointer-events:auto;transform:translateX(0);}
+  .slide.exit-l {opacity:0;transform:translateX(-60px);}
+  .slide.exit-r {opacity:0;transform:translateX(60px);}
+  @media(prefers-reduced-motion:reduce){.slide{transition:opacity .15s;transform:none!important;}}
+
+  /* ── typography ── */
+  .eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:2.8px;color:var(--a1);margin-bottom:7px;font-weight:700;}
+  .slide-title{font-size:clamp(24px,3.2vw,40px);font-weight:800;text-align:center;line-height:1.2;margin-bottom:22px;}
+  .slide-title span{color:var(--a1);}
+  p,li,td,th{font-size:17px;line-height:1.65;color:var(--text);}
+  h3{font-size:19px;font-weight:700;color:var(--a1);margin-bottom:8px;}
+  h4{font-size:17px;font-weight:600;color:var(--a2);margin-bottom:6px;}
+  ul{padding-left:20px;}li{margin-bottom:6px;}
+  strong{color:var(--a3);}
+  code{font-family:'Cascadia Code','Fira Code',Consolas,monospace;font-size:15px;color:var(--a3);background:var(--bg2);padding:2px 7px;border-radius:5px;}
+
+  /* ── neu primitives ── */
+  .card{background:var(--card);border-radius:var(--r);box-shadow:6px 6px 16px var(--sd),-4px -4px 12px var(--sl);padding:22px 26px;}
+  .inset{background:var(--bg2);border-radius:var(--rs);box-shadow:inset 3px 3px 8px var(--sd),inset -2px -2px 6px var(--sl);padding:14px 18px;}
+
+  /* ── grids ── */
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:18px;width:100%;}
+  .g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;width:100%;}
+  .g2w{display:grid;grid-template-columns:1.1fr 0.9fr;gap:20px;width:100%;}
+
+  /* ── badge ── */
+  .badge{display:inline-flex;align-items:center;gap:7px;background:var(--card);box-shadow:3px 3px 8px var(--sd),-2px -2px 6px var(--sl);border-radius:50px;padding:7px 15px;font-size:16px;font-weight:600;}
+  .bv{color:var(--a1);} .bb{color:var(--a2);} .bg{color:var(--a3);} .bo{color:var(--a4);} .bp{color:var(--a5);} .by{color:var(--warn);} .br{color:var(--danger);}
+
+  /* ── table ── */
+  .tw{width:100%;overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:16px;}
+  th{background:var(--bg);color:var(--a1);padding:11px 14px;text-align:left;font-size:15px;text-transform:uppercase;letter-spacing:.8px;}
+  td{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.07);vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:rgba(124,58,237,.05);}
+
+  /* ── code block ── */
+  .cw{border-radius:var(--rs);overflow:hidden;background:#0d1117;display:flex;flex-direction:column;min-height:0;}
+  .ch{display:flex;align-items:center;justify-content:space-between;padding:9px 16px;background:#161b22;flex-shrink:0;}
+  .cl{font-size:16px;color:#8b949e;font-family:monospace;}
+  .cp{font-size:15px;padding:5px 13px;border-radius:8px;border:none;cursor:pointer;font-weight:600;background:var(--card);color:var(--text);box-shadow:3px 3px 7px var(--sd),-2px -2px 5px var(--sl);transition:all .15s;}
+  .cp.ok{box-shadow:inset 2px 2px 5px var(--sd),inset -1px -1px 4px var(--sl);color:var(--a3);}
+  pre{flex:1;overflow:auto;padding:16px;margin:0;font-size:14px;line-height:1.7;font-family:'Cascadia Code','Fira Code',Consolas,monospace;min-height:0;}
+  .kw{color:#ff7b72;font-weight:700;} .fn{color:#d2a8ff;} .st{color:#a5d6ff;} .cm{color:#8b949e;font-style:italic;} .nm{color:#f0db4f;} .tg{color:#7ee787;} .at{color:#ffa657;}
+
+  /* ── MCQ ── */
+  .mq{background:var(--card);border-radius:var(--r);box-shadow:6px 6px 16px var(--sd),-4px -4px 12px var(--sl);padding:20px 24px;display:flex;flex-direction:column;gap:10px;}
+  .mq-q{font-size:17px;font-weight:600;line-height:1.5;}
+  .mq-o{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+  .mq-opt{background:var(--bg2);border-radius:10px;padding:9px 13px;font-size:16px;box-shadow:inset 2px 2px 5px var(--sd),inset -1px -1px 4px var(--sl);}
+
+  /* ── answer row ── */
+  .ar{display:flex;align-items:flex-start;gap:13px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06);}
+  .an{background:var(--a1);color:#fff;border-radius:50%;width:28px;height:28px;min-width:28px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;}
+  .at2{font-size:17px;line-height:1.55;}
+  .ac{color:var(--a3);font-weight:700;}
+
+  /* ── shortcuts ── */
+  #sh{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:9999;align-items:center;justify-content:center;}
+  #sh.on{display:flex;}
+  .shb{background:var(--card);border-radius:var(--r);padding:34px 42px;box-shadow:10px 10px 30px var(--sd);max-width:400px;width:90%;}
+  .shb h2{font-size:21px;color:var(--a1);margin-bottom:16px;text-align:center;}
+  .shr{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.07);}
+  .shr:last-child{border-bottom:none;}
+  .shk{background:var(--bg2);border-radius:7px;padding:4px 10px;font-size:15px;font-family:monospace;color:var(--a1);}
+  .shd{font-size:16px;color:var(--muted);}
+  .cbt{display:block;margin:18px auto 0;background:var(--card);box-shadow:4px 4px 10px var(--sd),-2px -2px 7px var(--sl);border:none;border-radius:12px;padding:9px 26px;font-size:17px;color:var(--text);cursor:pointer;}
+
+  /* ── utils ── */
+  .w100{width:100%;} .mt2{margin-top:10px;} .mt3{margin-top:14px;} .mt4{margin-top:20px;}
+  .fcol{display:flex;flex-direction:column;}
+  .scroll{overflow-y:auto;max-height:57vh;padding-right:4px;}
+  .scroll::-webkit-scrollbar{width:5px;}
+  .scroll::-webkit-scrollbar-thumb{background:var(--a1);border-radius:10px;}
+  .trace{position:absolute;opacity:.05;pointer-events:none;}
+</style>
+</head>
+<body>
+<div id="pb"></div>
+<div id="ctr">1 / 20</div>
+<div id="deck"></div>
+
+<div id="sh">
+  <div class="shb">
+    <h2>⌨️ Shortcuts</h2>
+    <div class="shr"><span class="shk">→ / Right-click</span><span class="shd">Next slide</span></div>
+    <div class="shr"><span class="shk">←</span><span class="shd">Prev slide</span></div>
+    <div class="shr"><span class="shk">Home / End</span><span class="shd">First / Last</span></div>
+    <div class="shr"><span class="shk">?</span><span class="shd">Toggle this</span></div>
+    <button class="cbt" onclick="closeSh()">Close</button>
+  </div>
+</div>
+
+<script>
+const slides = [
+
+/* ══ 1 TITLE ══════════════════════════════════════════════════════ */
+`<div class="slide" data-index="0" style="background:radial-gradient(ellipse at 55% 40%,#1a0d3a 0%,var(--bg) 68%)">
+  <!-- framework glyph traces -->
+  <svg class="trace" style="right:10px;top:10px;width:320px;height:320px" viewBox="0 0 320 320" fill="none" aria-hidden="true">
+    <rect x="40" y="40" width="240" height="180" rx="14" stroke="white" stroke-width="1.5"/>
+    <line x1="40" y1="80" x2="280" y2="80" stroke="white" stroke-width="1"/>
+    <circle cx="60"  cy="60" r="6" fill="none" stroke="white" stroke-width="1.5"/>
+    <circle cx="80"  cy="60" r="6" fill="none" stroke="white" stroke-width="1.5"/>
+    <circle cx="100" cy="60" r="6" fill="none" stroke="white" stroke-width="1.5"/>
+    <rect x="56"  y="104" width="60" height="44" rx="6" stroke="white" stroke-width="1.2"/>
+    <rect x="130" y="104" width="60" height="44" rx="6" stroke="white" stroke-width="1.2"/>
+    <rect x="204" y="104" width="60" height="44" rx="6" stroke="white" stroke-width="1.2"/>
+    <path d="M86 178 L86 240 M160 178 L160 240 M234 178 L234 240" stroke="white" stroke-width="1" stroke-dasharray="4 3"/>
+    <rect x="50" y="240" width="220" height="30" rx="6" stroke="white" stroke-width="1.2"/>
+  </svg>
+  <svg class="trace" style="left:10px;bottom:10px;width:260px;height:200px" viewBox="0 0 260 200" fill="none" aria-hidden="true">
+    <path d="M20 100 L80 100 M80 100 L80 40 M80 100 L80 160 M80 40 L200 40 M80 100 L200 100 M80 160 L200 160" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="80"  cy="40"  r="7" fill="none" stroke="white" stroke-width="1.5"/>
+    <circle cx="80"  cy="100" r="7" fill="none" stroke="white" stroke-width="1.5"/>
+    <circle cx="80"  cy="160" r="7" fill="none" stroke="white" stroke-width="1.5"/>
+    <circle cx="200" cy="40"  r="7" fill="none" stroke="white" stroke-width="1.5"/>
+    <circle cx="200" cy="100" r="7" fill="none" stroke="white" stroke-width="1.5"/>
+    <circle cx="200" cy="160" r="7" fill="none" stroke="white" stroke-width="1.5"/>
+  </svg>
+
+  <div style="text-align:center;max-width:840px">
+    <div class="eyebrow">System Integration &amp; Architecture · Module 23</div>
+    <h1 style="font-size:clamp(28px,4.8vw,52px);font-weight:800;line-height:1.1;margin-bottom:14px">
+      Web Frameworks<br><span style="color:var(--a1)">Engines of Modern Web Development</span>
+    </h1>
+    <p style="font-size:19px;color:var(--muted);margin-bottom:26px">"Stop building with raw lumber — start building with pre-fabricated kits."</p>
+    <!-- tech logo row -->
+    <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:20px">
+      <!-- Django -->
+      <div class="badge bv">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" role="img" aria-label="Django"><rect x="1" y="1" width="20" height="20" rx="4" fill="rgba(9,121,105,.3)" stroke="#0d9488" stroke-width="1.5"/><text x="11" y="15" text-anchor="middle" font-size="8" fill="#34d399" font-family="monospace" font-weight="700">DJ</text></svg>
+        Django
+      </div>
+      <!-- Rails -->
+      <div class="badge bp">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" role="img" aria-label="Ruby on Rails"><circle cx="11" cy="11" r="10" fill="rgba(220,38,38,.2)" stroke="#f87171" stroke-width="1.5"/><text x="11" y="15" text-anchor="middle" font-size="8" fill="#f87171" font-family="monospace" font-weight="700">RR</text></svg>
+        Rails
+      </div>
+      <!-- React -->
+      <div class="badge bb">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" role="img" aria-label="React"><circle cx="11" cy="11" r="3.5" stroke="#38bdf8" stroke-width="1.5"/><ellipse cx="11" cy="11" rx="10" ry="4" stroke="#38bdf8" stroke-width="1.2"/><ellipse cx="11" cy="11" rx="10" ry="4" stroke="#38bdf8" stroke-width="1.2" transform="rotate(60 11 11)"/><ellipse cx="11" cy="11" rx="10" ry="4" stroke="#38bdf8" stroke-width="1.2" transform="rotate(120 11 11)"/></svg>
+        ReactJS
+      </div>
+      <!-- Laravel -->
+      <div class="badge bo">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" role="img" aria-label="Laravel"><path d="M11 2L20 7V15L11 20L2 15V7L11 2Z" stroke="#fb923c" stroke-width="1.5" fill="rgba(251,146,60,.15)"/><text x="11" y="15" text-anchor="middle" font-size="8" fill="#fb923c" font-family="monospace" font-weight="700">L</text></svg>
+        Laravel
+      </div>
+      <!-- Vue -->
+      <div class="badge bg">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" role="img" aria-label="Vue.js"><path d="M11 18L2 4h5l4 7 4-7h5L11 18Z" stroke="#34d399" stroke-width="1.5" fill="rgba(52,211,153,.15)"/></svg>
+        Vue.js
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+      <span class="badge bv">🏗️ MVC Architecture</span>
+      <span class="badge bb">🌐 Client vs Server</span>
+      <span class="badge bg">⚙️ 7 Core Features</span>
+      <span class="badge bp">📦 Convention Over Config</span>
+    </div>
+  </div>
+</div>`,
+
+/* ══ 2 LESSON PREVIEW ═════════════════════════════════════════════ */
+`<div class="slide" data-index="1">
+  <div class="eyebrow">Lesson Preview</div>
+  <div class="slide-title">From <span>Managing Data</span> to Building Apps</div>
+  <div class="g2 w100" style="max-width:900px;align-items:start">
+    <div class="card">
+      <h3>📡 Coming From M22…</h3>
+      <p style="color:var(--muted)">3rd Periodical Quiz — MySQL, SQL queries, NoSQL. We mastered how to <strong>store and retrieve data</strong>.</p>
+      <p class="mt2">Now: how do we build the <strong>web applications that present that data</strong> to the world?</p>
+      <div class="inset mt3">
+        <p style="font-size:16px">💡 Think of a web framework as a powerful, <strong>pre-built toolkit</strong> — no more writing the same code over and over for every new site.</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3>🎯 Learning Objectives</h3>
+      <ul>
+        <li>Explain the core concept of a <strong>Web Framework</strong></li>
+        <li>Differentiate <strong>MVC, Three-tier, and Push/Pull</strong> architectures</li>
+        <li>Categorize <strong>client-side vs server-side</strong> frameworks</li>
+        <li>Describe the <strong>7 core features</strong> of modern frameworks</li>
+        <li>Identify <strong>Django</strong> and <strong>Ruby on Rails</strong> characteristics</li>
+      </ul>
+    </div>
+  </div>
+</div>`,
+
+/* ══ 3 WHAT IS A WEB FRAMEWORK ════════════════════════════════════ */
+`<div class="slide" data-index="2">
+  <div class="eyebrow">Core Concept</div>
+  <div class="slide-title">What is a <span>Web Framework</span>?</div>
+  <div class="g2w w100" style="max-width:940px;align-items:start">
+    <div class="card">
+      <h3>Web Application Framework (WAF)</h3>
+      <p>A <strong>software framework</strong> designed to support the development of web applications, web services, and web APIs.</p>
+      <p class="mt2">Their primary goal: <strong>automate the overhead</strong> associated with common web activities so developers focus on their unique application logic.</p>
+      <div class="inset mt3">
+        <h4>Frameworks typically provide:</h4>
+        <ul style="margin-top:8px">
+          <li style="font-size:16px">📚 Libraries for <strong>database access</strong></li>
+          <li style="font-size:16px">🖼️ <strong>Templating engines</strong> for generating HTML</li>
+          <li style="font-size:16px">🔐 <strong>Session management</strong> tools</li>
+          <li style="font-size:16px">♻️ <strong>Code reuse</strong> structures</li>
+          <li style="font-size:16px">🔗 URL <strong>routing</strong> utilities</li>
+        </ul>
+      </div>
+    </div>
+    <div class="fcol" style="gap:16px">
+      <div class="card" style="border-top:3px solid var(--a1)">
+        <h3 style="font-size:17px">Without a Framework</h3>
+        <p style="font-size:16px;color:var(--muted)">Every feature — login forms, database queries, URL patterns — must be hand-coded from scratch <em>for every project</em>.</p>
+      </div>
+      <div class="card" style="border-top:3px solid var(--a3)">
+        <h3 style="font-size:17px;color:var(--a3)">With a Framework</h3>
+        <p style="font-size:16px;color:var(--muted)">Common patterns are already built. Focus only on the <strong>business logic unique to your app</strong>. Deploy faster, with fewer bugs.</p>
+      </div>
+      <div class="inset" style="border-left:3px solid var(--a4)">
+        <p style="font-size:15px">⚠️ Frameworks enforce <strong>Inversion of Control</strong> — instead of you calling the library, the <em>framework</em> calls your code when an event (like an HTTP request) happens.</p>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══ 4 BRIEF HISTORY ══════════════════════════════════════════════ */
+`<div class="slide" data-index="3">
+  <div class="eyebrow">Historical Context</div>
+  <div class="slide-title">A Brief <span>History</span></div>
+  <div style="max-width:880px;width:100%">
+    <!-- timeline -->
+    <div style="display:flex;flex-direction:column;gap:0">
+      ${[
+        ['a2','Early 1990s','Static HTML Era','The web consisted of hand-coded static HTML files. To change a page, the author manually edited the server file.'],
+        ['a4','1993','Common Gateway Interface (CGI)','The CGI standard was introduced — the first way to interface external applications with web servers, creating dynamic pages based on user input. Problem: high overhead — each request started a separate server process.'],
+        ['a3','1995','Integrated Languages','ColdFusion, PHP, and Active Server Pages (ASP) emerged. Libraries existed, but tools were fragmented.'],
+        ['a5','Late 1990s','Full-Stack Frameworks','Mature frameworks gathered multiple libraries into a single cohesive software stack — the modern web framework was born.'],
+      ].map(([col,year,title,desc],i,a)=>`
+        <div style="display:grid;grid-template-columns:130px 1fr;gap:0 16px;align-items:stretch">
+          <div style="display:flex;flex-direction:column;align-items:flex-end;padding-right:0">
+            <div class="badge b${col}" style="font-size:15px;padding:6px 14px;white-space:nowrap">${year}</div>
+            ${i<a.length-1?`<div style="flex:1;width:2px;background:linear-gradient(to bottom,var(--${col}),var(--a1));margin:6px 14px 0 auto;border-radius:2px;min-height:14px"></div>`:''}
+          </div>
+          <div class="card" style="margin-bottom:${i<a.length-1?'12px':'0'}">
+            <h4 style="margin:0 0 4px;color:var(--${col})">${title}</h4>
+            <p style="font-size:15px">${desc}</p>
+          </div>
+        </div>`).join('')}
+    </div>
+  </div>
+</div>`,
+
+/* ══ 5 MVC ARCHITECTURE ═══════════════════════════════════════════ */
+`<div class="slide" data-index="4">
+  <div class="eyebrow">Framework Architecture · 1 of 3</div>
+  <div class="slide-title">Model–View–<span>Controller</span> (MVC)</div>
+  <div style="max-width:940px;width:100%">
+    <!-- MVC diagram -->
+    <div style="display:flex;align-items:stretch;gap:0;justify-content:center;margin-bottom:20px">
+      ${[
+        ['a3','M','Model','Manages data &amp; business logic. Interacts directly with the database (MySQL, etc.).'],
+        ['a2','V','View','Manages the user interface. What the user actually sees in their browser.'],
+        ['a1','C','Controller','Handles user input. Processes requests via the Model and updates the View.'],
+      ].map(([col,letter,name,desc],i,a)=>`
+        <div class="card" style="flex:1;text-align:center;border-top:4px solid var(--${col})">
+          <div style="font-size:42px;font-weight:900;color:var(--${col});margin-bottom:6px">${letter}</div>
+          <h3 style="color:var(--${col});margin:0 0 8px;font-size:17px">${name}</h3>
+          <p style="font-size:15px;color:var(--muted)">${desc}</p>
+        </div>
+        ${i<a.length-1?`<div style="display:flex;align-items:center;padding:0 8px"><svg width="30" height="30" viewBox="0 0 30 30" fill="none" aria-hidden="true"><path d="M5 15 L22 15 M16 9 L22 15 L16 21" stroke="var(--a1)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`:''}`).join('')}
+    </div>
+    <div class="g2 w100" style="gap:14px">
+      <div class="inset" style="border-left:3px solid var(--a3)">
+        <p style="font-size:16px">✅ <strong>Best Practice</strong> — MVC modularizes code, promotes <strong>code reuse</strong>, and lets multiple interfaces (desktop, mobile, JSON API) use the same core data logic.</p>
+      </div>
+      <div class="inset" style="border-left:3px solid var(--a4)">
+        <p style="font-size:16px">⚠️ <strong>Don't confuse MVC with Three-tier.</strong> MVC is an <em>internal code pattern</em> within one tier; Three-tier is an <em>infrastructure deployment</em> across separate servers.</p>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══ 6 PUSH vs PULL + THREE-TIER ═════════════════════════════════ */
+`<div class="slide" data-index="5">
+  <div class="eyebrow">Framework Architecture · 2 of 3 &amp; 3 of 3</div>
+  <div class="slide-title">Push/Pull &amp; <span>Three-Tier</span></div>
+  <div class="g2 w100" style="max-width:920px;align-items:start">
+    <div class="card">
+      <h3>🔀 Push vs Pull Architecture</h3>
+      <div class="inset mt2" style="border-left:3px solid var(--a4)">
+        <h4 style="color:var(--a4)">Push-based (Action-based) — Most Common</h4>
+        <p style="font-size:15px">Controllers perform business logic then <strong>push</strong> data to the View layer to render.</p>
+        <p style="font-size:14px;color:var(--muted);margin-top:6px">Examples: <strong>Django, Ruby on Rails, Spring MVC, CodeIgniter</strong></p>
+      </div>
+      <div class="inset mt3" style="border-left:3px solid var(--a2)">
+        <h4 style="color:var(--a2)">Pull-based (Component-based)</h4>
+        <p style="font-size:15px">Starts with the View layer. The View <strong>pulls</strong> results from multiple controllers as needed.</p>
+        <p style="font-size:14px;color:var(--muted);margin-top:6px">Examples: <strong>Lift, Tapestry, JSF, Wicket</strong></p>
+      </div>
+    </div>
+    <div class="card">
+      <h3>🏗️ Three-Tier Organization</h3>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+        ${[
+          ['a2','🌐','Client Tier','The user\'s web browser. Communicates with the application via HTTP.'],
+          ['a1','⚙️','Application Tier','The server containing business logic. The Web Framework runs here — processes requests, talks to the DB, renders responses.'],
+          ['a3','🗄️','Database Tier','Server running the RDBMS (MySQL, PostgreSQL). Stores and retrieves all application data.'],
+        ].map(([col,icon,name,desc],i,a)=>`
+          <div class="inset" style="border-left:3px solid var(--${col})">
+            <p style="font-size:15px"><span style="font-size:18px;margin-right:6px">${icon}</span><strong style="color:var(--${col})">${name}${i===1?' ← Framework Lives Here':''}</strong><br><span style="color:var(--muted)">${desc}</span></p>
+          </div>${i<a.length-1?`<div style="text-align:center;font-size:18px;color:var(--a1);line-height:1">↕</div>`:''}`).join('')}
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══ 7 CATEGORIES: SERVER-SIDE ════════════════════════════════════ */
+`<div class="slide" data-index="6">
+  <div class="eyebrow">Framework Categories</div>
+  <div class="slide-title">Server-Side <span>Frameworks (Backend)</span></div>
+  <div style="max-width:920px;width:100%">
+    <div class="card" style="margin-bottom:16px">
+      <p style="text-align:center;font-size:17px">Run on the <strong>web server</strong> — handle business logic, database queries, and page rendering before sending HTML to the browser.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px">
+      ${[
+        ['🐍','Django','Python','High-level, batteries-included. Used by Instagram, Pinterest, Disqus.'],
+        ['💎','Ruby on Rails','Ruby','Opinionated, rapid dev. Convention over Configuration.'],
+        ['🐘','Laravel','PHP','Elegant syntax for PHP. One of the most popular PHP frameworks.'],
+        ['🪟','ASP.NET Core','C#','Microsoft\'s cross-platform, high-performance framework.'],
+        ['☕','Spring MVC','Java','Enterprise-grade Java framework widely used in large organizations.'],
+        ['🔥','CodeIgniter','PHP','Lightweight PHP framework with a small footprint.'],
+        ['🎵','Symfony','PHP','Reusable PHP components — many frameworks are built on top of it.'],
+        ['🌶️','Flask','Python','Micro-framework — minimal and lightweight. Great for APIs.'],
+      ].map(([icon,name,lang,desc])=>`
+        <div class="card" style="text-align:center;padding:14px 10px;border-top:2px solid var(--a1)">
+          <div style="font-size:24px;margin-bottom:6px">${icon}</div>
+          <p style="font-size:15px;font-weight:700;margin-bottom:2px">${name}</p>
+          <p style="font-size:13px;color:var(--a2);margin-bottom:6px">${lang}</p>
+          <p style="font-size:13px;color:var(--muted)">${desc}</p>
+        </div>`).join('')}
+    </div>
+  </div>
+</div>`,
+
+/* ══ 8 CATEGORIES: CLIENT-SIDE ════════════════════════════════════ */
+`<div class="slide" data-index="7">
+  <div class="eyebrow">Framework Categories</div>
+  <div class="slide-title">Client-Side <span>Frameworks (Frontend)</span></div>
+  <div style="max-width:920px;width:100%">
+    <div class="card" style="margin-bottom:16px">
+      <p style="text-align:center;font-size:17px">Run in the <strong>user's browser</strong> using JavaScript — handle the visual interface, animations, and real-time updates without page reloads.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px">
+      ${[
+        ['⚛️','ReactJS','Meta/Facebook','Component-based UI library. Powers Facebook and Instagram.'],
+        ['🅰️','Angular','Google','Full MVC framework in the browser. Enterprise-grade.'],
+        ['💚','Vue.js','Community','Progressive framework. Easy to learn, highly flexible.'],
+        ['🧲','Svelte','Community','Compiles to vanilla JS — no virtual DOM overhead.'],
+        ['🦴','Backbone.js','Community','Lightweight structure for JS-heavy apps via models/views.'],
+        ['🔥','EmberJS','Community','Convention-heavy full frontend framework.'],
+        ['💎','jQuery UI','JS Foundation','UI interactions and effects built on the jQuery library.'],
+      ].map(([icon,name,by,desc])=>`
+        <div class="card" style="text-align:center;padding:14px 10px;border-top:2px solid var(--a2)">
+          <div style="font-size:24px;margin-bottom:6px">${icon}</div>
+          <p style="font-size:15px;font-weight:700;margin-bottom:2px">${name}</p>
+          <p style="font-size:13px;color:var(--a2);margin-bottom:6px">${by}</p>
+          <p style="font-size:13px;color:var(--muted)">${desc}</p>
+        </div>`).join('')}
+      <div class="card" style="text-align:center;padding:14px 10px;border-top:2px solid var(--a3);display:flex;align-items:center;justify-content:center;flex-direction:column">
+        <div style="font-size:22px;margin-bottom:6px">🔑</div>
+        <p style="font-size:14px;color:var(--muted)">All use <strong style="color:var(--a3)">JavaScript</strong> and run entirely in the browser</p>
+      </div>
+    </div>
+    <div class="inset" style="border-left:4px solid var(--a2);text-align:center">
+      <p style="font-size:16px">Modern apps use <strong>both</strong> — e.g. <strong>Django (server)</strong> + <strong>ReactJS (client)</strong> = full-stack web application.</p>
+    </div>
+  </div>
+</div>`,
+
+/* ══ 9 7 CORE FEATURES ════════════════════════════════════════════ */
+`<div class="slide" data-index="8">
+  <div class="eyebrow">Core Framework Features</div>
+  <div class="slide-title">The 7 <span>Web Template System Features</span></div>
+  <div style="max-width:920px;width:100%">
+    <div class="g2 w100" style="gap:13px">
+      ${[
+        ['a1','⚡','Caching','Stores copies of web documents to reduce bandwidth usage, server load, and perceived "lag." Subsequent requests are served from the cache, bypassing database rendering.'],
+        ['a2','🔐','Security','Built-in authentication &amp; authorization. Identifies users and restricts access by role (e.g. Admin vs. Guest). Drupal uses a role-based access web interface.'],
+        ['a3','🗄️','Database Access &amp; Mapping','Unified API for various databases. Many frameworks provide <strong style="color:var(--a3)">ORMs</strong> — write Python/Ruby instead of raw SQL to query your database.'],
+        ['a4','🗺️','URL Mapping (Routing)','Interprets incoming browser URLs and maps them to specific controller logic. Django uses regular expressions to match URL patterns.'],
+        ['a5','🔄','AJAX','Lets pages send/receive small data packets in the background <em>without reloading</em>. Makes web apps feel as responsive as desktop software. (jQuery is often embedded in Rails for this.)'],
+        ['a2','🌐','Web Services','Utilities to easily create and consume <strong>RESTful web services</strong> and data APIs — connecting your app to the wider world.'],
+        ['a1','🧩','Web Resources (ROA)','Newer frameworks embrace <strong>Resource-Oriented Architecture</strong>. Developers build resource collections using Semantic Web concepts (RDF — Resource Description Framework).'],
+      ].map(([col,icon,name,desc])=>`
+        <div class="card" style="border-left:4px solid var(--${col});padding:14px 18px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+            <span style="font-size:22px">${icon}</span>
+            <h4 style="margin:0;color:var(--${col})">${name}</h4>
+          </div>
+          <p style="font-size:15px">${desc}</p>
+        </div>`).join('')}
+    </div>
+  </div>
+</div>`,
+
+/* ══ 10 SPOTLIGHT: DJANGO ═════════════════════════════════════════ */
+`<div class="slide" data-index="9">
+  <div class="eyebrow">Framework Spotlight</div>
+  <div class="slide-title"><span>Django</span> — Python's Web Giant</div>
+  <div class="g2w w100" style="max-width:940px;align-items:start">
+    <div class="card">
+      <h3>MVT Request Flow</h3>
+      <p style="font-size:16px;color:var(--muted);margin-bottom:14px">Django uses <strong>Model–View–Template (MVT)</strong>, a slight variation of MVC:</p>
+      <!-- MVT flow SVG -->
+      <svg viewBox="0 0 380 280" width="100%" style="max-height:240px" role="img" aria-label="Django MVT request flow diagram">
+        <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="var(--a1)"/></marker></defs>
+        <!-- Browser -->
+        <rect x="4" y="110" width="70" height="40" rx="6" fill="rgba(56,189,248,.1)" stroke="var(--a2)" stroke-width="1.5"/>
+        <text x="39" y="134" text-anchor="middle" font-size="12" fill="var(--a2)" font-family="sans-serif">Browser</text>
+        <!-- arrow 1 -->
+        <line x1="74" y1="130" x2="96" y2="130" stroke="var(--a1)" stroke-width="1.8" marker-end="url(#arr)"/>
+        <text x="85" y="122" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="sans-serif">HTTP</text>
+        <!-- urls.py -->
+        <rect x="100" y="110" width="70" height="40" rx="6" fill="rgba(124,58,237,.1)" stroke="var(--a1)" stroke-width="1.5"/>
+        <text x="135" y="128" text-anchor="middle" font-size="11" fill="var(--a1)" font-family="monospace">urls.py</text>
+        <text x="135" y="142" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="sans-serif">URL mapper</text>
+        <!-- arrow 2 -->
+        <line x1="170" y1="130" x2="192" y2="130" stroke="var(--a1)" stroke-width="1.8" marker-end="url(#arr)"/>
+        <!-- views.py -->
+        <rect x="196" y="110" width="70" height="40" rx="6" fill="rgba(124,58,237,.1)" stroke="var(--a1)" stroke-width="1.5"/>
+        <text x="231" y="128" text-anchor="middle" font-size="11" fill="var(--a1)" font-family="monospace">views.py</text>
+        <text x="231" y="142" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="sans-serif">Request handler</text>
+        <!-- arrow down to model -->
+        <line x1="231" y1="150" x2="231" y2="188" stroke="var(--a3)" stroke-width="1.8" marker-end="url(#arr)"/>
+        <!-- models.py -->
+        <rect x="196" y="192" width="70" height="40" rx="6" fill="rgba(52,211,153,.1)" stroke="var(--a3)" stroke-width="1.5"/>
+        <text x="231" y="210" text-anchor="middle" font-size="11" fill="var(--a3)" font-family="monospace">models.py</text>
+        <text x="231" y="224" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="sans-serif">Data structures</text>
+        <!-- arrow to DB -->
+        <line x1="266" y1="212" x2="310" y2="212" stroke="var(--a3)" stroke-width="1.8" marker-end="url(#arr)"/>
+        <rect x="314" y="192" width="60" height="40" rx="6" fill="rgba(52,211,153,.08)" stroke="var(--a3)" stroke-width="1.2"/>
+        <text x="344" y="216" text-anchor="middle" font-size="11" fill="var(--a3)" font-family="sans-serif">Database</text>
+        <!-- arrow up to template -->
+        <line x1="231" y1="110" x2="231" y2="72" stroke="var(--a5)" stroke-width="1.8" marker-end="url(#arr)"/>
+        <!-- template -->
+        <rect x="196" y="30" width="70" height="40" rx="6" fill="rgba(244,114,182,.1)" stroke="var(--a5)" stroke-width="1.5"/>
+        <text x="231" y="46" text-anchor="middle" font-size="10" fill="var(--a5)" font-family="monospace">&lt;file&gt;.html</text>
+        <text x="231" y="60" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="sans-serif">Template</text>
+        <!-- arrow from template to browser -->
+        <line x1="196" y1="50" x2="110" y2="50" stroke="var(--a5)" stroke-width="1.8" marker-end="url(#arr)"/>
+        <line x1="110" y1="50" x2="39" y2="50" x2="39" y2="110" stroke="var(--a5)" stroke-width="1.8"/>
+        <text x="120" y="42" text-anchor="middle" font-size="10" fill="var(--a5)" font-family="sans-serif">HTML response</text>
+      </svg>
+    </div>
+    <div class="fcol" style="gap:14px">
+      <div class="card">
+        <h3 style="font-size:17px">✅ What Django Gives You</h3>
+        <ul style="font-size:15px;margin-top:6px">
+          <li><strong>User authentication</strong> — sign-up, log-in, log-out ready</li>
+          <li><strong>Admin dashboard</strong> — manage your data visually</li>
+          <li><strong>Forms</strong> &amp; input validation</li>
+          <li><strong>File uploads</strong> built-in</li>
+          <li><strong>ORM</strong> — write Python instead of SQL</li>
+          <li>Template system with <code>&#123;&#123; username &#125;&#125;</code> placeholders</li>
+        </ul>
+      </div>
+      <div class="inset" style="border-left:3px solid var(--a3)">
+        <p style="font-size:15px">🐍 Django is written in <strong>Python</strong>. It enables rapid development <em>without installation or dependency headaches</em>. Powers Instagram, Pinterest, and Disqus.</p>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══ 11 SPOTLIGHT: RAILS ══════════════════════════════════════════ */
+`<div class="slide" data-index="10">
+  <div class="eyebrow">Framework Spotlight</div>
+  <div class="slide-title"><span>Ruby on Rails</span> — The Opinionated Framework</div>
+  <div class="g2 w100" style="max-width:900px;align-items:start">
+    <div class="card">
+      <h3>Rails Philosophy</h3>
+      <p style="font-size:16px;color:var(--muted);margin-bottom:14px">Rails is "opinionated software" — it assumes a <strong>best way</strong> to do things and strongly encourages that path.</p>
+      <div class="inset" style="border-left:4px solid var(--a5);margin-bottom:12px">
+        <h4 style="color:var(--a5);font-size:17px">DRY — Don't Repeat Yourself</h4>
+        <p style="font-size:16px">"Every piece of knowledge must have a <strong>single, unambiguous, authoritative representation</strong> within a system."</p>
+        <p style="font-size:15px;color:var(--muted);margin-top:8px">By avoiding repeated code, the system becomes more maintainable, extensible, and less buggy.</p>
+      </div>
+      <div class="inset" style="border-left:4px solid var(--a1)">
+        <h4 style="color:var(--a1);font-size:17px">Convention Over Configuration</h4>
+        <p style="font-size:16px">Rails has strong defaults. Developers don't spend hours configuring endless XML files just to get started.</p>
+        <p style="font-size:15px;color:var(--muted);margin-top:8px">Name a file the Rails way → it just works. Deviate → configure manually.</p>
+      </div>
+    </div>
+    <div class="fcol" style="gap:14px">
+      <div class="card" style="text-align:center">
+        <!-- Rails gem logo SVG -->
+        <svg width="80" height="80" viewBox="0 0 80 80" fill="none" style="margin:0 auto 12px;display:block" role="img" aria-label="Ruby on Rails gem icon">
+          <polygon points="40,6 70,22 70,58 40,74 10,58 10,22" fill="rgba(239,68,68,.12)" stroke="var(--a5)" stroke-width="2"/>
+          <polygon points="40,18 58,28 58,52 40,62 22,52 22,28" fill="rgba(239,68,68,.08)" stroke="var(--a5)" stroke-width="1.5"/>
+          <text x="40" y="46" text-anchor="middle" font-size="16" fill="var(--a5)" font-family="monospace" font-weight="800">Rails</text>
+        </svg>
+        <h3 style="color:var(--a5)">Ruby on Rails</h3>
+        <p style="font-size:15px;color:var(--muted)">Written in the <strong>Ruby</strong> programming language</p>
+      </div>
+      <div class="card">
+        <h3 style="font-size:17px">Push-based MVC</h3>
+        <p style="font-size:15px;color:var(--muted)">Rails follows a <strong>push-based</strong> architecture — controllers perform logic and push data to the view layer to render the final HTML.</p>
+        <p style="font-size:15px;margin-top:8px">Often pairs with <strong>ReactJS</strong> (frontend) for the complete full-stack experience in modern apps.</p>
+      </div>
+      <div class="inset" style="border-left:3px solid var(--a4)">
+        <p style="font-size:15px">💡 AJAX support via embedded <strong>jQuery</strong> — dynamic page updates without full reloads.</p>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══ 12 ANALOGIES ═════════════════════════════════════════════════ */
+`<div class="slide" data-index="11">
+  <div class="eyebrow">Analogies</div>
+  <div class="slide-title">Making It <span>Click</span></div>
+  <div class="g2 w100" style="max-width:920px;align-items:start">
+    <div class="card">
+      <h3>🏠 The Prefabricated House</h3>
+      <div class="inset mt2" style="border-left:3px solid var(--danger)">
+        <h4 style="color:var(--danger)">❌ Without a Framework</h4>
+        <p style="font-size:15px">Like building a house by digging your own clay for bricks, mining ore for nails, and chopping lumber yourself. Possible — but massively time-consuming.</p>
+      </div>
+      <div class="inset mt3" style="border-left:3px solid var(--a3)">
+        <h4 style="color:var(--a3)">✅ With a Framework</h4>
+        <p style="font-size:15px">Like buying a <strong>prefabricated kit</strong>. Walls, roof, and plumbing already built (Libraries). Blueprints included (MVC). Standard instructions (Convention over Config). You just assemble and decorate.</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3>🍽️ The Restaurant Kitchen (Three-Tier)</h3>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+        <div class="inset" style="border-left:3px solid var(--a2)">
+          <h4 style="color:var(--a2)">👤 Client Tier = The Customer</h4>
+          <p style="font-size:15px">Sits at the table, reads the menu, places an order. Only speaks to the waiter.</p>
+        </div>
+        <div class="inset" style="border-left:3px solid var(--a1)">
+          <h4 style="color:var(--a1)">🧑‍🍳 Application Tier = The Waiter</h4>
+          <p style="font-size:15px">Takes the order (URL request), goes to the kitchen (Controller), tells the chef what to cook (Model), picks up the meal (View), and brings it back.</p>
+        </div>
+        <div class="inset" style="border-left:3px solid var(--a3)">
+          <h4 style="color:var(--a3)">🥩 Database Tier = The Pantry</h4>
+          <p style="font-size:15px">Raw ingredients stored here. The waiter <em>never</em> goes directly to the pantry — always through the chef.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══ 13 USE CASE ══════════════════════════════════════════════════ */
+`<div class="slide" data-index="12">
+  <div class="eyebrow">Use Case</div>
+  <div class="slide-title">Social Media <span>Dashboard</span></div>
+  <div style="max-width:860px;width:100%">
+    <div class="card" style="margin-bottom:18px;background:linear-gradient(135deg,rgba(124,58,237,.07),rgba(56,189,248,.05))">
+      <p style="text-align:center;font-size:17px">A company wants to build a web dashboard showing <strong>live social media mentions, comments, and likes</strong>.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:13px">
+      ${[
+        ['a5','💎','Ruby on Rails — Backend (Server-Side)','Handles user logins securely and connects to external social media APIs (Twitter, Facebook, Instagram). All sensitive business logic stays on the server.'],
+        ['a2','⚛️','ReactJS — Frontend (Client-Side)','AJAX-powered component library. Like counts and comment streams refresh <em>dynamically without a full browser reload</em> — the dashboard feels instant and alive.'],
+        ['a1','🏗️','MVC Architecture — Code Organization','Database Models (user data, post metrics) are completely separate from visual components (graphs, tables). Future updates to the design don\'t break the data layer.'],
+      ].map(([col,icon,title,desc])=>`
+        <div style="display:grid;grid-template-columns:52px 1fr;gap:0 14px;align-items:center">
+          <div style="width:52px;height:52px;border-radius:50%;background:var(--card);box-shadow:4px 4px 10px var(--sd),-2px -2px 7px var(--sl);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${icon}</div>
+          <div class="card" style="padding:14px 20px;border-left:4px solid var(--${col})">
+            <h4 style="color:var(--${col});margin:0 0 4px">${title}</h4>
+            <p style="font-size:16px">${desc}</p>
+          </div>
+        </div>`).join('')}
+    </div>
+  </div>
+</div>`,
+
+/* ══ 14 KEY QUOTES ════════════════════════════════════════════════ */
+`<div class="slide" data-index="13">
+  <div class="eyebrow">Key Takeaways</div>
+  <div class="slide-title">Key <span>Insights</span></div>
+  <div style="max-width:820px;width:100%;display:flex;flex-direction:column;gap:16px">
+    <div class="card"><div style="border-left:4px solid var(--a1);padding-left:20px;font-size:18px;font-style:italic;color:var(--muted);line-height:1.7">"A <strong>Web Framework</strong> automates the overhead of common web tasks — database access, sessions, security, routing — so developers can focus on what makes their app unique."</div></div>
+    <div class="card"><div style="border-left:4px solid var(--a2);padding-left:20px;font-size:18px;font-style:italic;color:var(--muted);line-height:1.7">"<strong>MVC</strong> separates data (Model) from display (View) via a Controller — enabling the same data logic to power multiple interfaces: desktop, mobile, and JSON API."</div></div>
+    <div class="card"><div style="border-left:4px solid var(--a3);padding-left:20px;font-size:18px;font-style:italic;color:var(--muted);line-height:1.7">"<strong>Django's ORM</strong> lets you write Python to manage your database instead of raw SQL — and <strong>Rails' DRY philosophy</strong> ensures that every piece of knowledge has exactly one home in the codebase."</div></div>
+    <div class="card"><div style="border-left:4px solid var(--a4);padding-left:20px;font-size:18px;font-style:italic;color:var(--muted);line-height:1.7">"Great frameworks are 'batteries included' — <strong>Caching, Security, ORM, URL Routing, AJAX, Web Services, and ROA</strong> come pre-built. You just plug in your business logic."</div></div>
+  </div>
+</div>`,
+
+/* ══ 15 RECAP ═════════════════════════════════════════════════════ */
+`<div class="slide" data-index="14">
+  <div class="eyebrow">Before Activities</div>
+  <div class="slide-title">Quick <span>Recap</span></div>
+  <div class="g2 w100" style="max-width:880px;align-items:start">
+    <div class="card">
+      <h3>Core Concepts</h3>
+      <ul>
+        <li><strong>WAF</strong> = Web Application Framework — automates common web tasks</li>
+        <li>History: Static HTML → CGI (1993) → PHP/ASP (1995) → Full-stack (late 1990s)</li>
+        <li><strong>MVC</strong> = Model (data) · View (UI) · Controller (logic)</li>
+        <li><strong>Three-Tier</strong> = Client · Application · Database (different servers)</li>
+        <li><strong>Push-based</strong> = controller pushes data (Django, Rails)</li>
+        <li><strong>Pull-based</strong> = view pulls data (Lift, JSF)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>7 Core Features + Frameworks</h3>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+        <div class="badge bv w100" style="justify-content:flex-start">⚡ Caching</div>
+        <div class="badge bb w100" style="justify-content:flex-start">🔐 Security</div>
+        <div class="badge bg w100" style="justify-content:flex-start">🗄️ Database Access &amp; ORM</div>
+        <div class="badge bo w100" style="justify-content:flex-start">🗺️ URL Mapping / Routing</div>
+        <div class="badge bp w100" style="justify-content:flex-start">🔄 AJAX</div>
+        <div class="badge bb w100" style="justify-content:flex-start">🌐 Web Services</div>
+        <div class="badge bv w100" style="justify-content:flex-start">🧩 Web Resources (ROA)</div>
+      </div>
+    </div>
+  </div>
+  <div class="card mt4" style="max-width:880px;width:100%;background:linear-gradient(135deg,rgba(124,58,237,.08),rgba(52,211,153,.06));text-align:center">
+    <p style="font-size:18px">🧪 Activity time! ↓</p>
+  </div>
+</div>`,
+
+/* ══ 16 HTML LAB ══════════════════════════════════════════════════ */
+`<div class="slide" data-index="15">
+  <div class="eyebrow">Guided Lab — HTML &amp; CSS</div>
+  <div class="slide-title">Responsive Layout with <span>W3.CSS</span></div>
+  <div style="max-width:960px;width:100%;height:min(530px,60vh);display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:stretch">
+    <div class="cw" style="height:100%">
+      <div class="ch">
+        <span class="cl">index.html — save &amp; open in browser</span>
+        <button class="cp" onclick="copyCode(this,'lab-html')">Copy</button>
+      </div>
+      <pre id="lab-html"><span class="kw">&lt;!DOCTYPE html&gt;</span>
+<span class="tg">&lt;html&gt;</span>
+<span class="tg">&lt;head&gt;</span>
+  <span class="tg">&lt;title&gt;</span>Example<span class="tg">&lt;/title&gt;</span>
+  <span class="tg">&lt;meta</span> <span class="at">name</span>=<span class="st">"viewport"</span>
+        <span class="at">content</span>=<span class="st">"width=device-width, initial-scale=1"</span><span class="tg">&gt;</span>
+  <span class="cm">&lt;!-- W3.CSS: free responsive stylesheet --&gt;</span>
+  <span class="tg">&lt;link</span> <span class="at">rel</span>=<span class="st">"stylesheet"</span>
+        <span class="at">href</span>=<span class="st">"https://www.w3schools.com/w3css/4/w3.css"</span><span class="tg">&gt;</span>
+<span class="tg">&lt;/head&gt;</span>
+<span class="tg">&lt;body&gt;</span>
+
+<span class="tg">&lt;div</span> <span class="at">class</span>=<span class="st">"w3-container w3-blue"</span><span class="tg">&gt;</span>
+  <span class="tg">&lt;h1&gt;</span>Example Demo<span class="tg">&lt;/h1&gt;</span>
+  <span class="tg">&lt;p&gt;</span>Resize this responsive page!<span class="tg">&lt;/p&gt;</span>
+<span class="tg">&lt;/div&gt;</span>
+
+<span class="tg">&lt;div</span> <span class="at">class</span>=<span class="st">"w3-row-padding"</span><span class="tg">&gt;</span>
+
+  <span class="tg">&lt;div</span> <span class="at">class</span>=<span class="st">"w3-third"</span><span class="tg">&gt;</span>
+    <span class="tg">&lt;h2&gt;</span>London<span class="tg">&lt;/h2&gt;</span>
+    <span class="tg">&lt;p&gt;</span>Capital of England.<span class="tg">&lt;/p&gt;</span>
+    <span class="tg">&lt;p&gt;</span>Metro area: over 13 million inhabitants.<span class="tg">&lt;/p&gt;</span>
+  <span class="tg">&lt;/div&gt;</span>
+
+  <span class="tg">&lt;div</span> <span class="at">class</span>=<span class="st">"w3-third"</span><span class="tg">&gt;</span>
+    <span class="tg">&lt;h2&gt;</span>Paris<span class="tg">&lt;/h2&gt;</span>
+    <span class="tg">&lt;p&gt;</span>Capital of France.<span class="tg">&lt;/p&gt;</span>
+    <span class="tg">&lt;p&gt;</span>Paris area: 12+ million inhabitants.<span class="tg">&lt;/p&gt;</span>
+  <span class="tg">&lt;/div&gt;</span>
+
+  <span class="tg">&lt;div</span> <span class="at">class</span>=<span class="st">"w3-third"</span><span class="tg">&gt;</span>
+    <span class="tg">&lt;h2&gt;</span>Tokyo<span class="tg">&lt;/h2&gt;</span>
+    <span class="tg">&lt;p&gt;</span>Capital of Japan.<span class="tg">&lt;/p&gt;</span>
+    <span class="tg">&lt;p&gt;</span>Most populous metro area in the world.<span class="tg">&lt;/p&gt;</span>
+  <span class="tg">&lt;/div&gt;</span>
+
+<span class="tg">&lt;/div&gt;</span>
+<span class="tg">&lt;/body&gt;</span>
+<span class="tg">&lt;/html&gt;</span></pre>
+    </div>
+    <div class="fcol" style="gap:13px;height:100%">
+      <div class="card">
+        <h3 style="color:var(--a3)">📋 Steps</h3>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px">
+          ${['Open a text editor (Notepad, VS Code)','Paste the code on the left','Save as <code>index.html</code> on your desktop','Double-click to open in your browser','Resize the window — layout adapts automatically!'].map((s,i)=>`<div style="display:flex;align-items:center;gap:10px"><span class="badge bv" style="padding:4px 10px;font-size:14px;min-width:26px;justify-content:center">${i+1}</span><span style="font-size:16px">${s}</span></div>`).join('')}
+        </div>
+      </div>
+      <div class="inset" style="flex:1;border-left:3px solid var(--a4)">
+        <h4 style="color:var(--a4)">💡 The Django Connection</h4>
+        <p style="font-size:15px;color:var(--muted)">You've hardcoded "London is the capital…" right now. In Django, you'd have a <strong>Cities database table</strong>, and use the Template system (<code>&#123;&#123; city.name &#125;&#125;</code>) to pull those strings dynamically. Add one row to the database → the page updates automatically. That's the power of a framework.</p>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══ 17 MCQ ═══════════════════════════════════════════════════════ */
+`<div class="slide" data-index="16">
+  <div class="eyebrow">Skill-Building Check</div>
+  <div class="slide-title">Multiple Choice <span>Questions</span> (1–4)</div>
+  <div class="g2 w100" style="max-width:960px;align-items:start">
+    <div class="mq">
+      <div class="mq-q">1. What is a Web Framework?</div>
+      <div class="mq-o">
+        <div class="mq-opt">A. A software framework designed to support the development of web applications and services</div>
+        <div class="mq-opt">B. A physical server that hosts websites</div>
+        <div class="mq-opt">C. A database management system like MySQL</div>
+        <div class="mq-opt">D. A programming language used only for graphic design</div>
+      </div>
+    </div>
+    <div class="mq">
+      <div class="mq-q">2. What does HTML stand for?</div>
+      <div class="mq-o">
+        <div class="mq-opt">A. Hyperlink Text Markup Language</div>
+        <div class="mq-opt">B. HyperText Markup Language</div>
+        <div class="mq-opt">C. Hardware Transfer Machine Language</div>
+        <div class="mq-opt">D. High Text Management Logic</div>
+      </div>
+    </div>
+    <div class="mq">
+      <div class="mq-q">3. Web frameworks often target these types of development.</div>
+      <div class="mq-o">
+        <div class="mq-opt">A. Embedded Systems and IoT</div>
+        <div class="mq-opt">B. Dynamic Website Development and Web Applications</div>
+        <div class="mq-opt">C. Desktop Operating System development</div>
+        <div class="mq-opt">D. Artificial Intelligence and Machine Learning</div>
+      </div>
+    </div>
+    <div class="mq">
+      <div class="mq-q">4. It is the caching of web documents in order to reduce bandwidth usage, server load, and perceived "lag."</div>
+      <div class="mq-o">
+        <div class="mq-opt">A. Routing</div>
+        <div class="mq-opt">B. Caching</div>
+        <div class="mq-opt">C. Compilation</div>
+        <div class="mq-opt">D. Load Balancing</div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══ 18 ENUMERATION ═══════════════════════════════════════════════ */
+`<div class="slide" data-index="17">
+  <div class="eyebrow">Skill-Building Check</div>
+  <div class="slide-title">Enumeration <span>Questions 5–7</span></div>
+  <div class="g3 w100" style="max-width:960px;align-items:start">
+    <div class="card" style="grid-column:1/-1">
+      <h3>Q5: Give at least 5 examples of Web Frameworks</h3>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:10px">
+        ${['Django (Python)','Ruby on Rails','Laravel (PHP)','ASP.NET Core','Spring MVC','CodeIgniter','Symfony','Flask','ReactJS','Vue.js'].map(f=>`<div class="inset" style="text-align:center;font-size:15px;padding:8px 6px">${f}</div>`).join('')}
+      </div>
+      <p style="font-size:15px;color:var(--muted);margin-top:10px">✅ Any 5 from this list = full marks</p>
+    </div>
+    <div class="card">
+      <h3>Q6: 3 Types of Framework Architecture</h3>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+        <div class="inset"><p style="font-size:16px"><strong style="color:var(--a1)">1.</strong> Model-View-Controller (MVC)</p></div>
+        <div class="inset"><p style="font-size:16px"><strong style="color:var(--a2)">2.</strong> Push-based vs Pull-based Architecture</p></div>
+        <div class="inset"><p style="font-size:16px"><strong style="color:var(--a3)">3.</strong> Three-Tier Organization</p></div>
+      </div>
+    </div>
+    <div class="card" style="grid-column:2/4">
+      <h3>Q7: 7 Web Template System Features</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+        ${['Caching','Security','Database Access, Mapping &amp; Configuration','URL Mapping (Routing)','AJAX','Web Services','Web Resources (ROA)'].map((f,i)=>`<div class="inset"><p style="font-size:15px"><strong style="color:var(--a1)">${i+1}.</strong> ${f}</p></div>`).join('')}
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══ 19 ANSWER KEY ════════════════════════════════════════════════ */
+`<div class="slide" data-index="18">
+  <div class="eyebrow">Answer Key</div>
+  <div class="slide-title">Answers &amp; <span>Explanations</span></div>
+  <div style="max-width:860px;width:100%" class="scroll">
+    <div class="ar">
+      <div class="an">1</div>
+      <div class="at2"><span class="ac">A — A software framework designed to support the development of web applications.</span> Web Frameworks provide a standard way to build and deploy apps on the web, automating overhead tasks like sessions, routing, and DB access.</div>
+    </div>
+    <div class="ar">
+      <div class="an">2</div>
+      <div class="at2"><span class="ac">B — HyperText Markup Language.</span> HTML is the standard markup language for creating web pages. It is not a programming language — it describes structure and content.</div>
+    </div>
+    <div class="ar">
+      <div class="an">3</div>
+      <div class="at2"><span class="ac">B — Dynamic Website Development and Web Applications.</span> While frameworks can build static sites, their primary purpose is handling complex, user-driven dynamic web applications.</div>
+    </div>
+    <div class="ar">
+      <div class="an">4</div>
+      <div class="at2"><span class="ac">B — Caching.</span> Web caching stores copies of web documents so subsequent requests can be served faster — bypassing the database and template engine, dramatically reducing server load and response time.</div>
+    </div>
+    <div class="ar">
+      <div class="an">5</div>
+      <div class="at2"><span class="ac">Any 5 of:</span> Django, Ruby on Rails, Laravel, ASP.NET Core, Spring MVC, CodeIgniter, Symfony, Flask, ReactJS, Angular, Vue.js.</div>
+    </div>
+    <div class="ar">
+      <div class="an">6</div>
+      <div class="at2"><span class="ac">(1) MVC · (2) Push-based vs Pull-based · (3) Three-tier Organization.</span> MVC is internal code structure; Three-tier is infrastructure deployment; Push/Pull describes who initiates data flow.</div>
+    </div>
+    <div class="ar" style="border-bottom:none">
+      <div class="an">7</div>
+      <div class="at2"><span class="ac">Caching · Security · Database Access &amp; Mapping · URL Mapping (Routing) · AJAX · Web Services · Web Resources (ROA).</span> These 7 are the core "batteries-included" features that distinguish a full framework from a simple library.</div>
+    </div>
+  </div>
+</div>`,
+
+/* ══ 20 FINAL ═════════════════════════════════════════════════════ */
+`<div class="slide" data-index="19" style="background:radial-gradient(ellipse at 50% 40%,#1a0d3a 0%,var(--bg) 70%)">
+  <div style="text-align:center;max-width:700px">
+    <!-- celebratory gear/rocket SVG -->
+    <svg width="90" height="90" viewBox="0 0 90 90" fill="none" style="margin:0 auto 20px;display:block" role="img" aria-label="Module complete rocket icon">
+      <circle cx="45" cy="45" r="43" fill="rgba(124,58,237,.12)" stroke="var(--a1)" stroke-width="2"/>
+      <!-- rocket body -->
+      <path d="M45 20 C55 20 65 30 65 45 L65 60 L55 70 L45 65 L35 70 L25 60 L25 45 C25 30 35 20 45 20Z" fill="rgba(124,58,237,.15)" stroke="var(--a1)" stroke-width="2"/>
+      <!-- window -->
+      <circle cx="45" cy="44" r="7" fill="none" stroke="var(--a2)" stroke-width="2"/>
+      <!-- flames -->
+      <path d="M37 68 L40 76 L45 71 L50 76 L53 68" stroke="var(--a4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <!-- stars -->
+      <circle cx="18" cy="22" r="2" fill="var(--a3)"/>
+      <circle cx="72" cy="18" r="1.5" fill="var(--a5)"/>
+      <circle cx="75" cy="68" r="2" fill="var(--a2)"/>
+      <circle cx="14" cy="60" r="1.5" fill="var(--warn)"/>
+    </svg>
+    <div class="eyebrow" style="display:flex;justify-content:center">Module Complete!</div>
+    <h2 style="font-size:clamp(26px,4vw,46px);font-weight:800;margin-bottom:14px">M23 Done! <span style="color:var(--a1)">🚀</span></h2>
+    <p style="font-size:19px;color:var(--muted);margin-bottom:26px;max-width:560px;margin-left:auto;margin-right:auto">"A framework is not a shortcut — it's a launchpad. The best engineers don't build rockets with hand-smelted iron; they stand on the shoulders of giants and aim higher."</p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:22px">
+      <span class="badge bv">Frameworks ✓</span>
+      <span class="badge bb">MVC ✓</span>
+      <span class="badge bg">7 Features ✓</span>
+      <span class="badge bp">Django ✓</span>
+      <span class="badge bo">Rails ✓</span>
+    </div>
+    <div style="background:var(--card);border-radius:var(--rs);padding:13px 20px;box-shadow:inset 3px 3px 8px var(--sd),inset -2px -2px 6px var(--sl);display:inline-block">
+      <p style="font-size:16px;color:var(--muted)">Try the lab: open Notepad, paste the HTML, save as <code style="color:var(--a3)">index.html</code>, and resize your browser. 🎉</p>
+    </div>
+  </div>
+</div>`,
+
+];
+
+/* ═══════════════════════════════════════════════════════════════
+   ENGINE
+═══════════════════════════════════════════════════════════════ */
+const deck = document.getElementById('deck');
+const total = slides.length;
+let current = 0;
+
+slides.forEach(html => {
+  const w = document.createElement('div');
+  w.innerHTML = html;
+  deck.appendChild(w.firstElementChild);
+});
+
+const all = document.querySelectorAll('.slide');
+const bar = document.getElementById('pb');
+const ctr = document.getElementById('ctr');
+
+function goTo(idx, dir = 1) {
+  if (idx < 0 || idx >= total) return;
+  const prev = all[current];
+  prev.classList.remove('active');
+  prev.classList.add(dir > 0 ? 'exit-l' : 'exit-r');
+  setTimeout(() => prev.classList.remove('exit-l','exit-r'), 400);
+  current = idx;
+  const next = all[current];
+  next.style.transform = dir > 0 ? 'translateX(60px)' : 'translateX(-60px)';
+  next.classList.add('active');
+  setTimeout(() => { next.style.transform = ''; }, 10);
+  bar.style.width = ((current + 1) / total * 100) + '%';
+  ctr.textContent = (current + 1) + ' / ' + total;
+}
+
+all[0].classList.add('active');
+bar.style.width = (1 / total * 100) + '%';
+
+document.addEventListener('keydown', e => {
+  if (e.key==='ArrowRight'||e.key==='ArrowDown') goTo(current+1, 1);
+  else if (e.key==='ArrowLeft'||e.key==='ArrowUp') goTo(current-1,-1);
+  else if (e.key==='Home') goTo(0,-1);
+  else if (e.key==='End')  goTo(total-1,1);
+  else if (e.key==='?') toggleSh();
+});
+document.addEventListener('contextmenu', e => { e.preventDefault(); goTo(current+1,1); });
+document.addEventListener('mousedown', e => {
+  if (e.button===3){e.preventDefault();e.stopImmediatePropagation();goTo(current+1, 1);}
+  if (e.button===4){e.preventDefault();e.stopImmediatePropagation();goTo(current-1,-1);}
+}, true);
+let tx=0;
+document.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;},{passive:true});
+document.addEventListener('touchend',e=>{
+  const dx=tx-e.changedTouches[0].clientX;
+  if(Math.abs(dx)>40) dx>0?goTo(current+1,1):goTo(current-1,-1);
+});
+
+function copyCode(btn,id){
+  const pre=document.getElementById(id);
+  navigator.clipboard.writeText(pre?pre.innerText:'').then(()=>{
+    btn.textContent='Copied!';btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('ok');},1800);
+  });
+}
+function toggleSh(){document.getElementById('sh').classList.toggle('on');}
+function closeSh()  {document.getElementById('sh').classList.remove('on');}
+document.getElementById('sh').addEventListener('click',e=>{
+  if(e.target===document.getElementById('sh'))closeSh();
+});
+</script>
+</body>
+</html>

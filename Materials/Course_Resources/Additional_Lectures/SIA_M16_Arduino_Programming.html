@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIA M16 – Arduino Programming & Simulation</title>
+<style>
+  :root {
+    --bg: #181c1f;
+    --bg2: #1d2226;
+    --card: #222a2e;
+    --shadow-dark: #0f1315;
+    --shadow-light: #2d3a40;
+    --accent:  #e879f9;  /* vivid magenta/purple — IDE energy */
+    --accent2: #38bdf8;  /* sky blue — wokwi */
+    --accent3: #34d399;  /* green — circuit/code */
+    --accent4: #fb923c;  /* orange — warning/tip */
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --danger: #f87171;
+    --warning: #fbbf24;
+    --radius: 20px;
+    --radius-sm: 12px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+
+  #progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3)); transition: width .35s ease; z-index: 999; }
+  #counter { position: fixed; bottom: 14px; right: 20px; font-size: 16px; color: var(--text-muted); z-index: 999; }
+
+  #deck { width: 100%; height: 100%; position: relative; }
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    padding: 36px 52px;
+    opacity: 0; pointer-events: none;
+    transition: opacity .35s ease, transform .35s ease;
+    transform: translateX(60px);
+  }
+  .slide.active  { opacity: 1; pointer-events: auto; transform: translateX(0); }
+  .slide.exit-left  { opacity: 0; transform: translateX(-60px); }
+  .slide.exit-right { opacity: 0; transform: translateX(60px); }
+  @media (prefers-reduced-motion: reduce) {
+    .slide { transition: opacity .15s ease; transform: none !important; }
+  }
+
+  .eyebrow    { font-size: 12px; text-transform: uppercase; letter-spacing: 2.8px; color: var(--accent); margin-bottom: 8px; font-weight: 700; }
+  .slide-title { font-size: clamp(24px, 3.2vw, 40px); font-weight: 800; color: var(--text); text-align: center; line-height: 1.2; margin-bottom: 24px; }
+  .slide-title span { color: var(--accent); }
+
+  .card { background: var(--card); border-radius: var(--radius); box-shadow: 6px 6px 16px var(--shadow-dark), -4px -4px 12px var(--shadow-light); padding: 22px 26px; }
+  .card-inset { background: var(--bg2); border-radius: var(--radius-sm); box-shadow: inset 3px 3px 8px var(--shadow-dark), inset -2px -2px 6px var(--shadow-light); padding: 14px 18px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; width: 100%; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; width: 100%; }
+  .grid-2-wide { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; width: 100%; }
+
+  p, li, td, th { font-size: 17px; line-height: 1.65; color: var(--text); }
+  h3 { font-size: 19px; font-weight: 700; color: var(--accent); margin-bottom: 9px; }
+  h4 { font-size: 17px; font-weight: 600; color: var(--accent2); margin-bottom: 7px; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  strong { color: var(--accent3); }
+  code { font-family: 'Cascadia Code','Fira Code',Consolas,monospace; font-size: 15px; color: var(--accent3); background: var(--bg2); padding: 2px 7px; border-radius: 5px; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--card); box-shadow: 3px 3px 8px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
+    border-radius: 50px; padding: 7px 15px; font-size: 16px; font-weight: 600; color: var(--text);
+  }
+  .badge.purple { color: var(--accent);  }
+  .badge.blue   { color: var(--accent2); }
+  .badge.green  { color: var(--accent3); }
+  .badge.orange { color: var(--accent4); }
+  .badge.red    { color: var(--danger);  }
+  .badge.yellow { color: var(--warning); }
+
+  /* code blocks */
+  .code-wrap { position: relative; border-radius: var(--radius-sm); overflow: hidden; background: #0d1117; display: flex; flex-direction: column; min-height: 0; }
+  .code-header { display: flex; align-items: center; justify-content: space-between; padding: 9px 16px; background: #161b22; flex-shrink: 0; }
+  .code-lang { font-size: 16px; color: #8b949e; font-family: monospace; }
+  .copy-btn {
+    font-size: 15px; padding: 5px 13px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600;
+    background: var(--card); color: var(--text); box-shadow: 3px 3px 7px var(--shadow-dark), -2px -2px 5px var(--shadow-light); transition: all .15s;
+  }
+  .copy-btn.copied { box-shadow: inset 2px 2px 5px var(--shadow-dark), inset -1px -1px 4px var(--shadow-light); color: var(--accent3); }
+  pre { flex: 1; overflow: auto; padding: 16px; margin: 0; font-size: 13.5px; line-height: 1.65; font-family: 'Cascadia Code','Fira Code',Consolas,monospace; min-height: 0; }
+  .kw  { color: #ff7b72; } .fn  { color: #d2a8ff; } .str { color: #a5d6ff; }
+  .cm  { color: #8b949e; font-style: italic; } .num { color: #f0db4f; }
+  .prop{ color: #7ee787; } .inc { color: #ff7b72; } .tp  { color: #ffa657; }
+
+  /* wokwi UI mockup */
+  .wokwi-mock { border-radius: var(--radius-sm); overflow: hidden; box-shadow: 6px 6px 16px var(--shadow-dark); }
+  .wokwi-bar { background: #1a1a2e; padding: 10px 16px; display: flex; align-items: center; gap: 10px; }
+  .wokwi-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .wokwi-title { font-size: 14px; color: #8b949e; font-family: monospace; margin-left: 8px; }
+  .wokwi-body { display: grid; grid-template-columns: 1fr 1fr; }
+  .wokwi-left  { background: #12141a; padding: 14px; }
+  .wokwi-right { background: #0d1117; padding: 14px; display: flex; align-items: center; justify-content: center; }
+  .tab-row { display: flex; gap: 4px; margin-bottom: 10px; }
+  .tab { background: #222; border-radius: 6px 6px 0 0; padding: 5px 12px; font-size: 13px; color: #8b949e; font-family: monospace; cursor: default; }
+  .tab.active { background: #2a2a3a; color: var(--accent2); }
+
+  /* MCQ */
+  .mcq-card { background: var(--card); border-radius: var(--radius); box-shadow: 6px 6px 16px var(--shadow-dark), -4px -4px 12px var(--shadow-light); padding: 20px 24px; display: flex; flex-direction: column; gap: 11px; }
+  .mcq-q { font-size: 17px; font-weight: 600; color: var(--text); line-height: 1.5; }
+  .mcq-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mcq-opt { background: var(--bg2); border-radius: 10px; padding: 9px 13px; font-size: 16px; box-shadow: inset 2px 2px 5px var(--shadow-dark), inset -1px -1px 4px var(--shadow-light); }
+
+  /* answer key */
+  .ans-row { display: flex; align-items: flex-start; gap: 13px; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+  .ans-num { background: var(--accent); color: #1a001f; border-radius: 50%; width: 28px; height: 28px; min-width: 28px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; }
+  .ans-text { font-size: 17px; line-height: 1.55; }
+  .ans-correct { color: var(--accent3); font-weight: 700; }
+
+  /* shortcuts */
+  #shortcuts-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.72); z-index: 9999; align-items: center; justify-content: center; }
+  #shortcuts-overlay.show { display: flex; }
+  .shortcuts-box { background: var(--card); border-radius: var(--radius); padding: 34px 42px; box-shadow: 10px 10px 30px var(--shadow-dark); max-width: 400px; width: 90%; }
+  .shortcuts-box h2 { font-size: 21px; color: var(--accent); margin-bottom: 16px; text-align: center; }
+  .shortcut-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.07); }
+  .shortcut-row:last-child { border-bottom: none; }
+  .shortcut-key  { background: var(--bg2); border-radius: 7px; padding: 4px 10px; font-size: 15px; font-family: monospace; color: var(--accent); }
+  .shortcut-desc { font-size: 16px; color: var(--text-muted); }
+  .close-btn { display: block; margin: 18px auto 0; background: var(--card); box-shadow: 4px 4px 10px var(--shadow-dark), -2px -2px 7px var(--shadow-light); border: none; border-radius: 12px; padding: 9px 26px; font-size: 17px; color: var(--text); cursor: pointer; }
+
+  .w-full { width: 100%; }
+  .mt-2 { margin-top: 10px; }
+  .mt-3 { margin-top: 14px; }
+  .mt-4 { margin-top: 20px; }
+  .flex-col { display: flex; flex-direction: column; }
+  .inner-scroll { overflow-y: auto; max-height: 58vh; padding-right: 4px; }
+  .inner-scroll::-webkit-scrollbar { width: 5px; }
+  .inner-scroll::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
+  .trace { position: absolute; opacity: .05; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+<div id="counter">1 / 19</div>
+<div id="deck"></div>
+
+<div id="shortcuts-overlay">
+  <div class="shortcuts-box">
+    <h2>⌨️ Shortcuts</h2>
+    <div class="shortcut-row"><span class="shortcut-key">→ / Right-click</span><span class="shortcut-desc">Next slide</span></div>
+    <div class="shortcut-row"><span class="shortcut-key">←</span><span class="shortcut-desc">Prev slide</span></div>
+    <div class="shortcut-row"><span class="shortcut-key">Home / End</span><span class="shortcut-desc">First / Last</span></div>
+    <div class="shortcut-row"><span class="shortcut-key">?</span><span class="shortcut-desc">Toggle this</span></div>
+    <button class="close-btn" onclick="closeShortcuts()">Close</button>
+  </div>
+</div>
+
+<script>
+const slides = [
+
+/* ══════════════════════════════════════════════
+   SLIDE 1 — TITLE
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="0" style="background:radial-gradient(ellipse at 55% 40%, #1a0025 0%, var(--bg) 68%)">
+  <svg class="trace" style="right:0;top:0;width:400px;height:400px" viewBox="0 0 400 400" fill="none" aria-hidden="true">
+    <path d="M380 0 L380 120 L260 120 L260 200 L360 200 L360 300 L240 300 L240 400" stroke="white" stroke-width="2"/>
+    <path d="M400 60 L320 60 L320 180 L200 180" stroke="white" stroke-width="1.5"/>
+    <circle cx="260" cy="120" r="5" fill="white"/><circle cx="360" cy="200" r="5" fill="white"/><circle cx="240" cy="300" r="5" fill="white"/>
+  </svg>
+  <svg class="trace" style="left:0;bottom:0;width:340px;height:340px" viewBox="0 0 340 340" fill="none" aria-hidden="true">
+    <path d="M0 340 L0 220 L120 220 L120 140 L40 140 L40 50 L180 50 L180 0" stroke="white" stroke-width="2"/>
+    <circle cx="120" cy="220" r="5" fill="white"/><circle cx="40" cy="140" r="5" fill="white"/><circle cx="180" cy="50" r="5" fill="white"/>
+  </svg>
+  <div style="text-align:center;max-width:840px">
+    <div class="eyebrow">System Integration &amp; Architecture · Module 16</div>
+    <h1 style="font-size:clamp(28px,4.8vw,52px);font-weight:800;line-height:1.1;margin-bottom:14px">
+      Hardware Integration 3<br><span style="color:var(--accent)">Arduino Programming &amp; Simulation</span>
+    </h1>
+    <p style="font-size:19px;color:var(--text-muted);margin-bottom:26px">C++ sketches, Wokwi simulator mastery, and real projects</p>
+    <div style="display:flex;gap:13px;flex-wrap:wrap;justify-content:center">
+      <span class="badge purple">💻 C++ Sketches</span>
+      <span class="badge blue">🧪 Wokwi Simulator</span>
+      <span class="badge green">📋 diagram.json</span>
+      <span class="badge orange">📚 Libraries</span>
+      <span class="badge yellow">🧮 Calculator Project</span>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 2 — LESSON PREVIEW
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="1">
+  <div class="eyebrow">Lesson Preview</div>
+  <div class="slide-title">Bridging <span>Hardware &amp; Software</span></div>
+  <div class="grid-2 w-full" style="max-width:900px;align-items:start">
+    <div class="card">
+      <h3>📡 Coming From M13–M15…</h3>
+      <p style="color:var(--text-muted)">M13: Microcontroller fundamentals (CPU, Memory, I/O)<br>M14: The Arduino ecosystem &amp; hardware components<br>M15: 2nd Periodical Quiz Review</p>
+      <p class="mt-2">Now: we <strong>actually write code</strong>, wire circuits in Wokwi, and build real projects.</p>
+    </div>
+    <div class="card">
+      <h3>🎯 Learning Objectives</h3>
+      <ul>
+        <li>Understand the <strong>C++ structure</strong> of an Arduino sketch</li>
+        <li>Navigate the <strong>Wokwi simulator</strong> interface</li>
+        <li>Wire complex projects via <strong>diagram.json</strong></li>
+        <li>Load <strong>external libraries</strong> for advanced circuits</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card mt-4" style="max-width:900px;width:100%;background:linear-gradient(135deg,rgba(232,121,249,.07),rgba(56,189,248,.06))">
+    <p style="text-align:center;font-size:17px">💡 Testing in a simulator before buying physical parts saves time, money, and frustration.</p>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 3 — ARDUINO LANGUAGE & SKETCH
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="2">
+  <div class="eyebrow">Core Concept</div>
+  <div class="slide-title">The Arduino <span>Language &amp; Sketch</span></div>
+  <div class="grid-2 w-full" style="max-width:920px;align-items:start">
+    <div class="card">
+      <h3>📝 What is a Sketch?</h3>
+      <p>A <strong>sketch</strong> is the official name for an Arduino code file. It is written in <strong>C++</strong> with built-in hardware-control methods that make it beginner-friendly.</p>
+      <div class="card-inset mt-3">
+        <h4>The Compile &amp; Upload Flow</h4>
+        <div style="display:flex;flex-direction:column;gap:9px;margin-top:8px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="badge purple" style="padding:4px 11px;font-size:14px">1</span>
+            <span style="font-size:16px">You write human-readable <strong>C++ code</strong></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="badge blue" style="padding:4px 11px;font-size:14px">2</span>
+            <span style="font-size:16px">IDE <strong>compiles</strong> it → machine language (binary)</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="badge green" style="padding:4px 11px;font-size:14px">3</span>
+            <span style="font-size:16px"><strong>Flashed</strong> to MCU's Flash/EEPROM memory</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="badge orange" style="padding:4px 11px;font-size:14px">4</span>
+            <span style="font-size:16px">Board runs the sketch <strong>independently</strong>, forever</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>🔑 Every Sketch has Two Mandatory Functions</h3>
+      <div class="card-inset mt-2" style="font-family:monospace;font-size:15px;line-height:1.8">
+        <span style="color:#ff7b72">void</span> <span style="color:#d2a8ff">setup</span>() {<br>
+        &nbsp;&nbsp;<span style="color:#8b949e;font-style:italic">// Runs ONCE on power-up</span><br>
+        &nbsp;&nbsp;<span style="color:#8b949e;font-style:italic">// Pin modes, serial begin,</span><br>
+        &nbsp;&nbsp;<span style="color:#8b949e;font-style:italic">// LCD init, etc.</span><br>
+        }<br><br>
+        <span style="color:#ff7b72">void</span> <span style="color:#d2a8ff">loop</span>() {<br>
+        &nbsp;&nbsp;<span style="color:#8b949e;font-style:italic">// Repeats FOREVER</span><br>
+        &nbsp;&nbsp;<span style="color:#8b949e;font-style:italic">// This IS the MCU's</span><br>
+        &nbsp;&nbsp;<span style="color:#8b949e;font-style:italic">// endless cycle</span><br>
+        }
+      </div>
+      <div class="card-inset mt-3" style="border-left:3px solid var(--accent4)">
+        <p style="font-size:16px">⚠️ <strong style="color:var(--accent4)">Key rule:</strong> Arduino Uno can only run <strong>one sketch at a time</strong> — no OS means no multitasking.</p>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 4 — WOKWI INTERFACE
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="3">
+  <div class="eyebrow">Wokwi Simulator</div>
+  <div class="slide-title">The <span>Wokwi</span> Interface</div>
+  <div style="max-width:940px;width:100%">
+    <!-- Wokwi UI mockup -->
+    <div class="wokwi-mock w-full" style="margin-bottom:18px">
+      <div class="wokwi-bar">
+        <div class="wokwi-dot" style="background:#f87171"></div>
+        <div class="wokwi-dot" style="background:#fbbf24"></div>
+        <div class="wokwi-dot" style="background:#34d399"></div>
+        <span class="wokwi-title">wokwi.com — Calc_Activity</span>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+          <div style="background:#2d2d5a;border-radius:6px;padding:4px 10px;font-size:13px;color:#a78bfa">📚 Library Manager</div>
+          <div style="background:#1a3a1a;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#34d399;font-weight:800">▶</div>
+        </div>
+      </div>
+      <div class="wokwi-body" style="min-height:140px">
+        <div class="wokwi-left">
+          <div class="tab-row">
+            <div class="tab active">sketch.ino</div>
+            <div class="tab">diagram.json</div>
+          </div>
+          <div style="font-family:monospace;font-size:12px;color:#8b949e;line-height:1.7">
+            <span style="color:#ff7b72">#include</span> <span style="color:#a5d6ff">&lt;LiquidCrystal.h&gt;</span><br>
+            <span style="color:#ff7b72">#include</span> <span style="color:#a5d6ff">&lt;Keypad.h&gt;</span><br><br>
+            <span style="color:#ff7b72">void</span> <span style="color:#d2a8ff">setup</span>() { <span style="color:#8b949e">// init</span> }<br>
+            <span style="color:#ff7b72">void</span> <span style="color:#d2a8ff">loop</span>()  { <span style="color:#8b949e">// run</span> }<br>
+            <span style="color:#38bdf8;font-size:11px">✦ autocomplete enabled</span>
+          </div>
+        </div>
+        <div class="wokwi-right" style="flex-direction:column;gap:12px">
+          <div style="background:#1a2a1a;border-radius:8px;padding:10px 16px;border:1px solid rgba(52,211,153,.3)">
+            <div style="font-size:11px;color:#34d399;font-family:monospace;text-align:center">[ Hello, Wokwi! ]</div>
+            <div style="font-size:11px;color:#34d399;font-family:monospace;text-align:center">[ 1 2 3 + ]</div>
+          </div>
+          <div style="font-size:13px;color:#8b949e;text-align:center">Virtual Simulator →</div>
+          <div style="background:#1a1a2e;border-radius:6px;padding:6px 12px;display:flex;align-items:center;gap:8px">
+            <span style="font-size:16px;color:#a78bfa">＋</span>
+            <span style="font-size:12px;color:#8b949e">Add component</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="grid-2 w-full" style="gap:14px">
+      <div class="card-inset" style="border-left:3px solid var(--accent)">
+        <h4 style="color:var(--accent)">Left Panel — Code Editor</h4>
+        <p style="font-size:16px">Tabbed files: <code>sketch.ino</code> + <code>diagram.json</code>. Features <strong>auto-complete</strong> to speed up coding.</p>
+      </div>
+      <div class="card-inset" style="border-left:3px solid var(--accent2)">
+        <h4 style="color:var(--accent2)">Right Panel — Visual Simulator</h4>
+        <p style="font-size:16px">Interactive virtual breadboard. Click buttons, slide switches. Can mimic <strong>button bounce</strong>. Click ▶ to run.</p>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 5 — ADDING COMPONENTS & diagram.json
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="4">
+  <div class="eyebrow">Wokwi Deep-Dive</div>
+  <div class="slide-title">Components &amp; <span>diagram.json</span></div>
+  <div class="grid-2 w-full" style="max-width:920px;align-items:start">
+    <div class="card">
+      <h3>➕ Adding Components</h3>
+      <p>Two ways to add parts to your circuit:</p>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
+        <div class="card-inset" style="border-left:3px solid var(--accent)">
+          <h4 style="color:var(--accent)">Method 1 — Graphically</h4>
+          <p style="font-size:16px">Click the <strong style="color:var(--accent)">purple + icon</strong> in the toolbar. Search and add components from the menu. Fast for beginners.</p>
+        </div>
+        <div class="card-inset" style="border-left:3px solid var(--accent2)">
+          <h4 style="color:var(--accent2)">Method 2 — Via Code</h4>
+          <p style="font-size:16px">Edit the <code>diagram.json</code> tab directly to define components, positions, and wire connections. More precise.</p>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>📋 diagram.json — The Blueprint</h3>
+      <p>The <code>diagram.json</code> file is the <strong>definitive source of truth</strong> for your circuit's physical layout.</p>
+      <div class="card-inset mt-3" style="border-left:3px solid var(--warning)">
+        <p style="font-size:16px">⚠️ <strong style="color:var(--warning)">Wokwi does NOT have a graphical UI</strong> to change component values (e.g., resistor value, LED color).</p>
+        <p style="font-size:16px;margin-top:6px">To change a 220Ω resistor to 10kΩ, you <strong>must edit diagram.json manually</strong>.</p>
+      </div>
+      <div class="card-inset mt-3" style="font-family:monospace;font-size:13px;color:var(--text-muted);line-height:1.7">
+        { <span style="color:#ffa657">"type"</span>: <span style="color:#a5d6ff">"wokwi-resistor"</span>,<br>
+        &nbsp;&nbsp;<span style="color:#ffa657">"attrs"</span>: { <span style="color:#ffa657">"value"</span>: <span style="color:#a5d6ff">"<span style="color:var(--accent3)">10000</span>"</span> } }
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 6 — LIBRARIES
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="5">
+  <div class="eyebrow">Advanced Feature</div>
+  <div class="slide-title">Loading <span>External Libraries</span></div>
+  <div style="max-width:880px;width:100%">
+    <div class="card" style="margin-bottom:18px;background:linear-gradient(135deg,rgba(232,121,249,.07),rgba(56,189,248,.05))">
+      <p style="font-size:17px">For advanced projects (LCD screens, matrix keypads, servos), you need to import <strong>external libraries</strong> that extend the base C++ functionality.</p>
+    </div>
+    <div class="grid-3 w-full" style="margin-bottom:18px">
+      <div class="card" style="text-align:center">
+        <div style="font-size:36px;margin-bottom:10px">🖥️</div>
+        <h3 style="font-size:17px">LiquidCrystal</h3>
+        <p style="font-size:15px;color:var(--text-muted)">Controls 16×2 LCD displays via parallel or I2C wiring</p>
+      </div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:36px;margin-bottom:10px">⌨️</div>
+        <h3 style="font-size:17px">Keypad</h3>
+        <p style="font-size:15px;color:var(--text-muted)">Reads input from 4×4 matrix membrane keypads</p>
+      </div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:36px;margin-bottom:10px">🔧</div>
+        <h3 style="font-size:17px">Servo</h3>
+        <p style="font-size:15px;color:var(--text-muted)">Controls servo motors for robotics &amp; automation</p>
+      </div>
+    </div>
+    <div class="grid-2 w-full" style="gap:14px">
+      <div class="card-inset" style="border-left:3px solid var(--accent)">
+        <h4 style="color:var(--accent)">How to load in Wokwi</h4>
+        <p style="font-size:16px">Click the <strong>Library Manager tab</strong> above the code editor → search for the library name → click to add it to your project.</p>
+      </div>
+      <div class="card-inset" style="border-left:3px solid var(--accent2)">
+        <h4 style="color:var(--accent2)">Can't find it?</h4>
+        <p style="font-size:16px">If a library isn't in the internal search, you can <strong>upload a .zip archive</strong> of the library directly into Wokwi.</p>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 7 — UNO SPECS
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="6">
+  <div class="eyebrow">Hardware Reference</div>
+  <div class="slide-title">Arduino Uno <span>Specs &amp; Pins</span></div>
+  <div style="max-width:900px;width:100%">
+    <div class="grid-2 w-full" style="align-items:start">
+      <div class="card">
+        <h3>📌 Pin Overview</h3>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-top:4px">
+          <div class="card-inset" style="border-left:3px solid var(--accent3)">
+            <h4 style="color:var(--accent3)">14 Digital I/O Pins</h4>
+            <p style="font-size:16px">Can read (HIGH/LOW) or write digital signals. <strong>6 of these also support PWM</strong> (analog-like output).</p>
+          </div>
+          <div class="card-inset" style="border-left:3px solid var(--accent2)">
+            <h4 style="color:var(--accent2)">6 Analog Input Pins (A0–A5)</h4>
+            <p style="font-size:16px">Read variable voltage (0–5V) via ADC. Used for sensors, potentiometers, etc.</p>
+          </div>
+          <div class="card-inset" style="border-left:3px solid var(--accent)">
+            <h4 style="color:var(--accent)">I2C on A4 (SDA) &amp; A5 (SCL)</h4>
+            <p style="font-size:16px">Analog pins A4 &amp; A5 double as the I2C communication bus — used for LCDs, sensors, etc.</p>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <!-- Arduino Uno pin diagram SVG -->
+        <h3>🗺️ Board Overview</h3>
+        <svg viewBox="0 0 260 300" width="100%" style="margin-top:8px" role="img" aria-label="Arduino Uno board overview diagram">
+          <!-- board outline -->
+          <rect x="20" y="20" width="220" height="260" rx="12" fill="rgba(52,211,153,.06)" stroke="var(--accent3)" stroke-width="1.8"/>
+          <text x="130" y="50" text-anchor="middle" font-size="13" fill="var(--accent3)" font-family="monospace" font-weight="700">Arduino Uno</text>
+          <text x="130" y="64" text-anchor="middle" font-size="9"  fill="var(--text-muted)" font-family="monospace">ATmega328P · 16 MHz</text>
+          <!-- digital pins top -->
+          <text x="130" y="90" text-anchor="middle" font-size="10" fill="var(--accent)" font-family="monospace">Digital Pins 0–13</text>
+          <rect x="35" y="95" width="190" height="14" rx="3" fill="rgba(232,121,249,.12)" stroke="var(--accent)" stroke-width="1"/>
+          ${Array.from({length:14},(_,i)=>`<rect x="${38+i*13}" y="97" width="9" height="10" rx="1" fill="none" stroke="var(--accent)" stroke-width="1.2"/>`).join('')}
+          <!-- PWM label -->
+          <text x="130" y="122" text-anchor="middle" font-size="9" fill="var(--accent)" font-family="monospace">★ Pins 3,5,6,9,10,11 = PWM</text>
+          <!-- USB -->
+          <rect x="40" y="145" width="34" height="22" rx="4" fill="rgba(96,165,250,.15)" stroke="var(--accent2)" stroke-width="1.5"/>
+          <text x="57" y="160" text-anchor="middle" font-size="9" fill="var(--accent2)" font-family="monospace">USB</text>
+          <!-- Power jack -->
+          <rect x="85" y="145" width="34" height="22" rx="4" fill="rgba(251,191,36,.12)" stroke="var(--warning)" stroke-width="1.5"/>
+          <text x="102" y="160" text-anchor="middle" font-size="9" fill="var(--warning)" font-family="monospace">PWR</text>
+          <!-- Reset -->
+          <circle cx="160" cy="156" r="10" fill="rgba(248,113,113,.12)" stroke="var(--danger)" stroke-width="1.5"/>
+          <text x="160" y="160" text-anchor="middle" font-size="8" fill="var(--danger)" font-family="monospace">RST</text>
+          <!-- MCU chip -->
+          <rect x="90" y="185" width="80" height="60" rx="5" fill="rgba(52,211,153,.1)" stroke="var(--accent3)" stroke-width="1.5"/>
+          <text x="130" y="210" text-anchor="middle" font-size="9" fill="var(--accent3)" font-family="monospace">ATmega328P</text>
+          <text x="130" y="224" text-anchor="middle" font-size="8" fill="var(--text-muted)" font-family="monospace">MCU Chip</text>
+          <!-- Analog pins bottom -->
+          <text x="130" y="262" text-anchor="middle" font-size="10" fill="var(--accent2)" font-family="monospace">Analog Pins A0–A5</text>
+          <rect x="60" y="267" width="140" height="10" rx="2" fill="rgba(56,189,248,.1)" stroke="var(--accent2)" stroke-width="1"/>
+          ${['A0','A1','A2','A3','A4','A5'].map((l,i)=>`<text x="${70+i*22}" y="275" font-size="7" fill="var(--accent2)" font-family="monospace" text-anchor="middle">${l}</text>`).join('')}
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 8 — ANALOGIES
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="7">
+  <div class="eyebrow">Analogies</div>
+  <div class="slide-title">Making It <span>Click</span></div>
+  <div class="grid-2 w-full" style="max-width:900px;align-items:start">
+    <div class="card">
+      <h3>✈️ Wokwi = Virtual Flight Simulator</h3>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px">
+        <div class="card-inset">
+          <h4>Real Arduino Project</h4>
+          <p style="font-size:16px">Like learning to fly a real airplane. A mistake (short circuit) can <strong>fry your expensive components</strong> — there's no undo.</p>
+        </div>
+        <div style="text-align:center;font-size:22px">VS.</div>
+        <div class="card-inset" style="border:1.5px solid rgba(56,189,248,.3)">
+          <h4 style="color:var(--accent2)">Wokwi Simulator</h4>
+          <p style="font-size:16px">Like a <strong>flight simulator for pilots</strong>. Highly accurate, interactive environment. Make every mistake safely — no components fry, no money lost.</p>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>📐 diagram.json = Engineering Blueprint</h3>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px">
+        <div class="card-inset">
+          <h4>Drag-and-Drop UI</h4>
+          <p style="font-size:16px">Like sketching a rough <strong>floor plan on a napkin</strong>. Quick and intuitive but imprecise for fine details.</p>
+        </div>
+        <div class="card-inset" style="border:1.5px solid rgba(232,121,249,.3)">
+          <h4 style="color:var(--accent)">diagram.json</h4>
+          <p style="font-size:16px">The <strong>precise, formal technical blueprint</strong>. Uses strict JSON to define exactly where every wire, resistor, and pin must go. The definitive source of truth.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 9 — USE CASE: IoT RAPID PROTOTYPING
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="8">
+  <div class="eyebrow">Use Case</div>
+  <div class="slide-title">IoT <span>Rapid Prototyping</span></div>
+  <div style="max-width:880px;width:100%">
+    <div class="card" style="margin-bottom:18px;background:linear-gradient(135deg,rgba(232,121,249,.07),rgba(52,211,153,.06))">
+      <p style="font-size:17px;text-align:center">Imagine you're a freelance hardware engineer hired to build a <strong>smart plant watering system</strong>.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:grid;grid-template-columns:48px 1fr;gap:0 16px;align-items:center">
+        <div style="width:48px;height:48px;border-radius:50%;background:var(--card);box-shadow:4px 4px 10px var(--shadow-dark),-2px -2px 7px var(--shadow-light);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:var(--accent)">❌</div>
+        <div class="card" style="padding:14px 20px">
+          <h4 style="color:var(--danger)">Old Way — Physical First</h4>
+          <p style="font-size:16px">Buy $100+ of sensors, wires, MCUs. Spend 2 days physically debugging short circuits, wrong wiring, and fried components. Expensive and time-consuming.</p>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:48px 1fr;gap:0 16px;align-items:center">
+        <div style="width:48px;height:48px;border-radius:50%;background:var(--card);box-shadow:4px 4px 10px var(--shadow-dark),-2px -2px 7px var(--shadow-light);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:var(--accent3)">✅</div>
+        <div class="card" style="padding:14px 20px;border-left:3px solid var(--accent3)">
+          <h4 style="color:var(--accent3)">Wokwi Way — Digital Prototype First</h4>
+          <p style="font-size:16px">Build the entire circuit in Wokwi. Code the logic in C++, test with virtual rain sensors, verify the pump triggers correctly — in <strong>1 hour</strong>. Zero hardware cost.</p>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:48px 1fr;gap:0 16px;align-items:center">
+        <div style="width:48px;height:48px;border-radius:50%;background:var(--card);box-shadow:4px 4px 10px var(--shadow-dark),-2px -2px 7px var(--shadow-light);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:var(--accent2)">🛒</div>
+        <div class="card" style="padding:14px 20px">
+          <h4 style="color:var(--accent2)">Then — Buy Physical Parts</h4>
+          <p style="font-size:16px">Only after the digital prototype is verified and working do you order the physical components. No surprises, no wasted budget.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 10 — CALC PROJECT OVERVIEW
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="9">
+  <div class="eyebrow">Lab · Project 1</div>
+  <div class="slide-title">The Arduino <span>Calculator</span> Project</div>
+  <div class="grid-2-wide w-full" style="max-width:940px;align-items:start">
+    <div class="card">
+      <h3>🧮 Calc_Activity Overview</h3>
+      <p>Build a fully functioning calculator using:</p>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+        <div class="card-inset"><span style="font-size:16px">🖥️ <strong>16×2 LCD screen</strong> — display input &amp; results</span></div>
+        <div class="card-inset"><span style="font-size:16px">⌨️ <strong>4×4 Matrix Keypad</strong> — number &amp; operator input</span></div>
+        <div class="card-inset"><span style="font-size:16px">🔌 <strong>Arduino Uno</strong> — the brain</span></div>
+      </div>
+      <div class="card-inset mt-3" style="border-left:3px solid var(--accent)">
+        <h4 style="color:var(--accent)">Required Libraries</h4>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <span class="badge purple" style="font-size:14px;padding:5px 12px">LiquidCrystal</span>
+          <span class="badge blue"   style="font-size:14px;padding:5px 12px">Keypad</span>
+          <span class="badge green"  style="font-size:14px;padding:5px 12px">Servo</span>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>📋 Project Steps</h3>
+      <div style="display:flex;flex-direction:column;gap:9px;margin-top:4px">
+        ${[
+          ['purple','1','Open Wokwi → New Arduino Uno project → name it <strong>Calc_Activity</strong>'],
+          ['blue',  '2','Open Library Manager → add <strong>LiquidCrystal, Keypad, Servo</strong>'],
+          ['green', '3','Open <code>sketch.ino</code> → paste the calculator C++ code (next slide)'],
+          ['orange','4','Open <code>diagram.json</code> → paste the wiring JSON (slide after that)'],
+          ['yellow','5','Click ▶ Play → type <strong>12 + 34 =</strong> → LCD should show <strong>46</strong>!'],
+        ].map(([col,num,text])=>`
+          <div style="display:flex;align-items:flex-start;gap:12px">
+            <span class="badge ${col}" style="padding:4px 10px;font-size:14px;min-width:28px;justify-content:center;flex-shrink:0">${num}</span>
+            <span style="font-size:16px;line-height:1.5">${text}</span>
+          </div>`).join('')}
+      </div>
+      <div class="card-inset mt-3" style="border-left:3px solid var(--warning)">
+        <p style="font-size:15px">⚠️ Click the <strong>virtual keypad buttons</strong> with your mouse — not your physical keyboard!</p>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 11 — CALC CODE (sketch.ino)
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="10">
+  <div class="eyebrow">Lab · Project 1 — Code</div>
+  <div class="slide-title">Calculator <span>sketch.ino</span></div>
+  <div style="max-width:960px;width:100%;height:min(560px,62vh);display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch">
+    <div class="code-wrap" style="height:100%">
+      <div class="code-header">
+        <span class="code-lang">sketch.ino — Part 1 (setup &amp; declarations)</span>
+        <button class="copy-btn" onclick="copyCode(this,'calc-code-a')">Copy</button>
+      </div>
+      <pre id="calc-code-a"><span class="inc">#include</span> <span class="str">&lt;LiquidCrystal.h&gt;</span>
+<span class="inc">#include</span> <span class="str">&lt;Keypad.h&gt;</span>
+<span class="inc">#include</span> <span class="str">&lt;Servo.h&gt;</span>
+
+<span class="cm">// LCD: RS, EN, D4, D5, D6, D7</span>
+LiquidCrystal <span class="fn">lcd</span>(<span class="num">12</span>, <span class="num">11</span>, <span class="num">10</span>, <span class="num">9</span>, <span class="num">8</span>, <span class="num">7</span>);
+
+<span class="cm">// Keypad layout</span>
+<span class="kw">const</span> <span class="tp">byte</span> KEYPAD_ROWS = <span class="num">4</span>;
+<span class="kw">const</span> <span class="tp">byte</span> KEYPAD_COLS = <span class="num">4</span>;
+<span class="tp">byte</span> rowPins[KEYPAD_ROWS] = {<span class="num">5</span>, <span class="num">4</span>, <span class="num">3</span>, <span class="num">2</span>};
+<span class="tp">byte</span> colPins[KEYPAD_COLS] = {A3, A2, A1, A0};
+
+<span class="tp">char</span> keys[KEYPAD_ROWS][KEYPAD_COLS] = {
+  {<span class="str">'1'</span>, <span class="str">'2'</span>, <span class="str">'3'</span>, <span class="str">'+'</span>},
+  {<span class="str">'4'</span>, <span class="str">'5'</span>, <span class="str">'6'</span>, <span class="str">'-'</span>},
+  {<span class="str">'7'</span>, <span class="str">'8'</span>, <span class="str">'9'</span>, <span class="str">'*'</span>},
+  {<span class="str">'.'</span>, <span class="str">'0'</span>, <span class="str">'='</span>, <span class="str">'/'</span>}
+};
+
+Keypad keypad = <span class="fn">Keypad</span>(
+  <span class="fn">makeKeymap</span>(keys),
+  rowPins, colPins,
+  KEYPAD_ROWS, KEYPAD_COLS
+);
+
+<span class="kw">char</span> operation = <span class="num">0</span>;
+String memory = <span class="str">""</span>;
+String current = <span class="str">""</span>;
+<span class="tp">bool</span> decimalPoint = <span class="kw">false</span>;
+
+<span class="kw">void</span> <span class="fn">setup</span>() {
+  Serial.<span class="fn">begin</span>(<span class="num">115200</span>);
+  lcd.<span class="fn">begin</span>(<span class="num">16</span>, <span class="num">2</span>);
+  lcd.<span class="fn">print</span>(<span class="str">"GoodArduinoCode"</span>);
+  lcd.<span class="fn">setCursor</span>(<span class="num">3</span>, <span class="num">1</span>);
+  String msg = <span class="str">"Calculator"</span>;
+  <span class="kw">for</span> (<span class="tp">byte</span> i = <span class="num">0</span>; i &lt; msg.<span class="fn">length</span>(); i++) {
+    lcd.<span class="fn">print</span>(msg[i]);
+    <span class="fn">delay</span>(<span class="num">50</span>);
+  }
+  <span class="fn">delay</span>(<span class="num">500</span>);
+  lcd.<span class="fn">clear</span>();
+  lcd.<span class="fn">cursor</span>();
+  lcd.<span class="fn">setCursor</span>(<span class="num">1</span>, <span class="num">0</span>);
+}</pre>
+    </div>
+    <div class="code-wrap" style="height:100%">
+      <div class="code-header">
+        <span class="code-lang">sketch.ino — Part 2 (logic &amp; loop)</span>
+        <button class="copy-btn" onclick="copyCode(this,'calc-code-b')">Copy</button>
+      </div>
+      <pre id="calc-code-b"><span class="kw">double</span> <span class="fn">calculate</span>(<span class="tp">char</span> op, <span class="kw">double</span> l, <span class="kw">double</span> r) {
+  <span class="kw">switch</span> (op) {
+    <span class="kw">case</span> <span class="str">'+'</span>: <span class="kw">return</span> l + r;
+    <span class="kw">case</span> <span class="str">'-'</span>: <span class="kw">return</span> l - r;
+    <span class="kw">case</span> <span class="str">'*'</span>: <span class="kw">return</span> l * r;
+    <span class="kw">case</span> <span class="str">'/'</span>: <span class="kw">return</span> l / r;
+  }
+}
+
+<span class="kw">void</span> <span class="fn">processInput</span>(<span class="tp">char</span> key) {
+  <span class="kw">if</span> (<span class="str">'-'</span> == key && current == <span class="str">""</span>) {
+    current = <span class="str">"-"</span>;
+    lcd.<span class="fn">print</span>(<span class="str">"-"</span>);
+    <span class="kw">return</span>;
+  }
+  <span class="kw">switch</span> (key) {
+    <span class="kw">case</span> <span class="str">'+'</span>: <span class="kw">case</span> <span class="str">'-'</span>:
+    <span class="kw">case</span> <span class="str">'*'</span>: <span class="kw">case</span> <span class="str">'/'</span>:
+      <span class="kw">if</span> (!operation) {
+        memory = current;
+        current = <span class="str">""</span>;
+      }
+      operation = key;
+      lcd.<span class="fn">setCursor</span>(<span class="num">0</span>, <span class="num">1</span>);
+      lcd.<span class="fn">print</span>(key);
+      <span class="kw">return</span>;
+    <span class="kw">case</span> <span class="str">'='</span>:
+      <span class="kw">float</span> L = memory.<span class="fn">toDouble</span>();
+      <span class="kw">float</span> R = current.<span class="fn">toDouble</span>();
+      memory = String(<span class="fn">calculate</span>(operation,L,R));
+      lcd.<span class="fn">clear</span>();
+      lcd.<span class="fn">setCursor</span>(<span class="num">0</span>, <span class="num">0</span>);
+      lcd.<span class="fn">print</span>(memory);
+      lcd.<span class="fn">setCursor</span>(<span class="num">0</span>, <span class="num">1</span>);
+      lcd.<span class="fn">print</span>(operation);
+      operation = <span class="num">0</span>;
+      current = <span class="str">""</span>;
+      <span class="kw">return</span>;
+    <span class="kw">case</span> <span class="str">'.'</span>:
+      <span class="kw">if</span> (current.<span class="fn">indexOf</span>(<span class="str">'.'</span>) == -<span class="num">1</span>) {
+        current += key; lcd.<span class="fn">print</span>(key);
+      }
+      <span class="kw">return</span>;
+    <span class="kw">default</span>:
+      <span class="kw">if</span> (!operation) memory = <span class="str">""</span>;
+      <span class="kw">if</span> (current == <span class="str">"0"</span>) current = key;
+      <span class="kw">else</span> current += key;
+      lcd.<span class="fn">print</span>(key);
+  }
+}
+
+<span class="kw">void</span> <span class="fn">loop</span>() {
+  <span class="kw">if</span> (millis() / <span class="num">250</span> % <span class="num">2</span> == <span class="num">0</span>)
+    lcd.<span class="fn">cursor</span>();
+  <span class="kw">else</span>
+    lcd.<span class="fn">noCursor</span>();
+  <span class="tp">char</span> key = keypad.<span class="fn">getKey</span>();
+  <span class="kw">if</span> (key) <span class="fn">processInput</span>(key);
+}</pre>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 12 — CALC diagram.json + WIRING
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="11">
+  <div class="eyebrow">Lab · Project 1 — Wiring</div>
+  <div class="slide-title">Calculator <span>diagram.json</span></div>
+  <div style="max-width:960px;width:100%;height:min(520px,60vh);display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch">
+    <div class="code-wrap" style="height:100%">
+      <div class="code-header">
+        <span class="code-lang">diagram.json</span>
+        <button class="copy-btn" onclick="copyCode(this,'calc-json')">Copy</button>
+      </div>
+      <pre id="calc-json">{
+  <span class="prop">"version"</span>: <span class="num">1</span>,
+  <span class="prop">"author"</span>: <span class="str">"wokwi"</span>,
+  <span class="prop">"editor"</span>: <span class="str">"wokwi"</span>,
+  <span class="prop">"parts"</span>: [
+    {
+      <span class="prop">"type"</span>: <span class="str">"wokwi-arduino-uno"</span>,
+      <span class="prop">"id"</span>: <span class="str">"uno"</span>,
+      <span class="prop">"top"</span>: <span class="num">-200</span>,
+      <span class="prop">"left"</span>: <span class="num">0</span>,
+      <span class="prop">"attrs"</span>: {}
+    },
+    {
+      <span class="prop">"type"</span>: <span class="str">"wokwi-membrane-keypad"</span>,
+      <span class="prop">"id"</span>: <span class="str">"keypad"</span>,
+      <span class="prop">"top"</span>: <span class="num">100</span>, <span class="prop">"left"</span>: <span class="num">0</span>,
+      <span class="prop">"attrs"</span>: {
+        <span class="prop">"keys"</span>: <span class="str">"123A456B789C*0#D"</span>
+      }
+    },
+    {
+      <span class="prop">"type"</span>: <span class="str">"wokwi-lcd1602"</span>,
+      <span class="prop">"id"</span>: <span class="str">"lcd"</span>,
+      <span class="prop">"top"</span>: <span class="num">-20</span>, <span class="prop">"left"</span>: <span class="num">0</span>,
+      <span class="prop">"attrs"</span>: { <span class="prop">"pins"</span>: <span class="str">"i2c"</span> }
+    },
+    {
+      <span class="prop">"type"</span>: <span class="str">"wokwi-resistor"</span>,
+      <span class="prop">"id"</span>: <span class="str">"r1"</span>,
+      <span class="prop">"top"</span>: <span class="num">220</span>, <span class="prop">"left"</span>: <span class="num">0</span>,
+      <span class="prop">"attrs"</span>: { <span class="prop">"value"</span>: <span class="str">"220"</span> }
+    }
+  ],
+  <span class="prop">"connections"</span>: [
+    [ <span class="str">"uno:5V"</span>,  <span class="str">"lcd:VCC"</span>, <span class="str">"red"</span>,   [...] ],
+    [ <span class="str">"uno:GND"</span>, <span class="str">"lcd:GND"</span>, <span class="str">"black"</span>, [...] ],
+    [ <span class="str">"uno:A4"</span>,  <span class="str">"lcd:SDA"</span>, <span class="str">"green"</span>, [...] ],
+    [ <span class="str">"uno:A5"</span>,  <span class="str">"lcd:SCL"</span>, <span class="str">"blue"</span>,  [...] ]
+  ]
+}</pre>
+    </div>
+    <div class="flex-col" style="gap:14px;height:100%">
+      <div class="card">
+        <h3>🔌 Component Map</h3>
+        <div style="display:flex;flex-direction:column;gap:9px;margin-top:4px">
+          <div style="display:flex;align-items:center;gap:10px"><span style="font-size:18px">🖥️</span><span style="font-size:16px"><strong>wokwi-lcd1602</strong> → I2C mode (A4=SDA, A5=SCL)</span></div>
+          <div style="display:flex;align-items:center;gap:10px"><span style="font-size:18px">⌨️</span><span style="font-size:16px"><strong>wokwi-membrane-keypad</strong> → rows: pins 2–5, cols: A0–A3</span></div>
+          <div style="display:flex;align-items:center;gap:10px"><span style="font-size:18px">🔧</span><span style="font-size:16px"><strong>wokwi-resistor</strong> → 220Ω (attr value: "220")</span></div>
+        </div>
+      </div>
+      <div class="card" style="flex:1">
+        <h3>💡 Code Breakdown</h3>
+        <ul style="font-size:15px">
+          <li><code>setup()</code> — init LCD, show splash "Calculator" animation, clear screen</li>
+          <li><code>loop()</code> — blink cursor, poll keypad with <code>getKey()</code></li>
+          <li><code>processInput()</code> — handles operators, decimal points, equals sign</li>
+          <li><code>calculate()</code> — performs ÷ × − + via switch statement</li>
+          <li>Negative numbers: leading <code>-</code> when <code>current == ""</code></li>
+        </ul>
+      </div>
+      <div class="card-inset" style="border-left:3px solid var(--accent3)">
+        <p style="font-size:16px">✅ Test: type <strong>12 + 34 =</strong> → LCD shows <strong>46</strong></p>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 13 — PROJECT 2: ESP32 LED BLINK
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="12">
+  <div class="eyebrow">Lab · Project 2 — Bonus</div>
+  <div class="slide-title">ESP32 LED Blink — <span>Led_Activity</span></div>
+  <div style="max-width:900px;width:100%;display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start">
+    <div class="flex-col" style="gap:14px">
+      <div class="card">
+        <h3>📋 Steps</h3>
+        <div style="display:flex;flex-direction:column;gap:9px;margin-top:4px">
+          ${[
+            ['blue',  '1','Open Wokwi → new project → select <strong>ESP32</strong> board'],
+            ['green', '2','Name the project <strong>Led_Activity</strong>'],
+            ['purple','3','Paste the code into <code>sketch.ino</code>'],
+            ['orange','4','Click ▶ Play → LED blinks every 0.5 seconds'],
+            ['yellow','5','<strong>Challenge:</strong> change <code>delay(500)</code> to <code>delay(100)</code> — 5× faster!'],
+          ].map(([col,num,text])=>`
+            <div style="display:flex;align-items:flex-start;gap:12px">
+              <span class="badge ${col}" style="padding:4px 10px;font-size:14px;min-width:28px;justify-content:center;flex-shrink:0">${num}</span>
+              <span style="font-size:16px;line-height:1.5">${text}</span>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="card-inset" style="border-left:3px solid var(--accent2)">
+        <h4 style="color:var(--accent2)">ESP32 vs Uno</h4>
+        <p style="font-size:15px;color:var(--text-muted)">The ESP32 is more powerful than the Uno — it has built-in <strong>Wi-Fi &amp; Bluetooth</strong>, dual-core processor, and more GPIO pins. Perfect for IoT projects!</p>
+      </div>
+    </div>
+    <div class="code-wrap" style="min-height:280px">
+      <div class="code-header">
+        <span class="code-lang">sketch.ino — ESP32 Blink</span>
+        <button class="copy-btn" onclick="copyCode(this,'esp-code')">Copy</button>
+      </div>
+      <pre id="esp-code"><span class="cm">// LED Blink on ESP32
+// Built-in LED is on pin 2</span>
+
+<span class="tp">int</span> led = <span class="num">2</span>;
+
+<span class="kw">void</span> <span class="fn">setup</span>() {
+  <span class="cm">// Set pin 2 as output</span>
+  <span class="fn">pinMode</span>(led, OUTPUT);
+}
+
+<span class="kw">void</span> <span class="fn">loop</span>() {
+  <span class="cm">// Turn LED ON</span>
+  <span class="fn">digitalWrite</span>(led, HIGH);
+  <span class="fn">delay</span>(<span class="num">500</span>);  <span class="cm">// 500ms on</span>
+
+  <span class="cm">// Turn LED OFF</span>
+  <span class="fn">digitalWrite</span>(led, LOW);
+  <span class="fn">delay</span>(<span class="num">500</span>);  <span class="cm">// 500ms off</span>
+
+  <span class="cm">// Challenge: change 500 to 100!</span>
+}</pre>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 14 — KEY QUOTES
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="13">
+  <div class="eyebrow">Key Takeaways</div>
+  <div class="slide-title">Key <span>Insights</span></div>
+  <div style="max-width:820px;width:100%;display:flex;flex-direction:column;gap:16px">
+    <div class="card"><div style="border-left:4px solid var(--accent);padding-left:20px;font-size:18px;font-style:italic;color:var(--text-muted);line-height:1.7">"Arduino sketches are written in <strong>C++</strong> and compiled into machine language. The code file is called a <em>sketch</em>, and every sketch must have a <code>setup()</code> and a <code>loop()</code> function."</div></div>
+    <div class="card"><div style="border-left:4px solid var(--accent2);padding-left:20px;font-size:18px;font-style:italic;color:var(--text-muted);line-height:1.7">"Wokwi is a dual-panel tool: the <strong>left panel is your code editor</strong> (<code>sketch.ino</code> + <code>diagram.json</code>), and the <strong>right panel is your virtual circuit</strong>. Click ▶ to run."</div></div>
+    <div class="card"><div style="border-left:4px solid var(--accent3);padding-left:20px;font-size:18px;font-style:italic;color:var(--text-muted);line-height:1.7">"<strong>diagram.json is the blueprint</strong> of your circuit. To change a component's value (like resistor from 220Ω to 10kΩ), you must edit diagram.json directly — Wokwi has no graphical property editor."</div></div>
+    <div class="card"><div style="border-left:4px solid var(--accent4);padding-left:20px;font-size:18px;font-style:italic;color:var(--text-muted);line-height:1.7">"<strong>Libraries drive complexity.</strong> Add LiquidCrystal, Keypad, Servo, and others via Wokwi's Library Manager. If it's not in the search, upload it as a .zip file."</div></div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 15 — RECAP
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="14">
+  <div class="eyebrow">Before Activities</div>
+  <div class="slide-title">Quick <span>Recap</span></div>
+  <div class="grid-2 w-full" style="max-width:880px;align-items:start">
+    <div class="card">
+      <h3>Core Concepts</h3>
+      <ul>
+        <li><strong>Sketch</strong> = Arduino code file (C++ based)</li>
+        <li><code>setup()</code> = runs once at power-on</li>
+        <li><code>loop()</code> = repeats forever (the MCU cycle)</li>
+        <li>Arduino Uno: <strong>14 digital pins, 6 analog pins</strong></li>
+        <li>Only <strong>1 sketch</strong> can run at a time (no OS)</li>
+        <li><strong>Libraries</strong> extend C++ functionality</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Wokwi Key Points</h3>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+        <div class="badge purple w-full" style="justify-content:flex-start">💻 Left panel = sketch.ino + diagram.json</div>
+        <div class="badge blue w-full"   style="justify-content:flex-start">🖥️ Right panel = visual circuit simulator</div>
+        <div class="badge orange w-full" style="justify-content:flex-start">📋 diagram.json = the circuit blueprint</div>
+        <div class="badge green w-full"  style="justify-content:flex-start">📚 Library Manager = add external libs</div>
+        <div class="badge yellow w-full" style="justify-content:flex-start">▶ Green Play = start simulation</div>
+      </div>
+    </div>
+  </div>
+  <div class="card mt-4" style="max-width:880px;width:100%;background:linear-gradient(135deg,rgba(232,121,249,.08),rgba(52,211,153,.06));text-align:center">
+    <p style="font-size:18px">🧪 Activity time — test your knowledge! ↓</p>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 16 — MCQ 1–4
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="15">
+  <div class="eyebrow">Skill-Building Check</div>
+  <div class="slide-title">Multiple Choice <span>Questions</span> (1–4)</div>
+  <div class="grid-2 w-full" style="max-width:960px;align-items:start">
+    <div class="mcq-card">
+      <div class="mcq-q">1. What is the official name given to an Arduino code file?</div>
+      <div class="mcq-opts">
+        <div class="mcq-opt">A. A Script</div>
+        <div class="mcq-opt">B. A Module</div>
+        <div class="mcq-opt">C. A Sketch</div>
+        <div class="mcq-opt">D. A Routine</div>
+      </div>
+    </div>
+    <div class="mcq-card">
+      <div class="mcq-q">2. To change a resistor from 220Ω to 10kΩ in Wokwi, where must you do it?</div>
+      <div class="mcq-opts">
+        <div class="mcq-opt">A. Right-click the resistor in the visual simulator</div>
+        <div class="mcq-opt">B. Use the properties menu in the purple + icon</div>
+        <div class="mcq-opt">C. Manually edit the diagram.json file</div>
+        <div class="mcq-opt">D. Adjust the value inside sketch.ino</div>
+      </div>
+    </div>
+    <div class="mcq-card">
+      <div class="mcq-q">3. The Arduino Uno can run how many different programs at the same time?</div>
+      <div class="mcq-opts">
+        <div class="mcq-opt">A. 1 (One)</div>
+        <div class="mcq-opt">B. 2 (Two)</div>
+        <div class="mcq-opt">C. 4 (Four)</div>
+        <div class="mcq-opt">D. Unlimited (depends on memory)</div>
+      </div>
+    </div>
+    <div class="mcq-card">
+      <div class="mcq-q">4. How do you load external libraries like Keypad.h or LiquidCrystal.h in Wokwi?</div>
+      <div class="mcq-opts">
+        <div class="mcq-opt">A. Copy them into diagram.json</div>
+        <div class="mcq-opt">B. Use the Library Manager tab above the code editor</div>
+        <div class="mcq-opt">C. Drag them onto the virtual breadboard</div>
+        <div class="mcq-opt">D. They're built-in by default</div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 17 — MCQ 5–6
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="16">
+  <div class="eyebrow">Skill-Building Check</div>
+  <div class="slide-title">Multiple Choice <span>Questions</span> (5–6)</div>
+  <div class="grid-2 w-full" style="max-width:860px;align-items:start">
+    <div class="mcq-card">
+      <div class="mcq-q">5. When you want to run your simulation in Wokwi, you click the ___ button in the top-right corner.</div>
+      <div class="mcq-opts">
+        <div class="mcq-opt">A. Start / Green Play (▶)</div>
+        <div class="mcq-opt">B. Compile</div>
+        <div class="mcq-opt">C. Run (▶)</div>
+        <div class="mcq-opt">D. Upload</div>
+      </div>
+    </div>
+    <div class="mcq-card">
+      <div class="mcq-q">6. Which of the following is NOT a standard feature of the Arduino Uno?</div>
+      <div class="mcq-opts">
+        <div class="mcq-opt">A. 14 Digital I/O pins</div>
+        <div class="mcq-opt">B. 6 Analog input pins</div>
+        <div class="mcq-opt">C. 16 MHz ceramic resonator</div>
+        <div class="mcq-opt">D. Built-in Wi-Fi connectivity</div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 18 — ANSWER KEY
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="17">
+  <div class="eyebrow">Answer Key</div>
+  <div class="slide-title">Answers &amp; <span>Explanations</span></div>
+  <div style="max-width:860px;width:100%" class="inner-scroll">
+    <div class="ans-row">
+      <div class="ans-num">1</div>
+      <div class="ans-text"><span class="ans-correct">C — A Sketch.</span> In the Arduino ecosystem, a code file is formally called a sketch. It is written in C++ and saved with a <code>.ino</code> extension.</div>
+    </div>
+    <div class="ans-row">
+      <div class="ans-num">2</div>
+      <div class="ans-text"><span class="ans-correct">C — Manually edit the diagram.json file.</span> Wokwi does not offer a graphical properties editor. The diagram.json is the authoritative blueprint for all component attributes and wiring.</div>
+    </div>
+    <div class="ans-row">
+      <div class="ans-num">3</div>
+      <div class="ans-text"><span class="ans-correct">A — 1 (One).</span> Because the Arduino Uno uses a simple microcontroller processor without an operating system, it can only run one sketch at a time. No multitasking.</div>
+    </div>
+    <div class="ans-row">
+      <div class="ans-num">4</div>
+      <div class="ans-text"><span class="ans-correct">B — The Library Manager tab.</span> Click the Library Manager tab above the code editor, search for the library by name, and add it to extend your project's functionality. External .zip files also work.</div>
+    </div>
+    <div class="ans-row">
+      <div class="ans-num">5</div>
+      <div class="ans-text"><span class="ans-correct">A — Green Play button (▶).</span> The green play button in the top-right corner of the simulator view starts the interactive simulation. Note: it is not the same as the IDE's "Upload" button.</div>
+    </div>
+    <div class="ans-row" style="border-bottom:none">
+      <div class="ans-num">6</div>
+      <div class="ans-text"><span class="ans-correct">D — Built-in Wi-Fi is NOT a feature.</span> The Arduino Uno does not have Wi-Fi. For wireless connectivity you need an ESP32 or a Wi-Fi shield. The Uno features 14 digital pins, 6 analog pins, USB, and a 16 MHz resonator.</div>
+    </div>
+  </div>
+</div>`,
+
+/* ══════════════════════════════════════════════
+   SLIDE 19 — FINAL
+══════════════════════════════════════════════ */
+`<div class="slide" data-index="18" style="background:radial-gradient(ellipse at 50% 40%, #1a0025 0%, var(--bg) 70%)">
+  <div style="text-align:center;max-width:700px">
+    <!-- code terminal SVG -->
+    <svg width="90" height="90" viewBox="0 0 90 90" fill="none" style="margin:0 auto 20px;display:block" role="img" aria-label="Terminal icon">
+      <rect x="4" y="4" width="82" height="82" rx="16" fill="rgba(232,121,249,.1)" stroke="var(--accent)" stroke-width="2"/>
+      <circle cx="18" cy="20" r="4" fill="var(--danger)"/>
+      <circle cx="30" cy="20" r="4" fill="var(--warning)"/>
+      <circle cx="42" cy="20" r="4" fill="var(--accent3)"/>
+      <path d="M14 35L26 45L14 55" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M32 55h28" stroke="var(--accent3)" stroke-width="2.5" stroke-linecap="round"/>
+    </svg>
+    <div class="eyebrow" style="display:flex;justify-content:center">Module Complete!</div>
+    <h2 style="font-size:clamp(26px,4vw,46px);font-weight:800;margin-bottom:14px">M16 Done! <span style="color:var(--accent)">💻</span></h2>
+    <p style="font-size:18px;color:var(--text-muted);margin-bottom:28px;max-width:580px;margin-left:auto;margin-right:auto">"The greatest engineers don't just build — they prototype, test, iterate, and verify. Wokwi gives you the power to do all four before spending a single peso on hardware."</p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:22px">
+      <span class="badge purple">C++ Sketches ✓</span>
+      <span class="badge blue">Wokwi Interface ✓</span>
+      <span class="badge green">diagram.json ✓</span>
+      <span class="badge orange">Libraries ✓</span>
+      <span class="badge yellow">Calculator + ESP32 ✓</span>
+    </div>
+    <div style="background:var(--card);border-radius:var(--radius-sm);padding:13px 20px;box-shadow:inset 3px 3px 8px var(--shadow-dark),inset -2px -2px 6px var(--shadow-light);display:inline-block">
+      <p style="font-size:16px;color:var(--text-muted)">Now go build that calculator — and break it. That's how you learn. 🔧⚡</p>
+    </div>
+  </div>
+</div>`,
+
+];
+
+/* ══════════════════════════════════════════════ ENGINE */
+const deck = document.getElementById('deck');
+const total = slides.length;
+let current = 0;
+
+slides.forEach(html => {
+  const w = document.createElement('div');
+  w.innerHTML = html;
+  deck.appendChild(w.firstElementChild);
+});
+
+const allSlides = document.querySelectorAll('.slide');
+const bar = document.getElementById('progress-bar');
+const ctr = document.getElementById('counter');
+
+function goTo(idx, dir = 1) {
+  if (idx < 0 || idx >= total) return;
+  const prev = allSlides[current];
+  prev.classList.remove('active');
+  prev.classList.add(dir > 0 ? 'exit-left' : 'exit-right');
+  setTimeout(() => prev.classList.remove('exit-left','exit-right'), 400);
+  current = idx;
+  const next = allSlides[current];
+  next.style.transform = dir > 0 ? 'translateX(60px)' : 'translateX(-60px)';
+  next.classList.add('active');
+  setTimeout(() => { next.style.transform = ''; }, 10);
+  bar.style.width = ((current + 1) / total * 100) + '%';
+  ctr.textContent = (current + 1) + ' / ' + total;
+}
+
+allSlides[0].classList.add('active');
+bar.style.width = (1 / total * 100) + '%';
+
+document.addEventListener('keydown', e => {
+  if (e.key==='ArrowRight'||e.key==='ArrowDown') goTo(current+1, 1);
+  else if (e.key==='ArrowLeft'||e.key==='ArrowUp') goTo(current-1,-1);
+  else if (e.key==='Home') goTo(0,-1);
+  else if (e.key==='End')  goTo(total-1,1);
+  else if (e.key==='?') toggleShortcuts();
+});
+document.addEventListener('contextmenu', e => { e.preventDefault(); goTo(current+1,1); });
+document.addEventListener('mousedown', e => {
+  if (e.button===3){e.preventDefault();e.stopImmediatePropagation();goTo(current+1, 1);}
+  if (e.button===4){e.preventDefault();e.stopImmediatePropagation();goTo(current-1,-1);}
+}, true);
+let touchX=0;
+document.addEventListener('touchstart',e=>{touchX=e.touches[0].clientX;},{passive:true});
+document.addEventListener('touchend',e=>{
+  const dx=touchX-e.changedTouches[0].clientX;
+  if(Math.abs(dx)>40) dx>0?goTo(current+1,1):goTo(current-1,-1);
+});
+
+function copyCode(btn,id){
+  const pre=document.getElementById(id);
+  navigator.clipboard.writeText(pre?pre.innerText:'').then(()=>{
+    btn.textContent='Copied!';btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},1800);
+  });
+}
+function toggleShortcuts(){document.getElementById('shortcuts-overlay').classList.toggle('show');}
+function closeShortcuts() {document.getElementById('shortcuts-overlay').classList.remove('show');}
+document.getElementById('shortcuts-overlay').addEventListener('click',e=>{
+  if(e.target===document.getElementById('shortcuts-overlay'))closeShortcuts();
+});
+</script>
+</body>
+</html>

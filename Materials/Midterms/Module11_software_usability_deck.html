@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Software Usability & Usability Testing</title>
+<style>
+  :root {
+    --bg: #1a1e2e;
+    --surface: #232840;
+    --surface2: #2c3250;
+    --shadow-dark: #131724;
+    --shadow-light: #2d3558;
+    --accent: #7c6af7;
+    --accent2: #56c9f0;
+    --accent3: #f06a8a;
+    --accent4: #5be3b0;
+    --text: #e8ecf5;
+    --text2: #a8b2d0;
+    --text3: #6a7599;
+    --card-r: 18px;
+    --raise: 6px 6px 16px var(--shadow-dark), -4px -4px 12px var(--shadow-light);
+    --inset: inset 3px 3px 8px var(--shadow-dark), inset -2px -2px 6px var(--shadow-light);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:'Segoe UI',system-ui,sans-serif;color:var(--text);}
+  #deck{width:100%;height:100%;position:relative;}
+  .slide{position:absolute;inset:0;display:flex;flex-direction:column;padding:40px 52px 32px;opacity:0;pointer-events:none;transition:opacity .35s ease, transform .35s ease;transform:translateX(60px);}
+  .slide.active{opacity:1;pointer-events:all;transform:translateX(0);}
+  .slide.exit-left{opacity:0;transform:translateX(-60px);}
+  .slide.exit-right{opacity:0;transform:translateX(60px);}
+  @media(prefers-reduced-motion:reduce){.slide{transition:opacity .1s;transform:none!important;}}
+
+  /* eyebrow + title */
+  .eyebrow{font-size:13px;letter-spacing:2.5px;text-transform:uppercase;color:var(--accent);margin-bottom:6px;font-weight:600;}
+  .slide-title{font-size:32px;font-weight:800;line-height:1.2;color:var(--text);margin-bottom:24px;}
+  .slide-title .hi{color:var(--accent);}
+  .slide-title .hi2{color:var(--accent2);}
+  .slide-title .hi3{color:var(--accent3);}
+  .slide-title .hi4{color:var(--accent4);}
+
+  /* progress */
+  #progress-bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .35s;}
+  #counter{position:fixed;bottom:16px;right:24px;font-size:16px;color:var(--text3);background:var(--surface);padding:4px 12px;border-radius:20px;box-shadow:var(--raise);}
+
+  /* card */
+  .card{background:var(--surface);border-radius:var(--card-r);box-shadow:var(--raise);padding:22px 26px;}
+  .card-sm{padding:16px 20px;}
+  .card.accent-border{border-left:4px solid var(--accent);}
+  .card.accent2-border{border-left:4px solid var(--accent2);}
+  .card.accent3-border{border-left:4px solid var(--accent3);}
+  .card.accent4-border{border-left:4px solid var(--accent4);}
+
+  /* grid helpers */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;}
+  .grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;}
+  .col-full{grid-column:1/-1;}
+
+  /* text */
+  p,li,td,th,label,.body-text{font-size:17px;line-height:1.65;color:var(--text);}
+  .small-text{font-size:16px;line-height:1.6;}
+  .label{font-size:16px;font-weight:700;color:var(--accent);margin-bottom:6px;}
+  .label2{font-size:16px;font-weight:700;color:var(--accent2);}
+  .label3{font-size:16px;font-weight:700;color:var(--accent3);}
+  .label4{font-size:16px;font-weight:700;color:var(--accent4);}
+  strong{color:var(--accent2);font-weight:700;}
+  em{color:var(--accent4);font-style:normal;font-weight:600;}
+
+  ul,ol{padding-left:22px;}
+  ul li,ol li{margin-bottom:8px;font-size:17px;}
+
+  /* badge */
+  .badge{display:inline-block;padding:4px 14px;border-radius:20px;font-size:16px;font-weight:700;background:var(--surface2);box-shadow:var(--raise);}
+  .badge-accent{background:var(--accent);color:#fff;}
+  .badge-accent2{background:var(--accent2);color:#111;}
+  .badge-accent3{background:var(--accent3);color:#fff;}
+  .badge-accent4{background:var(--accent4);color:#111;}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:17px;}
+  th{background:var(--surface2);color:var(--accent2);font-weight:700;padding:12px 16px;text-align:left;}
+  td{padding:11px 16px;border-bottom:1px solid var(--surface2);vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  tr:nth-child(even) td{background:rgba(255,255,255,.02);}
+
+  /* code */
+  .code-wrap{background:#0f1220;border-radius:12px;box-shadow:var(--inset);padding:18px 20px;position:relative;}
+  pre{font-size:16px;line-height:1.6;color:#c8d3f5;overflow:auto;white-space:pre-wrap;word-break:break-word;}
+  .copy-btn{position:absolute;top:10px;right:12px;background:var(--surface2);color:var(--text2);border:none;border-radius:8px;padding:5px 14px;font-size:15px;cursor:pointer;box-shadow:var(--raise);transition:box-shadow .15s;}
+  .copy-btn:active,.copy-btn.copied{box-shadow:var(--inset);color:var(--accent4);}
+
+  /* quote */
+  .quote-card{background:var(--surface);border-radius:var(--card-r);box-shadow:var(--raise);padding:24px 30px 20px;border-left:5px solid var(--accent);}
+  .quote-text{font-size:18px;line-height:1.7;font-style:italic;color:var(--text);}
+  .quote-attr{font-size:16px;color:var(--text3);margin-top:10px;}
+
+  /* step */
+  .step-num{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;background:var(--accent);color:#fff;flex-shrink:0;box-shadow:var(--raise);}
+  .step-row{display:flex;gap:14px;align-items:flex-start;margin-bottom:16px;}
+
+  /* MCQ option */
+  .opt{background:var(--surface2);border-radius:10px;padding:10px 16px;font-size:17px;margin-bottom:8px;}
+  .opt-letter{color:var(--accent);font-weight:700;margin-right:8px;}
+
+  /* identification */
+  .id-scenario{background:var(--surface2);border-radius:12px;padding:16px 20px;font-size:17px;line-height:1.65;margin-bottom:12px;border-left:4px solid var(--accent3);}
+  .id-prompt{font-size:17px;color:var(--accent4);font-weight:700;margin-bottom:8px;}
+  .id-answer-line{border-bottom:2px solid var(--text3);margin-bottom:6px;height:28px;border-radius:0;}
+  .id-reason-label{font-size:16px;color:var(--text3);margin-bottom:4px;}
+  .id-reason-line{border-bottom:2px solid var(--text3);height:28px;border-radius:0;margin-bottom:0;}
+
+  /* answer key reveal */
+  .ans-correct{color:var(--accent4);font-weight:700;font-size:17px;}
+  .ans-explain{font-size:16px;color:var(--text2);margin-top:4px;line-height:1.55;}
+
+  /* icon svg */
+  .icon-hero{margin-bottom:16px;}
+
+  /* scrollable content area */
+  .content-scroll{flex:1;overflow-y:auto;min-height:0;padding-right:4px;}
+  .content-scroll::-webkit-scrollbar{width:5px;}
+  .content-scroll::-webkit-scrollbar-track{background:transparent;}
+  .content-scroll::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:4px;}
+
+  /* shortcut overlay */
+  #overlay{display:none;position:fixed;inset:0;background:rgba(10,12,24,.88);z-index:999;align-items:center;justify-content:center;}
+  #overlay.show{display:flex;}
+  #overlay-box{background:var(--surface);border-radius:20px;box-shadow:var(--raise);padding:36px 48px;max-width:420px;width:90%;}
+  #overlay-box h3{font-size:22px;margin-bottom:20px;color:var(--accent);}
+  #overlay-box table{font-size:17px;}
+  #overlay-box td{padding:8px 12px;border-bottom:1px solid var(--surface2);}
+  #overlay-box td:first-child{color:var(--accent2);font-weight:700;}
+  kbd{background:var(--surface2);border-radius:6px;padding:2px 8px;font-size:15px;box-shadow:var(--raise);}
+
+  /* title slide specific */
+  .hero-title{font-size:44px;font-weight:900;line-height:1.1;margin-bottom:16px;}
+  .hero-sub{font-size:20px;color:var(--text2);line-height:1.5;}
+
+  /* pill row */
+  .pill-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;}
+  .pill{background:var(--surface2);border-radius:30px;padding:7px 18px;font-size:16px;font-weight:600;box-shadow:var(--raise);}
+
+  /* number metric */
+  .metric-num{font-size:38px;font-weight:900;color:var(--accent);line-height:1;}
+  .metric-label{font-size:16px;color:var(--text2);margin-top:4px;}
+  .metric-card{text-align:center;padding:20px 16px;}
+
+  /* final */
+  .final-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;}
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+<div id="counter"></div>
+<div id="deck"></div>
+
+<!-- shortcut overlay -->
+<div id="overlay">
+  <div id="overlay-box">
+    <h3>⌨ Keyboard Shortcuts</h3>
+    <table>
+      <tr><td>→ / Mouse4</td><td>Next slide</td></tr>
+      <tr><td>← / Mouse3</td><td>Previous slide</td></tr>
+      <tr><td>Home</td><td>First slide</td></tr>
+      <tr><td>End</td><td>Last slide</td></tr>
+      <tr><td>?</td><td>This overlay</td></tr>
+      <tr><td>Swipe</td><td>Navigate (mobile)</td></tr>
+    </table>
+    <p style="margin-top:18px;font-size:16px;color:var(--text3);">Click anywhere to close.</p>
+  </div>
+</div>
+
+<script>
+const slides = [];
+
+function slide(eyebrow, title, html) {
+  slides.push({ eyebrow, title, html });
+}
+
+// ─── SLIDE 1: TITLE ───────────────────────────────────────────
+slide('Information Technology · UX Design', '', `
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:0;">
+  <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Usability icon" style="margin-bottom:22px;">
+    <rect width="72" height="72" rx="18" fill="#7c6af720"/>
+    <rect x="12" y="18" width="48" height="32" rx="6" stroke="#7c6af7" stroke-width="2.5" fill="none"/>
+    <path d="M24 50 L30 56 L42 56 L48 50" stroke="#56c9f0" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="28" cy="32" r="5" stroke="#f06a8a" stroke-width="2.2" fill="none"/>
+    <path d="M34 38 Q36 28 44 30 Q48 31 46 36" stroke="#5be3b0" stroke-width="2" stroke-linecap="round" fill="none"/>
+    <circle cx="36" cy="34" r="2" fill="#7c6af7"/>
+  </svg>
+  <p class="eyebrow" style="font-size:14px;">Software Engineering · Human-Computer Interaction</p>
+  <h1 class="hero-title">Software Usability<br/>&amp; <span style="color:var(--accent2);">Usability Testing</span></h1>
+  <p class="hero-sub" style="max-width:580px;">Understanding how users interact with systems—and how to measure, evaluate, and improve that experience through data-driven methods.</p>
+  <div class="pill-row" style="margin-top:22px;">
+    <span class="pill" style="color:var(--accent);">ISO 9241-11</span>
+    <span class="pill" style="color:var(--accent2);">ISO/IEC 9126-1</span>
+    <span class="pill" style="color:var(--accent3);">SUS Metric</span>
+    <span class="pill" style="color:var(--accent4);">Usability Testing</span>
+    <span class="pill">UX Design</span>
+  </div>
+</div>
+`);
+
+// ─── SLIDE 2: LESSON PREVIEW ─────────────────────────────────
+slide('Lesson Preview', 'Building on ERP — The Human Side of Software', `
+<div class="content-scroll">
+  <div class="card accent2-border" style="margin-bottom:18px;">
+    <p>In a previous discussion, you explored <strong>Enterprise Resource Planning (ERP)</strong>. This lesson shifts focus to the <em>"human" side</em> of software—how users interact with systems and how we measure that interaction.</p>
+  </div>
+  <p class="label" style="margin-bottom:12px;">In this session, we will explore:</p>
+  <div class="grid3" style="margin-bottom:18px;">
+    <div class="card" style="text-align:center;">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:8px;" role="img" aria-label="Definition icon"><circle cx="18" cy="18" r="14" stroke="#7c6af7" stroke-width="2" fill="none"/><text x="18" y="23" text-anchor="middle" font-size="16" fill="#7c6af7" font-weight="bold">?</text></svg>
+      <p class="label" style="margin-bottom:4px;">Define</p>
+      <p class="small-text">What is software usability and why it matters</p>
+    </div>
+    <div class="card" style="text-align:center;">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:8px;" role="img" aria-label="Metrics icon"><rect x="4" y="18" width="6" height="14" rx="2" fill="#56c9f0"/><rect x="13" y="10" width="6" height="22" rx="2" fill="#7c6af7"/><rect x="22" y="14" width="6" height="18" rx="2" fill="#5be3b0"/><rect x="31" y="6" width="4" height="26" rx="2" fill="#f06a8a"/></svg>
+      <p class="label2" style="margin-bottom:4px;">Measure</p>
+      <p class="small-text">Apply standardized usability metrics</p>
+    </div>
+    <div class="card" style="text-align:center;">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:8px;" role="img" aria-label="Evaluate icon"><path d="M6 28 L14 18 L20 24 L28 12 L34 16" stroke="#5be3b0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="34" cy="16" r="3" fill="#f06a8a"/></svg>
+      <p class="label4" style="margin-bottom:4px;">Evaluate</p>
+      <p class="small-text">Present findings from a usability test</p>
+    </div>
+  </div>
+  <div class="quote-card">
+    <p class="quote-text">&#x1F3AF; <strong>Lesson Objective:</strong> By the end of this lesson, you will be able to explain software usability, apply various usability metrics (like the System Usability Scale), and present actionable findings from a usability test.</p>
+  </div>
+</div>
+`);
+
+// ─── SLIDE 3: WHAT IS SOFTWARE USABILITY ─────────────────────
+slide('Main Lesson', 'What is Software Usability?', `
+<div class="content-scroll">
+  <div class="grid2" style="gap:20px;">
+    <div>
+      <div class="card accent-border" style="margin-bottom:16px;">
+        <p><strong>Software usability</strong> is the controlled element of UX design. It ensures users don't face confusion or obstruction when navigating a product.</p>
+        <p style="margin-top:10px;">As a designer, you control the <em>interface</em>, <em>accessibility</em>, and <em>information architecture</em> to align with the user's lifestyle, goals, and habits.</p>
+      </div>
+      <div class="quote-card">
+        <p class="quote-text">"The capacity of a product to be used by specific users to achieve specific goals with effectiveness, efficiency, and satisfaction in a specific context of use."</p>
+        <p class="quote-attr">— ISO 9241-11</p>
+      </div>
+    </div>
+    <div>
+      <p class="label" style="margin-bottom:12px;">Key Insight</p>
+      <div class="card accent3-border" style="margin-bottom:12px;">
+        <p class="small-text">Usability is <strong>not a universal constant</strong>. A system might provide excellent usability for experienced users but perform poorly for beginners.</p>
+      </div>
+      <svg width="100%" height="160" viewBox="0 0 300 160" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Usability triangle: effectiveness, efficiency, satisfaction">
+        <polygon points="150,18 30,142 270,142" stroke="#7c6af7" stroke-width="2" fill="#7c6af710"/>
+        <text x="150" y="12" text-anchor="middle" fill="#7c6af7" font-size="14" font-weight="bold">Effectiveness</text>
+        <text x="18" y="158" text-anchor="middle" fill="#56c9f0" font-size="14" font-weight="bold">Efficiency</text>
+        <text x="282" y="158" text-anchor="middle" fill="#5be3b0" font-size="14" font-weight="bold">Satisfaction</text>
+        <circle cx="150" cy="90" r="22" fill="#7c6af720" stroke="#7c6af7" stroke-width="1.5"/>
+        <text x="150" y="95" text-anchor="middle" fill="#e8ecf5" font-size="13" font-weight="bold">Usability</text>
+      </svg>
+    </div>
+  </div>
+</div>
+`);
+
+// ─── SLIDE 4: CORE USABILITY REQUIREMENTS ─────────────────────
+slide('Main Lesson', 'The 5 Core Usability Requirements', `
+<div class="content-scroll">
+  <div class="grid2">
+    <div class="card accent-border">
+      <p class="label">📚 Ease of Learning</p>
+      <p class="small-text">The user should be able to explore the system and perform desired tasks quickly without extensive instruction.</p>
+    </div>
+    <div class="card accent2-border">
+      <p class="label2">⚡ Efficiency of Use</p>
+      <p class="small-text">Once a user has learned the system, they should achieve high levels of productivity effortlessly.</p>
+    </div>
+    <div class="card accent4-border">
+      <p class="label4">🔄 Ease of Recall</p>
+      <p class="small-text">An infrequent user should return after a period of non-use and perform tasks without re-learning everything.</p>
+    </div>
+    <div class="card accent3-border">
+      <p class="label3">🛡 Low Error Rate</p>
+      <p class="small-text">The system should let users perform tasks successfully. When errors occur, recovery should be easy with minimal inconvenience.</p>
+    </div>
+    <div class="card col-full" style="background:var(--surface2);border-left:4px solid var(--accent);">
+      <p class="label">😊 Subjective Satisfaction</p>
+      <p class="small-text">The user should find the interaction pleasant and be subjectively satisfied with the system.</p>
+      <p style="margin-top:10px;font-size:16px;color:var(--text3);">💡 A "pleasant-looking" interface does NOT guarantee good usability—all five requirements must be satisfied.</p>
+    </div>
+  </div>
+</div>
+`);
+
+// ─── SLIDE 5: SOFTWARE QUALITY (ISO/IEC 9126-1) ──────────────
+slide('Main Lesson', 'Software Quality — ISO/IEC 9126-1', `
+<div class="content-scroll">
+  <p class="body-text" style="margin-bottom:18px;">Usability is part of the larger <strong>Software Quality</strong> picture. The <em>ISO/IEC 9126-1</em> standard outlines a quality model analyzed through four characteristics:</p>
+  <div class="grid2" style="margin-bottom:18px;">
+    <div class="card accent-border">
+      <p class="label">Efficiency</p>
+      <p class="small-text">The software's ability to enable users to achieve goals <em>thoroughly</em> in a specific context (completeness).</p>
+    </div>
+    <div class="card accent2-border">
+      <p class="label2">Productivity</p>
+      <p class="small-text">Allows users to use an appropriate amount of resources relative to the effectiveness achieved.</p>
+    </div>
+    <div class="card accent3-border">
+      <p class="label3">Safety</p>
+      <p class="small-text">Presents acceptable levels of risk of harm to people, business, software, property, or the environment.</p>
+    </div>
+    <div class="card accent4-border">
+      <p class="label4">Satisfaction</p>
+      <p class="small-text">Satisfies users in a specific context of use—the subjective sense that the product meets their needs.</p>
+    </div>
+  </div>
+  <div class="card" style="background:var(--surface2);">
+    <p class="small-text" style="color:var(--text2);">Engineering requires a deep focus on quality as the <strong>foundation of every design process</strong>. Software quality and usability are not separate concerns—they are deeply intertwined.</p>
+  </div>
+</div>
+`);
+
+// ─── SLIDE 6: USABILITY METRICS OVERVIEW ─────────────────────
+slide('Main Lesson — Usability Metrics', 'Measuring the Intangible', `
+<div class="content-scroll">
+  <div class="card accent2-border" style="margin-bottom:20px;">
+    <p>A <strong>usability metric</strong> is a system of measurement that evaluates the <em>effectiveness</em>, <em>efficiency</em>, and <em>satisfaction</em> of users interacting with a product. They tell us exactly how easy (or hard) a product is.</p>
+  </div>
+  <div class="grid4">
+    <div class="card metric-card">
+      <div class="metric-num">1</div>
+      <div class="metric-label">Success Score</div>
+      <div style="margin-top:8px;font-size:15px;color:var(--accent);font-weight:700;">Effectiveness</div>
+    </div>
+    <div class="card metric-card">
+      <div class="metric-num" style="color:var(--accent3);">2</div>
+      <div class="metric-label">Error Count</div>
+      <div style="margin-top:8px;font-size:15px;color:var(--accent3);font-weight:700;">Accuracy</div>
+    </div>
+    <div class="card metric-card">
+      <div class="metric-num" style="color:var(--accent2);">3</div>
+      <div class="metric-label">Task Time</div>
+      <div style="margin-top:8px;font-size:15px;color:var(--accent2);font-weight:700;">Efficiency</div>
+    </div>
+    <div class="card metric-card">
+      <div class="metric-num" style="color:var(--accent4);">4</div>
+      <div class="metric-label">SUS Score</div>
+      <div style="margin-top:8px;font-size:15px;color:var(--accent4);font-weight:700;">Satisfaction</div>
+    </div>
+  </div>
+  <div class="card" style="background:var(--surface2);margin-top:18px;">
+    <p class="small-text">Designers and stakeholders often rely on subjective feedback. A successful UX practice demands a <strong>data-driven approach</strong>—moving from "I think this is good" to "the data shows this works."</p>
+  </div>
+</div>
+`);
+
+// ─── SLIDE 7: METRIC 1 & 2 ────────────────────────────────────
+slide('Usability Metrics', 'Success Score & Error Count', `
+<div class="content-scroll">
+  <div class="grid2">
+    <div>
+      <p class="label" style="margin-bottom:10px;">📊 Metric 1 — Success Score</p>
+      <div class="card accent-border" style="margin-bottom:12px;">
+        <p class="small-text">The most basic metric. Did the user complete the task they were assigned?</p>
+      </div>
+      <div class="code-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre>Success Score =
+  Completed Tasks ÷ Total Attempts</pre>
+      </div>
+    </div>
+    <div>
+      <p class="label3" style="margin-bottom:10px;">⚠️ Metric 2 — Number of Errors</p>
+      <div class="card accent3-border" style="margin-bottom:12px;">
+        <p class="small-text"><strong>Slips:</strong> User has the right goal but makes a physical mistake (e.g., typo in date).</p>
+        <p class="small-text" style="margin-top:6px;"><strong>Mistakes:</strong> User has the wrong goal entirely (e.g., entering today's date instead of birth date).</p>
+      </div>
+      <div class="code-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre>Error Rate =
+  Errors ÷ Total Attempts
+
+Error Occurrence Rate =
+  Total Errors ÷ Possible Errors</pre>
+      </div>
+    </div>
+  </div>
+</div>
+`);
+
+// ─── SLIDE 8: METRIC 3 & 4 ────────────────────────────────────
+slide('Usability Metrics', 'Task Time & System Usability Scale', `
+<div class="content-scroll">
+  <div class="grid2">
+    <div>
+      <p class="label2" style="margin-bottom:10px;">⏱ Metric 3 — Task Time</p>
+      <div class="card accent2-border" style="margin-bottom:12px;">
+        <p class="small-text">Good usability means users complete tasks <em>fast</em>. Note: there are <strong>no absolute industry standards</strong> for task time—use it for internal comparisons (e.g., A/B testing versions).</p>
+      </div>
+      <div class="code-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre>Avg Task Time =
+  (T₁ + T₂ + … + Tₙ) ÷ Users</pre>
+      </div>
+    </div>
+    <div>
+      <p class="label4" style="margin-bottom:10px;">📋 Metric 4 — SUS</p>
+      <div class="card accent4-border" style="margin-bottom:12px;">
+        <p class="small-text">The <strong>System Usability Scale</strong>: 10 questions scored 1–5, producing a final score <strong>0–100</strong>. An industry-standard alternative to single-question evaluations.</p>
+      </div>
+      <div class="card" style="background:var(--surface2);">
+        <p class="small-text"><strong>Questions alternate</strong> between positive and negative phrasing to avoid bias. Example:</p>
+        <p class="small-text" style="margin-top:6px;">✅ "I thought the system was easy to use."</p>
+        <p class="small-text">❌ "I found the system unnecessarily complex."</p>
+      </div>
+    </div>
+  </div>
+</div>
+`);
+
+// ─── SLIDE 9: SUS QUESTIONNAIRE ──────────────────────────────
+slide('System Usability Scale', 'The 10 Standard SUS Questions', `
+<div class="content-scroll">
+  <div class="grid2">
+    <div>
+      ${[
+        "I think that I would like to use this system frequently.",
+        "I found the system unnecessarily complex.",
+        "I thought the system was easy to use.",
+        "I think that I would need the support of a technical person to be able to use this system.",
+        "I found the various functions in this system were well integrated."
+      ].map((q,i)=>`<div class="opt" style="margin-bottom:10px;"><span class="opt-letter">${i+1}.</span>${q}</div>`).join('')}
+    </div>
+    <div>
+      ${[
+        "I thought there was too much inconsistency in this system.",
+        "I imagine that most people would learn to use this system very quickly.",
+        "I found the system very awkward to use.",
+        "I felt very confident using the system.",
+        "I needed to learn a lot of things before I could get going with this system."
+      ].map((q,i)=>`<div class="opt" style="margin-bottom:10px;"><span class="opt-letter">${i+6}.</span>${q}</div>`).join('')}
+    </div>
+  </div>
+  <div class="card" style="background:var(--surface2);margin-top:14px;">
+    <p class="small-text">Responses: <strong>1</strong> = Strongly Disagree → <strong>5</strong> = Strongly Agree. Final score: <em>0–100</em> representing overall system usability.</p>
+  </div>
+</div>
+`);
+
+// ─── SLIDE 10: 5-STEP EVALUATION ──────────────────────────────
+slide('Usability Testing', 'How to Evaluate Test Results — 5 Steps', `
+<div class="content-scroll">
+  <div class="grid2">
+    <div>
+      <div class="step-row">
+        <div class="step-num">1</div>
+        <div><p style="font-size:17px;font-weight:700;color:var(--accent);">Define What You're Looking For</p><p class="small-text">Review your original goals. Identify problem areas, pain points, and specific aspects to evaluate.</p></div>
+      </div>
+      <div class="step-row">
+        <div class="step-num" style="background:var(--accent2);color:#111;">2</div>
+        <div><p style="font-size:17px;font-weight:700;color:var(--accent2);">Organize the Data</p><p class="small-text">Review sessions: watch recordings, read transcripts. Note issues encountered, actions taken, and user comments.</p></div>
+      </div>
+      <div class="step-row">
+        <div class="step-num" style="background:var(--accent4);color:#111;">3</div>
+        <div><p style="font-size:17px;font-weight:700;color:var(--accent4);">Draw Conclusions</p><p class="small-text"><strong>Quantitative:</strong> Statistical data on severity. <strong>Qualitative:</strong> Insights into <em>why</em> issues exist and how to fix them.</p></div>
+      </div>
+    </div>
+    <div>
+      <div class="step-row">
+        <div class="step-num" style="background:var(--accent3);">4</div>
+        <div><p style="font-size:17px;font-weight:700;color:var(--accent3);">Prioritize the Issues</p>
+          <div class="card-sm card" style="margin-top:8px;">
+            <p class="small-text"><span style="color:var(--accent3);font-weight:700;">🔴 Critical</span> — Users cannot complete tasks</p>
+            <p class="small-text"><span style="color:#f0a050;font-weight:700;">🟠 Serious</span> — Frustrating; tasks completable with effort</p>
+            <p class="small-text"><span style="color:var(--accent4);font-weight:700;">🟡 Minor</span> — Annoying but won't drive users away</p>
+          </div>
+        </div>
+      </div>
+      <div class="step-row" style="margin-top:12px;">
+        <div class="step-num" style="background:var(--accent);">5</div>
+        <div><p style="font-size:17px;font-weight:700;color:var(--accent);">Compile a Report</p><p class="small-text">Draft a report explaining discovered problems and proposed solutions. The goal: improve the product.</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+`);
+
+// ─── SLIDE 11: ANALOGIES ──────────────────────────────────────
+slide('Real-Life Analogies', 'Usability in the Everyday World', `
+<div class="content-scroll">
+  <div class="grid2" style="margin-bottom:18px;">
+    <div class="quote-card" style="border-left-color:var(--accent4);">
+      <svg width="34" height="34" viewBox="0 0 34 34" fill="none" role="img" aria-label="Kitchen icon" style="margin-bottom:8px;"><rect x="2" y="8" width="30" height="20" rx="4" stroke="#5be3b0" stroke-width="2" fill="none"/><path d="M8 18 L14 18 M20 18 L26 18" stroke="#5be3b0" stroke-width="2" stroke-linecap="round"/><path d="M17 12 L17 24" stroke="#5be3b0" stroke-width="2" stroke-linecap="round"/></svg>
+      <p class="quote-text" style="font-size:16px;">🍳 <strong>The Well-Designed Kitchen</strong> — A commercial kitchen with frequently used tools within arm's reach is <em>efficient</em>. A chef who recalls where the whisk is after a month off passes the <em>"Ease of Recall"</em> test.</p>
+    </div>
+    <div class="quote-card" style="border-left-color:var(--accent2);">
+      <svg width="34" height="34" viewBox="0 0 34 34" fill="none" role="img" aria-label="Mobile banking icon" style="margin-bottom:8px;"><rect x="8" y="2" width="18" height="30" rx="4" stroke="#56c9f0" stroke-width="2" fill="none"/><circle cx="17" cy="26" r="2" fill="#56c9f0"/><line x1="12" y1="8" x2="22" y2="8" stroke="#56c9f0" stroke-width="2" stroke-linecap="round"/></svg>
+      <p class="quote-text" style="font-size:16px;">📱 <strong>Mobile Banking App</strong> — Tracks <em>Task Time</em> for transfers and <em>Error Rates</em> for accidental sends. SUS is run across age groups to guarantee usability for <em>all</em> specific users.</p>
+    </div>
+  </div>
+  <div class="quote-card" style="border-left-color:var(--accent);">
+    <p class="quote-text" style="font-size:16px;">📌 <strong>Project Management Tool</strong> — Starts by measuring <em>Ease of Learning</em> (time to create a first project), then shifts to <em>Efficiency of Use</em> (can an expert assign tasks and set dependencies in 15 seconds?). Metrics evolve as user expertise grows.</p>
+  </div>
+</div>
+`);
+
+// ─── SLIDE 12: KEY QUOTES ─────────────────────────────────────
+slide('Key Quotes', 'Defining Usability by the Standards', `
+<div class="content-scroll">
+  <div class="grid2" style="gap:20px;">
+    <div class="quote-card">
+      <p class="quote-text">"The capacity of a product to be used by specific users to achieve specific goals with effectiveness, efficiency, and satisfaction in a specific context of use."</p>
+      <p class="quote-attr">— ISO 9241-11, Usability Definition</p>
+    </div>
+    <div class="quote-card" style="border-left-color:var(--accent2);">
+      <p class="quote-text">"A software interface that is merely 'pleasant to look at' does not guarantee good usability. It must satisfy the requirements: efficiency, ease of learning/recall, and a low error rate."</p>
+      <p class="quote-attr">— Lesson Note</p>
+    </div>
+    <div class="quote-card" style="border-left-color:var(--accent4);">
+      <p class="quote-text">"While there are industry standards for Success Scores and Error Rates, there are no absolute standards for task time. You generally rely on internal comparisons."</p>
+      <p class="quote-attr">— Lesson Tip, Task Time Metric</p>
+    </div>
+    <div class="quote-card" style="border-left-color:var(--accent3);">
+      <p class="quote-text">"A high success score means users eventually completed their tasks, but you must also look at efficiency. If it took 10 minutes for a 30-second task, the product has low efficiency."</p>
+      <p class="quote-attr">— FAQ: Does a high Success Score mean good usability?</p>
+    </div>
+  </div>
+</div>
+`);
+
+// ─── SLIDE 13: LESSON RECAP ───────────────────────────────────
+slide('Lesson Recap', 'Key Takeaways Before Activities', `
+<div class="content-scroll">
+  <div class="grid2">
+    <div class="card accent-border">
+      <p class="label">🎯 Usability is Measurable</p>
+      <p class="small-text">Not just "friendliness"—it is a quality defined by <strong>effectiveness</strong>, <strong>efficiency</strong>, and <strong>satisfaction</strong>.</p>
+    </div>
+    <div class="card accent2-border">
+      <p class="label2">📐 Use Standards</p>
+      <p class="small-text">Ground your work in <em>ISO 9241-11</em> and <em>ISO/IEC 9126-1</em> for internationally recognized definitions.</p>
+    </div>
+    <div class="card accent4-border">
+      <p class="label4">📊 Be Data-Driven</p>
+      <p class="small-text">Use quantitative formulas (Success Score, Error Rate, Task Time) and qualitative methods like the <strong>SUS</strong>.</p>
+    </div>
+    <div class="card accent3-border">
+      <p class="label3">🔧 Analyze &amp; Act</p>
+      <p class="small-text">Separate quantitative statistics from qualitative "why." Prioritize into <em>Critical → Serious → Minor</em> before your final report.</p>
+    </div>
+    <div class="card col-full" style="background:var(--surface2);text-align:center;">
+      <p style="font-size:18px;font-weight:700;color:var(--accent);">Ready for the activities? Let's test your understanding! 🚀</p>
+    </div>
+  </div>
+</div>
+`);
+
+// ─── SLIDE 14: ACTIVITY — MCQ Part 1 (Q1–Q2) ─────────────────
+slide('Skill-Building Check — Multiple Choice', 'Questions 1 & 2', `
+<div class="content-scroll">
+  <p class="body-text" style="margin-bottom:18px;color:var(--text2);">Choose the best answer for each question. <em>(Answers revealed on the Answer Key slide.)</em></p>
+  <div class="grid2">
+    <div class="card">
+      <p class="label" style="margin-bottom:8px;">Q1.</p>
+      <p class="body-text" style="margin-bottom:14px;">According to ISO 9241-11, usability is the capacity of a product to be used by specific users to achieve specific goals with...</p>
+      <div class="opt"><span class="opt-letter">A.</span>Ease of learning and recall</div>
+      <div class="opt"><span class="opt-letter">B.</span>Efficiency, effectiveness, and satisfaction</div>
+      <div class="opt"><span class="opt-letter">C.</span>High productivity and low error rates</div>
+      <div class="opt"><span class="opt-letter">D.</span>Low cost and high performance</div>
+    </div>
+    <div class="card">
+      <p class="label" style="margin-bottom:8px;">Q2.</p>
+      <p class="body-text" style="margin-bottom:14px;">In user testing, a "slip" is defined as an error where:</p>
+      <div class="opt"><span class="opt-letter">A.</span>The user had the wrong goal in mind.</div>
+      <div class="opt"><span class="opt-letter">B.</span>The user had the right goal but made a physical or typo error.</div>
+      <div class="opt"><span class="opt-letter">C.</span>The system failed to execute the user's command.</div>
+      <div class="opt"><span class="opt-letter">D.</span>The user takes too long to finish the task.</div>
+    </div>
+  </div>
+</div>
+`);
+
+// ─── SLIDE 15: ACTIVITY — MCQ Part 2 (Q3–Q4) ─────────────────
+slide('Skill-Building Check — Multiple Choice', 'Questions 3 & 4', `
+<div class="content-scroll">
+  <div class="grid2">
+    <div class="card">
+      <p class="label" style="margin-bottom:8px;">Q3.</p>
+      <p class="body-text" style="margin-bottom:14px;">When using the System Usability Scale (SUS), the final score is calculated on a scale of:</p>
+      <div class="opt"><span class="opt-letter">A.</span>1–5</div>
+      <div class="opt"><span class="opt-letter">B.</span>0–10</div>
+      <div class="opt"><span class="opt-letter">C.</span>0–100</div>
+      <div class="opt"><span class="opt-letter">D.</span>0–1000</div>
+    </div>
+    <div class="card">
+      <p class="label" style="margin-bottom:8px;">Q4.</p>
+      <p class="body-text" style="margin-bottom:14px;">You are analyzing usability test results and find that a user cannot complete the checkout process on your e-commerce site. How would you categorize this issue?</p>
+      <div class="opt"><span class="opt-letter">A.</span>Minor</div>
+      <div class="opt"><span class="opt-letter">B.</span>Serious</div>
+      <div class="opt"><span class="opt-letter">C.</span>Critical</div>
+      <div class="opt"><span class="opt-letter">D.</span>Low Priority</div>
+    </div>
+  </div>
+</div>
+`);
+
+// ─── SLIDE 16: ACTIVITY — MCQ Part 3 (Q5–Q6) ─────────────────
+slide('Skill-Building Check — Multiple Choice', 'Questions 5 & 6', `
+<div class="content-scroll">
+  <div class="grid2">
+    <div class="card">
+      <p class="label" style="margin-bottom:8px;">Q5.</p>
+      <p class="body-text" style="margin-bottom:14px;">"Achieving high levels of productivity once the user has learned how to interact with the system" is the definition of which usability requirement?</p>
+      <div class="opt"><span class="opt-letter">A.</span>Ease of Learning</div>
+      <div class="opt"><span class="opt-letter">B.</span>Ease of Recall</div>
+      <div class="opt"><span class="opt-letter">C.</span>Efficiency of Use</div>
+      <div class="opt"><span class="opt-letter">D.</span>Subjective Satisfaction</div>
+    </div>
+    <div class="card">
+      <p class="label" style="margin-bottom:8px;">Q6.</p>
+      <p class="body-text" style="margin-bottom:14px;">Why is "Task Time" a difficult metric to compare against industry standards?</p>
+      <div class="opt"><span class="opt-letter">A.</span>It requires complex scientific tools to measure.</div>
+      <div class="opt"><span class="opt-letter">B.</span>There are no absolute universal time standards for most tasks; it's better for internal comparisons.</div>
+      <div class="opt"><span class="opt-letter">C.</span>It is purely a subjective measurement based on user feelings.</div>
+      <div class="opt"><span class="opt-letter">D.</span>It is only relevant for physical hardware, not software.</div>
+    </div>
+  </div>
+</div>
+`);
+
+// ─── SLIDE 17: IDENTIFICATION — Q1 & Q2 ──────────────────────
+slide('Skill-Building Check — Identification', 'Questions 7 & 8 · Scenario-Based', `
+<div class="content-scroll">
+  <p class="body-text" style="margin-bottom:16px;color:var(--text2);">Read each scenario. <strong>Identify the usability concept described</strong>, then write <em>one sentence</em> explaining your reason.</p>
+  <div class="grid2">
+    <div class="card">
+      <p class="label3" style="margin-bottom:8px;">Q7.</p>
+      <div class="id-scenario">Ramona has never used the company's new project management tool before. After 10 minutes of exploring on her own—without reading any manual—she has successfully created her first project and assigned tasks to her teammates.</div>
+      <p class="id-prompt">Identify which usability requirement Ramona demonstrated.</p>
+      <div style="margin-top:10px;">
+        <p style="font-size:16px;color:var(--text3);margin-bottom:4px;">Answer:</p>
+        <div class="id-answer-line"></div>
+        <p class="id-reason-label" style="margin-top:10px;">Reason (1 sentence):</p>
+        <div class="id-reason-line"></div>
+      </div>
+    </div>
+    <div class="card">
+      <p class="label3" style="margin-bottom:8px;">Q8.</p>
+      <div class="id-scenario">During a usability test on a food delivery app, a tester named Odessa tried to tap the "Confirm Order" button but accidentally tapped "Cancel" instead because the buttons were too close together. She immediately realized her mistake and re-entered her order.</div>
+      <p class="id-prompt">Identify the type of user error Odessa committed.</p>
+      <div style="margin-top:10px;">
+        <p style="font-size:16px;color:var(--text3);margin-bottom:4px;">Answer:</p>
+        <div class="id-answer-line"></div>
+        <p class="id-reason-label" style="margin-top:10px;">Reason (1 sentence):</p>
+        <div class="id-reason-line"></div>
+      </div>
+    </div>
+  </div>
+</div>
+`);
+
+// ─── SLIDE 18: IDENTIFICATION — Q3 & Q4 ──────────────────────
+slide('Skill-Building Check — Identification', 'Questions 9 & 10 · Scenario-Based', `
+<div class="content-scroll">
+  <div class="grid2">
+    <div class="card">
+      <p class="label3" style="margin-bottom:8px;">Q9.</p>
+      <div class="id-scenario">A UX team collected survey data from 30 users who tested their hospital appointment-booking app. Each user answered the same 10 questions, rating each from 1 to 5. The team then computed a single score of 78 out of 100 to represent how usable the app was overall.</div>
+      <p class="id-prompt">Identify which usability metric or tool the team used.</p>
+      <div style="margin-top:10px;">
+        <p style="font-size:16px;color:var(--text3);margin-bottom:4px;">Answer:</p>
+        <div class="id-answer-line"></div>
+        <p class="id-reason-label" style="margin-top:10px;">Reason (1 sentence):</p>
+        <div class="id-reason-line"></div>
+      </div>
+    </div>
+    <div class="card">
+      <p class="label3" style="margin-bottom:8px;">Q10.</p>
+      <div class="id-scenario">After running usability tests on their university enrollment portal, a QA team discovered three problems: (1) students cannot submit their enrollment form at all due to a broken button, (2) the course search filter causes confusion but students eventually find their subject, and (3) the font color on the confirmation page is slightly hard to read but does not stop anyone from completing tasks.</div>
+      <p class="id-prompt">Identify the correct priority level of Problem 1 in the team's evaluation process.</p>
+      <div style="margin-top:10px;">
+        <p style="font-size:16px;color:var(--text3);margin-bottom:4px;">Answer:</p>
+        <div class="id-answer-line"></div>
+        <p class="id-reason-label" style="margin-top:10px;">Reason (1 sentence):</p>
+        <div class="id-reason-line"></div>
+      </div>
+    </div>
+  </div>
+</div>
+`);
+
+// ─── SLIDE 19: SKILL-BUILDING ACTIVITY ───────────────────────
+slide('Guided Activity', 'Build Your Own SUS Questionnaire', `
+<div class="content-scroll">
+  <div class="grid2" style="gap:20px;">
+    <div>
+      <p class="label" style="margin-bottom:12px;">Instructions</p>
+      <div class="step-row"><div class="step-num">1</div><div><p class="small-text">Choose a software project you are working on or conceptualizing (e.g., mobile shopping app, food delivery website, enrollment system).</p></div></div>
+      <div class="step-row"><div class="step-num" style="background:var(--accent2);color:#111;">2</div><div><p class="small-text">Create your own <strong>10-question survey</strong> using the SUS pattern outlined in the lesson.</p></div></div>
+      <div class="step-row"><div class="step-num" style="background:var(--accent3);">3</div><div><p class="small-text">Ensure questions <strong>alternate</strong> between positive and negative phrasing, exactly like the lesson example.</p></div></div>
+      <div class="step-row"><div class="step-num" style="background:var(--accent4);color:#111;">4</div><div><p class="small-text">Provide a brief description of your <strong>target test users</strong> for your specific product.</p></div></div>
+    </div>
+    <div>
+      <p class="label2" style="margin-bottom:10px;">Example Reference — "BookTrack"</p>
+      <div class="card accent2-border" style="margin-bottom:10px;">
+        <p class="small-text"><strong>Project:</strong> BookTrack — A library borrowing and management system.</p>
+        <p class="small-text" style="margin-top:4px;"><strong>Target Users:</strong> University students and librarians.</p>
+      </div>
+      <div class="card" style="background:var(--surface2);">
+        <ol style="padding-left:18px;">
+          <li class="small-text">I think I would like to borrow books using BookTrack frequently.</li>
+          <li class="small-text">I found the borrowing process unnecessarily complex.</li>
+          <li class="small-text">I thought the book search function was easy to use.</li>
+          <li class="small-text">I think I would need help to renew my borrowed books.</li>
+          <li class="small-text" style="color:var(--text3);">...(continue to Question 10)</li>
+        </ol>
+      </div>
+      <div class="card" style="margin-top:10px;background:var(--surface2);">
+        <p class="small-text" style="color:var(--accent4);">💡 Pro-Tip: Each question should be clear, direct, and relate specifically to tasks a user performs on your platform.</p>
+      </div>
+    </div>
+  </div>
+</div>
+`);
+
+// ─── SLIDE 20: ANSWER KEY — MCQ ──────────────────────────────
+slide('Answer Key', 'Multiple Choice — Questions 1–6', `
+<div class="content-scroll">
+  <div class="grid2">
+    ${[
+      {q:"Q1", ans:"B. Efficiency, effectiveness, and satisfaction", exp:"ISO 9241-11 explicitly names these three as the core pillars of usability."},
+      {q:"Q2", ans:"B. Right goal, physical/typo error", exp:"A slip occurs despite correct intention (e.g., typing '2001' instead of '2010'). A mistake means wrong goal."},
+      {q:"Q3", ans:"C. 0–100", exp:"SUS generates a single number between 0 and 100 representing overall system usability."},
+      {q:"Q4", ans:"C. Critical", exp:"An issue that makes it impossible for users to complete tasks is Critical—must be fixed immediately."},
+      {q:"Q5", ans:"C. Efficiency of Use", exp:"Ease of Learning is about initial skill acquisition; Efficiency of Use is about speed and productivity after learning."},
+      {q:"Q6", ans:"B. No universal time standards; best for internal comparisons", exp:"Task Time lacks absolute industry benchmarks, making it better suited for A/B comparisons between design versions."}
+    ].map(({q,ans,exp})=>`
+      <div class="card" style="padding:16px 20px;">
+        <p class="label" style="margin-bottom:6px;">${q}</p>
+        <p class="ans-correct">✅ ${ans}</p>
+        <p class="ans-explain">${exp}</p>
+      </div>
+    `).join('')}
+  </div>
+</div>
+`);
+
+// ─── SLIDE 21: ANSWER KEY — IDENTIFICATION ────────────────────
+slide('Answer Key', 'Identification — Questions 7–10', `
+<div class="content-scroll">
+  <div class="grid2">
+    <div class="card">
+      <p class="label3" style="margin-bottom:6px;">Q7 — Ramona &amp; the Project Tool</p>
+      <p class="ans-correct">✅ Ease of Learning</p>
+      <p class="ans-explain">Ramona was able to explore the system and complete tasks on her own without instruction, which is the definition of Ease of Learning.</p>
+    </div>
+    <div class="card">
+      <p class="label3" style="margin-bottom:6px;">Q8 — Odessa &amp; the Food App</p>
+      <p class="ans-correct">✅ Slip</p>
+      <p class="ans-explain">Odessa had the correct intention (confirm her order) but made a physical mistake by tapping the wrong button due to poor spacing—this is the definition of a Slip.</p>
+    </div>
+    <div class="card">
+      <p class="label3" style="margin-bottom:6px;">Q9 — Hospital App Survey</p>
+      <p class="ans-correct">✅ System Usability Scale (SUS)</p>
+      <p class="ans-explain">The team used a 10-question survey rated 1–5 that produces a single score from 0 to 100, which is exactly how the System Usability Scale works.</p>
+    </div>
+    <div class="card">
+      <p class="label3" style="margin-bottom:6px;">Q10 — Enrollment Portal Problem 1</p>
+      <p class="ans-correct">✅ Critical</p>
+      <p class="ans-explain">Problem 1 is Critical because students cannot complete the essential task of submitting their enrollment form at all—the broken button makes task completion impossible.</p>
+    </div>
+  </div>
+</div>
+`);
+
+// ─── SLIDE 22: CLOSING ────────────────────────────────────────
+slide('', '', `
+<div class="final-wrap">
+  <svg width="90" height="90" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Celebration icon" style="margin-bottom:22px;">
+    <circle cx="45" cy="45" r="40" fill="#7c6af720" stroke="#7c6af7" stroke-width="2"/>
+    <text x="45" y="60" text-anchor="middle" font-size="44">🎉</text>
+  </svg>
+  <p class="eyebrow" style="font-size:14px;margin-bottom:10px;">End of Lesson</p>
+  <h1 class="hero-title" style="font-size:36px;text-align:center;">"Usability is not about<br/><span style="color:var(--accent2);">making things easy.</span><br/>It's about making things <span style="color:var(--accent4);">right."</span></h1>
+  <p style="font-size:18px;color:var(--text2);margin-top:20px;max-width:500px;text-align:center;">You now have the tools to define, measure, evaluate, and improve software usability. Keep building with intention. 🚀</p>
+  <div class="pill-row" style="margin-top:24px;justify-content:center;">
+    <span class="pill badge-accent">ISO 9241-11</span>
+    <span class="pill" style="background:var(--accent2);color:#111;">SUS</span>
+    <span class="pill" style="background:var(--accent4);color:#111;">Ease of Learning</span>
+    <span class="pill badge-accent3">Efficiency of Use</span>
+  </div>
+</div>
+`);
+
+// ════════════════════════════════════════════
+// RENDER ENGINE
+// ════════════════════════════════════════════
+const deck = document.getElementById('deck');
+const bar = document.getElementById('progress-bar');
+const ctr = document.getElementById('counter');
+let current = 0;
+
+function buildSlides() {
+  slides.forEach((s, i) => {
+    const el = document.createElement('div');
+    el.className = 'slide' + (i === 0 ? ' active' : '');
+    el.innerHTML = `
+      ${s.eyebrow ? `<p class="eyebrow">${s.eyebrow}</p>` : ''}
+      ${s.title ? `<h2 class="slide-title">${s.title}</h2>` : ''}
+      <div class="content-scroll" style="flex:1;min-height:0;">${s.html}</div>
+    `;
+    deck.appendChild(el);
+  });
+}
+
+function updateProgress() {
+  const pct = ((current + 1) / slides.length) * 100;
+  bar.style.width = pct + '%';
+  ctr.textContent = (current + 1) + ' / ' + slides.length;
+}
+
+function goTo(n, dir) {
+  if (n < 0 || n >= slides.length || n === current) return;
+  const els = deck.querySelectorAll('.slide');
+  const from = els[current];
+  const to = els[n];
+  from.classList.remove('active');
+  from.classList.add(dir > 0 ? 'exit-left' : 'exit-right');
+  to.style.transform = dir > 0 ? 'translateX(60px)' : 'translateX(-60px)';
+  to.classList.add('active');
+  setTimeout(() => {
+    from.classList.remove('exit-left', 'exit-right');
+    to.style.transform = '';
+  }, 370);
+  current = n;
+  updateProgress();
+}
+
+function next() { goTo(current + 1, 1); }
+function prev() { goTo(current - 1, -1); }
+
+function copyCode(btn) {
+  const pre = btn.closest('.code-wrap').querySelector('pre');
+  navigator.clipboard.writeText(pre.textContent).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1800);
+  });
+}
+
+// keyboard
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next();
+  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') prev();
+  else if (e.key === 'Home') goTo(0, -1);
+  else if (e.key === 'End') goTo(slides.length - 1, 1);
+  else if (e.key === '?') toggleOverlay();
+});
+
+// mouse buttons
+document.addEventListener('mousedown', e => {
+  if (e.button === 3) { e.preventDefault(); e.stopImmediatePropagation(); next(); }
+  else if (e.button === 4) { e.preventDefault(); e.stopImmediatePropagation(); prev(); }
+}, true);
+
+// right-click = next
+document.addEventListener('contextmenu', e => { e.preventDefault(); next(); });
+
+// swipe
+let tx = 0;
+document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - tx;
+  if (Math.abs(dx) > 40) { dx < 0 ? next() : prev(); }
+}, { passive: true });
+
+// overlay
+const overlay = document.getElementById('overlay');
+function toggleOverlay() { overlay.classList.toggle('show'); }
+overlay.addEventListener('click', () => overlay.classList.remove('show'));
+
+buildSlides();
+updateProgress();
+</script>
+</body>
+</html>
