@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ITE 401 · Platform Technologies · Module 3</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #faf7f0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      color: #1e1e2a;
+    }
+
+    .presentation-wrapper {
+      width: 1300px;
+      max-width: 100%;
+      height: 90vh;
+      max-height: 800px;
+      background: white;
+      border-radius: 32px;
+      box-shadow: 0 20px 40px -12px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: #e8e3d9;
+      width: 100%;
+      flex-shrink: 0;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: #c44536;
+      transition: width 0.3s ease;
+    }
+
+    .slide-counter {
+      position: absolute;
+      bottom: 28px;
+      right: 32px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      color: #7c6f5e;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(4px);
+      padding: 6px 14px;
+      border-radius: 40px;
+      border: 1px solid #e1d9ce;
+      z-index: 20;
+    }
+
+    .slides-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .slide-track {
+      display: flex;
+      height: 100%;
+      width: 100%;
+      transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1);
+      will-change: transform;
+    }
+
+    .slide {
+      flex: 0 0 100%;
+      height: 100%;
+      padding: 40px 50px 60px 50px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #d4cdc0 #f2ede6;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+
+    .slide::-webkit-scrollbar { width: 5px; }
+    .slide::-webkit-scrollbar-track { background: #f2ede6; border-radius: 12px; }
+    .slide::-webkit-scrollbar-thumb { background: #d4cdc0; border-radius: 12px; }
+
+    .eyebrow {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #c44536;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: #1e1e2a;
+      margin-bottom: 1.2rem;
+      border-bottom: 2px solid #ece6dc;
+      padding-bottom: 0.4rem;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: #2d2a3a;
+      margin: 0.8rem 0 0.2rem 0;
+    }
+
+    h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #3d3a4a;
+      margin: 0.6rem 0 0.15rem 0;
+    }
+
+    p, li, .card p, .text-block {
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: #2c2936;
+    }
+
+    .small-meta {
+      font-size: 0.75rem;
+      color: #7a6f5e;
+      letter-spacing: 0.02em;
+      margin-top: 4px;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 14px;
+      width: 100%;
+    }
+
+    .card-grid > * {
+      min-width: 0;
+    }
+
+    .card {
+      background: #f6f2eb;
+      padding: 16px 20px;
+      border-radius: 20px;
+      border: 1px solid #e5ded4;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+      transition: 0.1s ease;
+    }
+
+    .card h4 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #1e1e2a;
+      margin-bottom: 4px;
+    }
+
+    .card p, .card li {
+      font-size: 0.85rem;
+      line-height: 1.4;
+      color: #35303e;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 24px;
+      margin: 12px 0;
+    }
+
+    .two-col > * { min-width: 0; }
+
+    /* ===== IMPROVED CODE BLOCK ===== */
+    .code-block {
+      background: #1a1a2e;
+      color: #e8e4de;
+      padding: 20px 24px;
+      border-radius: 18px;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.78rem;
+      line-height: 1.7;
+      overflow-x: auto;
+      overflow-y: auto;
+      white-space: pre;
+      word-break: normal;
+      margin: 8px 0 4px 0;
+      border: 1px solid #3a3550;
+      min-height: 240px;
+      max-height: 440px;
+      flex: 1 1 auto;
+      tab-size: 2;
+      -moz-tab-size: 2;
+    }
+
+    .code-block .tag { color: #f9a97c; }
+    .code-block .attr { color: #b0d9b0; }
+    .code-block .string { color: #d4b8d9; }
+    .code-block .keyword { color: #f7c95e; }
+    .code-block .comment { color: #6f7b8a; font-style: italic; }
+    .code-block .function { color: #7fc1ca; }
+    .code-block .variable { color: #e8e4de; }
+    .code-block .number { color: #e6a87c; }
+    .code-block .operator { color: #d4b8d9; }
+    .code-block .bracket { color: #b0d9b0; }
+    .code-block .doctype { color: #6f7b8a; }
+
+    ul, ol {
+      padding-left: 1.2rem;
+      margin: 6px 0 8px 0;
+    }
+
+    li {
+      margin-bottom: 2px;
+    }
+
+    .analogy {
+      background: #f0ede7;
+      border-left: 4px solid #c44536;
+      padding: 10px 16px;
+      border-radius: 12px;
+      margin: 10px 0;
+      font-style: normal;
+    }
+
+    .analogy strong {
+      color: #1e1e2a;
+    }
+
+    hr {
+      border: 0;
+      height: 1px;
+      background: #e1d9ce;
+      margin: 14px 0;
+    }
+
+    .faq-block {
+      background: #f6f2eb;
+      border-radius: 24px;
+      padding: 18px 22px;
+      margin: 10px 0;
+      border: 1px solid #e5ded4;
+    }
+
+    .faq-block h3 {
+      margin-top: 0;
+      color: #c44536;
+      font-size: 1.1rem;
+    }
+
+    .scenario-box {
+      background: #f0ede7;
+      border-radius: 20px;
+      padding: 18px 22px;
+      margin: 8px 0;
+      border-left: 6px solid #c44536;
+    }
+
+    .answer-box {
+      background: #e8f0e6;
+      border-radius: 20px;
+      padding: 18px 22px;
+      margin: 10px 0;
+      border-left: 6px solid #2d7a4a;
+    }
+
+    .answer-box h4 {
+      color: #1e5a3a;
+      margin-bottom: 6px;
+    }
+
+    /* code slide specific */
+    .code-slide .code-block {
+      min-height: 300px;
+      max-height: 520px;
+    }
+
+    @media (max-width: 700px) {
+      .slide { padding: 28px 20px 70px 20px; }
+      h1 { font-size: 1.8rem; }
+      .two-col { grid-template-columns: 1fr; gap: 16px; }
+      .card-grid { grid-template-columns: 1fr; }
+      .code-block { font-size: 0.65rem; padding: 14px 16px; min-height: 200px; max-height: 340px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .slide-track { transition: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="presentation-wrapper">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="slides-container">
+    <div class="slide-track" id="slideTrack">
+      <!-- SLIDE 1 -->
+      <div class="slide">
+        <div class="eyebrow">ITE 401 · Platform Technologies</div>
+        <h1>Module #3 · Databases &amp; Software Development</h1>
+        <div style="margin-bottom: 0.6rem;">
+          <span style="background: #eae4da; padding: 4px 14px; border-radius: 40px; font-size:0.8rem; font-weight:500;">Learning targets</span>
+        </div>
+        <ul style="font-size:1rem; line-height:1.7; margin-bottom: 1.2rem;">
+          <li>🔹 Identify different Database drivers &amp; applications</li>
+          <li>🔹 Recall server &amp; client connectivity</li>
+          <li>🔹 Apply Front‑end programming concepts</li>
+          <li>🔹 Discuss basic cloud infrastructure</li>
+        </ul>
+        <div class="analogy" style="margin-bottom:6px;">
+          <strong>💡 Analogy:</strong> Technology Platform = pundasyon ng bahay. Hindi ka pwedeng magtayo ng apps kung walang matibay na sahig.
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px;">
+          <span style="background:#eae4da; padding:2px 14px; border-radius:40px; font-size:0.75rem;">OS: Windows, macOS, Linux</span>
+          <span style="background:#eae4da; padding:2px 14px; border-radius:40px; font-size:0.75rem;">Cloud: AWS, GCP</span>
+        </div>
+        <div style="margin-top: 14px; color: #5f5544; font-size:0.8rem; border-top:1px solid #e1d9ce; padding-top:10px;">References: Oracle · Coursera · React Docs · PHINMA Ed</div>
+      </div>
+
+      <!-- SLIDE 2 : DATABASE intro -->
+      <div class="slide">
+        <div class="eyebrow">B · Main lesson</div>
+        <h1>What is a Database?</h1>
+        <p style="font-size:1rem;">Organized collection of structured information, controlled by a <strong>DBMS</strong>.</p>
+        <div class="analogy"><strong>💡 Analogy:</strong> Database = digital filing cabinet. DBMS = secretary / steward na naghahanap, naglalagay, nagbabantay.</div>
+        <h2 style="margin-top: 8px;">Structured Query Language (SQL)</h2>
+        <ul>
+          <li><strong>Query:</strong> “Database, pakihanap nga lahat ng estudyanteng nakatira sa Iloilo.”</li>
+          <li><strong>Manipulate:</strong> mag‑add, mag‑update, mag‑delete</li>
+          <li><strong>Define:</strong> gumawa ng bagong table structures</li>
+        </ul>
+        <div style="background:#f2ede6; border-radius:20px; padding:6px 16px; margin-top:6px; font-size:0.8rem; color:#3f3a30;">SQL developed at IBM in the 1970s · Oracle · ANSI standard</div>
+      </div>
+
+      <!-- SLIDE 3 : Types of Database (table) -->
+      <div class="slide">
+        <div class="eyebrow">Types of Database</div>
+        <h1>Mga Uri ng Database</h1>
+        <div style="display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 14px; margin-top:4px;">
+          <div class="card"><h4>Relational (RDBMS)</h4><p>Tables, rows, columns, keys. Parang Excel sheets na magkakaugnay.</p></div>
+          <div class="card"><h4>Object‑oriented</h4><p>Data as Objects (Java‑style). Swak sa OOP paradigm.</p></div>
+          <div class="card"><h4>Distributed</h4><p>Files across different physical sites / servers.</p></div>
+          <div class="card"><h4>Data Warehouse</h4><p>Central repository for fast query &amp; business analytics.</p></div>
+          <div class="card"><h4>NoSQL</h4><p>Unstructured / semi‑structured data (posts, logs).</p></div>
+          <div class="card"><h4>Graph</h4><p>Nodes &amp; edges. Parang Facebook network graph.</p></div>
+          <div class="card"><h4>Open Source</h4><p>Libre, open code (PostgreSQL, MySQL).</p></div>
+          <div class="card"><h4>Cloud Database</h4><p>DBaaS: AWS, Google — sila na bahala sa hardware.</p></div>
+          <div class="card"><h4>Multimodel</h4><p>Combines relational + document models in one backend.</p></div>
+          <div class="card"><h4>Document/JSON</h4><p>Stores JSON documents, flexible fields.</p></div>
+          <div class="card"><h4>Self‑driving</h4><p>AI / ML automates updates, backup, security.</p></div>
+        </div>
+      </div>
+
+      <!-- SLIDE 4 : Front-End Development -->
+      <div class="slide">
+        <div class="eyebrow">C · Front‑end development</div>
+        <h1>Client‑Side System</h1>
+        <p>Ang <strong>Front‑End Developer</strong> ang gumagawa ng UI — lahat ng nakikita, nahihipo, at nararanasan ng end‑user.</p>
+        <div class="analogy"><strong>💡 Analogy:</strong> Website = Restaurant. Front‑end = dekorasyon, menu card, kulay ng ilaw, uniform ng waiters.</div>
+        <h2>3 Core Languages</h2>
+        <div class="two-col">
+          <div class="card"><h4>HTML</h4><p>Kansel / Skeleton. Structure ng page: text, buttons, inputs.</p></div>
+          <div class="card"><h4>CSS</h4><p>Styling / Damit. Kulay, font, spacing, layout.</p></div>
+          <div class="card"><h4>JavaScript</h4><p>Utak / Paggalaw. Logic sa browser, alert, functions.</p></div>
+        </div>
+      </div>
+
+      <!-- SLIDE 5 : React.js -->
+      <div class="slide">
+        <div class="eyebrow">D · React.js crash course</div>
+        <h1>React.js · UI library</h1>
+        <p>Binuo ng Facebook, para sa mabilis at malinis na User Interfaces gamit ang reusable blocks.</p>
+        <h3>Step‑by‑Step Project</h3>
+        <div class="code-block">
+          <span class="comment"># 1. install Node.js · 2. create app</span>
+          npx create-react-app my-app
+          <span class="comment"># 3. enter directory</span>
+          cd my-app
+          <span class="comment"># 4. start dev server</span>
+          npm start
+        </div>
+        <div style="display:flex; gap: 12px; margin-top:8px; flex-wrap:wrap;">
+          <div class="card" style="flex:1;"><h4>Components</h4><p>Lego bricks: reusable UI pieces</p></div>
+          <div class="card" style="flex:1;"><h4>State</h4><p>Memory object na nagtatabi ng data na pwedeng magbago</p></div>
+          <div class="card" style="flex:1;"><h4>Hooks</h4><p>useState, etc. para sa dynamic states</p></div>
+        </div>
+      </div>
+
+      <!-- SLIDE 6 : Back-end & Cloud -->
+      <div class="slide">
+        <div class="eyebrow">E · Back‑end &amp; Cloud</div>
+        <h1>Server‑Side System</h1>
+        <p>Nakatutok sa logic, APIs, database architectures, at background processing.</p>
+        <div class="analogy"><strong>💡 Analogy:</strong> Back‑end = Kusina (Kitchen). Hindi nakikita ng customer, pero kapag pumalya, walang makakaing pagkain.</div>
+        <h2>Cloud Components</h2>
+        <div class="card-grid">
+          <div class="card"><h4>Virtual Machines (VMs)</h4><p>Emulated software computers sa cloud.</p></div>
+          <div class="card"><h4>Containers (Docker)</h4><p>Isolated packages ng app + dependencies.</p></div>
+          <div class="card"><h4>Serverless</h4><p>Upload code, run on demand — no OS config.</p></div>
+        </div>
+      </div>
+
+      <!-- SLIDE 7 : React CDN code demo - IMPROVED -->
+      <div class="slide code-slide">
+        <div class="eyebrow">G · React CDN practice</div>
+        <h1>Student Registration · React UI</h1>
+        <div class="code-block" style="font-size:0.72rem; min-height:320px; max-height:520px; white-space:pre;">
+<span class="doctype">&lt;!DOCTYPE html&gt;</span>
+<span class="tag">&lt;html&gt;</span>
+<span class="tag">&lt;head&gt;</span>
+    <span class="tag">&lt;meta</span> <span class="attr">charset</span>=<span class="string">"UTF-8"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;title&gt;</span>Simple Form · React<span class="tag">&lt;/title&gt;</span>
+    <span class="tag">&lt;script</span> <span class="attr">src</span>=<span class="string">"https://unpkg.com/react@17.0.2/umd/react.production.min.js"</span><span class="tag">&gt;&lt;\/script&gt;</span>
+    <span class="tag">&lt;script</span> <span class="attr">src</span>=<span class="string">"https://unpkg.com/react-dom@17.0.2/umd/react-dom.production.min.js"</span><span class="tag">&gt;&lt;\/script&gt;</span>
+    <span class="tag">&lt;script</span> <span class="attr">src</span>=<span class="string">"https://unpkg.com/@babel/standalone@7.15.3/babel.min.js"</span><span class="tag">&gt;&lt;\/script&gt;</span>
+<span class="tag">&lt;/head&gt;</span>
+<span class="tag">&lt;body&gt;</span>
+    <span class="tag">&lt;div</span> <span class="attr">id</span>=<span class="string">"form-example"</span><span class="tag">&gt;&lt;/div&gt;</span>
+    <span class="tag">&lt;script</span> <span class="attr">type</span>=<span class="string">"text/babel"</span><span class="tag">&gt;</span>
+    <span class="keyword">const</span> <span class="variable">{ useState }</span> <span class="operator">=</span> React;
+
+    <span class="keyword">const</span> <span class="function">Form</span> <span class="operator">=</span> () <span class="operator">=&gt;</span> {
+        <span class="keyword">const</span> <span class="variable">[idno, setIdno]</span> <span class="operator">=</span> <span class="function">useState</span>(<span class="string">""</span>);
+        <span class="keyword">const</span> <span class="variable">[name, setName]</span> <span class="operator">=</span> <span class="function">useState</span>(<span class="string">""</span>);
+        <span class="keyword">const</span> <span class="variable">[course, setCourse]</span> <span class="operator">=</span> <span class="function">useState</span>(<span class="string">""</span>);
+        <span class="keyword">const</span> <span class="variable">[displayInfo, setDisplayInfo]</span> <span class="operator">=</span> <span class="function">useState</span>(<span class="keyword">false</span>);
+
+        <span class="keyword">const</span> <span class="function">handleIdnoChange</span> <span class="operator">=</span> (event) <span class="operator">=&gt;</span> {
+            <span class="function">setIdno</span>(event.target.value);
+        };
+
+        <span class="keyword">const</span> <span class="function">handleNameChange</span> <span class="operator">=</span> (event) <span class="operator">=&gt;</span> {
+            <span class="function">setName</span>(event.target.value);
+        };
+
+        <span class="keyword">const</span> <span class="function">handleCourseChange</span> <span class="operator">=</span> (event) <span class="operator">=&gt;</span> {
+            <span class="function">setCourse</span>(event.target.value);
+        };
+
+        <span class="keyword">const</span> <span class="function">handleSubmit</span> <span class="operator">=</span> (event) <span class="operator">=&gt;</span> {
+            event.preventDefault();
+            <span class="function">setDisplayInfo</span>(<span class="keyword">true</span>);
+        };
+
+        <span class="keyword">return</span> (
+            <span class="tag">&lt;div&gt;</span>
+                <span class="tag">&lt;h2</span> <span class="attr">style</span>=<span class="string">{{ color: 'pink' }}</span><span class="tag">&gt;</span>Platform of Technology<span class="tag">&lt;/h2&gt;</span>
+                <span class="tag">&lt;form</span> <span class="attr">onSubmit</span>=<span class="string">{handleSubmit}</span><span class="tag">&gt;</span>
+                    <span class="tag">&lt;label</span> <span class="attr">htmlFor</span>=<span class="string">"idno"</span><span class="tag">&gt;</span>Enter ID Number:<span class="tag">&lt;/label&gt;</span>
+                    <span class="tag">&lt;input</span> <span class="attr">type</span>=<span class="string">"text"</span> <span class="attr">id</span>=<span class="string">"idno"</span> <span class="attr">value</span>=<span class="string">{idno}</span> <span class="attr">onChange</span>=<span class="string">{handleIdnoChange}</span> <span class="tag">/&gt;</span>
+
+                    <span class="tag">&lt;label</span> <span class="attr">htmlFor</span>=<span class="string">"name"</span><span class="tag">&gt;</span>Enter Name:<span class="tag">&lt;/label&gt;</span>
+                    <span class="tag">&lt;input</span> <span class="attr">type</span>=<span class="string">"text"</span> <span class="attr">id</span>=<span class="string">"name"</span> <span class="attr">value</span>=<span class="string">{name}</span> <span class="attr">onChange</span>=<span class="string">{handleNameChange}</span> <span class="tag">/&gt;</span>
+
+                    <span class="tag">&lt;label</span> <span class="attr">htmlFor</span>=<span class="string">"course"</span><span class="tag">&gt;</span>Enter Course:<span class="tag">&lt;/label&gt;</span>
+                    <span class="tag">&lt;input</span> <span class="attr">type</span>=<span class="string">"text"</span> <span class="attr">id</span>=<span class="string">"course"</span> <span class="attr">value</span>=<span class="string">{course}</span> <span class="attr">onChange</span>=<span class="string">{handleCourseChange}</span> <span class="tag">/&gt;</span>
+
+                    <span class="tag">&lt;button</span> <span class="attr">type</span>=<span class="string">"submit"</span> <span class="attr">style</span>=<span class="string">{{ backgroundColor: 'pink', color: 'white', padding: '10px 20px', borderRadius: '5px', border: 'none', marginTop: '10px' }}</span><span class="tag">&gt;</span>
+                        Display Info
+                    <span class="tag">&lt;/button&gt;</span>
+                <span class="tag">&lt;/form&gt;</span>
+
+                {displayInfo <span class="operator">&amp;&amp;</span> (
+                    <span class="tag">&lt;div</span> <span class="attr">style</span>=<span class="string">{{ marginTop: "10px" }}</span><span class="tag">&gt;</span>
+                        <span class="tag">&lt;p&gt;</span>ID Number: {idno}<span class="tag">&lt;/p&gt;</span>
+                        <span class="tag">&lt;p&gt;</span>Name: {name}<span class="tag">&lt;/p&gt;</span>
+                        <span class="tag">&lt;p&gt;</span>Course: {course}<span class="tag">&lt;/p&gt;</span>
+                    <span class="tag">&lt;/div&gt;</span>
+                )}
+            <span class="tag">&lt;/div&gt;</span>
+        );
+    };
+
+    ReactDOM.render(<span class="tag">&lt;Form</span> <span class="tag">/&gt;</span>, document.getElementById(<span class="string">"form-example"</span>));
+    <span class="tag">&lt;\/script&gt;</span>
+<span class="tag">&lt;/body&gt;</span>
+<span class="tag">&lt;/html&gt;</span>
+        </div>
+      </div>
+
+      <!-- SLIDE 8 : Skill-Building Q1 - Scenario only -->
+      <div class="slide">
+        <div class="eyebrow">F · Skill‑building</div>
+        <h1>Scenario A: Jeziel's Growing Social Media</h1>
+        <div class="scenario-box">
+          <p><strong>Scenario:</strong> Gumagawa si Jeziel ng isang social network kung saan mabilis dumami ang users, at nahihirapan na ang kasalukuyang Relational Database (RDBMS) sa pabago‑bago at malaking volume ng data traffic.</p>
+          <p style="margin-top:8px;"><strong>Tanong:</strong> Ano ang dapat niyang gamitin? Ano ang mga posibleng solusyon?</p>
+        </div>
+        <div style="background: #f9f5ed; border-radius: 16px; padding: 12px 18px; border: 1px dashed #c44536; margin-top:6px;">
+          <p style="font-size:0.9rem;"><strong>💡 Isipin mo:</strong> Alin sa mga uri ng database ang mas flexible at kayang humawak ng mabilis na paglaki ng data?</p>
+        </div>
+        <p style="margin-top:10px; color:#5f5544; font-size:0.85rem;">👉 Pindutin ang susunod na slide para sa posibleng sagot.</p>
+      </div>
+
+      <!-- SLIDE 9 : Skill-Building Q2 - Scenario only -->
+      <div class="slide">
+        <div class="eyebrow">F · Skill‑building</div>
+        <h1>Scenario B: Geff's Multimedia Platform</h1>
+        <div class="scenario-box">
+          <p><strong>Scenario:</strong> Si Geff ay nagpapatakbo ng platform na naglalaman ng iba't ibang media types tulad ng images, malalaking video logs, at audio recording files.</p>
+          <p style="margin-top:8px;"><strong>Tanong:</strong> Anong database o storage solution ang bagay sa kanya?</p>
+        </div>
+        <div style="background: #f9f5ed; border-radius: 16px; padding: 12px 18px; border: 1px dashed #c44536; margin-top:6px;">
+          <p style="font-size:0.9rem;"><strong>💡 Isipin mo:</strong> Paano mo iimbak ang mabibigat na media files habang pinapanatili ang mabilis na pag‑access at pag‑manage ng metadata?</p>
+        </div>
+        <p style="margin-top:10px; color:#5f5544; font-size:0.85rem;">👉 Pindutin ang susunod na slide para sa posibleng sagot.</p>
+      </div>
+
+      <!-- SLIDE 10 : Skill-Building Q1 - Answer -->
+      <div class="slide">
+        <div class="eyebrow">F · Skill‑building · Answer</div>
+        <h1>Jeziel's Social Media — Possible Solutions</h1>
+        <div class="answer-box">
+          <h4>✅ Posibleng Sagot #1: NoSQL Database</h4>
+          <p>Lumipat sa <strong>NoSQL Database</strong> (tulad ng <strong>MongoDB</strong> o <strong>Cassandra</strong>) — mas mabilis mag‑scale ng pahalang (horizontal scaling) at kayang i‑handle ang dynamic na data tulad ng posts at messages.</p>
+        </div>
+        <div class="answer-box" style="border-left-color: #b07a3a; background: #f5efe6;">
+          <h4>✅ Posibleng Sagot #2: Graph Database</h4>
+          <p>Gumamit ng <strong>Graph Database</strong> (tulad ng <strong>Neo4j</strong>) — lalo na kung ang focus ay sa pag‑track ng friendships, connections, at social relationships.</p>
+        </div>
+        <div style="margin-top:10px; background:#eae4da; border-radius:12px; padding:8px 16px;">
+          <p style="font-size:0.85rem;"><strong>Paliwanag:</strong> Mas flexible ang NoSQL at Graph databases para sa mabilis na paglaki at pagbabago ng istruktura ng data kumpara sa tradisyonal na RDBMS.</p>
+        </div>
+      </div>
+
+      <!-- SLIDE 11 : Skill-Building Q2 - Answer -->
+      <div class="slide">
+        <div class="eyebrow">F · Skill‑building · Answer</div>
+        <h1>Geff's Multimedia Platform — Possible Solutions</h1>
+        <div class="answer-box">
+          <h4>✅ Posibleng Sagot #1: Cloud Object Storage + NoSQL</h4>
+          <p>Gumamit ng <strong>Cloud Object Storage</strong> (tulad ng AWS S3) para sa physical media files, at <strong>NoSQL Document Database</strong> para sa metadata management.</p>
+        </div>
+        <div class="answer-box" style="border-left-color: #b07a3a; background: #f5efe6;">
+          <h4>✅ Posibleng Sagot #2: Multimodel Database</h4>
+          <p>Gumamit ng <strong>Multimodel Database</strong> na kayang humawak ng iba't ibang uri ng data — relational para sa user info at document‑based para sa media metadata.</p>
+        </div>
+        <div style="margin-top:10px; background:#eae4da; border-radius:12px; padding:8px 16px;">
+          <p style="font-size:0.85rem;"><strong>Paliwanag:</strong> Mas matipid at mabilis kapag ang mga raw binary files (videos, images) ay naka‑store sa object storage, habang ang metadata ay nasa database para sa mabilis na query at pag‑organize.</p>
+        </div>
+      </div>
+
+      <!-- SLIDE 12 : LESSON WRAP-UP FAQ 1 - Node.js -->
+      <div class="slide">
+        <div class="eyebrow">C · Lesson wrap‑up · FAQs</div>
+        <h1>1. What is Node.js?</h1>
+        <div class="faq-block">
+          <h3>Official Definition</h3>
+          <p>Node.js is a cross‑platform, open‑source server environment that runs on Windows, Linux, Unix, macOS, and more. It's a back‑end JavaScript runtime environment that runs on the V8 JavaScript Engine and executes JavaScript code outside a web browser.</p>
+        </div>
+        <div class="analogy">
+          <strong>💡 Analogy:</strong> Dati, si <em>JavaScript</em> ay parang isang <strong>isda na nakatira lang sa loob ng aquarium</strong> (ang aquarium ay ang web browser). Hindi siya pwedeng mabuhay sa labas ng browser. Noong ginawa ang <strong>Node.js</strong>, parang binigyan si JavaScript ng <strong>baga o paa para makalabas sa aquarium at maglakad sa lupa</strong> (ang lupa ay ang operating system o server). Dahil kay Node.js, pwede mo nang gamitin si JavaScript para gumawa ng server files, mag‑delete ng files, at makipag‑usap nang direkta sa mga databases!
+        </div>
+      </div>
+
+      <!-- SLIDE 13 : LESSON WRAP-UP FAQ 2 - Purpose of database -->
+      <div class="slide">
+        <div class="eyebrow">C · Lesson wrap‑up · FAQs</div>
+        <h1>2. Purpose of a Database</h1>
+        <div class="faq-block">
+          <h3>Official Definition</h3>
+          <p>Databases are used for <strong>storing, maintaining, and accessing</strong> any sort of data. They collect information on people, places, or things. That information is gathered in one place so that it can be observed and analyzed.</p>
+        </div>
+        <div class="analogy">
+          <strong>💡 Analogy:</strong> Isipin mo na ikaw ang may‑ari ng isang sikat na <strong>Sari‑Sari Store o Grocery</strong>. Kung wala kang database, ang listahan ng mga utang, presyo, at imbentaryo mo ay nakasulat lang sa mga <strong>pira‑pirasong papel o lumang notebook</strong> na pwedeng ngatngatin ng daga, mabasa ng kape, o mawala bigla. Ang <strong>pangunahing layunin (purpose) ng database</strong> ay ilagay ang lahat ng magulong impormasyon na ito sa isang <strong>matibay, secure, at digital na taguan</strong>.
+          <ul style="margin-top:8px;">
+            <li><strong>Storing (Pagtatabi):</strong> Ligtas na nakatago ang pangalan ng customer, items, at mga presyo.</li>
+            <li><strong>Maintaining (Pag‑aayos):</strong> Madali mong mapapalitan ang presyo kapag nagka‑inflation nang hindi binubura ang buong listahan.</li>
+            <li><strong>Accessing (Pagkuha):</strong> Sa isang click o query mo lang, malalaman mo agad kung sino ang pinakamalaking umutang sa tindahan mo para mabilis mong ma‑analyze kung kumikita ka pa ba o nalulugi na!</li>
+          </ul>
+        </div>
+      </div>
+
+    </div> <!-- slide-track -->
+
+    <div class="slide-counter" id="slideCounter">1 / 13</div>
+  </div> <!-- slides-container -->
+</div> <!-- presentation-wrapper -->
+
+<script>
+  (function() {
+    const track = document.getElementById('slideTrack');
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const total = slides.length;
+    const counter = document.getElementById('slideCounter');
+    const fill = document.getElementById('progressFill');
+
+    let current = 0;
+    let animating = false;
+
+    function updateSlide(index, direction = 1) {
+      if (animating) return;
+      if (index < 0) index = 0;
+      if (index >= total) index = total - 1;
+      if (index === current && index !== 0 && index !== total-1) return;
+
+      animating = true;
+      current = index;
+
+      track.style.transform = `translateX(-${current * 100}%)`;
+      counter.textContent = `${current+1} / ${total}`;
+      fill.style.width = `${((current+1) / total) * 100}%`;
+
+      setTimeout(() => { animating = false; }, 420);
+    }
+
+    function goForward() {
+      if (current < total - 1) updateSlide(current + 1, 1);
+    }
+    function goBack() {
+      if (current > 0) updateSlide(current - 1, -1);
+    }
+    function goHome() { updateSlide(0); }
+    function goEnd() { updateSlide(total - 1); }
+
+    document.querySelector('.slides-container').addEventListener('click', (e) => {
+      goForward();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      const key = e.key;
+      if (key === 'ArrowRight' || key === 'ArrowDown' || key === ' ') {
+        e.preventDefault();
+        goForward();
+      } else if (key === 'ArrowLeft' || key === 'ArrowUp') {
+        e.preventDefault();
+        goBack();
+      } else if (key === 'Home') {
+        e.preventDefault();
+        goHome();
+      } else if (key === 'End') {
+        e.preventDefault();
+        goEnd();
+      }
+    });
+
+    updateSlide(0);
+  })();
+</script>
+</body>
+</html>

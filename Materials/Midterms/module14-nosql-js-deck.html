@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Module 14 — NoSQL Databases, Cross-Platform Backends &amp; JavaScript Setup</title>
+<style>
+  :root{
+    --bg: #0E161F;
+    --bg-soft: #121C27;
+    --surface: #16212D;
+    --surface-2: #1C2938;
+    --line: rgba(230,240,247,0.09);
+    --line-strong: rgba(230,240,247,0.16);
+    --text: #E9F1F7;
+    --text-muted: #90A4B8;
+    --text-dim: #5D7086;
+    --teal: #43D9C4;
+    --teal-dim: rgba(67,217,196,0.14);
+    --amber: #F5B942;
+    --amber-dim: rgba(245,185,66,0.14);
+    --violet: #A98BFA;
+    --violet-dim: rgba(169,139,250,0.14);
+    --coral: #F2735C;
+    --shadow: 0 24px 60px -20px rgba(0,0,0,0.55);
+    --radius: 14px;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, "Courier New", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:
+      radial-gradient(1100px 700px at 8% -10%, rgba(67,217,196,0.10), transparent 60%),
+      radial-gradient(900px 620px at 105% 10%, rgba(169,139,250,0.08), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{ background: var(--teal); color:#062420; }
+
+  /* ---------- deck shell ---------- */
+  #deck{
+    position:relative; width:100vw; height:100vh;
+    display:flex; align-items:center; justify-content:center;
+  }
+  #progressTrack{
+    position:fixed; top:0; left:0; width:100%; height:3px;
+    background:var(--line); z-index:60;
+  }
+  #progressBar{
+    height:100%; width:0%;
+    background:linear-gradient(90deg,var(--teal),var(--violet));
+    transition:width .35s ease;
+  }
+  #counter{
+    position:fixed; bottom:18px; right:22px; z-index:60;
+    font-family:var(--mono); font-size:12px; letter-spacing:.06em;
+    color:var(--text-muted); background:rgba(18,28,39,0.75);
+    border:1px solid var(--line); padding:6px 12px; border-radius:999px;
+    backdrop-filter:blur(6px);
+  }
+  #hint{
+    position:fixed; bottom:18px; left:22px; z-index:60;
+    font-family:var(--mono); font-size:11px; color:var(--text-dim);
+    display:flex; align-items:center; gap:8px;
+  }
+  #hint kbd{
+    border:1px solid var(--line-strong); border-radius:5px; padding:1px 6px;
+    font-family:var(--mono); color:var(--text-muted); background:var(--surface);
+  }
+
+  .slide-wrap{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    padding:64px 72px;
+    opacity:0; visibility:hidden;
+    transform:translateX(28px);
+    transition:opacity .35s ease, transform .35s ease, visibility 0s linear .35s;
+    pointer-events:none;
+  }
+  .slide-wrap.active{
+    opacity:1; visibility:visible; transform:translateX(0);
+    transition:opacity .35s ease, transform .35s ease;
+    pointer-events:auto;
+  }
+  .slide-wrap.leaving-left{ transform:translateX(-28px); }
+  .slide-wrap.leaving-right{ transform:translateX(28px); }
+  @media (prefers-reduced-motion: reduce){
+    .slide-wrap{ transition:opacity .01s linear; transform:none !important; }
+  }
+
+  .slide{
+    width:min(1180px, 100%); max-height:100%;
+    overflow:auto; padding:6px 4px 18px;
+  }
+  .slide::-webkit-scrollbar{ width:8px; }
+  .slide::-webkit-scrollbar-thumb{ background:var(--line-strong); border-radius:8px; }
+
+  .eyebrow{
+    font-family:var(--mono); font-size:13.5px; letter-spacing:.13em;
+    color:var(--teal); text-transform:uppercase;
+    display:inline-flex; align-items:center; gap:8px; margin-bottom:14px;
+  }
+  .eyebrow::before{ content:"{"; color:var(--text-dim); font-weight:700; }
+  .eyebrow::after{ content:"}"; color:var(--text-dim); font-weight:700; }
+  .eyebrow.amber{ color:var(--amber); }
+  .eyebrow.violet{ color:var(--violet); }
+
+  h1.title{
+    font-size:clamp(28px, 3.4vw, 42px);
+    line-height:1.12; margin:0 0 18px; font-weight:800;
+    letter-spacing:-0.01em;
+  }
+  h1.title .accent{ color:var(--teal); }
+  p.lede{ font-size:17px; color:var(--text-muted); line-height:1.65; max-width:74ch; margin:0 0 22px; }
+
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+
+  .card{
+    position:relative;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:22px 24px;
+    box-shadow: var(--shadow);
+  }
+  .card::before{
+    content:""; position:absolute; top:0; right:0; width:16px; height:16px;
+    background:var(--bg);
+    clip-path:polygon(0 0, 100% 0, 100% 100%);
+    border-bottom:1px solid var(--line);
+    border-left:1px solid var(--line);
+  }
+  .card h3{ margin:0 0 8px; font-size:18.5px; font-weight:700; }
+  .card p{ margin:0; font-size:16.5px; line-height:1.65; color:var(--text-muted); }
+  .card.accent-teal{ border-left:3px solid var(--teal); }
+  .card.accent-amber{ border-left:3px solid var(--amber); }
+  .card.accent-violet{ border-left:3px solid var(--violet); }
+
+  .badge-row{ display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin:10px 0 28px; }
+  .badge{
+    display:flex; align-items:center; gap:11px;
+    background:var(--surface-2); border:1px solid var(--line);
+    padding:10px 18px 10px 12px; border-radius:999px;
+    font-family:var(--mono); font-size:14.5px; color:var(--text-muted);
+  }
+  .badge svg{ width:34px; height:34px; flex-shrink:0; }
+  .badge-row.hero{ gap:20px; }
+  .badge-row.hero .badge{ padding:12px 22px 12px 14px; font-size:15.5px; }
+  .badge-row.hero .badge svg{ width:42px; height:42px; }
+  .badge-row > svg{ width:34px; height:34px; flex-shrink:0; vertical-align:middle; }
+  .badge-row.hero > svg{ width:48px; height:48px; }
+
+  ol.steps{ counter-reset:step; list-style:none; margin:0; padding:0; display:grid; gap:12px; }
+  ol.steps li{
+    counter-increment:step; display:grid; grid-template-columns:34px 1fr; gap:14px;
+    background:var(--surface); border:1px solid var(--line); border-radius:10px;
+    padding:12px 16px; align-items:start;
+  }
+  ol.steps li::before{
+    content: counter(step);
+    width:34px; height:34px; border-radius:8px;
+    background:var(--teal-dim); color:var(--teal);
+    font-family:var(--mono); font-weight:700; font-size:15px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  ol.steps li .stxt b{ display:block; font-size:16.5px; margin-bottom:3px; }
+  ol.steps li .stxt span{ font-size:16px; color:var(--text-muted); line-height:1.5; }
+
+  table.cmp{ width:100%; border-collapse:collapse; font-size:16.5px; }
+  table.cmp th, table.cmp td{ text-align:left; padding:11px 14px; border-bottom:1px solid var(--line); vertical-align:top; }
+  table.cmp th{ font-family:var(--mono); font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); }
+  table.cmp td b{ color:var(--text); }
+  table.cmp td.sql-col{ color:var(--amber); }
+  table.cmp td.nosql-col{ color:var(--teal); }
+  table.cmp tr:last-child td{ border-bottom:none; }
+
+  blockquote.pullquote{
+    margin:0; border-left:3px solid var(--teal);
+    background:var(--teal-dim);
+    padding:20px 24px; border-radius:0 10px 10px 0;
+    font-size:18.5px; line-height:1.65; color:var(--text);
+  }
+  blockquote.pullquote .cite{ display:block; margin-top:12px; font-family:var(--mono); font-size:13px; color:var(--text-dim); }
+
+  .diagram-box{
+    background:var(--bg-soft); border:1px solid var(--line); border-radius:12px;
+    padding:18px 20px; font-family:var(--mono); font-size:14.5px; color:var(--text-muted);
+    overflow:auto; white-space:pre; line-height:1.55;
+  }
+  .diagram-box .k1{ color:var(--amber); }
+  .diagram-box .k2{ color:var(--teal); }
+
+  /* --- code + preview split --- */
+  .split-row{
+    display:grid; grid-template-columns:1.15fr 0.85fr; gap:20px;
+    height:min(560px, 62vh);
+  }
+  .panel{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    display:flex; flex-direction:column; height:100%; min-height:0; overflow:hidden;
+  }
+  .panel-head{
+    flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
+    padding:10px 16px; border-bottom:1px solid var(--line); background:var(--surface-2);
+  }
+  .panel-head .dots{ display:flex; gap:6px; }
+  .panel-head .dots span{ width:9px; height:9px; border-radius:50%; display:inline-block; }
+  .panel-head .dots span:nth-child(1){ background:#F2735C; }
+  .panel-head .dots span:nth-child(2){ background:#F5B942; }
+  .panel-head .dots span:nth-child(3){ background:#43D9C4; }
+  .panel-head .fname{ font-family:var(--mono); font-size:13px; color:var(--text-muted); }
+  .copy-btn{
+    font-family:var(--mono); font-size:12.5px; color:var(--text); background:var(--surface);
+    border:1px solid var(--line-strong); padding:5px 11px; border-radius:6px; cursor:pointer;
+  }
+  .copy-btn:hover{ border-color:var(--teal); color:var(--teal); }
+  .copy-btn.copied{ background:var(--teal-dim); color:var(--teal); border-color:var(--teal); }
+  .panel pre{
+    flex:1; overflow:auto; min-height:0; margin:0; padding:16px 18px;
+  }
+  .panel pre code{
+    font-family:var(--mono); font-size:14px; line-height:1.65; white-space:pre;
+    color:var(--text);
+  }
+  .tok-tag{ color:#7FB7FF; }
+  .tok-string{ color:#9FE39A; }
+  .tok-keyword{ color:var(--violet); }
+  .tok-comment{ color:var(--text-dim); font-style:italic; }
+  .tok-number{ color:var(--amber); }
+  .panel iframe{ flex:1; width:100%; border:0; min-height:0; background:#fff; }
+  .panel .live-label{
+    flex-shrink:0; padding:10px 16px; font-family:var(--mono); font-size:12.5px;
+    color:var(--text-dim); border-top:1px solid var(--line); background:var(--surface-2);
+  }
+
+  /* activities */
+  .qa-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .qa-grid.odd-last > *:last-child{ grid-column:1 / -1; max-width:560px; margin:0 auto; }
+  .qcard{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px 18px; }
+  .qcard .qnum{ font-family:var(--mono); font-size:12.5px; color:var(--teal); margin-bottom:7px; }
+  .qcard .qtext{ font-size:16.5px; line-height:1.6; margin-bottom:12px; }
+  .qcard ul.opts{ list-style:none; margin:0; padding:0; display:grid; gap:6px; }
+  .qcard ul.opts li{
+    font-size:16px; padding:8px 11px; border-radius:7px; background:var(--surface-2);
+    border:1px solid var(--line); color:var(--text-muted);
+  }
+  .qcard ul.opts li b{ color:var(--text); font-family:var(--mono); margin-right:6px; }
+  .id-tag{
+    display:inline-block; font-family:var(--mono); font-size:12px; color:var(--violet);
+    background:var(--violet-dim); padding:2px 8px; border-radius:5px; margin-bottom:8px;
+  }
+
+  .answer-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .ans-item{ background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:13px 16px; }
+  .ans-item .a-head{ display:flex; gap:8px; align-items:baseline; margin-bottom:4px; }
+  .ans-item .a-head .qn{ font-family:var(--mono); font-size:13px; color:var(--text-dim); }
+  .ans-item .a-head .ans{ font-weight:700; color:var(--teal); font-size:16.5px; }
+  .ans-item p{ margin:0; font-size:15.5px; color:var(--text-muted); line-height:1.55; }
+
+  .closing-quote{
+    text-align:center; max-width:720px; margin:40px auto 0;
+  }
+  .closing-quote p.q{ font-size:24px; line-height:1.5; font-weight:600; color:var(--text); margin:0 0 14px; }
+  .closing-quote p.a{ font-family:var(--mono); font-size:15px; color:var(--text-dim); }
+
+  /* shortcuts overlay */
+  #shortcuts{
+    position:fixed; inset:0; background:rgba(6,10,15,0.72); backdrop-filter:blur(4px);
+    display:none; align-items:center; justify-content:center; z-index:80;
+  }
+  #shortcuts.show{ display:flex; }
+  #shortcuts .box{
+    background:var(--surface); border:1px solid var(--line-strong); border-radius:16px;
+    padding:30px 34px; width:min(440px,90vw); box-shadow:var(--shadow);
+  }
+  #shortcuts h4{ margin:0 0 16px; font-size:16px; }
+  #shortcuts .row{ display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--line); font-size:15px; color:var(--text-muted); }
+  #shortcuts .row:last-child{ border-bottom:none; }
+  #shortcuts kbd{ font-family:var(--mono); background:var(--surface-2); border:1px solid var(--line-strong); border-radius:5px; padding:2px 8px; color:var(--text); }
+
+  h2.sec{ font-size:22px; margin:0 0 4px; }
+  ul.plain{ margin:0; padding-left:20px; }
+  ul.plain li{ margin-bottom:9px; font-size:16.5px; line-height:1.6; color:var(--text-muted); }
+  ul.plain li b{ color:var(--text); }
+
+  @media (max-width: 880px){
+    .slide-wrap{ padding:34px 20px; }
+    .grid2, .grid3, .qa-grid, .answer-grid{ grid-template-columns:1fr; }
+    .split-row{ grid-template-columns:1fr; height:auto; }
+    .panel{ height:min(420px,58vh); }
+    h1.title{ font-size:26px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="progressTrack"><div id="progressBar"></div></div>
+<div id="counter">1 / 19</div>
+<div id="hint"><kbd>&#8594;</kbd> next &nbsp; <kbd>&#8592;</kbd> prev &nbsp; <kbd>?</kbd> shortcuts</div>
+
+<div id="deck"></div>
+
+<div id="shortcuts" role="dialog" aria-label="Keyboard shortcuts">
+  <div class="box">
+    <h4>Navigation shortcuts</h4>
+    <div class="row"><span>Next slide</span><span><kbd>&#8594;</kbd> / right-click / Mouse4</span></div>
+    <div class="row"><span>Previous slide</span><span><kbd>&#8592;</kbd> / Mouse3</span></div>
+    <div class="row"><span>First / last slide</span><span><kbd>Home</kbd> / <kbd>End</kbd></span></div>
+    <div class="row"><span>Toggle this panel</span><span><kbd>?</kbd></span></div>
+    <div class="row"><span>Close panel</span><span><kbd>Esc</kbd></span></div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ================= icon library (inline SVG, offline) ================= */
+const ICON = {
+  nosql: '<svg viewBox="0 0 40 40" role="img" aria-label="NoSQL document database icon"><title>NoSQL document database</title>' +
+    '<path d="M9 4h16l7 7v25a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="#123028" stroke="#43D9C4" stroke-width="1.6"/>' +
+    '<path d="M25 4v7h7" fill="none" stroke="#43D9C4" stroke-width="1.6" stroke-linejoin="round"/>' +
+    '<text x="20" y="26" text-anchor="middle" font-family="SFMono-Regular,Consolas,monospace" font-size="12" fill="#43D9C4">{ }</text>' +
+    '</svg>',
+  mysql: '<svg viewBox="0 0 40 40" role="img" aria-label="Relational SQL table icon"><title>Relational SQL database</title>' +
+    '<rect x="5" y="8" width="30" height="24" rx="2" fill="#2A2312" stroke="#F5B942" stroke-width="1.6"/>' +
+    '<line x1="5" y1="16" x2="35" y2="16" stroke="#F5B942" stroke-width="1.2"/>' +
+    '<line x1="5" y1="24" x2="35" y2="24" stroke="#F5B942" stroke-width="1.2"/>' +
+    '<line x1="15" y1="8" x2="15" y2="32" stroke="#F5B942" stroke-width="1.2"/>' +
+    '<line x1="25" y1="8" x2="25" y2="32" stroke="#F5B942" stroke-width="1.2"/>' +
+    '</svg>',
+    js: '<img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjRjdERjFFIiB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHJvbGU9ImltZyIgdmlld0JveD0iMCAwIDI0IDI0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjx0aXRsZT5KYXZhU2NyaXB0PC90aXRsZT48cGF0aCBkPSJNMCAwaDI0djI0SDBWMHptMjIuMDM0IDE4LjI3NmMtLjE3NS0xLjA5NS0uODg4LTIuMDE1LTMuMDAzLTIuODczLS43MzYtLjM0NS0xLjU1NC0uNTg1LTEuNzk3LTEuMTQtLjA5MS0uMzMtLjEwNS0uNTEtLjA0Ni0uNzA1LjE1LS42NDYuOTE1LS44NCAxLjUxNS0uNjYuMzkuMTIuNzUuNDIuOTc2LjkgMS4wMzQtLjY3NiAxLjAzNC0uNjc2IDEuNzU1LTEuMTI1LS4yNy0uNDItLjQwNC0uNjAxLS41ODYtLjc4LS42My0uNzA1LTEuNDY5LTEuMDY1LTIuODM0LTEuMDM0bC0uNzA1LjA4OWMtLjY3Ni4xNjUtMS4zMi41MjUtMS43MSAxLjAwNS0xLjE0IDEuMjkxLS44MTEgMy41NDEuNTY5IDQuNDcxIDEuMzY1IDEuMDIgMy4zNjEgMS4yNDQgMy42MTYgMi4yMDUuMjQgMS4xNy0uODcgMS41NDUtMS45NjYgMS40MS0uODExLS4xOC0xLjI2LS41ODYtMS43NTUtMS4zMzZsLTEuODMgMS4wNTFjLjIxLjQ4LjQ1LjY4OS44MSAxLjEwOSAxLjc0IDEuNzU2IDYuMDkgMS42NjYgNi44NzEtMS4wMDQuMDI5LS4wOS4yNC0uNzA1LjA3NC0xLjY1em0tOC45ODMtNy4yNDVoLTIuMjQ4YzAgMS45MzgtLjAwOSAzLjg2NC0uMDA5IDUuODA1IDAgMS4yMzIuMDYzIDIuMzYzLS4xMzggMi43MTEtLjMzLjY4OS0xLjE4LjYwMS0xLjU2Ni40OC0uMzk2LS4xOTYtLjU5Ny0uNDY2LS44My0uODU1LS4wNjMtLjEwNS0uMTEtLjE5Ni0uMTI3LS4xOTZsLTEuODI1IDEuMTI1Yy4zMDUuNjMuNzUgMS4xNzIgMS4zMjQgMS41MTcuODU1LjUxIDIuMDA0LjY3NSAzLjIwNy40MDUuNzgzLS4yMjYgMS40NTgtLjY5MSAxLjgxMS0xLjQxMS41MS0uOTMuNDAyLTIuMDcuMzk3LTMuMzQ2LjAxMi0yLjA1NCAwLTQuMTA5IDAtNi4xNzl6Ii8+PC9zdmc+" alt="js" width="32" height="32" style="display:inline-block;vertical-align:middle">',
+  nodejs: '<img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjNUZBMDRFIiB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHJvbGU9ImltZyIgdmlld0JveD0iMCAwIDI0IDI0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjx0aXRsZT5Ob2RlLmpzPC90aXRsZT48cGF0aCBkPSJNMTEuOTk4IDI0YTEuNjE4IDEuNjE4IDAgMCAxLS44LS4yMTRsLTIuNTUtMS41MWMtLjM4MS0uMjEzLS4xOTUtLjI4OC0uMDY5LS4zMzIuNTA4LS4xNzcuNjEtLjIxNiAxLjE1LS41MjIuMDU3LS4wMzIuMTMxLS4wMi4xOS4wMTVsMS45NTkgMS4xNjNjLjA3LjAzOS4xNzEuMDM5LjIzNyAwbDcuNjQ2LTQuNDE1Yy4wNzEtLjA0LjExNi0uMTIyLjExNi0uMjA3VjYuMDQxYzAtLjA4OC0uMDQ1LS4xNjgtLjExOC0uMjFMMTIuMTIgMS40MjJhLjIzNS4yMzUgMCAwIDAtLjIzOCAwTDQuMjQxIDUuODMyYS4yNDIuMjQyIDAgMCAwLS4xMi4yMXY4LjgzYzAgLjA4Ni4wNDcuMTY3LjEyLjIwOGwyLjA5NiAxLjIxYzEuMTM3LjU2OCAxLjgzMy0uMTAxIDEuODMzLS43NzNWNi45NzJhLjIxNS4yMTUgMCAwIDEgLjIxNS0uMjE1aC45NGEuMjE1LjIxNSAwIDAgMSAuMjE1LjIxNXY5LjU0NmMwIDEuNTEyLS44MjQgMi4zOC0yLjI1OSAyLjM4LS40NCAwLS43ODggMC0xLjc1Ny0uNDc3bC0yLjAwOC0xLjE1NWExLjYyMyAxLjYyMyAwIDAgMS0uOC0xLjQwNFY2LjA0MWMwLS41NzguMzA4LTEuMTE2LjgtMS40MDVsNy42NDYtNC40MTZhMS42NjIgMS42NjIgMCAwIDEgMS42MDMgMGw3LjY0NiA0LjQxNmMuNDkzLjI5LjguODI3LjggMS40MDV2OC44M2MwIC41NzgtLjMwNyAxLjExNy0uOCAxLjQwNWwtNy42NDYgNC40MTZhMS42MTggMS42MTggMCAwIDEtLjgwMi4yMTN6bTIuMzU5LTYuMDg5Yy0zLjM0OCAwLTQuMDQ5LTEuNTM3LTQuMDQ5LTIuODI2YS4yMTUuMjE1IDAgMCAxIC4yMTUtLjIxNWguOTU2Yy4xMDYgMCAuMTk2LjA3Ny4yMTMuMTgxLjE0Ni45OC41OCAxLjQ3NiAyLjY2NSAxLjQ3NiAxLjY0IDAgMi4zMzgtLjM3MSAyLjMzOC0xLjI0MSAwLS41MDItLjE5OC0uODc0LTIuNzQ3LTEuMTI0LTIuMTMtLjIxLTMuNDQ3LS42ODEtMy40NDctMi4zODYgMC0xLjU3MiAxLjMyNS0yLjUwOCAzLjU0Ny0yLjUwOCAyLjQ5NiAwIDMuNzMuODY2IDMuODg2IDIuNzI2YS4yMTYuMjE2IDAgMCAxLS4wNTUuMTYzLjIxNy4yMTcgMCAwIDEtLjE1OC4wN2gtLjk2YS4yMTUuMjE1IDAgMCAxLS4yMDktLjE2NWMtLjI0My0xLjA3OS0uODMyLTEuNDI1LTIuNTA0LTEuNDI1LTEuODQ0IDAtMi4wNTguNjQyLTIuMDU4IDEuMTIzIDAgLjU4My4yNTMuNzUzIDIuNjYzIDEuMDgyIDIuMzg2LjMyNSAzLjUyNy43ODYgMy41MjcgMi40MTUtLjAwMiAxLjY5OC0xLjQxNiAyLjY1NC0zLjg4MiAyLjY1NHoiLz48L3N2Zz4=" alt="nodejs" width="32" height="32" style="display:inline-block;vertical-align:middle">'
+};
+
+/* ================= raw runnable code sample (safe JS string) ================= */
+const CODE_SAMPLE = "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Telephone Company Provider Survey</title>\n    <style>\n        * {\n            box-sizing: border-box;\n            font-family: Arial, sans-serif;\n        }\n        body {\n            background-color: #2d3748;\n            color: #ffffff;\n            display: flex;\n            justify-content: center;\n            align-items: center;\n            min-height: 100vh;\n            margin: 0;\n        }\n        .survey-card {\n            background-color: #4a5568;\n            padding: 30px;\n            border-radius: 12px;\n            width: 100%;\n            max-width: 500px;\n            box-shadow: 0 10px 25px rgba(0,0,0,0.3);\n            text-align: center;\n        }\n        h2 { margin-top: 0; color: #f7fafc; }\n        p { color: #cbd5e0; margin-bottom: 25px; }\n        .score-buttons {\n            display: flex;\n            justify-content: space-between;\n            gap: 10px;\n            margin-bottom: 25px;\n        }\n        .score-btn {\n            flex: 1;\n            padding: 12px;\n            background-color: #718096;\n            color: white;\n            border: none;\n            border-radius: 6px;\n            font-size: 18px;\n            font-weight: bold;\n            cursor: pointer;\n            transition: background 0.2s ease;\n        }\n        .score-btn:hover { background-color: #3182ce; }\n        .scores-log {\n            text-align: left;\n            background-color: #2d3748;\n            padding: 15px;\n            border-radius: 6px;\n            font-size: 14px;\n        }\n        .scores-log h4 { margin: 0 0 8px 0; color: #e2e8f0; }\n        .scores-log ul { margin: 0; padding-left: 20px; color: #a0aec0; }\n        .modal-overlay {\n            position: fixed;\n            top: 0; left: 0;\n            width: 100%; height: 100%;\n            background: rgba(0, 0, 0, 0.6);\n            display: none;\n            justify-content: center;\n            align-items: center;\n        }\n        .modal-box {\n            background: #ffffff;\n            color: #2d3748;\n            padding: 30px;\n            border-radius: 10px;\n            text-align: center;\n            max-width: 350px;\n            width: 90%;\n            box-shadow: 0 5px 15px rgba(0,0,0,0.3);\n        }\n        .modal-box h3 { margin-top: 0; color: #1a202c; }\n        .close-btn {\n            margin-top: 15px;\n            padding: 8px 20px;\n            background-color: #3182ce;\n            color: white;\n            border: none;\n            border-radius: 4px;\n            cursor: pointer;\n            font-size: 15px;\n        }\n        .close-btn:hover { background-color: #2b6cb0; }\n    </style>\n</head>\n<body>\n\n<div class=\"survey-card\">\n    <h2>Telephone Company Provider Survey</h2>\n    <p>Rate your satisfaction with the service:</p>\n\n    <div class=\"score-buttons\">\n        <button class=\"score-btn\" onclick=\"submitRating(1)\">1</button>\n        <button class=\"score-btn\" onclick=\"submitRating(2)\">2</button>\n        <button class=\"score-btn\" onclick=\"submitRating(3)\">3</button>\n        <button class=\"score-btn\" onclick=\"submitRating(4)\">4</button>\n        <button class=\"score-btn\" onclick=\"submitRating(5)\">5</button>\n    </div>\n\n    <div class=\"scores-log\">\n        <h4>Recent Score Submissions:</h4>\n        <ul id=\"scoreList\">\n            <li>No ratings submitted yet.</li>\n        </ul>\n    </div>\n</div>\n\n<div class=\"modal-overlay\" id=\"thankYouModal\">\n    <div class=\"modal-box\">\n        <h3>Thank you!</h3>\n        <p style=\"color: #4a5568;\">Your feedback is greatly appreciated.</p>\n        <button class=\"close-btn\" onclick=\"closeModal()\">Close</button>\n    </div>\n</div>\n\n<script>\n    const submittedScores = [];\n\n    function submitRating(score) {\n        submittedScores.push(score);\n        updateScoreLog();\n        document.getElementById('thankYouModal').style.display = 'flex';\n    }\n\n    function updateScoreLog() {\n        const scoreListElem = document.getElementById('scoreList');\n        scoreListElem.innerHTML = '';\n\n        submittedScores.forEach((s, index) => {\n            const li = document.createElement('li');\n            li.textContent = `Submission #${index + 1}: Rating Score ${s}`;\n            scoreListElem.appendChild(li);\n        });\n    }\n\n    function closeModal() {\n        document.getElementById('thankYouModal').style.display = 'none';\n    }\n<" + "/script>\n\n</body>\n</html>";
+
+function highlightCode(raw){
+  let s = raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const re = /(&lt;!--[\s\S]*?--&gt;)|(\/\/[^\n]*)|(&lt;\/?[A-Za-z][\w-]*)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(\b(?:function|const|let|var|if|else|return|new|class|true|false|display|none|flex|center|column)\b)|(#[0-9a-fA-F]{3,6}\b|\b\d+(?:px|vh|%)?\b)/g;
+  return s.replace(re, function(m,cmt,jscmt,tag,str,kw,num){
+    if(cmt||jscmt) return '<span class="tok-comment">'+m+'</span>';
+    if(tag) return '<span class="tok-tag">'+m+'</span>';
+    if(str) return '<span class="tok-string">'+m+'</span>';
+    if(kw) return '<span class="tok-keyword">'+m+'</span>';
+    if(num) return '<span class="tok-number">'+m+'</span>';
+    return m;
+  });
+}
+
+/* ================= slide content ================= */
+const slides = [];
+
+// 1. Title
+slides.push(`
+  <div class="eyebrow">MODULE 14</div>
+  <h1 class="title">NoSQL Databases, Cross-Platform<br>Backends &amp; <span class="accent">JavaScript</span> Setup</h1>
+  <p class="lede">A practical tour through flexible, document-based data storage, how it powers apps across web and mobile, and the first steps toward building with JavaScript and Node.js.</p>
+  <div class="badge-row hero">
+    <div class="badge">${ICON.nosql} NoSQL / MongoDB-style</div>
+    <div class="badge">${ICON.mysql} MySQL / Relational</div>
+    <div class="badge">${ICON.js} JavaScript</div>
+    <div class="badge">${ICON.nodejs} Node.js</div>
+  </div>
+  <div class="card accent-teal" style="max-width:640px;">
+    <h3>What you'll leave with</h3>
+    <p>A clear model of schemaless data storage, why it fits cross-platform backends, and the concrete setup path for a JavaScript/Node.js project — plus a working feedback-survey app you can run yourself.</p>
+  </div>
+`);
+
+// 2. Learning targets
+slides.push(`
+  <div class="eyebrow">A. Lesson Preview</div>
+  <h1 class="title">Learning Targets</h1>
+  <p class="lede">By the end of this module, you will be able to:</p>
+  <ol class="steps">
+    <li><div class="stxt"><b>Explain NoSQL fundamentals</b><span>Describe the concepts and core advantages of a NoSQL database.</span></div></li>
+    <li><div class="stxt"><b>Compare storage models</b><span>Contrast relational databases (MySQL) with non-relational databases (NoSQL).</span></div></li>
+    <li><div class="stxt"><b>Connect NoSQL to real systems</b><span>Understand how NoSQL databases power cross-platform backend services.</span></div></li>
+    <li><div class="stxt"><b>Set up a JavaScript project</b><span>Walk through the core steps required to set up a JavaScript/Node.js project using VS Code.</span></div></li>
+    <li><div class="stxt"><b>Build a working interface</b><span>Create an interactive web-based feedback survey using HTML, CSS, and DOM manipulation.</span></div></li>
+  </ol>
+`);
+
+// 3. Prerequisites
+slides.push(`
+  <div class="eyebrow">A. Lesson Preview</div>
+  <h1 class="title">Prerequisites &amp; Review</h1>
+  <p class="lede">Before starting this module, make sure these foundational ideas feel familiar:</p>
+  <div class="grid3">
+    <div class="card accent-amber">
+      <h3>Relational Databases (SQL)</h3>
+      <p>Systems like MySQL store data in rigid tables using fixed schemas — set rows and columns.</p>
+    </div>
+    <div class="card accent-teal">
+      <h3>Backend Systems</h3>
+      <p>The server-side logic and database layer responsible for processing and storing data for applications.</p>
+    </div>
+    <div class="card accent-violet">
+      <h3>Cross-Platform Architecture</h3>
+      <p>Writing code or setting up data structures that serve desktop, web, and mobile clients seamlessly.</p>
+    </div>
+  </div>
+`);
+
+// 4. What is NoSQL
+slides.push(`
+  <div class="eyebrow">B. Main Lesson · 1</div>
+  <h1 class="title">What is a NoSQL Database?</h1>
+  <p class="lede">A <b style="color:var(--text)">NoSQL (Not Only SQL)</b> database is a modern data storage system that provides a flexible, non-relational approach to managing information. Unlike traditional databases that require strict structures before saving data, NoSQL databases handle <b style="color:var(--text)">unstructured</b> and <b style="color:var(--text)">semi-structured</b> data seamlessly.</p>
+  <blockquote class="pullquote">
+    Key Rule: NoSQL databases do not rely on rigid table schemas. This makes them ideal for applications with rapidly evolving data needs or high-speed performance requirements.
+  </blockquote>
+  <div class="badge-row" style="margin-top:22px;">${ICON.nosql}<span style="font-family:var(--mono);font-size:15px;color:var(--text-muted)">Documents can each hold a different shape of data — no two records need to match.</span></div>
+`);
+
+// 5. NoSQL vs MySQL
+slides.push(`
+  <div class="eyebrow amber">B. Main Lesson · 2</div>
+  <h1 class="title">NoSQL vs. MySQL: What's the Difference?</h1>
+  <div class="grid2" style="align-items:start;">
+    <table class="cmp">
+      <tr><th>Feature</th><th>MySQL</th><th>NoSQL</th></tr>
+      <tr><td>Storage model</td><td class="sql-col">Tables, fixed rows &amp; columns</td><td class="nosql-col">Collections of flexible documents</td></tr>
+      <tr><td>Schema</td><td class="sql-col">Rigid, predefined</td><td class="nosql-col">Schemaless / flexible</td></tr>
+      <tr><td>Speed at scale</td><td class="sql-col">Can slow with massive unstructured data</td><td class="nosql-col">Handles huge volumes at high speed</td></tr>
+      <tr><td>Scalability</td><td class="sql-col">Vertical (bigger server)</td><td class="nosql-col">Horizontal (more servers/clusters)</td></tr>
+    </table>
+    <div class="diagram-box"><span class="k1">Relational (MySQL)</span>                 <span class="k2">NoSQL (Collection)</span>
++-------------------+              {
+| ID | Name | Score |                "name": "Jane",
++-------------------+                "score": 5,
+| 1  | Jane |   5   |                "interests": ["coding", "gaming"]
++-------------------+              }</div>
+  </div>
+`);
+
+// 6. Cross-platform backends
+slides.push(`
+  <div class="eyebrow">B. Main Lesson · 3</div>
+  <h1 class="title">NoSQL for Cross-Platform Backends</h1>
+  <p class="lede">The backend acts as the central engine behind an application. When building cross-platform apps — spanning Android, iOS, and the Web — NoSQL databases offer real advantages:</p>
+  <div class="grid3">
+    <div class="card accent-teal">
+      <h3>Platform Neutrality</h3>
+      <p>NoSQL stores data in universal formats like JSON, acting as a translator between different operating systems.</p>
+    </div>
+    <div class="card accent-violet">
+      <h3>Adaptability</h3>
+      <p>Fields can be added or updated dynamically without altering the entire database structure.</p>
+    </div>
+    <div class="card accent-amber">
+      <h3>Unified Access</h3>
+      <p>Computers, tablets, and smartphones can query the same backend API simultaneously.</p>
+    </div>
+  </div>
+`);
+
+// 7. JavaScript + Node.js / VS Code setup
+slides.push(`
+  <div class="eyebrow violet">B. Main Lesson · 4</div>
+  <h1 class="title">Setting Up JavaScript with Node.js &amp; VS Code</h1>
+  <p class="lede"><b style="color:var(--text)">JavaScript</b> is a versatile, cross-platform language that runs in browsers and on servers via Node.js. <b style="color:var(--text)">VS Code</b> is the widely-used editor for writing, testing, and running JavaScript applications.</p>
+  <div class="grid2">
+    <ol class="steps">
+      <li><div class="stxt"><b>Install Node.js</b><span>Download and install Node.js from nodejs.org.</span></div></li>
+      <li><div class="stxt"><b>Create a new project</b><span>Name your application, e.g. "SurveyApp".</span></div></li>
+      <li><div class="stxt"><b>Open VS Code</b><span>Launch VS Code and open your project folder.</span></div></li>
+      <li><div class="stxt"><b>Design the app UI</b><span>Drag-and-drop elements or write layout XML.</span></div></li>
+    </ol>
+    <ol class="steps" start="5">
+      <li><div class="stxt"><b>Write business logic</b><span>Code interactivity inside .js files using Node.js or browser APIs.</span></div></li>
+      <li><div class="stxt"><b>Test and run</b><span>Execute in an emulator or a real device.</span></div></li>
+      <li><div class="stxt"><b>Fix and refine</b><span>Debug issues and polish performance.</span></div></li>
+      <li><div class="stxt"><b>Publish</b><span>Deploy to app marketplaces.</span></div></li>
+    </ol>
+  </div>
+`);
+
+// 8. Analogies
+slides.push(`
+  <div class="eyebrow">C. Analogies &amp; Use Cases</div>
+  <h1 class="title">Real-World Analogies</h1>
+  <div class="grid2">
+    <div class="card accent-amber">
+      <h3>Spreadsheets vs. Filing Cabinets</h3>
+      <p><b style="color:var(--text)">MySQL:</b> like a spreadsheet where every row must share the exact same columns — add one, and every row gets it, blank or not.<br><br>
+      <b style="color:var(--text)">NoSQL:</b> like a filing cabinet of labeled folders. Inside each folder, individual documents hold whatever details they need, without touching the others.</p>
+    </div>
+    <div class="card accent-teal">
+      <h3>The Universal Translator</h3>
+      <p>Using NoSQL for a multi-platform app is like having a universal translator at an international conference. Whether the request comes from an iPhone, an Android tablet, or a web browser, the NoSQL backend serves data in a format everyone understands.</p>
+    </div>
+  </div>
+`);
+
+// 9. Industry use case
+slides.push(`
+  <div class="eyebrow">C. Analogies &amp; Use Cases</div>
+  <h1 class="title">Industry Use Case: Provider Satisfaction Surveys</h1>
+  <p class="lede">A telecommunications enterprise wants to collect real-time service feedback from millions of users across web portals and mobile apps.</p>
+  <ol class="steps">
+    <li><div class="stxt"><b>Frontend collection</b><span>Users rate service quality from 1 to 5 on a web or mobile screen.</span></div></li>
+    <li><div class="stxt"><b>Backend submission</b><span>The rating and feedback summary are packaged into a JSON payload.</span></div></li>
+    <li><div class="stxt"><b>NoSQL persistence</b><span>The response is saved into a NoSQL collection without forcing strict columns — flexible metadata like location, network speed, or device model comes along naturally.</span></div></li>
+  </ol>
+`);
+
+// 10. Recap / summary
+slides.push(`
+  <div class="eyebrow">D. Lesson Wrap-Up</div>
+  <h1 class="title">Summary Takeaways</h1>
+  <ul class="plain">
+    <li><b>NoSQL databases</b> excel at handling large volumes of unstructured data with dynamic schemas and high performance.</li>
+    <li><b>Cross-platform backends</b> rely on NoSQL to deliver consistent data access across diverse client hardware.</li>
+    <li><b>VS Code &amp; Node.js</b> provide an intuitive toolchain for developing modern cross-platform web applications.</li>
+  </ul>
+`);
+
+// 11. FAQ
+slides.push(`
+  <div class="eyebrow">D. Lesson Wrap-Up</div>
+  <h1 class="title">Frequently Asked Questions</h1>
+  <div class="grid2">
+    <div class="card accent-teal">
+      <h3>Q1. Why are NoSQL databases becoming popular?</h3>
+      <p>They handle massive amounts of unstructured data effortlessly and scale horizontally across multiple servers — well suited for modern web platforms, real-time analytics, and big data processing.</p>
+    </div>
+    <div class="card accent-amber">
+      <h3>Q2. Are NoSQL databases suitable for every application?</h3>
+      <p>No. Applications needing complex multi-table queries or strict ACID transactional integrity — like banking systems — still rely heavily on relational databases such as MySQL or PostgreSQL.</p>
+    </div>
+  </div>
+`);
+
+// 12. Code project
+slides.push(`
+  <div class="eyebrow">E. Guided Drills</div>
+  <h1 class="title">Project: Telephone Company Provider Survey</h1>
+  <p class="lede" style="margin-bottom:14px;">A complete, runnable single-file HTML/CSS/JavaScript DOM app. Users pick a rating from 1–5; a thank-you modal confirms the submission. Copy the code or watch it run live on the right.</p>
+  <div class="split-row">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <span class="fname">survey.html</span>
+        <button class="copy-btn" id="copyBtn">Copy</button>
+      </div>
+      <pre><code id="codeBlock"></code></pre>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <span class="fname">Live preview</span>
+        <span style="font-family:var(--mono);font-size:12px;color:var(--text-dim);">sandboxed</span>
+      </div>
+      <iframe id="livePreview" title="Live rendering of the survey app" sandbox="allow-scripts"></iframe>
+      <div class="live-label">Try it — click a score button to see the thank-you modal.</div>
+    </div>
+  </div>
+`);
+
+// 13. Recap before activities
+slides.push(`
+  <div class="eyebrow">Recap</div>
+  <h1 class="title">Before You Begin the Activities</h1>
+  <p class="lede">Quick refresh:</p>
+  <div class="grid3">
+    <div class="card accent-teal"><h3>NoSQL</h3><p>Schemaless, document-based, built for scale and flexibility.</p></div>
+    <div class="card accent-amber"><h3>MySQL</h3><p>Rigid tables, strong consistency, ideal for transactional integrity.</p></div>
+    <div class="card accent-violet"><h3>JavaScript + VS Code</h3><p>The language and editor pairing used to build cross-platform web and server apps.</p></div>
+  </div>
+  <p class="lede" style="margin-top:20px;">Next: 5 multiple-choice questions, then 5 situational identification questions.</p>
+`);
+
+// 14. MCQ
+const mcqData = [
+  {q:"It is a specialized runtime environment that lets JavaScript run on the server side, outside of a browser.", opts:["NoSQL Container","Node.js","Web Parser","Schema Compiler"]},
+  {q:"It is a super-organized storage container that holds unstructured or semi-structured data without forcing a rigid table schema.", opts:["Relational SQL Table","Static Web Host","NoSQL Database","Java Compiler"]},
+  {q:"It is the phase in application development where the finished app is shared with users via app stores or download channels.", opts:["Code Debugging","UI Mockup","Publish the App","Local Testing"]},
+  {q:"It acts as the core engine behind a website or mobile application, managing data processing and database communication.", opts:["Frontend View","Backend Application","CSS Stylesheet","Browser Viewport"]},
+  {q:"Which step in setting up a new JavaScript project involves choosing a package manager and initializing the project structure?", opts:["Test and Run","Design the Screen","npm init (Initialize Project)","Configure Graphics Driver"]}
+];
+let mcqHtml = '<div class="eyebrow">F. Skill-Building Check</div><h1 class="title">Multiple Choice</h1><div class="qa-grid odd-last">';
+mcqData.forEach((item,i)=>{
+  const letters = ["A","B","C","D"];
+  mcqHtml += '<div class="qcard"><div class="qnum">QUESTION ' + (i+1) + '</div><div class="qtext">' + item.q + '</div><ul class="opts">';
+  item.opts.forEach((o,j)=>{ mcqHtml += '<li><b>' + letters[j] + '.</b>' + o + '</li>'; });
+  mcqHtml += '</ul></div>';
+});
+mcqHtml += '</div>';
+slides.push(mcqHtml);
+
+// 15. Identification (situational)
+const idData = [
+  {tag:"Situational", q:"A telecom company wants to add a new \u201cnetwork_speed\u201d field to some survey responses without altering the structure of existing records or the entire database. What type of database solution addresses this need?"},
+  {tag:"Situational", q:"A developer is assigned to write concise, type-safe logic for a new Android application inside the official IDE. Which programming language should they use?"},
+  {tag:"Situational", q:"A bank needs to guarantee that a fund transfer either completes fully or not at all, with strict multi-table consistency. Which database category best fits this requirement?"},
+  {tag:"Situational", q:"A startup wants its iOS app, Android app, and web dashboard to read and write the same feedback data through one shared API. What kind of backend approach makes this possible?"},
+  {tag:"Situational", q:"A survey submission arrives as a JSON object containing a rating, a device model, and an optional network-speed value that isn\u2019t present in older entries. What storage model naturally accepts this varying structure?"}
+];
+let idHtml = '<div class="eyebrow violet">F. Skill-Building Check</div><h1 class="title">Identification — Situational</h1><div class="qa-grid odd-last">';
+idData.forEach((item,i)=>{
+  idHtml += '<div class="qcard"><span class="id-tag">' + item.tag + '</span><div class="qnum">ITEM ' + (i+1) + '</div><div class="qtext">' + item.q + '</div></div>';
+});
+idHtml += '</div>';
+slides.push(idHtml);
+
+// 16. Answer key - MCQ
+const mcqAnswers = [
+  {a:"B — Node.js", e:"The runtime environment that allows JavaScript to run on the server side."},
+  {a:"C — NoSQL Database", e:"Provides schemaless data storage flexible enough to hold varying document formats."},
+  {a:"C — Publish the App", e:"The final step where the compiled app is deployed for public access."},
+  {a:"B — Backend Application", e:"Processes requests, handles business logic, and talks directly to databases."},
+  {a:"C — npm init (Initialize Project)", e:"Developers run npm init to create a package.json and set up a new JS project."}
+];
+let ak1 = '<div class="eyebrow">Answer Key</div><h1 class="title">Multiple Choice — Answers</h1><div class="answer-grid">';
+mcqAnswers.forEach((it,i)=>{
+  ak1 += '<div class="ans-item"><div class="a-head"><span class="qn">Q' + (i+1) + '</span><span class="ans">' + it.a + '</span></div><p>' + it.e + '</p></div>';
+});
+ak1 += '</div>';
+slides.push(ak1);
+
+// 17. Answer key - Identification
+const idAnswers = [
+  {a:"NoSQL Database", e:"Its schemaless, document-based structure lets new fields appear on some records without a full redesign."},
+  {a:"JavaScript", e:"JavaScript is the versatile, cross-platform language paired with Node.js for web and server app logic."},
+  {a:"Relational Database (MySQL / SQL)", e:"Relational systems provide the ACID guarantees and multi-table consistency banking transfers need."},
+  {a:"Cross-platform NoSQL-powered backend", e:"A NoSQL backend serves JSON to every client type through one unified API."},
+  {a:"NoSQL Collection / Document", e:"Documents in a collection can each hold a different shape of data, so varying fields are no problem."}
+];
+let ak2 = '<div class="eyebrow violet">Answer Key</div><h1 class="title">Identification — Answers</h1><div class="answer-grid">';
+idAnswers.forEach((it,i)=>{
+  ak2 += '<div class="ans-item"><div class="a-head"><span class="qn">Item ' + (i+1) + '</span><span class="ans">' + it.a + '</span></div><p>' + it.e + '</p></div>';
+});
+ak2 += '</div>';
+slides.push(ak2);
+
+// 18. Key quotes
+slides.push(`
+  <div class="eyebrow">Key Quotes</div>
+  <h1 class="title">Quote to Remember</h1>
+  <blockquote class="pullquote" style="font-size:19px; max-width:760px;">
+    NoSQL databases do not rely on rigid table schemas. This makes them ideal for applications with rapidly evolving data needs or high-speed performance requirements.
+    <span class="cite">— Module 14, Section B.1</span>
+  </blockquote>
+`);
+
+// 19. Closing
+slides.push(`
+  <div class="eyebrow">Closing</div>
+  <h1 class="title" style="text-align:center;">That's a Wrap on Module 14</h1>
+  <div class="closing-quote">
+    <p class="q">"The best structure is the one flexible enough to hold what you haven't thought of yet."</p>
+    <p class="a">Thanks for working through NoSQL, cross-platform backends, and JavaScript setup — go build something.</p>
+  </div>
+  <div class="badge-row hero" style="justify-content:center; margin-top:30px;">
+    ${ICON.nosql}${ICON.mysql}
+  </div>
+`);
+
+/* ================= engine ================= */
+const deck = document.getElementById('deck');
+const total = slides.length;
+let current = 0;
+
+slides.forEach((html, i)=>{
+  const wrap = document.createElement('div');
+  wrap.className = 'slide-wrap';
+  wrap.id = 'slide-' + i;
+  const inner = document.createElement('div');
+  inner.className = 'slide';
+  inner.innerHTML = html;
+  wrap.appendChild(inner);
+  deck.appendChild(wrap);
+});
+
+const counterEl = document.getElementById('counter');
+const progressBar = document.getElementById('progressBar');
+const wraps = Array.from(document.querySelectorAll('.slide-wrap'));
+
+function render(prevIndex, dir){
+  wraps.forEach((w,i)=>{
+    w.classList.remove('active','leaving-left','leaving-right');
+    if(i === current){ w.classList.add('active'); }
+  });
+  if(prevIndex !== null && prevIndex !== current){
+    const pw = wraps[prevIndex];
+    pw.classList.add(dir === 1 ? 'leaving-left' : 'leaving-right');
+  }
+  counterEl.textContent = (current+1) + ' / ' + total;
+  progressBar.style.width = (((current+1)/total)*100) + '%';
+
+  if(current === 11){ initCodeSlide(); } // slide 12 (index 11)
+}
+
+function goTo(idx){
+  if(idx < 0 || idx >= total || idx === current) return;
+  const dir = idx > current ? 1 : -1;
+  const prev = current;
+  current = idx;
+  render(prev, dir);
+}
+function next(){ goTo(Math.min(current+1, total-1)); }
+function prev(){ goTo(Math.max(current-1, 0)); }
+
+render(null, 1);
+
+/* code slide init (runs once content is in DOM) */
+let codeSlideInit = false;
+function initCodeSlide(){
+  if(codeSlideInit) return;
+  codeSlideInit = true;
+  const codeBlock = document.getElementById('codeBlock');
+  const iframe = document.getElementById('livePreview');
+  const copyBtn = document.getElementById('copyBtn');
+  if(codeBlock){ codeBlock.innerHTML = highlightCode(CODE_SAMPLE); }
+  if(iframe){ iframe.srcdoc = CODE_SAMPLE; }
+  if(copyBtn){
+    copyBtn.addEventListener('click', function(){
+      navigator.clipboard.writeText(CODE_SAMPLE).then(function(){
+        copyBtn.textContent = 'Copied!';
+        copyBtn.classList.add('copied');
+        setTimeout(function(){ copyBtn.textContent = 'Copy'; copyBtn.classList.remove('copied'); }, 1600);
+      }).catch(function(){
+        copyBtn.textContent = 'Press Ctrl+C';
+      });
+    });
+  }
+}
+
+/* ================= keyboard nav ================= */
+const shortcutsEl = document.getElementById('shortcuts');
+document.addEventListener('keydown', function(e){
+  if(e.key === '?' ){ shortcutsEl.classList.toggle('show'); return; }
+  if(e.key === 'Escape'){ shortcutsEl.classList.remove('show'); return; }
+  if(shortcutsEl.classList.contains('show')) return;
+  if(e.key === 'ArrowRight' || e.key === 'PageDown'){ next(); }
+  else if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ prev(); }
+  else if(e.key === 'Home'){ goTo(0); }
+  else if(e.key === 'End'){ goTo(total-1); }
+});
+
+/* ================= mouse nav: right-click, side buttons ================= */
+document.addEventListener('contextmenu', function(e){
+  e.preventDefault();
+  next();
+});
+
+// Block browser back/forward on mouse4/mouse3 at the earliest possible point
+document.addEventListener('mousedown', function(e){
+  if(e.button === 3 || e.button === 4){
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }
+}, true);
+
+document.addEventListener('mouseup', function(e){
+  if(e.button === 3){ e.preventDefault(); prev(); }
+  else if(e.button === 4){ e.preventDefault(); next(); }
+});
+
+// Extra safety net against history navigation
+window.addEventListener('popstate', function(){ /* no-op, history nav suppressed at source */ });
+
+/* ================= touch swipe ================= */
+let touchStartX = null, touchStartY = null;
+document.addEventListener('touchstart', function(e){
+  if(e.touches.length !== 1) return;
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, {passive:true});
+document.addEventListener('touchend', function(e){
+  if(touchStartX === null) return;
+  const dx = (e.changedTouches[0].clientX - touchStartX);
+  const dy = (e.changedTouches[0].clientY - touchStartY);
+  if(Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)){
+    if(dx < 0) next(); else prev();
+  }
+  touchStartX = null; touchStartY = null;
+}, {passive:true});
+
+/* close shortcuts on outside click */
+shortcutsEl.addEventListener('click', function(e){
+  if(e.target === shortcutsEl) shortcutsEl.classList.remove('show');
+});
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Platform Technologies — Recap · Modules 10–15/16</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+:root{
+  --bg:#0B0F19;--bg2:#111827;--bg3:#1A2236;--bg4:#1F2B42;
+  --accent:#F7DF1E;--green:#5FA04E;--cyan:#38BDF8;--violet:#A78BFA;
+  --red:#F87171;--orange:#FB923C;--mute:#64748B;--border:#1E2D45;
+  --txt:#E2E8F0;--txt2:#94A3B8;
+  --font:'Space Grotesk',system-ui,sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:var(--font)}
+
+/* ── Progress bar ── */
+#prog{position:fixed;top:0;left:0;height:3px;background:var(--accent);transition:width .3s;z-index:100}
+#counter{position:fixed;top:10px;right:16px;font-size:13px;color:var(--mute);z-index:100;font-family:var(--font);letter-spacing:.04em}
+
+/* ── Slide engine ── */
+.deck{width:100%;height:100vh;position:relative}
+.slide{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  padding:52px 64px 40px;overflow:hidden;
+  opacity:0;pointer-events:none;
+  transition:opacity .35s,transform .35s;
+  transform:translateX(60px);
+}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.out-left{opacity:0;transform:translateX(-60px)}
+.slide.out-right{opacity:0;transform:translateX(60px)}
+@media(prefers-reduced-motion:reduce){.slide{transition:opacity .15s;transform:none!important}}
+
+/* ── Typography ── */
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin-bottom:6px}
+.slide-title{font-size:clamp(26px,3.4vw,42px);font-weight:700;line-height:1.15;color:var(--txt);margin-bottom:18px}
+.slide-title .hl{color:var(--accent)}
+.slide-title .hl-c{color:var(--cyan)}
+.slide-title .hl-v{color:var(--violet)}
+.slide-title .hl-g{color:var(--green)}
+.body{font-size:clamp(16px,1.6vw,19px);line-height:1.7;color:var(--txt2)}
+.body b{color:var(--txt);font-weight:600}
+.sm{font-size:16px}
+
+/* ── Cards & grids ── */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;flex:1;min-height:0}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;flex:1;min-height:0}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:22px 24px;overflow:hidden}
+.card-accent{border-top:3px solid var(--accent)}
+.card-cyan{border-top:3px solid var(--cyan)}
+.card-violet{border-top:3px solid var(--violet)}
+.card-green{border-top:3px solid var(--green)}
+.card-red{border-top:3px solid var(--red)}
+.card-orange{border-top:3px solid var(--orange)}
+.card h3{font-size:clamp(16px,1.5vw,20px);font-weight:700;margin-bottom:10px;color:var(--txt)}
+.card p,.card li{font-size:clamp(15px,1.3vw,17px);color:var(--txt2);line-height:1.6}
+.card ul{padding-left:18px}
+.card li{margin-bottom:6px}
+
+/* ── Step / number badges ── */
+.step-row{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}
+.step-num{min-width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;margin-top:2px}
+.step-num.acc{background:var(--accent);color:#000}
+.step-num.cy{background:var(--cyan);color:#000}
+.step-num.vi{background:var(--violet);color:#000}
+.step-num.gr{background:var(--green);color:#fff}
+.step-body h4{font-size:clamp(16px,1.4vw,18px);font-weight:700;color:var(--txt);margin-bottom:3px}
+.step-body p{font-size:clamp(15px,1.3vw,16px);color:var(--txt2);line-height:1.55}
+
+/* ── Tag chips ── */
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;font-size:14px;font-weight:600;border:1px solid}
+.chip-y{background:rgba(247,223,30,.1);border-color:var(--accent);color:var(--accent)}
+.chip-c{background:rgba(56,189,248,.1);border-color:var(--cyan);color:var(--cyan)}
+.chip-v{background:rgba(167,139,250,.1);border-color:var(--violet);color:var(--violet)}
+.chip-g{background:rgba(95,160,78,.1);border-color:var(--green);color:var(--green)}
+.chip-r{background:rgba(248,113,113,.1);border-color:var(--red);color:var(--red)}
+.chip-o{background:rgba(251,146,60,.1);border-color:var(--orange);color:var(--orange)}
+.chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+
+/* ── Tables ── */
+.tbl{width:100%;border-collapse:collapse;font-size:clamp(15px,1.3vw,17px)}
+.tbl th{padding:10px 14px;background:var(--bg3);color:var(--accent);font-weight:700;text-align:left;border-bottom:2px solid var(--accent)}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--txt2);vertical-align:top}
+.tbl tr:last-child td{border:none}
+.tbl .g{color:var(--green);font-weight:600}
+.tbl .r{color:var(--red)}
+
+/* ── Quiz / assessment ── */
+.qblock{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px 22px;margin-bottom:14px;display:flex;flex-direction:column}
+.qblock .qnum{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin-bottom:6px}
+.qblock .qtext{font-size:clamp(16px,1.5vw,18px);font-weight:600;color:var(--txt);margin-bottom:14px;line-height:1.4}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.opt{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:clamp(15px,1.3vw,16px);color:var(--txt2)}
+/* MCQ 2x2 grid layout */
+.mcq-grid{display:grid !important;grid-template-columns:1fr 1fr !important;gap:16px !important;flex:1;min-height:0;overflow:auto;align-content:start}
+.mcq-grid .qblock{margin-bottom:0 !important}
+.id-blank{border:none;border-bottom:2px solid var(--border);background:transparent;width:100%;font-size:clamp(16px,1.4vw,18px);color:var(--txt);padding:4px 0;font-family:var(--font);margin-top:8px;outline:none;display:block}
+.id-blank:focus{border-color:var(--accent)}
+.ans-badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:13px;font-weight:700;background:var(--green);color:#000;margin-right:8px}
+.ans-exp{font-size:clamp(15px,1.3vw,16px);color:var(--txt2)}
+
+/* ── Code blocks ── */
+.code-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;height:100%;min-height:0}
+.code-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--bg4);flex-shrink:0}
+.code-hdr .lang{font-size:13px;font-weight:700;color:var(--mute);font-family:var(--mono)}
+.copy-btn{padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--txt2);font-size:13px;cursor:pointer;font-family:var(--font);transition:all .15s}
+.copy-btn:hover{background:var(--bg4);color:var(--txt)}
+.copy-btn.copied{background:var(--green);color:#000;border-color:var(--green)}
+pre{flex:1;overflow:auto;min-height:0;padding:18px 20px;font-family:var(--mono);font-size:13.5px;line-height:1.7;color:#c8d8f0;tab-size:2}
+.cm{color:#64748B}.st{color:#86efac}.kw{color:var(--violet)}.fn{color:var(--cyan)}.tg{color:var(--red)}.num{color:var(--orange)}.at{color:var(--accent)}
+
+/* ── Title slide specifics ── */
+.hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px;flex:1;min-height:0;align-items:center}
+.hero-left{display:flex;flex-direction:column;gap:16px}
+.hero-desc{font-size:clamp(16px,1.5vw,20px);color:var(--txt2);line-height:1.65;max-width:520px}
+.module-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+
+/* ── Diagram ── */
+.diagram{display:flex;flex-direction:column;gap:0;align-items:center;justify-content:center;height:100%}
+.diag-node{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 20px;font-size:clamp(15px,1.3vw,17px);text-align:center;width:100%;max-width:380px;font-weight:600}
+.diag-arr{font-size:22px;color:var(--mute);text-align:center;line-height:1.4}
+
+/* ── Scrollable inner ── */
+.scroll-inner{overflow-y:auto;flex:1;min-height:0;padding-right:4px}
+.scroll-inner::-webkit-scrollbar{width:4px}
+.scroll-inner::-webkit-scrollbar-track{background:transparent}
+.scroll-inner::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* ── Shortcuts overlay ── */
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);display:none;align-items:center;justify-content:center;z-index:200}
+#overlay.show{display:flex}
+.overlay-box{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:40px 48px;max-width:480px;width:90%}
+.overlay-box h2{font-size:22px;font-weight:700;margin-bottom:20px;color:var(--accent)}
+.shortcut-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:16px}
+.shortcut-row:last-child{border:none}
+.shortcut-row kbd{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-family:var(--mono);font-size:14px;color:var(--txt)}
+
+/* ── Divider ── */
+.divider{height:1px;background:var(--border);margin:16px 0}
+
+/* ── Scrollable quiz pages ── */
+.qpage{display:flex;flex-direction:column;gap:14px;flex:1;min-height:0;overflow-y:auto}
+.qpage::-webkit-scrollbar{width:4px}
+.qpage::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* ── Flex helpers ── */
+.flex-col{display:flex;flex-direction:column;gap:12px;flex:1;min-height:0}
+.flex-row{display:flex;gap:16px;flex:1;min-height:0}
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}
+.bold{font-weight:700;color:var(--txt)}
+.tag{display:inline-block;padding:2px 9px;border-radius:5px;font-size:13px;font-weight:700;background:rgba(247,223,30,.15);color:var(--accent)}
+.tag-c{background:rgba(56,189,248,.15);color:var(--cyan)}
+.tag-v{background:rgba(167,139,250,.15);color:var(--violet)}
+.tag-g{background:rgba(95,160,78,.15);color:var(--green)}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<div id="counter"></div>
+
+<div class="deck" id="deck">
+
+<!-- ══════════ SLIDE 0 — TITLE ══════════ -->
+<div class="slide active">
+  <div class="eyebrow">Platform Technologies · Modules 10 – 15/16</div>
+  <div class="slide-title"><span class="hl">Comprehensive Recap</span> — Pre-Exam Review</div>
+  <div class="hero-grid">
+    <div class="hero-left">
+      <p class="hero-desc">A full sweep of everything from <b>Content Distribution</b> to <b>NoSQL Databases</b> — with quizzes, identification items, and the answer key ready for review. Now with plain-English explanations and everyday analogies for the trickier concepts.</p>
+      <div class="module-chips">
+        <span class="chip chip-v">M10 · Content Distribution &amp; CMS</span>
+        <span class="chip chip-c">M11-12 · Data Harvesting &amp; Interactive Platforms</span>
+        <span class="chip chip-g">M13 · Multi-Platform &amp; JS</span>
+        <span class="chip chip-y">M14 · NoSQL + JS Setup</span>
+        <span class="chip chip-o">M15-16 · NoSQL · Stateless · Drivers</span>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap">
+        <span style="font-size:16px;color:var(--txt2)">📋 <b style="color:var(--txt)">10 MC</b></span>
+        <span style="font-size:16px;color:var(--txt2)">🔍 <b style="color:var(--txt)">10 Identification</b></span>
+        <span style="font-size:16px;color:var(--txt2)">📝 <b style="color:var(--txt)">5+5 Enumeration</b></span>
+        <span style="font-size:16px;color:var(--txt2)">🗝 <b style="color:var(--txt)">Full Answer Key</b></span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;height:100%">
+      <svg viewBox="0 0 420 320" width="100%" style="max-height:280px" role="img" aria-label="Recap overview diagram showing five module topics feeding into one exam">
+        <defs>
+          <linearGradient id="ga" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#A78BFA"/><stop offset="100%" stop-color="#38BDF8"/></linearGradient>
+          <linearGradient id="gb" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#5FA04E"/><stop offset="100%" stop-color="#38BDF8"/></linearGradient>
+        </defs>
+        <!-- center hex -->
+        <polygon points="210,60 255,85 255,135 210,160 165,135 165,85" fill="url(#ga)" opacity=".9"/>
+        <text x="210" y="117" text-anchor="middle" font-family="Space Grotesk,sans-serif" font-size="13" font-weight="700" fill="#000">EXAM</text>
+        <!-- nodes -->
+        <rect x="10" y="20" width="120" height="38" rx="8" fill="#1A2236" stroke="#A78BFA" stroke-width="1.5"/>
+        <text x="70" y="44" text-anchor="middle" font-family="Space Grotesk,sans-serif" font-size="12" fill="#A78BFA" font-weight="600">M10 · CMS</text>
+        <rect x="10" y="72" width="120" height="38" rx="8" fill="#1A2236" stroke="#38BDF8" stroke-width="1.5"/>
+        <text x="70" y="96" text-anchor="middle" font-family="Space Grotesk,sans-serif" font-size="12" fill="#38BDF8" font-weight="600">M11-12 · Data</text>
+        <rect x="10" y="124" width="120" height="38" rx="8" fill="#1A2236" stroke="#5FA04E" stroke-width="1.5"/>
+        <text x="70" y="148" text-anchor="middle" font-family="Space Grotesk,sans-serif" font-size="12" fill="#5FA04E" font-weight="600">M13 · Multi-Platform</text>
+        <rect x="10" y="176" width="120" height="38" rx="8" fill="#1A2236" stroke="#F7DF1E" stroke-width="1.5"/>
+        <text x="70" y="200" text-anchor="middle" font-family="Space Grotesk,sans-serif" font-size="12" fill="#F7DF1E" font-weight="600">M14 · NoSQL + JS</text>
+        <rect x="10" y="228" width="120" height="38" rx="8" fill="#1A2236" stroke="#FB923C" stroke-width="1.5"/>
+        <text x="70" y="252" text-anchor="middle" font-family="Space Grotesk,sans-serif" font-size="12" fill="#FB923C" font-weight="600">M15-16 · Stateless</text>
+        <!-- arrows -->
+        <line x1="130" y1="39" x2="165" y2="95" stroke="#A78BFA" stroke-width="1.5" marker-end="url(#ar)" opacity=".7"/>
+        <line x1="130" y1="91" x2="165" y2="105" stroke="#38BDF8" stroke-width="1.5" opacity=".7"/>
+        <line x1="130" y1="143" x2="165" y2="110" stroke="#5FA04E" stroke-width="1.5" opacity=".7"/>
+        <line x1="130" y1="195" x2="165" y2="120" stroke="#F7DF1E" stroke-width="1.5" opacity=".7"/>
+        <line x1="130" y1="247" x2="165" y2="130" stroke="#FB923C" stroke-width="1.5" opacity=".7"/>
+        <!-- right side: recap + key -->
+        <rect x="290" y="60" width="120" height="40" rx="8" fill="#1A2236" stroke="#38BDF8" stroke-width="1.5"/>
+        <text x="350" y="85" text-anchor="middle" font-family="Space Grotesk,sans-serif" font-size="12" fill="#38BDF8" font-weight="600">Quiz &amp; Recap</text>
+        <rect x="290" y="115" width="120" height="40" rx="8" fill="#1A2236" stroke="#5FA04E" stroke-width="1.5"/>
+        <text x="350" y="140" text-anchor="middle" font-family="Space Grotesk,sans-serif" font-size="12" fill="#5FA04E" font-weight="600">Answer Key</text>
+        <line x1="255" y1="100" x2="290" y2="82" stroke="#38BDF8" stroke-width="1.5" opacity=".7"/>
+        <line x1="255" y1="115" x2="290" y2="130" stroke="#5FA04E" stroke-width="1.5" opacity=".7"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 1 — RECAP: M10 CMS ══════════ -->
+<div class="slide">
+  <div class="eyebrow">Recap · Module 10</div>
+  <div class="slide-title">Content Distribution &amp; <span class="hl-v">CMS</span></div>
+  <div class="grid2" style="gap:18px">
+    <div class="flex-col">
+      <div class="card card-violet">
+        <h3>What is a CMS?</h3>
+        <p>A <b>Content Management System</b> is software that lets users create, manage, and publish digital content without requiring deep coding knowledge. Examples: WordPress, Wix, Shopify, Joomla, Blogger.</p>
+      </div>
+      <div class="card card-violet">
+        <h3>Key CMS Features</h3>
+        <ul>
+          <li>Content creation &amp; editing (WYSIWYG)</li>
+          <li>User role management (admin, editor, viewer)</li>
+          <li>Template &amp; theme systems</li>
+          <li>Plugin / extension marketplace</li>
+          <li>SEO &amp; media management tools</li>
+        </ul>
+      </div>
+    </div>
+    <div class="flex-col">
+      <div class="card card-accent">
+        <h3>Content Distribution Platforms</h3>
+        <ul>
+          <li><b>Blogging:</b> WordPress, Blogger, Medium</li>
+          <li><b>E-commerce:</b> Shopify, WooCommerce</li>
+          <li><b>Portfolio / Landing:</b> Wix, Squarespace</li>
+          <li><b>Wiki / Docs:</b> Confluence, Notion</li>
+        </ul>
+      </div>
+      <div class="card" style="background:var(--bg3)">
+        <h3 style="color:var(--accent)">Why CMS Matters</h3>
+        <p>Separates <b>content</b> from <b>presentation</b> — writers work independently from developers. Reduces time-to-publish and enables non-technical teams to manage websites.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 1B — RECAP: M10 Paid/Owned/Earned Media ══════════ -->
+<div class="slide">
+  <div class="eyebrow">Recap · Module 10</div>
+  <div class="slide-title">The <span class="hl-v">3 Types</span> of Media (Simple Version)</div>
+  <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:16px">
+    <p class="sm" style="color:var(--txt2)">💡 <b style="color:var(--txt)">Easiest way to remember it:</b> ask yourself — <b style="color:var(--txt)">"Did I pay for this, do I own it, or did I earn it?"</b></p>
+  </div>
+  <div class="grid3">
+    <div class="card card-accent">
+      <h3 style="color:var(--accent)">🟡 Paid Media</h3>
+      <p class="sm" style="margin-bottom:8px"><b>In simple terms:</b> you pay money so people see your content.</p>
+      <p class="sm" style="color:var(--txt2)">Like renting a billboard — instant reach, but the moment you stop paying, it disappears.</p>
+      <div class="divider"></div>
+      <p class="sm" style="color:var(--txt2)"><b style="color:var(--txt)">Examples:</b> Meta Ads, Google Ads, Amazon Ads, LinkedIn Ads</p>
+    </div>
+    <div class="card card-violet">
+      <h3 style="color:var(--violet)">🟣 Owned Media</h3>
+      <p class="sm" style="margin-bottom:8px"><b>In simple terms:</b> channels you fully control — no rent, no landlord.</p>
+      <p class="sm" style="color:var(--txt2)">Like owning a house — it's yours forever and you decide what goes in it.</p>
+      <div class="divider"></div>
+      <p class="sm" style="color:var(--txt2)"><b style="color:var(--txt)">Examples:</b> Website/Blog, Email List, Social Profiles, YouTube Channel, Podcast</p>
+    </div>
+    <div class="card card-green">
+      <h3 style="color:var(--green)">🟢 Earned Media</h3>
+      <p class="sm" style="margin-bottom:8px"><b>In simple terms:</b> other people talk about you for free, because they want to.</p>
+      <p class="sm" style="color:var(--txt2)">Like a friend recommending a restaurant — you didn't pay for it, but people trust it more.</p>
+      <div class="divider"></div>
+      <p class="sm" style="color:var(--txt2)"><b style="color:var(--txt)">Examples:</b> Reviews, Press Coverage, Shares, Backlinks, Influencer Mentions</p>
+    </div>
+  </div>
+  <div class="card" style="background:var(--bg3);margin-top:16px">
+    <h3 style="color:var(--txt)">🪑 The Three-Legged Stool</h3>
+    <p class="sm" style="color:var(--txt2)">A strategy only stands strong when all three legs are there: <b style="color:var(--accent)">Paid = Amplification</b> (boosts reach) · <b style="color:var(--violet)">Owned = Foundation</b> (your home base) · <b style="color:var(--green)">Earned = Validation</b> (proof people trust you). Relying on just one leg makes the whole thing wobble.</p>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 2 — RECAP: M11-12 Data Harvesting ══════════ -->
+<div class="slide">
+  <div class="eyebrow">Recap · Module 11–12</div>
+  <div class="slide-title">Data Harvesting &amp; <span class="hl-c">Interactive Platforms</span></div>
+  <div class="grid2">
+    <div class="flex-col">
+      <div class="card card-cyan">
+        <h3>Data Harvesting (Web Scraping)</h3>
+        <p class="sm" style="margin-bottom:10px">Process of <b>copying datasets and metadata</b> between data catalogs. APIs act as communication lines between databases.</p>
+        <p class="sm" style="color:var(--cyan);margin-bottom:10px">💡 <b>In simple terms:</b> like picking apples from different trees (find them), gathering them into a basket (extract), sorting good from bad (clean), then storing them in the pantry (save).</p>
+        <div class="step-row"><div class="step-num cy">1</div><div class="step-body"><h4>Source Identification</h4><p>Find target websites/sources</p></div></div>
+        <div class="step-row"><div class="step-num cy">2</div><div class="step-body"><h4>Data Extraction</h4><p>Fetch via HTTP, APIs, scripts</p></div></div>
+        <div class="step-row"><div class="step-num cy">3</div><div class="step-body"><h4>Data Parsing</h4><p>HTML/XML/JSON → CSV/DB</p></div></div>
+        <div class="step-row"><div class="step-num cy">4</div><div class="step-body"><h4>Data Cleaning</h4><p>Remove dupes, fix errors</p></div></div>
+        <div class="step-row"><div class="step-num cy">5</div><div class="step-body"><h4>Data Storage</h4><p>Save for analysis/use</p></div></div>
+      </div>
+    </div>
+    <div class="flex-col">
+      <div class="card card-cyan">
+        <h3>Interactive Platforms</h3>
+        <p class="sm" style="margin-bottom:10px">Web platforms allowing users to <b>participate, contribute, and interact</b> — not just consume.</p>
+        <p class="sm" style="margin-bottom:8px"><b style="color:var(--txt)">7 Types:</b></p>
+        <ul style="font-size:15px;color:var(--txt2);padding-left:16px">
+          <li>Social Media (FB, X, Instagram)</li>
+          <li>Online Forums (Reddit, Stack Overflow)</li>
+          <li>E-Learning Platforms</li>
+          <li>Web-based Games</li>
+          <li>Collaborative Tools (Docs, Trello, Slack)</li>
+          <li>Interactive Data Visualization</li>
+          <li>Virtual Events &amp; Conferences</li>
+        </ul>
+      </div>
+      <div class="card" style="background:var(--bg3)">
+        <h3 style="color:var(--cyan)">6 Key Characteristics</h3>
+        <p style="font-size:15px;color:var(--txt2)">⚡ Real-Time Interaction &nbsp;·&nbsp; ✍ User-Generated Content &nbsp;·&nbsp; 🖱 Interactivity with Elements &nbsp;·&nbsp; 🔄 Dynamic Content &nbsp;·&nbsp; 💬 Feedback Mechanisms &nbsp;·&nbsp; 🎯 Personalization</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 3 — RECAP: M13 Multi-Platform ══════════ -->
+<div class="slide">
+  <div class="eyebrow">Recap · Module 13</div>
+  <div class="slide-title">Multi-Platform &amp; <span class="hl-g">JavaScript</span></div>
+  <div class="grid2">
+    <div class="flex-col">
+      <div class="card card-green">
+        <h3>Cross-Platform vs Platform-Agnostic</h3>
+        <p class="sm"><b>Cross-Platform:</b> Software runs on multiple hardware/OS environments (Windows, macOS, Android, iOS).</p>
+        <div class="divider"></div>
+        <p class="sm"><b>Platform-Agnostic:</b> Code doesn't rely on any specific OS or hardware — "write once, run anywhere."</p>
+      </div>
+      <div class="card card-green">
+        <h3>6 Cross-Platform Approaches</h3>
+        <ul style="font-size:15px;color:var(--txt2);padding-left:16px">
+          <li><b>Web-Based Apps</b> — HTML/CSS/JS in browser</li>
+          <li><b>Hybrid Mobile</b> — JS wrapped in native container</li>
+          <li><b>Native Cross-Platform</b> — React Native, Flutter</li>
+          <li><b>PWAs</b> — installable web apps</li>
+          <li><b>Desktop</b> — Electron (Windows/macOS/Linux)</li>
+          <li><b>Game Engines</b> — Unity, Unreal</li>
+        </ul>
+      </div>
+    </div>
+    <div class="flex-col">
+      <div class="card card-accent">
+        <h3>JavaScript — The Universal Language</h3>
+        <p class="sm" style="margin-bottom:10px">JS runs <b>natively everywhere</b> — one language for all platforms:</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="background:var(--bg4);border-radius:8px;padding:10px 12px;font-size:15px"><span style="color:var(--accent);font-weight:700">🌐 Browser</span><br><span style="color:var(--txt2)">Vanilla JS, React, Vue</span></div>
+          <div style="background:var(--bg4);border-radius:8px;padding:10px 12px;font-size:15px"><span style="color:var(--green);font-weight:700">⬡ Server</span><br><span style="color:var(--txt2)">Node.js</span></div>
+          <div style="background:var(--bg4);border-radius:8px;padding:10px 12px;font-size:15px"><span style="color:var(--cyan);font-weight:700">📱 Mobile</span><br><span style="color:var(--txt2)">React Native, Ionic</span></div>
+          <div style="background:var(--bg4);border-radius:8px;padding:10px 12px;font-size:15px"><span style="color:var(--violet);font-weight:700">🖥 Desktop</span><br><span style="color:var(--txt2)">Electron</span></div>
+        </div>
+      </div>
+      <div class="card" style="background:var(--bg3)">
+        <h3 style="color:var(--green)">Platform Agnostic Contexts</h3>
+        <p style="font-size:15px;color:var(--txt2)">Software Dev · Data Formats (CSV/JSON) · Cloud Services · Web Standards (HTML/CSS/JS) · Cross-Platform Frameworks</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 4 — RECAP: M14 NoSQL ══════════ -->
+<div class="slide">
+  <div class="eyebrow">Recap · Module 14</div>
+  <div class="slide-title">NoSQL Databases &amp; <span class="hl">JS Setup</span></div>
+  <div class="grid2">
+    <div class="flex-col">
+      <div class="card card-accent">
+        <h3>What is NoSQL?</h3>
+        <p class="sm">A <b>non-relational</b> database that stores data without a rigid predefined schema. Ideal for unstructured/semi-structured data at scale.</p>
+        <div class="divider"></div>
+        <table class="tbl" style="font-size:14px">
+          <tr><th>Feature</th><th>MySQL</th><th>NoSQL</th></tr>
+          <tr><td>Schema</td><td class="r">Fixed tables</td><td class="g">Flexible</td></tr>
+          <tr><td>Scaling</td><td class="r">Vertical</td><td class="g">Horizontal</td></tr>
+          <tr><td>Data</td><td class="r">Structured only</td><td class="g">Any shape</td></tr>
+        </table>
+      </div>
+      <div class="card card-accent">
+        <h3>5 NoSQL Traits</h3>
+        <ul style="font-size:15px;color:var(--txt2);padding-left:16px">
+          <li><b style="color:var(--txt)">Schema Flexibility</b> — no predefined structure</li>
+          <li><b style="color:var(--txt)">Horizontal Scaling</b> — distributes across nodes</li>
+          <li><b style="color:var(--txt)">High Availability</b> — auto replication/failover</li>
+          <li><b style="color:var(--txt)">Diverse Data Models</b> — Key-Value, Doc, Graph…</li>
+          <li><b style="color:var(--txt)">Eventual Consistency</b> — async replication</li>
+        </ul>
+      </div>
+    </div>
+    <div class="flex-col">
+      <div class="card card-green">
+        <h3>JavaScript Setup (VS Code + Node.js)</h3>
+        <div class="step-row"><div class="step-num acc">1</div><div class="step-body"><h4>Install Node.js</h4><p>Download from nodejs.org</p></div></div>
+        <div class="step-row"><div class="step-num acc">2</div><div class="step-body"><h4>Open VS Code</h4><p>Launch editor, open project folder</p></div></div>
+        <div class="step-row"><div class="step-num acc">3</div><div class="step-body"><h4>Init project</h4><p>Run <code style="font-family:var(--mono);color:var(--accent);font-size:14px">npm init</code> → package.json</p></div></div>
+        <div class="step-row"><div class="step-num acc">4</div><div class="step-body"><h4>Write logic</h4><p>Create .js files, use <code style="font-family:var(--mono);color:var(--accent);font-size:14px">node file.js</code></p></div></div>
+      </div>
+      <div class="card" style="background:var(--bg3)">
+        <h3 style="color:var(--accent)">Key Analogy</h3>
+        <p style="font-size:15px;color:var(--txt2)"><b style="color:var(--txt)">MySQL</b> = a spreadsheet with locked column headers. <b style="color:var(--txt)">NoSQL</b> = a notebook where each page can look completely different — some have tables, some have paragraphs, some have photos.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 5 — RECAP: M15-16 Stateless + Drivers ══════════ -->
+<div class="slide">
+  <div class="eyebrow">Recap · Module 15–16</div>
+  <div class="slide-title">Stateless Architecture &amp; <span class="hl-o">System Drivers</span></div>
+  <div class="grid2">
+    <div class="flex-col">
+      <div class="card card-orange">
+        <h3>Stateless Architecture</h3>
+        <p class="sm" style="margin-bottom:10px">Each request is <b>independent</b> — the server retains no session memory of prior requests.</p>
+        <div style="background:var(--bg4);border-radius:8px;padding:12px 14px;margin-bottom:10px">
+          <p style="font-size:15px;color:var(--accent);font-weight:700">Key Rule:</p>
+          <p style="font-size:15px;color:var(--txt2)">Client must send <b>all context</b> (tokens, session IDs) with <b>every single request</b>.</p>
+        </div>
+        <p class="sm" style="color:var(--orange);margin-bottom:10px">💡 <b>In simple terms:</b> like ordering at a fast-food counter — the cashier forgets you the second you walk away, so you must repeat your whole order every single time.</p>
+        <p style="font-size:14px;color:var(--txt2)"><b style="color:var(--txt)">Benefits:</b> No server-side sessions · Seamless scalability · Optimized load balancing · Reduced server overhead</p>
+      </div>
+      <div class="card card-orange">
+        <h3>4 NoSQL Database Categories</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
+          <div style="background:var(--bg4);border-radius:8px;padding:10px;font-size:14px"><b style="color:var(--cyan)">📄 Document</b><br><span style="color:var(--txt2)">MongoDB, Couchbase</span><br><span style="color:var(--mute)">JSON/BSON</span></div>
+          <div style="background:var(--bg4);border-radius:8px;padding:10px;font-size:14px"><b style="color:var(--green)">🔑 Key-Value</b><br><span style="color:var(--txt2)">Redis, DynamoDB</span><br><span style="color:var(--mute)">Cache, sessions</span></div>
+          <div style="background:var(--bg4);border-radius:8px;padding:10px;font-size:14px"><b style="color:var(--violet)">📊 Column-Family</b><br><span style="color:var(--txt2)">Cassandra, HBase</span><br><span style="color:var(--mute)">Analytics, logs</span></div>
+          <div style="background:var(--bg4);border-radius:8px;padding:10px;font-size:14px"><b style="color:var(--accent)">🕸 Graph</b><br><span style="color:var(--txt2)">Neo4j, Neptune</span><br><span style="color:var(--mute)">Social graphs</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="flex-col">
+      <div class="card" style="background:var(--bg2);border-color:var(--orange)">
+        <h3 style="color:var(--orange)">System Drivers</h3>
+        <p class="sm" style="margin-bottom:12px">Software that lets the <b>OS communicate with hardware</b>. Translates generic I/O requests into device-specific commands.</p>
+        <div style="background:var(--bg3);border-radius:10px;padding:14px">
+          <div style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px">
+            <div style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:8px 24px;font-size:15px;font-weight:600;text-align:center;width:100%">Operating System</div>
+            <div style="font-size:20px;color:var(--orange)">↓</div>
+            <div style="background:rgba(251,146,60,.1);border:1px solid var(--orange);border-radius:8px;padding:8px 24px;font-size:15px;font-weight:600;text-align:center;width:100%;color:var(--orange)">Device Driver</div>
+            <div style="font-size:20px;color:var(--orange)">↓</div>
+            <div style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:8px 24px;font-size:15px;font-weight:600;text-align:center;width:100%">Hardware Device</div>
+          </div>
+        </div>
+        <p style="font-size:14px;color:var(--txt2);margin-top:10px"><b style="color:var(--txt)">Common drivers:</b> Graphics · Printer · Audio · Network · USB · Bluetooth · Storage · Webcam · Touchpad · Scanner</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 6 — MC Q1–4 ══════════ -->
+<div class="slide">
+  <div class="eyebrow">Part I · Multiple Choice</div>
+  <div class="slide-title">Questions <span class="hl">1 – 4</span></div>
+  <div class="mcq-grid">
+    <div class="qblock">
+      <div class="qnum">Question 1 · M10</div>
+      <div class="qtext">What does CMS stand for, and what is its primary purpose?</div>
+      <div class="opts">
+        <div class="opt">A. Code Management System — for writing cleaner code</div>
+        <div class="opt">B. Content Management System — to create/manage digital content without deep coding</div>
+        <div class="opt">C. Cloud Media Service — for streaming videos online</div>
+        <div class="opt">D. Content Marketing Software — for running ad campaigns</div>
+      </div>
+    </div>
+    <div class="qblock">
+      <div class="qnum">Question 2 · M11-12</div>
+      <div class="qtext">Data harvesting is ALSO known as:</div>
+      <div class="opts">
+        <div class="opt">A. Data mining and machine learning</div>
+        <div class="opt">B. Database normalization</div>
+        <div class="opt">C. Web scraping or data scraping</div>
+        <div class="opt">D. API load balancing</div>
+      </div>
+    </div>
+    <div class="qblock">
+      <div class="qnum">Question 3 · M11-12</div>
+      <div class="qtext">Which of the following is NOT one of the 7 types of interactive platforms?</div>
+      <div class="opts">
+        <div class="opt">A. Social Media Platforms</div>
+        <div class="opt">B. Relational Database Engines</div>
+        <div class="opt">C. E-Learning Platforms</div>
+        <div class="opt">D. Web-based Games</div>
+      </div>
+    </div>
+    <div class="qblock">
+      <div class="qnum">Question 4 · M13</div>
+      <div class="qtext">Which statement BEST describes "platform agnostic" software?</div>
+      <div class="opts">
+        <div class="opt">A. Software that only runs on Android</div>
+        <div class="opt">B. Software that does not depend on any specific OS or hardware</div>
+        <div class="opt">C. Software that requires a specific browser to work</div>
+        <div class="opt">D. Software that only uses Java as its language</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 7 — MC Q5–8 ══════════ -->
+<div class="slide">
+  <div class="eyebrow">Part I · Multiple Choice</div>
+  <div class="slide-title">Questions <span class="hl">5 – 8</span></div>
+  <div class="mcq-grid">
+    <div class="qblock">
+      <div class="qnum">Question 5 · M13</div>
+      <div class="qtext">Which cross-platform approach uses HTML/CSS/JS wrapped inside a native mobile container?</div>
+      <div class="opts">
+        <div class="opt">A. Progressive Web App (PWA)</div>
+        <div class="opt">B. Hybrid Mobile App (e.g. React Native, Ionic)</div>
+        <div class="opt">C. Desktop App via Electron</div>
+        <div class="opt">D. Web-based Cross-Platform App</div>
+      </div>
+    </div>
+    <div class="qblock">
+      <div class="qnum">Question 6 · M14</div>
+      <div class="qtext">What is the KEY difference between NoSQL and MySQL databases?</div>
+      <div class="opts">
+        <div class="opt">A. NoSQL uses a fixed schema; MySQL does not</div>
+        <div class="opt">B. NoSQL cannot store any data; it only caches</div>
+        <div class="opt">C. NoSQL does not enforce a rigid predefined schema; MySQL does</div>
+        <div class="opt">D. MySQL can scale horizontally; NoSQL cannot</div>
+      </div>
+    </div>
+    <div class="qblock">
+      <div class="qnum">Question 7 · M15-16</div>
+      <div class="qtext">In a stateless architecture, where is session context stored?</div>
+      <div class="opts">
+        <div class="opt">A. In the server's RAM for the session duration</div>
+        <div class="opt">B. In a dedicated session database on the server</div>
+        <div class="opt">C. Sent by the client with every single request</div>
+        <div class="opt">D. Automatically managed by the browser only</div>
+      </div>
+    </div>
+    <div class="qblock">
+      <div class="qnum">Question 8 · M15-16</div>
+      <div class="qtext">Which NoSQL category stores data as simple key/value pairs — used for caching and sessions?</div>
+      <div class="opts">
+        <div class="opt">A. Document Store (MongoDB)</div>
+        <div class="opt">B. Column-Family (Cassandra)</div>
+        <div class="opt">C. Graph Database (Neo4j)</div>
+        <div class="opt">D. Key-Value Store (Redis, DynamoDB)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 8 — MC Q9–10 ══════════ -->
+<div class="slide">
+  <div class="eyebrow">Part I · Multiple Choice</div>
+  <div class="slide-title">Questions <span class="hl">9 – 10</span></div>
+  <div class="mcq-grid">
+    <div class="qblock">
+      <div class="qnum">Question 9 · M13-14</div>
+      <div class="qtext">Which JavaScript runtime environment allows JS code to run on the SERVER side?</div>
+      <div class="opts">
+        <div class="opt">A. React Native</div>
+        <div class="opt">B. Electron</div>
+        <div class="opt">C. Node.js</div>
+        <div class="opt">D. npm (Node Package Manager)</div>
+      </div>
+    </div>
+    <div class="qblock">
+      <div class="qnum">Question 10 · M15-16</div>
+      <div class="qtext">A system driver is BEST described as:</div>
+      <div class="opts">
+        <div class="opt">A. A CSS framework for styling web apps</div>
+        <div class="opt">B. Software that lets the OS communicate with physical hardware</div>
+        <div class="opt">C. A type of NoSQL database category</div>
+        <div class="opt">D. A JavaScript library for HTTP requests</div>
+      </div>
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:20px 22px;margin-top:4px">
+      <p style="font-size:16px;color:var(--txt2)"><span style="color:var(--accent);font-weight:700">✓ Done with Multiple Choice!</span> Move to the next slide for <b>Identification</b> questions.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 9 — IDENTIFICATION Q1–4 ══════════ -->
+<div class="slide">
+  <div class="eyebrow">Part II · Identification</div>
+  <div class="slide-title">Questions <span class="hl-c">1 – 4</span></div>
+  <p class="body sm" style="margin-bottom:14px;color:var(--mute)">Write the correct term or concept being described.</p>
+  <div class="mcq-grid">
+    <div class="qblock">
+      <div class="qnum">Identification 1 · M10</div>
+      <div class="qtext">Software that lets users create, manage, and publish digital content without requiring deep programming knowledge. Examples include WordPress, Wix, and Shopify.</div>
+      <input class="id-blank" type="text" placeholder="Write your answer here…" autocomplete="off">
+    </div>
+    <div class="qblock">
+      <div class="qnum">Identification 2 · M11-12</div>
+      <div class="qtext">The process of copying datasets and their metadata between two or more data catalogs. Also known as web scraping or data scraping.</div>
+      <input class="id-blank" type="text" placeholder="Write your answer here…" autocomplete="off">
+    </div>
+    <div class="qblock">
+      <div class="qnum">Identification 3 · M11-12</div>
+      <div class="qtext">A web platform that allows users to actively participate, contribute, and interact with content, features, and other users — unlike static websites that only display information.</div>
+      <input class="id-blank" type="text" placeholder="Write your answer here…" autocomplete="off">
+    </div>
+    <div class="qblock">
+      <div class="qnum">Identification 4 · M13</div>
+      <div class="qtext">A concept where software does not rely on or favor any specific operating system, hardware architecture, or underlying platform — "write once, run anywhere."</div>
+      <input class="id-blank" type="text" placeholder="Write your answer here…" autocomplete="off">
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 10 — IDENTIFICATION Q5–8 ══════════ -->
+<div class="slide">
+  <div class="eyebrow">Part II · Identification</div>
+  <div class="slide-title">Questions <span class="hl-c">5 – 8</span></div>
+  <p class="body sm" style="margin-bottom:14px;color:var(--mute)">Write the correct term or concept being described.</p>
+  <div class="mcq-grid">
+    <div class="qblock">
+      <div class="qnum">Identification 5 · M13</div>
+      <div class="qtext">A JavaScript-based cross-platform framework that allows developers to build mobile applications for both Android and iOS using a single codebase.</div>
+      <input class="id-blank" type="text" placeholder="Write your answer here…" autocomplete="off">
+    </div>
+    <div class="qblock">
+      <div class="qnum">Identification 6 · M13-14</div>
+      <div class="qtext">The JavaScript package manager with over 2 million reusable packages. Developers use it to install frameworks and tools with a single command.</div>
+      <input class="id-blank" type="text" placeholder="Write your answer here…" autocomplete="off">
+    </div>
+    <div class="qblock">
+      <div class="qnum">Identification 7 · M14-15</div>
+      <div class="qtext">A type of database that does NOT use a predefined schema or rigid table structure — designed for flexibility, scalability, and rapidly evolving data.</div>
+      <input class="id-blank" type="text" placeholder="Write your answer here…" autocomplete="off">
+    </div>
+    <div class="qblock">
+      <div class="qnum">Identification 8 · M15-16</div>
+      <div class="qtext">A server architecture where each request is completely independent — the server retains no session memory of previous interactions from the client.</div>
+      <input class="id-blank" type="text" placeholder="Write your answer here…" autocomplete="off">
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 11 — IDENTIFICATION Q9–10 ══════════ -->
+<div class="slide">
+  <div class="eyebrow">Part II · Identification</div>
+  <div class="slide-title">Questions <span class="hl-c">9 – 10</span></div>
+  <p class="body sm" style="margin-bottom:14px;color:var(--mute)">Write the correct term or concept being described.</p>
+  <div class="mcq-grid">
+    <div class="qblock">
+      <div class="qnum">Identification 9 · M15-16</div>
+      <div class="qtext">A software component that acts as an intermediary — allowing the operating system to communicate with and control a physical hardware device by translating generic I/O requests into device-specific commands.</div>
+      <input class="id-blank" type="text" placeholder="Write your answer here…" autocomplete="off">
+    </div>
+    <div class="qblock">
+      <div class="qnum">Identification 10 · M13</div>
+      <div class="qtext">A JavaScript-based framework that allows developers to build desktop applications (for Windows, macOS, and Linux) using web technologies — used by apps like VS Code and Discord.</div>
+      <input class="id-blank" type="text" placeholder="Write your answer here…" autocomplete="off">
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:20px 22px;margin-top:4px">
+      <p style="font-size:16px;color:var(--txt2)"><span style="color:var(--cyan);font-weight:700">✓ Done with Identification!</span> Move to the next slide for <b>Enumeration</b>.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 12 — ENUMERATION A ══════════ -->
+<div class="slide">
+  <div class="eyebrow">Part III · Enumeration A</div>
+  <div class="slide-title">Enumerate the <span class="hl-g">5-Step</span> Data Harvesting Process</div>
+  <p class="body sm" style="margin-bottom:18px;color:var(--mute)">List all 5 steps <b>in order</b>. Order matters. (Module 11–12)</p>
+  <div class="grid2" style="flex:1;min-height:0;align-items:start">
+    <div class="flex-col">
+      <div class="card card-cyan" style="padding:18px 20px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div class="step-num cy" style="font-size:18px;width:36px;height:36px">1</div>
+          <input class="id-blank" type="text" placeholder="Step 1…" style="border-bottom:2px solid var(--cyan)">
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div class="step-num cy" style="font-size:18px;width:36px;height:36px">2</div>
+          <input class="id-blank" type="text" placeholder="Step 2…" style="border-bottom:2px solid var(--cyan)">
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="step-num cy" style="font-size:18px;width:36px;height:36px">3</div>
+          <input class="id-blank" type="text" placeholder="Step 3…" style="border-bottom:2px solid var(--cyan)">
+        </div>
+      </div>
+    </div>
+    <div class="flex-col">
+      <div class="card card-cyan" style="padding:18px 20px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div class="step-num cy" style="font-size:18px;width:36px;height:36px">4</div>
+          <input class="id-blank" type="text" placeholder="Step 4…" style="border-bottom:2px solid var(--cyan)">
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="step-num cy" style="font-size:18px;width:36px;height:36px">5</div>
+          <input class="id-blank" type="text" placeholder="Step 5…" style="border-bottom:2px solid var(--cyan)">
+        </div>
+      </div>
+      <div class="card" style="background:var(--bg3)">
+        <p style="font-size:15px;color:var(--txt2)">💡 Hint: Think about the <b style="color:var(--cyan)">lifecycle of raw web data</b> — from finding it to using it.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 13 — ENUMERATION B ══════════ -->
+<div class="slide">
+  <div class="eyebrow">Part III · Enumeration B</div>
+  <div class="slide-title">Enumerate <span class="hl-o">NoSQL Categories</span> &amp; <span class="hl-g">JS Platforms</span></div>
+  <div class="grid2" style="flex:1;min-height:0;align-items:start;gap:20px">
+    <div class="flex-col">
+      <div class="card card-orange" style="padding:18px 20px">
+        <h3 style="margin-bottom:14px">B1. 4 NoSQL Database Categories</h3>
+        <p style="font-size:15px;color:var(--txt2);margin-bottom:14px">(Module 15-16 · Name all 4)</p>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div class="step-num" style="background:var(--orange);color:#000;font-size:15px;width:30px;height:30px">1</div>
+          <input class="id-blank" type="text" placeholder="Category 1…" style="border-bottom:2px solid var(--orange)">
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div class="step-num" style="background:var(--orange);color:#000;font-size:15px;width:30px;height:30px">2</div>
+          <input class="id-blank" type="text" placeholder="Category 2…" style="border-bottom:2px solid var(--orange)">
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div class="step-num" style="background:var(--orange);color:#000;font-size:15px;width:30px;height:30px">3</div>
+          <input class="id-blank" type="text" placeholder="Category 3…" style="border-bottom:2px solid var(--orange)">
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="step-num" style="background:var(--orange);color:#000;font-size:15px;width:30px;height:30px">4</div>
+          <input class="id-blank" type="text" placeholder="Category 4…" style="border-bottom:2px solid var(--orange)">
+        </div>
+      </div>
+    </div>
+    <div class="flex-col">
+      <div class="card card-green" style="padding:18px 20px">
+        <h3 style="margin-bottom:14px">B2. 4 JS Cross-Platform Targets</h3>
+        <p style="font-size:15px;color:var(--txt2);margin-bottom:14px">(Module 13 · Name all 4 platforms JS runs on)</p>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div class="step-num gr" style="font-size:15px;width:30px;height:30px">1</div>
+          <input class="id-blank" type="text" placeholder="Platform 1…" style="border-bottom:2px solid var(--green)">
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div class="step-num gr" style="font-size:15px;width:30px;height:30px">2</div>
+          <input class="id-blank" type="text" placeholder="Platform 2…" style="border-bottom:2px solid var(--green)">
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div class="step-num gr" style="font-size:15px;width:30px;height:30px">3</div>
+          <input class="id-blank" type="text" placeholder="Platform 3…" style="border-bottom:2px solid var(--green)">
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="step-num gr" style="font-size:15px;width:30px;height:30px">4</div>
+          <input class="id-blank" type="text" placeholder="Platform 4…" style="border-bottom:2px solid var(--green)">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 14 — ANSWER KEY MC ══════════ -->
+<div class="slide">
+  <div class="eyebrow">Answer Key · Part I</div>
+  <div class="slide-title">Multiple Choice — <span class="hl-g">Answers</span></div>
+  <div class="scroll-inner">
+    <div class="grid2" style="gap:12px">
+      <div class="qblock" style="margin-bottom:0">
+        <div class="qnum">Q1 · M10</div>
+        <span class="ans-badge">B</span><span class="ans-exp">A CMS (Content Management System) lets users create/manage content without deep coding — WordPress, Wix, Shopify are examples.</span>
+      </div>
+      <div class="qblock" style="margin-bottom:0">
+        <div class="qnum">Q2 · M11-12</div>
+        <span class="ans-badge">C</span><span class="ans-exp">Data harvesting = web scraping / data scraping — copying datasets between data catalogs.</span>
+      </div>
+      <div class="qblock" style="margin-bottom:0">
+        <div class="qnum">Q3 · M11-12</div>
+        <span class="ans-badge">B</span><span class="ans-exp">Relational Database Engines are storage tools, not interactive user platforms. The 7 types are social, forums, e-learning, games, collaborative tools, data viz, and virtual events.</span>
+      </div>
+      <div class="qblock" style="margin-bottom:0">
+        <div class="qnum">Q4 · M13</div>
+        <span class="ans-badge">B</span><span class="ans-exp">Platform agnostic = software that does not depend on any specific OS or hardware — portable, universal compatibility.</span>
+      </div>
+      <div class="qblock" style="margin-bottom:0">
+        <div class="qnum">Q5 · M13</div>
+        <span class="ans-badge">B</span><span class="ans-exp">Hybrid Mobile Apps wrap HTML/CSS/JS in a native container (React Native, Ionic) — installable on mobile with native feature access.</span>
+      </div>
+      <div class="qblock" style="margin-bottom:0">
+        <div class="qnum">Q6 · M14</div>
+        <span class="ans-badge">C</span><span class="ans-exp">NoSQL does NOT enforce a rigid predefined schema — MySQL does. NoSQL handles unstructured/semi-structured data flexibly.</span>
+      </div>
+      <div class="qblock" style="margin-bottom:0">
+        <div class="qnum">Q7 · M15-16</div>
+        <span class="ans-badge">C</span><span class="ans-exp">Stateless = client sends ALL context with every request. Server retains no session memory of prior interactions.</span>
+      </div>
+      <div class="qblock" style="margin-bottom:0">
+        <div class="qnum">Q8 · M15-16</div>
+        <span class="ans-badge">D</span><span class="ans-exp">Key-Value Stores (Redis, DynamoDB) hold simple key/value pairs — perfect for caching and session storage.</span>
+      </div>
+      <div class="qblock" style="margin-bottom:0">
+        <div class="qnum">Q9 · M13-14</div>
+        <span class="ans-badge">C</span><span class="ans-exp">Node.js is the JS runtime that runs JavaScript on the SERVER side — outside the browser, built on Chrome's V8 engine.</span>
+      </div>
+      <div class="qblock" style="margin-bottom:0">
+        <div class="qnum">Q10 · M15-16</div>
+        <span class="ans-badge">B</span><span class="ans-exp">A system driver is OS-to-hardware middleware — translates generic I/O requests into device-specific commands.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 15 — ANSWER KEY Identification ══════════ -->
+<div class="slide">
+  <div class="eyebrow">Answer Key · Part II</div>
+  <div class="slide-title">Identification — <span class="hl-c">Answers</span></div>
+  <div class="scroll-inner">
+    <div class="grid2" style="gap:12px">
+      <div class="qblock" style="margin-bottom:0"><div class="qnum">ID 1 · M10</div><span class="ans-badge" style="background:var(--cyan)">CMS</span><span class="ans-exp">Content Management System — creates/manages digital content without deep coding (WordPress, Wix, Shopify).</span></div>
+      <div class="qblock" style="margin-bottom:0"><div class="qnum">ID 2 · M11-12</div><span class="ans-badge" style="background:var(--cyan)">Data Harvesting</span><span class="ans-exp">Copying datasets &amp; metadata between data catalogs — also called web scraping or data scraping.</span></div>
+      <div class="qblock" style="margin-bottom:0"><div class="qnum">ID 3 · M11-12</div><span class="ans-badge" style="background:var(--cyan)">Interactive Platform</span><span class="ans-exp">Web platform where users actively participate, contribute, and interact — not just view static content.</span></div>
+      <div class="qblock" style="margin-bottom:0"><div class="qnum">ID 4 · M13</div><span class="ans-badge" style="background:var(--cyan)">Platform Agnostic</span><span class="ans-exp">Software that doesn't depend on any specific OS, hardware, or platform — "write once, run anywhere."</span></div>
+      <div class="qblock" style="margin-bottom:0"><div class="qnum">ID 5 · M13</div><span class="ans-badge" style="background:var(--cyan)">React Native</span><span class="ans-exp">JS framework for building mobile apps on Android and iOS from a single codebase.</span></div>
+      <div class="qblock" style="margin-bottom:0"><div class="qnum">ID 6 · M13-14</div><span class="ans-badge" style="background:var(--cyan)">npm</span><span class="ans-exp">Node Package Manager — 2M+ packages. Used to install JS frameworks and tools with one command.</span></div>
+      <div class="qblock" style="margin-bottom:0"><div class="qnum">ID 7 · M14-15</div><span class="ans-badge" style="background:var(--cyan)">NoSQL Database</span><span class="ans-exp">Non-relational database with no predefined schema — flexible, scalable, for evolving data.</span></div>
+      <div class="qblock" style="margin-bottom:0"><div class="qnum">ID 8 · M15-16</div><span class="ans-badge" style="background:var(--cyan)">Stateless Architecture</span><span class="ans-exp">Each request is independent; server retains NO session memory — client sends all context every time.</span></div>
+      <div class="qblock" style="margin-bottom:0"><div class="qnum">ID 9 · M15-16</div><span class="ans-badge" style="background:var(--cyan)">System Driver</span><span class="ans-exp">Software intermediary that lets the OS communicate with hardware — translates generic I/O to device-specific commands.</span></div>
+      <div class="qblock" style="margin-bottom:0"><div class="qnum">ID 10 · M13</div><span class="ans-badge" style="background:var(--cyan)">Electron</span><span class="ans-exp">JS framework for desktop apps on Windows, macOS, Linux. Powers VS Code, Discord, Slack.</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 16 — ANSWER KEY Enumeration ══════════ -->
+<div class="slide">
+  <div class="eyebrow">Answer Key · Part III</div>
+  <div class="slide-title">Enumeration — <span class="hl-g">Answers</span></div>
+  <div class="grid2">
+    <div class="card card-cyan">
+      <h3 style="margin-bottom:16px">A · 5-Step Data Harvesting Process <span style="font-size:14px;color:var(--mute)">(in order)</span></h3>
+      <div class="step-row"><div class="step-num cy">1</div><div class="step-body"><h4>Data Source Identification</h4><p>Determine target websites/sources to extract data from</p></div></div>
+      <div class="step-row"><div class="step-num cy">2</div><div class="step-body"><h4>Data Extraction</h4><p>Fetch data via HTTP requests, APIs, or scraping libraries</p></div></div>
+      <div class="step-row"><div class="step-num cy">3</div><div class="step-body"><h4>Data Parsing</h4><p>Convert raw HTML/XML/JSON into structured formats (CSV, DB)</p></div></div>
+      <div class="step-row"><div class="step-num cy">4</div><div class="step-body"><h4>Data Cleaning</h4><p>Remove duplicates, fix errors and inconsistencies</p></div></div>
+      <div class="step-row"><div class="step-num cy">5</div><div class="step-body"><h4>Data Storage</h4><p>Save processed data in a database or file for analysis</p></div></div>
+    </div>
+    <div class="flex-col">
+      <div class="card card-orange">
+        <h3 style="margin-bottom:14px">B1 · 4 NoSQL Database Categories</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="background:var(--bg4);border-radius:8px;padding:10px;text-align:center"><div style="font-size:18px">📄</div><b style="color:var(--cyan);font-size:15px">Document Store</b><br><span style="color:var(--mute);font-size:13px">MongoDB, Couchbase</span></div>
+          <div style="background:var(--bg4);border-radius:8px;padding:10px;text-align:center"><div style="font-size:18px">🔑</div><b style="color:var(--green);font-size:15px">Key-Value</b><br><span style="color:var(--mute);font-size:13px">Redis, DynamoDB</span></div>
+          <div style="background:var(--bg4);border-radius:8px;padding:10px;text-align:center"><div style="font-size:18px">📊</div><b style="color:var(--violet);font-size:15px">Column-Family</b><br><span style="color:var(--mute);font-size:13px">Cassandra, HBase</span></div>
+          <div style="background:var(--bg4);border-radius:8px;padding:10px;text-align:center"><div style="font-size:18px">🕸</div><b style="color:var(--accent);font-size:15px">Graph</b><br><span style="color:var(--mute);font-size:13px">Neo4j, Neptune</span></div>
+        </div>
+      </div>
+      <div class="card card-green">
+        <h3 style="margin-bottom:14px">B2 · 4 JS Cross-Platform Targets</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="background:var(--bg4);border-radius:8px;padding:10px;text-align:center"><div style="font-size:18px">🌐</div><b style="color:var(--accent);font-size:15px">Browser</b><br><span style="color:var(--mute);font-size:13px">React, Vue, vanilla JS</span></div>
+          <div style="background:var(--bg4);border-radius:8px;padding:10px;text-align:center"><div style="font-size:18px">⬡</div><b style="color:var(--green);font-size:15px">Server</b><br><span style="color:var(--mute);font-size:13px">Node.js</span></div>
+          <div style="background:var(--bg4);border-radius:8px;padding:10px;text-align:center"><div style="font-size:18px">📱</div><b style="color:var(--cyan);font-size:15px">Mobile</b><br><span style="color:var(--mute);font-size:13px">React Native, Ionic</span></div>
+          <div style="background:var(--bg4);border-radius:8px;padding:10px;text-align:center"><div style="font-size:18px">🖥</div><b style="color:var(--violet);font-size:15px">Desktop</b><br><span style="color:var(--mute);font-size:13px">Electron</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 17 — CLOSING ══════════ -->
+<div class="slide">
+  <div class="eyebrow">End of Recap</div>
+  <div class="slide-title">You're <span class="hl">Ready</span> — Go Ace It!</div>
+  <div class="hero-grid">
+    <div class="hero-left">
+      <p class="hero-desc" style="font-size:clamp(17px,1.7vw,21px)">"A winner is just a loser who tried one more time." <span style="color:var(--mute);font-size:16px">— George Augustus Moore</span></p>
+      <div class="divider" style="margin:20px 0"></div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="step-row"><div class="step-num acc">✓</div><div class="step-body"><h4>CMS &amp; Content Distribution</h4><p>WordPress, Wix, Shopify — content creation without code</p></div></div>
+        <div class="step-row"><div class="step-num cy">✓</div><div class="step-body"><h4>Data Harvesting &amp; Interactive Platforms</h4><p>5-step pipeline · 7 types · 6 characteristics</p></div></div>
+        <div class="step-row"><div class="step-num gr">✓</div><div class="step-body"><h4>Multi-Platform &amp; JavaScript</h4><p>Platform agnostic · 6 approaches · Node.js everywhere</p></div></div>
+        <div class="step-row"><div class="step-num vi">✓</div><div class="step-body"><h4>NoSQL, Stateless &amp; System Drivers</h4><p>4 categories · stateless rules · OS-to-hardware bridge</p></div></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;height:100%">
+      <svg viewBox="0 0 300 300" width="260" height="260" role="img" aria-label="Celebratory star burst icon">
+        <defs>
+          <radialGradient id="starg" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#F7DF1E"/>
+            <stop offset="100%" stop-color="#FB923C" stop-opacity="0.4"/>
+          </radialGradient>
+        </defs>
+        <circle cx="150" cy="150" r="140" fill="rgba(247,223,30,0.06)" stroke="rgba(247,223,30,0.15)" stroke-width="1"/>
+        <circle cx="150" cy="150" r="100" fill="rgba(247,223,30,0.08)" stroke="rgba(247,223,30,0.2)" stroke-width="1"/>
+        <polygon points="150,20 162,112 240,60 172,130 260,150 172,170 240,240 162,188 150,280 138,188 60,240 128,170 40,150 128,130 60,60 138,112" fill="url(#starg)" opacity="0.85"/>
+        <text x="150" y="158" text-anchor="middle" font-family="Space Grotesk,sans-serif" font-size="38" font-weight="700" fill="#000">🎓</text>
+        <text x="150" y="190" text-anchor="middle" font-family="Space Grotesk,sans-serif" font-size="14" font-weight="700" fill="rgba(247,223,30,0.8)">EXAM READY</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<!-- Shortcuts overlay -->
+<div id="overlay">
+  <div class="overlay-box">
+    <h2>⌨ Shortcuts</h2>
+    <div class="shortcut-row"><span>Next slide</span><span><kbd>→</kbd> or right-click</span></div>
+    <div class="shortcut-row"><span>Previous slide</span><span><kbd>←</kbd></span></div>
+    <div class="shortcut-row"><span>First slide</span><span><kbd>Home</kbd></span></div>
+    <div class="shortcut-row"><span>Last slide</span><span><kbd>End</kbd></span></div>
+    <div class="shortcut-row"><span>Close this</span><span><kbd>?</kbd> or <kbd>Esc</kbd></span></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const prog = document.getElementById('prog');
+  const ctr  = document.getElementById('counter');
+  const ov   = document.getElementById('overlay');
+  let cur = 0, locked = false;
+
+  function go(n){
+    if(locked) return;
+    if(n < 0 || n >= slides.length) return;
+    locked = true;
+    const dir = n > cur ? 1 : -1;
+    slides[cur].classList.remove('active');
+    slides[cur].classList.add(dir>0 ? 'out-left' : 'out-right');
+    const prev = cur; cur = n;
+    slides[cur].classList.remove('out-left','out-right');
+    slides[cur].classList.add('active');
+    setTimeout(()=>{
+      slides[prev].classList.remove('out-left','out-right');
+      locked = false;
+    }, 380);
+    prog.style.width = ((cur/(slides.length-1))*100)+'%';
+    ctr.textContent = (cur+1)+' / '+slides.length;
+  }
+
+  // Keyboard
+  document.addEventListener('keydown', e=>{
+    if(ov.classList.contains('show')){if(e.key==='?'||e.key==='Escape')ov.classList.remove('show');return;}
+    if(e.key==='ArrowRight'||e.key===' ') go(cur+1);
+    else if(e.key==='ArrowLeft') go(cur-1);
+    else if(e.key==='Home') go(0);
+    else if(e.key==='End') go(slides.length-1);
+    else if(e.key==='?') ov.classList.add('show');
+  });
+
+  // Mouse: right-click = next, contextmenu blocked
+  document.addEventListener('contextmenu', e=>e.preventDefault());
+  document.addEventListener('mousedown', e=>{
+    if(e.button===2){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+    if(e.button===3){e.preventDefault();e.stopImmediatePropagation();go(cur-1);}
+    if(e.button===4){e.preventDefault();e.stopImmediatePropagation();go(cur+1);}
+  }, true);
+
+  // Overlay close on backdrop click
+  ov.addEventListener('click', e=>{ if(e.target===ov) ov.classList.remove('show'); });
+
+  // Touch swipe
+  let tx=0;
+  document.addEventListener('touchstart', e=>{ tx=e.touches[0].clientX; },{passive:true});
+  document.addEventListener('touchend', e=>{
+    const dx = e.changedTouches[0].clientX - tx;
+    if(Math.abs(dx)>50){ go(dx<0?cur+1:cur-1); }
+  },{passive:true});
+
+  // Copy buttons
+  document.addEventListener('click', e=>{
+    const btn = e.target.closest('.copy-btn');
+    if(!btn) return;
+    const pre = btn.closest('.code-wrap')?.querySelector('pre[data-raw]');
+    if(!pre) return;
+    navigator.clipboard.writeText(decodeURIComponent(pre.dataset.raw)).then(()=>{
+      const p = btn.textContent; btn.textContent='Copied!'; btn.classList.add('copied');
+      setTimeout(()=>{ btn.textContent=p; btn.classList.remove('copied'); },1400);
+    });
+  });
+
+  // Init
+  prog.style.width = '0%';
+  ctr.textContent = '1 / '+slides.length;
+})();
+</script>
+</body>
+</html>

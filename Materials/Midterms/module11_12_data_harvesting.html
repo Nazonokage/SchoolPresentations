@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Module 11–12 — Data Harvesting & Interaction Platforms</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#06080f;--surf:#0d1220;--card:#121b2e;--card2:#18233a;--bord:#1c2b42;--bord2:#243350;
+  --a1:#38bdf8;--a2:#818cf8;--a3:#34d399;--gold:#fbbf24;--rose:#fb7185;--violet:#c084fc;
+  --txt:#e8f0ff;--mute:#6b83aa;--dim:#374f6e;
+  --r:13px;--ff:'Segoe UI',system-ui,-apple-system,sans-serif;--mono:'Cascadia Code','Fira Code',Consolas,monospace;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:var(--ff)}
+#prog{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--a1),var(--a2),var(--a3));z-index:900;transition:width .3s ease;box-shadow:0 0 10px var(--a1)}
+#ctr{position:fixed;bottom:18px;right:22px;font-size:13px;color:var(--mute);z-index:900;letter-spacing:.05em;font-weight:600}
+#hint{position:fixed;bottom:18px;left:22px;font-size:13px;color:var(--dim);z-index:900}
+#deck{width:100%;height:100%;position:relative;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:44px 64px;opacity:0;pointer-events:none;transition:opacity .35s ease,transform .35s ease;transform:translateX(54px);overflow-y:auto}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.out{opacity:0;transform:translateX(-54px)}
+@media(prefers-reduced-motion:reduce){.slide{transition:opacity .15s;transform:none!important}}
+.W{width:100%;max-width:1420px}
+.eye{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--a1);margin-bottom:9px}
+.T{font-size:clamp(28px,3.8vw,52px);font-weight:900;line-height:1.08;margin-bottom:7px}
+.sub{font-size:clamp(15px,1.2vw,18px);color:var(--mute);margin-bottom:24px;line-height:1.55}
+.hr{width:46px;height:3px;background:linear-gradient(90deg,var(--a1),var(--a2));border-radius:2px;margin-bottom:22px}
+.card{background:var(--card);border:1px solid var(--bord);border-radius:var(--r);padding:18px 22px}
+.card2{background:var(--card2);border:1px solid var(--bord2);border-radius:var(--r);padding:16px 20px}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:3px 10px;border-radius:20px;margin-bottom:6px}
+.bA{background:#0a2033;color:var(--a1)} .bB{background:#16194a;color:#a5b4fc}
+.bC{background:#082a1e;color:var(--a3)} .bD{background:#2a1f08;color:var(--gold)}
+.bE{background:#2a0c18;color:var(--rose)} .bF{background:#1e0a2a;color:var(--violet)}
+.qt{background:var(--card);border-left:4px solid var(--a1);border-radius:0 var(--r) var(--r) 0;padding:18px 26px;font-style:italic;font-size:clamp(15px,1.2vw,18px);line-height:1.7}
+.qt cite{display:block;font-size:15px;font-style:normal;color:var(--mute);margin-top:9px;font-weight:600}
+/* steps */
+.step{display:flex;gap:14px;padding:10px 0;border-bottom:1px solid var(--bord);align-items:flex-start}
+.step:last-child{border-bottom:none}
+.snum{min-width:30px;height:30px;background:linear-gradient(135deg,var(--a1),var(--a2));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;margin-top:1px}
+.stxt h4{font-size:15px;font-weight:700;margin-bottom:3px;color:var(--a1)}
+.stxt p{font-size:15px;color:var(--mute);line-height:1.5}
+/* feature bullet */
+.fb{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--bord);align-items:flex-start}
+.fb:last-child{border-bottom:none}
+.ficon{min-width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:var(--card2)}
+.ftxt h4{font-size:15px;font-weight:700;margin-bottom:2px}
+.ftxt p{font-size:15px;color:var(--mute);line-height:1.5}
+/* code */
+.cw{background:#060a10;border:1px solid #182030;border-radius:var(--r);overflow:hidden}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:9px 15px;background:#0b1220;border-bottom:1px solid #182030}
+.cl{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)}
+.cpbtn{font-size:12px;padding:4px 12px;border-radius:6px;border:1px solid var(--bord2);background:var(--card2);color:var(--mute);cursor:pointer;font-family:var(--ff);transition:all .15s}
+.cpbtn:hover{background:var(--bord);color:var(--txt)}
+.cpbtn.ok{background:#082a1e;color:#34d399;border-color:#34d399}
+pre{padding:17px 20px;overflow:auto;font-family:var(--mono);font-size:13px;line-height:1.7;color:#c8d8f0}
+pre.scroll{max-height:320px}
+.kw{color:#f472b6}.at{color:#7dd3fc}.st{color:#86efac}.tg{color:#60a5fa}.cm{color:#374f6e;font-style:italic}.fn{color:#c084fc}.nm{color:#fda4af}
+/* breakdown item */
+.bd{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--bord);align-items:flex-start}
+.bd:last-child{border-bottom:none}
+.bdn{min-width:24px;font-size:13px;font-weight:800;color:var(--a1)}
+.bdt{font-size:14px;color:var(--mute);line-height:1.5}
+.bdt code{background:var(--bord);padding:1px 5px;border-radius:4px;font-family:var(--mono);font-size:12px;color:var(--a3)}
+/* MCQ */
+.qcard{background:var(--card);border:1px solid var(--bord);border-radius:var(--r);padding:15px 18px}
+.qnum{font-size:11px;font-weight:700;color:var(--a1);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.qtext{font-size:15px;font-weight:600;line-height:1.4;margin-bottom:10px}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.opt{background:var(--bg);border:1px solid var(--bord);border-radius:7px;padding:7px 12px;font-size:15px;color:var(--mute);line-height:1.4}
+.opt span{color:var(--a1);font-weight:700;margin-right:4px}
+/* ID */
+.idq{background:var(--card);border:1px solid var(--bord);border-radius:var(--r);padding:13px 17px;display:flex;gap:12px;align-items:flex-start}
+.idnum{min-width:27px;height:27px;background:var(--a1);color:#06080f;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;margin-top:2px}
+.idtxt{font-size:15px;line-height:1.55}
+.blank{display:inline-block;width:120px;border-bottom:1.5px solid var(--a1);margin:0 5px;vertical-align:bottom}
+/* answers */
+.arow{display:flex;align-items:flex-start;gap:11px;padding:8px 0;border-bottom:1px solid var(--bord)}
+.arow:last-child{border-bottom:none}
+.anum{min-width:32px;font-size:12px;font-weight:700;color:var(--a1)}
+.aans{font-size:15px;font-weight:700;color:#34d399;min-width:180px;flex-shrink:0}
+.aexp{font-size:14px;color:var(--mute);line-height:1.45}
+/* recap */
+.ri{display:flex;gap:11px;padding:8px 0;align-items:flex-start}
+.ric{min-width:28px;height:28px;background:var(--a2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.rit{font-size:15px;line-height:1.55}
+/* modal */
+#modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;align-items:center;justify-content:center}
+#modal.show{display:flex}
+.mbox{background:var(--surf);border:1px solid var(--bord2);border-radius:16px;padding:30px 38px;min-width:340px}
+.mbox h3{font-size:18px;font-weight:800;margin-bottom:18px}
+.mrow{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bord);font-size:14px}
+.mrow:last-child{border-bottom:none}
+.mrow span:first-child{color:var(--mute)}
+kbd{background:var(--card);border:1px solid var(--bord2);border-radius:5px;padding:2px 7px;font-size:11px;font-family:var(--mono)}
+.mclose{display:block;text-align:center;margin-top:18px;font-size:13px;color:var(--mute);cursor:pointer}
+.mclose:hover{color:var(--txt)}
+.grad{background:linear-gradient(135deg,#e0f0ff,#7dd3fc 40%,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<div id="ctr"></div>
+<div id="hint">→ next · ← prev · ? help</div>
+<div id="deck"></div>
+<div id="modal">
+  <div class="mbox">
+    <h3>⌨ Shortcuts</h3>
+    <div class="mrow"><span>Next</span><span><kbd>→</kbd> / right-click</span></div>
+    <div class="mrow"><span>Prev</span><span><kbd>←</kbd></span></div>
+    <div class="mrow"><span>First / Last</span><span><kbd>Home</kbd> / <kbd>End</kbd></span></div>
+    <div class="mrow"><span>This menu</span><span><kbd>?</kbd></span></div>
+    <span class="mclose" id="mclose">✕ Close</span>
+  </div>
+</div>
+
+<script>
+const S = [
+
+// ── 0 TITLE ──────────────────────────────────────────────────────────────────
+`<div class="W" style="text-align:center;display:flex;flex-direction:column;align-items:center">
+  <div class="eye" style="margin-bottom:14px">Platform Technologies · Module 11–12</div>
+  <div class="T grad" style="font-size:clamp(36px,5.5vw,68px);margin-bottom:14px">Data Harvesting &amp;<br>Interaction Platforms</div>
+  <div style="font-size:clamp(15px,1.3vw,19px);color:var(--mute);max-width:640px;line-height:1.65;margin-bottom:32px">
+    How platforms gather, process, and interact with data — plus building live widgets with HTML, CSS &amp; JavaScript.
+  </div>
+  <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-bottom:34px">
+    <div class="card" style="min-width:148px;text-align:left"><div style="font-size:11px;color:var(--mute);font-weight:700;letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px">Topics</div><div style="font-size:15px">Data Harvesting + Interactive Platforms</div></div>
+    <div class="card" style="min-width:148px;text-align:left"><div style="font-size:11px;color:var(--mute);font-weight:700;letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px">Activities</div><div style="font-size:15px">Google Maps embed + Chat app</div></div>
+    <div class="card" style="min-width:148px;text-align:left"><div style="font-size:11px;color:var(--mute);font-weight:700;letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px">Languages</div><div style="font-size:15px">HTML · CSS · JavaScript</div></div>
+  </div>
+  <div style="font-size:13px;color:var(--dim)">Right-click or → to advance · Press ? for shortcuts</div>
+</div>`,
+
+// ── 1 LEARNING TARGETS ───────────────────────────────────────────────────────
+`<div class="W">
+  <div class="eye">Lesson Preview</div>
+  <div class="T">Learning Targets</div>
+  <div class="hr"></div>
+  <div class="g2" style="gap:18px">
+    <div class="card" style="border-top:3px solid var(--a1);padding:22px">
+      <div style="font-size:34px;font-weight:900;color:var(--a1);line-height:1;margin-bottom:11px">01</div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:7px">Know Data Harvesting</div>
+      <div style="font-size:15px;color:var(--mute);line-height:1.6">Understand what data harvesting is, its benefits, and the 5-step process from source identification to storage.</div>
+    </div>
+    <div class="card" style="border-top:3px solid var(--a2);padding:22px">
+      <div style="font-size:34px;font-weight:900;color:var(--a2);line-height:1;margin-bottom:11px">02</div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:7px">Interaction Platforms</div>
+      <div style="font-size:15px;color:var(--mute);line-height:1.6">Define interactive platforms, list their 7 types, and identify their 6 key characteristics.</div>
+    </div>
+    <div class="card" style="border-top:3px solid var(--a3);padding:22px">
+      <div style="font-size:34px;font-weight:900;color:var(--a3);line-height:1;margin-bottom:11px">03</div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:7px">Embed Google Maps</div>
+      <div style="font-size:15px;color:var(--mute);line-height:1.6">Use an HTML iframe to embed a live Google Maps widget into a web page.</div>
+    </div>
+    <div class="card" style="border-top:3px solid var(--gold);padding:22px">
+      <div style="font-size:34px;font-weight:900;color:var(--gold);line-height:1;margin-bottom:11px">04</div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:7px">Build a Chat App</div>
+      <div style="font-size:15px;color:var(--mute);line-height:1.6">Create a functional blog chat interface using HTML structure, CSS styling, and JavaScript logic.</div>
+    </div>
+  </div>
+</div>`,
+
+// ── 2 WHAT IS DATA HARVESTING ────────────────────────────────────────────────
+`<div class="W">
+  <div class="eye">Main Lesson · Data Harvesting</div>
+  <div class="T">What is Data Harvesting?</div>
+  <div class="hr"></div>
+  <div class="g2" style="gap:18px;align-items:start">
+    <div>
+      <div class="card" style="border-left:4px solid var(--a1);margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--a1);margin-bottom:8px">Definition</div>
+        <div style="font-size:15px;line-height:1.7">Data harvesting is a process that <strong style="color:var(--a1)">copies datasets and their metadata</strong> between two or more data catalogs — a critical step in making data useful. It is also known as <strong style="color:var(--txt)">web scraping</strong> or <strong style="color:var(--txt)">data scraping</strong>.</div>
+      </div>
+      <div class="card" style="border-left:4px solid var(--a3)">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--a3);margin-bottom:8px">Analogy</div>
+        <div style="font-size:15px;color:var(--mute);line-height:1.65">Similar to how <strong style="color:var(--txt)">search engines</strong> use websites to look for, catalog, and index content from different websites — making it searchable in a single location. APIs act as the communication lines between different databases.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.08em;text-transform:uppercase;margin-bottom:13px">Benefits of Data Harvesting</div>
+      <div class="fb">
+        <div class="ficon">🏪</div>
+        <div class="ftxt">
+          <h4>One-Stop Shop</h4>
+          <p>Users can search one DDH (Data Driven Hub) and find information across several different catalogs — without searching each one separately or even knowing they exist.</p>
+        </div>
+      </div>
+      <div class="fb">
+        <div class="ficon">📡</div>
+        <div class="ftxt">
+          <h4>Broader Exposure</h4>
+          <p>The DDH harvests metadata and exposes it to a larger audience, so data added to other catalogs will be seen by far more users than it would otherwise reach.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+// ── 3 5-STEP PROCESS ─────────────────────────────────────────────────────────
+`<div class="W">
+  <div class="eye">Main Lesson · Data Harvesting Process</div>
+  <div class="T">The 5-Step Data Harvesting Process</div>
+  <div class="hr"></div>
+  <div class="g2" style="gap:18px;align-items:start">
+    <div class="card">
+      <div class="step">
+        <div class="snum">1</div>
+        <div class="stxt"><h4>Data Source Identification</h4><p>Determine the target websites or data sources from which you want to extract data.</p></div>
+      </div>
+      <div class="step">
+        <div class="snum">2</div>
+        <div class="stxt"><h4>Data Extraction</h4><p>Use automated scripts or tools to fetch and download data — via HTTP requests, APIs, or specialized scraping libraries.</p></div>
+      </div>
+      <div class="step">
+        <div class="snum">3</div>
+        <div class="stxt"><h4>Data Parsing</h4><p>Raw data in HTML, XML, or JSON is parsed to extract relevant information and converted into structured formats like CSV, Excel, or a database.</p></div>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="step">
+          <div class="snum">4</div>
+          <div class="stxt"><h4>Data Cleaning</h4><p>Cleanse the extracted data by removing irrelevant or duplicate information, and fixing errors or inconsistencies.</p></div>
+        </div>
+        <div class="step">
+          <div class="snum">5</div>
+          <div class="stxt"><h4>Data Storage</h4><p>Save the processed data in a database or file for further analysis or use.</p></div>
+        </div>
+      </div>
+      <div class="card" style="padding:14px 18px;text-align:center">
+        <div style="font-size:15px;color:var(--mute)">⚙ This pipeline transforms raw, scattered web data into clean, actionable, structured information.</div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+// ── 4 INTERACTIVE PLATFORMS ───────────────────────────────────────────────────
+`<div class="W">
+  <div class="eye">Main Lesson · Interactive Platforms</div>
+  <div class="T">What is an Interactive Platform?</div>
+  <div class="hr"></div>
+  <div class="g2" style="gap:18px;align-items:start">
+    <div>
+      <div class="card" style="border-left:4px solid var(--a2);margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--a2);margin-bottom:8px">Definition</div>
+        <div style="font-size:15px;line-height:1.7">A <strong style="color:var(--a2)">web-based platform</strong> that provides users with a dynamic and engaging experience. Unlike static websites that only display information, interactive platforms allow users to <strong style="color:var(--txt)">actively participate, contribute, and interact</strong> with the content, features, and other users.</div>
+      </div>
+      <div class="card">
+        <div style="font-size:12px;font-weight:700;color:var(--mute);letter-spacing:.07em;text-transform:uppercase;margin-bottom:10px">Tech Stack Required</div>
+        <div style="display:flex;flex-wrap:wrap;gap:7px">
+          <span class="badge bA">HTML</span>
+          <span class="badge bB">CSS</span>
+          <span class="badge bC">JavaScript</span>
+          <span class="badge bD">React / Angular / Vue</span>
+          <span class="badge bE">Server-side Languages</span>
+        </div>
+        <div style="font-size:14px;color:var(--mute);margin-top:10px;line-height:1.55">Modern frameworks like React, Angular, and Vue.js enhance interactivity and user experience of these platforms.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px">7 Types of Interactive Platforms</div>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        <div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--bord)"><span style="color:var(--a1);font-weight:700;min-width:20px">1.</span><div><strong style="font-size:15px">Social Media Platforms</strong><br><span style="font-size:14px;color:var(--mute)">Facebook, Twitter, Instagram, LinkedIn — share posts, comments, likes, discussions.</span></div></div>
+        <div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--bord)"><span style="color:var(--a1);font-weight:700;min-width:20px">2.</span><div><strong style="font-size:15px">Online Forums</strong><br><span style="font-size:14px;color:var(--mute)">Post questions, share knowledge, engage in topic-based conversations.</span></div></div>
+        <div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--bord)"><span style="color:var(--a1);font-weight:700;min-width:20px">3.</span><div><strong style="font-size:15px">E-Learning Platforms</strong><br><span style="font-size:14px;color:var(--mute)">Engaging educational content, quizzes, interactive exercises, and assessments.</span></div></div>
+        <div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--bord)"><span style="color:var(--a1);font-weight:700;min-width:20px">4.</span><div><strong style="font-size:15px">Web-based Games</strong><br><span style="font-size:14px;color:var(--mute)">Online games allowing multiple players to interact and compete in real-time.</span></div></div>
+        <div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--bord)"><span style="color:var(--a1);font-weight:700;min-width:20px">5.</span><div><strong style="font-size:15px">Collaborative Tools</strong><br><span style="font-size:14px;color:var(--mute)">Google Docs, Trello, Slack — collaborate in real-time, share files, communicate.</span></div></div>
+        <div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--bord)"><span style="color:var(--a1);font-weight:700;min-width:20px">6.</span><div><strong style="font-size:15px">Interactive Data Visualization</strong><br><span style="font-size:14px;color:var(--mute)">Explore complex datasets through interactive charts, graphs, and maps.</span></div></div>
+        <div style="display:flex;gap:10px;padding:7px 0"><span style="color:var(--a1);font-weight:700;min-width:20px">7.</span><div><strong style="font-size:15px">Virtual Events &amp; Conferences</strong><br><span style="font-size:14px;color:var(--mute)">Webinars with live Q&amp;A, polls, and networking opportunities.</span></div></div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+// ── 5 KEY CHARACTERISTICS ─────────────────────────────────────────────────────
+`<div class="W">
+  <div class="eye">Main Lesson · Interactive Platforms</div>
+  <div class="T">6 Key Characteristics of Interactive Platforms</div>
+  <div class="hr"></div>
+  <div class="g2" style="gap:16px">
+    <div class="card">
+      <div class="fb">
+        <div class="ficon">⚡</div>
+        <div class="ftxt"><h4>Real-Time Interaction</h4><p>Users can interact with the platform and other users in real-time, creating a sense of immediacy and engagement.</p></div>
+      </div>
+      <div class="fb">
+        <div class="ficon">✍</div>
+        <div class="ftxt"><h4>User-Generated Content</h4><p>Users contribute their own content — comments, posts, or media — allowing for user-driven experiences.</p></div>
+      </div>
+      <div class="fb">
+        <div class="ficon">🖱</div>
+        <div class="ftxt"><h4>Interactivity with Elements</h4><p>Users can interact with various elements such as buttons, forms, sliders, and multimedia on the platform.</p></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="fb">
+        <div class="ficon">🔄</div>
+        <div class="ftxt"><h4>Dynamic Content</h4><p>Content is updated dynamically without requiring page refreshes, providing a seamless, app-like user experience.</p></div>
+      </div>
+      <div class="fb">
+        <div class="ficon">💬</div>
+        <div class="ftxt"><h4>Feedback Mechanisms</h4><p>Users can provide feedback, comment on content, or rate items — fostering community building and engagement.</p></div>
+      </div>
+      <div class="fb">
+        <div class="ficon">🎯</div>
+        <div class="ftxt"><h4>Personalization</h4><p>Interactive platforms use data to personalize the user experience, presenting content relevant to each individual user.</p></div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+// ── 6 GOOGLE MAPS ACTIVITY ────────────────────────────────────────────────────
+`<div class="W">
+  <div class="eye">Skill-Building Activity · Code Project 1</div>
+  <div class="T">Embed Google Maps with an iframe</div>
+  <div class="hr"></div>
+  <div class="g2" style="gap:18px;align-items:start">
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.09em;text-transform:uppercase;margin-bottom:10px">Activity Instructions</div>
+        <div style="display:flex;flex-direction:column;gap:7px;font-size:15px;color:var(--mute);line-height:1.65">
+          <div style="display:flex;gap:9px"><span style="color:var(--a1);font-weight:700;min-width:18px">1.</span>Create a new activity using any HTML compiler.</div>
+          <div style="display:flex;gap:9px"><span style="color:var(--a1);font-weight:700;min-width:18px">2.</span>Name your file <code style="background:var(--bord);padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:12px">Map.html</code></div>
+          <div style="display:flex;gap:9px"><span style="color:var(--a1);font-weight:700;min-width:18px">3.</span>Go to Google Maps, search your school, click Share → Embed a map, and copy the iframe link.</div>
+          <div style="display:flex;gap:9px"><span style="color:var(--a1);font-weight:700;min-width:18px">4.</span>Paste it into the code structure below, replacing the <code style="background:var(--bord);padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:12px">src="..."</code> value.</div>
+          <div style="display:flex;gap:9px"><span style="color:var(--a1);font-weight:700;min-width:18px">5.</span>Inform your instructor when done.</div>
+        </div>
+      </div>
+      <div class="card" style="border-left:3px solid var(--a3)">
+        <div style="font-size:12px;font-weight:700;color:var(--a3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:7px">What the iframe Does</div>
+        <div style="font-size:15px;color:var(--mute);line-height:1.65">An <strong style="color:var(--txt)">iframe (Inline Frame)</strong> embeds another HTML document inside the current page — in this case a live interactive Google Maps widget, making your static page an interactive data visualization platform.</div>
+      </div>
+    </div>
+    <div class="cw">
+      <div class="ch"><span class="cl">HTML · Map.html</span><button class="cpbtn" id="cb1" onclick="doCopy('pre1','cb1')">Copy</button></div>
+      <pre id="pre1"><span class="tg">&lt;!DOCTYPE html&gt;</span>
+<span class="tg">&lt;html&gt;</span>
+  <span class="tg">&lt;head&gt;</span>
+    <span class="tg">&lt;title&gt;</span>Map<span class="tg">&lt;/title&gt;</span>
+  <span class="tg">&lt;/head&gt;</span>
+  <span class="tg">&lt;body</span> <span class="at">style</span>=<span class="st">"text-align: center;"</span><span class="tg">&gt;</span>
+    <span class="tg">&lt;h2&gt;</span>My School Map<span class="tg">&lt;/h2&gt;</span>
+
+    <span class="cm">&lt;!-- Paste your Google Maps embed link below --&gt;</span>
+    <span class="tg">&lt;iframe</span>
+      <span class="at">src</span>=<span class="st">"https://www.google.com/maps/embed?pb=..."</span>
+      <span class="at">width</span>=<span class="st">"600"</span>
+      <span class="at">height</span>=<span class="st">"450"</span>
+      <span class="at">style</span>=<span class="st">"border:0;"</span>
+      <span class="at">allowfullscreen</span>=<span class="st">""</span>
+      <span class="at">loading</span>=<span class="st">"lazy"</span>
+      <span class="at">referrerpolicy</span>=<span class="st">"no-referrer-when-downgrade"</span><span class="tg">&gt;</span>
+    <span class="tg">&lt;/iframe&gt;</span>
+  <span class="tg">&lt;/body&gt;</span>
+<span class="tg">&lt;/html&gt;</span></pre>
+    </div>
+  </div>
+</div>`,
+
+// ── 7 CHAT APP — HTML ─────────────────────────────────────────────────────────
+`<div class="W">
+  <div class="eye">Skill-Building Activity · Code Project 2</div>
+  <div class="T">Build a Blog Chat App — HTML Structure</div>
+  <div class="hr"></div>
+  <div class="g2" style="gap:18px;align-items:start">
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.09em;text-transform:uppercase;margin-bottom:10px">Instructions — Step 1 of 3</div>
+        <div style="font-size:15px;color:var(--mute);line-height:1.65">Create a new file on your HTML compiler and name it <code style="background:var(--bord);padding:1px 6px;border-radius:3px;font-family:var(--mono);font-size:13px">index.html</code>. This sets up the chat window, message container, and input field.</div>
+      </div>
+      <div class="card" style="border-left:3px solid var(--a1)">
+        <div style="font-size:12px;font-weight:700;color:var(--a1);letter-spacing:.07em;text-transform:uppercase;margin-bottom:9px">What Each Part Does</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="font-size:14px;color:var(--mute)"><code style="background:var(--bord);padding:1px 5px;border-radius:3px;font-family:var(--mono);color:var(--a3)">.chat-container</code> — outer wrapper for the whole chat UI</div>
+          <div style="font-size:14px;color:var(--mute)"><code style="background:var(--bord);padding:1px 5px;border-radius:3px;font-family:var(--mono);color:var(--a3)">#chat-messages</code> — scrollable message display area</div>
+          <div style="font-size:14px;color:var(--mute)"><code style="background:var(--bord);padding:1px 5px;border-radius:3px;font-family:var(--mono);color:var(--a3)">.chat-input</code> — holds the text field + Send button</div>
+          <div style="font-size:14px;color:var(--mute)"><code style="background:var(--bord);padding:1px 5px;border-radius:3px;font-family:var(--mono);color:var(--a3)">onclick="sendMessage()"</code> — triggers the JS function on click</div>
+        </div>
+      </div>
+    </div>
+    <div class="cw">
+      <div class="ch"><span class="cl">HTML · index.html</span><button class="cpbtn" id="cb2" onclick="doCopy('pre2','cb2')">Copy</button></div>
+      <pre id="pre2" class="scroll"><span class="tg">&lt;!DOCTYPE html&gt;</span>
+<span class="tg">&lt;html</span> <span class="at">lang</span>=<span class="st">"en"</span><span class="tg">&gt;</span>
+<span class="tg">&lt;head&gt;</span>
+  <span class="tg">&lt;meta</span> <span class="at">charset</span>=<span class="st">"UTF-8"</span><span class="tg">&gt;</span>
+  <span class="tg">&lt;meta</span> <span class="at">name</span>=<span class="st">"viewport"</span>
+    <span class="at">content</span>=<span class="st">"width=device-width, initial-scale=1.0"</span><span class="tg">&gt;</span>
+  <span class="tg">&lt;title&gt;</span>Chat in Blog<span class="tg">&lt;/title&gt;</span>
+  <span class="tg">&lt;link</span> <span class="at">rel</span>=<span class="st">"stylesheet"</span> <span class="at">href</span>=<span class="st">"style.css"</span><span class="tg">&gt;</span>
+<span class="tg">&lt;/head&gt;</span>
+<span class="tg">&lt;body&gt;</span>
+  <span class="tg">&lt;h1</span> <span class="at">style</span>=<span class="st">"text-align: center;"</span><span class="tg">&gt;</span>
+    Chat Inbox
+  <span class="tg">&lt;/h1&gt;</span>
+
+  <span class="tg">&lt;div</span> <span class="at">class</span>=<span class="st">"chat-container"</span><span class="tg">&gt;</span>
+    <span class="tg">&lt;div</span> <span class="at">class</span>=<span class="st">"chat-messages"</span>
+         <span class="at">id</span>=<span class="st">"chat-messages"</span><span class="tg">&gt;&lt;/div&gt;</span>
+    <span class="tg">&lt;div</span> <span class="at">class</span>=<span class="st">"chat-input"</span><span class="tg">&gt;</span>
+      <span class="tg">&lt;input</span> <span class="at">type</span>=<span class="st">"text"</span>
+             <span class="at">id</span>=<span class="st">"message-input"</span>
+             <span class="at">placeholder</span>=<span class="st">"Type your message..."</span><span class="tg">&gt;</span>
+      <span class="tg">&lt;button</span> <span class="at">onclick</span>=<span class="st">"sendMessage()"</span><span class="tg">&gt;</span>
+        Send
+      <span class="tg">&lt;/button&gt;</span>
+    <span class="tg">&lt;/div&gt;</span>
+  <span class="tg">&lt;/div&gt;</span>
+
+  <span class="cm">&lt;!-- JS file for chat functionality --&gt;</span>
+  <span class="tg">&lt;script</span> <span class="at">src</span>=<span class="st">"script.js"</span><span class="tg">&gt;&lt;/script&gt;</span>
+<span class="tg">&lt;/body&gt;</span>
+<span class="tg">&lt;/html&gt;</span></pre>
+    </div>
+  </div>
+</div>`,
+
+// ── 8 CHAT APP — CSS ──────────────────────────────────────────────────────────
+`<div class="W">
+  <div class="eye">Skill-Building Activity · Code Project 2</div>
+  <div class="T">Build a Blog Chat App — CSS Styling</div>
+  <div class="hr"></div>
+  <div class="g2" style="gap:18px;align-items:start">
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.09em;text-transform:uppercase;margin-bottom:10px">Instructions — Step 2 of 3</div>
+        <div style="font-size:15px;color:var(--mute);line-height:1.65">Create a second file named <code style="background:var(--bord);padding:1px 6px;border-radius:3px;font-family:var(--mono);font-size:13px">style.css</code> in the same folder. This adds styling to the chat window and messages.</div>
+      </div>
+      <div class="card" style="border-left:3px solid var(--a2)">
+        <div style="font-size:12px;font-weight:700;color:var(--a2);letter-spacing:.07em;text-transform:uppercase;margin-bottom:9px">What Each Rule Does</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <div style="font-size:14px;color:var(--mute)"><code style="background:var(--bord);padding:1px 5px;border-radius:3px;font-family:var(--mono);color:var(--a3)">.chat-container</code> — sets max-width, centers it, adds border</div>
+          <div style="font-size:14px;color:var(--mute)"><code style="background:var(--bord);padding:1px 5px;border-radius:3px;font-family:var(--mono);color:var(--a3)">.chat-messages</code> — fixed 300px height with vertical scroll</div>
+          <div style="font-size:14px;color:var(--mute)"><code style="background:var(--bord);padding:1px 5px;border-radius:3px;font-family:var(--mono);color:var(--a3)">.chat-input input</code> — 70% width text field with spacing</div>
+          <div style="font-size:14px;color:var(--mute)"><code style="background:var(--bord);padding:1px 5px;border-radius:3px;font-family:var(--mono);color:var(--a3)">.chat-input button</code> — padded send button</div>
+        </div>
+      </div>
+    </div>
+    <div class="cw">
+      <div class="ch"><span class="cl">CSS · style.css</span><button class="cpbtn" id="cb3" onclick="doCopy('pre3','cb3')">Copy</button></div>
+      <pre id="pre3"><span class="fn">body</span> {
+  font-family: Arial, sans-serif;
+  margin: <span class="nm">0</span>;
+  padding: <span class="nm">0</span>;
+}
+
+<span class="fn">.chat-container</span> {
+  max-width: <span class="nm">400px</span>;
+  margin: <span class="nm">20px</span> auto;
+  border: <span class="nm">1px</span> solid <span class="st">#ccc</span>;
+  border-radius: <span class="nm">5px</span>;
+  padding: <span class="nm">10px</span>;
+}
+
+<span class="fn">.chat-messages</span> {
+  height: <span class="nm">300px</span>;
+  overflow-y: scroll;
+  border-bottom: <span class="nm">1px</span> solid <span class="st">#ccc</span>;
+  padding: <span class="nm">5px</span>;
+}
+
+<span class="fn">.chat-input input</span> {
+  width: <span class="nm">70%</span>;
+  padding: <span class="nm">5px</span>;
+  margin-right: <span class="nm">5px</span>;
+}
+
+<span class="fn">.chat-input button</span> {
+  padding: <span class="nm">5px 10px</span>;
+}</pre>
+    </div>
+  </div>
+</div>`,
+
+// ── 9 CHAT APP — JS ───────────────────────────────────────────────────────────
+`<div class="W">
+  <div class="eye">Skill-Building Activity · Code Project 2</div>
+  <div class="T">Build a Blog Chat App — JavaScript Logic</div>
+  <div class="hr"></div>
+  <div class="g2" style="gap:18px;align-items:start">
+    <div class="cw" style="min-width:0">
+      <div class="ch"><span class="cl">JavaScript · script.js</span><button class="cpbtn" id="cb4" onclick="doCopy('pre4','cb4')">Copy</button></div>
+      <pre id="pre4" class="scroll"><span class="kw">function</span> <span class="fn">sendMessage</span>() {
+  <span class="kw">const</span> messageInput =
+    document.<span class="fn">getElementById</span>(<span class="st">'message-input'</span>);
+  <span class="kw">const</span> message =
+    messageInput.value.<span class="fn">trim</span>();
+
+  <span class="kw">if</span> (message !== <span class="st">''</span>) {
+    <span class="kw">const</span> chatMessages =
+      document.<span class="fn">getElementById</span>(<span class="st">'chat-messages'</span>);
+    <span class="kw">const</span> newMessage =
+      document.<span class="fn">createElement</span>(<span class="st">'div'</span>);
+
+    newMessage.classList.<span class="fn">add</span>(<span class="st">'message'</span>, <span class="st">'outgoing'</span>);
+    newMessage.textContent = message;
+    chatMessages.<span class="fn">appendChild</span>(newMessage);
+
+    messageInput.value = <span class="st">''</span>;
+    messageInput.<span class="fn">focus</span>();
+
+    <span class="cm">// Simulate a reply after 1 second</span>
+    <span class="fn">setTimeout</span>(sendReply, <span class="nm">1000</span>);
+  }
+}
+
+<span class="kw">function</span> <span class="fn">sendReply</span>() {
+  <span class="kw">const</span> chatMessages =
+    document.<span class="fn">getElementById</span>(<span class="st">'chat-messages'</span>);
+  <span class="kw">const</span> replyMessage =
+    document.<span class="fn">createElement</span>(<span class="st">'div'</span>);
+
+  replyMessage.classList.<span class="fn">add</span>(<span class="st">'message'</span>, <span class="st">'incoming'</span>);
+  replyMessage.textContent =
+    <span class="st">'This is a sample reply.'</span>;
+  chatMessages.<span class="fn">appendChild</span>(replyMessage);
+}</pre>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.09em;text-transform:uppercase;margin-bottom:9px">Instructions — Step 3 of 3</div>
+        <div style="font-size:15px;color:var(--mute);line-height:1.65">Create a third file named <code style="background:var(--bord);padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:13px">script.js</code>. This is the heart of the chat — it handles sending, displaying, and auto-replying to messages.</div>
+      </div>
+      <div class="card" style="border-left:3px solid var(--a3)">
+        <div style="font-size:12px;font-weight:700;color:var(--a3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:9px">Note from the module</div>
+        <div style="font-size:15px;color:var(--mute);line-height:1.65">The best part: these scripts can be applied using <strong style="color:var(--txt)">WordPress or Wix</strong>. This is a simplified example — real-world apps need more complex logic for user auth, server sync, and message history.</div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+// ── 10 CODE BREAKDOWN ─────────────────────────────────────────────────────────
+`<div class="W">
+  <div class="eye">Code Deep-Dive · JavaScript Breakdown</div>
+  <div class="T">Breaking Down the Chat Script</div>
+  <div class="hr"></div>
+  <div class="g2" style="gap:18px;align-items:start">
+    <div class="card">
+      <div style="font-size:13px;font-weight:700;color:var(--a1);letter-spacing:.08em;text-transform:uppercase;margin-bottom:11px">sendMessage() — Steps 1–6</div>
+      <div class="bd"><div class="bdn">1</div><div class="bdt">Gets the input field using <code>getElementById('message-input')</code> — <code>const</code> declares a constant variable named <code>messageInput</code>.</div></div>
+      <div class="bd"><div class="bdn">2</div><div class="bdt"><code>messageInput.value.trim()</code> retrieves the typed text and removes extra spaces from both ends using <code>trim()</code>.</div></div>
+      <div class="bd"><div class="bdn">3</div><div class="bdt">The <code>if (message !== '')</code> check ensures empty messages are never sent — only non-empty strings proceed.</div></div>
+      <div class="bd"><div class="bdn">4</div><div class="bdt">Inside <code>if</code>: gets the <code>#chat-messages</code> container element — this is where all messages are displayed.</div></div>
+      <div class="bd"><div class="bdn">5</div><div class="bdt"><code>document.createElement('div')</code> creates a brand new div element to hold the outgoing message.</div></div>
+      <div class="bd"><div class="bdn">6</div><div class="bdt"><code>classList.add('message', 'outgoing')</code> adds two CSS classes — <code>message</code> and <code>outgoing</code> — for styling the bubble.</div></div>
+    </div>
+    <div class="card">
+      <div style="font-size:13px;font-weight:700;color:var(--a2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:11px">sendMessage() — Steps 7–12</div>
+      <div class="bd"><div class="bdn">7</div><div class="bdt"><code>newMessage.textContent = message</code> sets the visible text of the div to the user's typed message.</div></div>
+      <div class="bd"><div class="bdn">8</div><div class="bdt"><code>chatMessages.appendChild(newMessage)</code> adds the message div into the chat container — it now appears on screen.</div></div>
+      <div class="bd"><div class="bdn">9</div><div class="bdt"><code>messageInput.value = ''</code> clears the input field so the user can type a new message immediately.</div></div>
+      <div class="bd"><div class="bdn">10</div><div class="bdt"><code>messageInput.focus()</code> returns cursor focus to the input — no need to click back on it after sending.</div></div>
+      <div class="bd"><div class="bdn">11</div><div class="bdt"><code>setTimeout(sendReply, 1000)</code> schedules the <code>sendReply()</code> function to run after a 1-second delay, simulating a reply.</div></div>
+      <div class="bd"><div class="bdn">12</div><div class="bdt"><code>sendReply()</code> creates an <code>incoming</code> div with "This is a sample reply." — demonstrating both outgoing and incoming message logic.</div></div>
+    </div>
+  </div>
+</div>`,
+
+// ── 11 ANALOGY ────────────────────────────────────────────────────────────────
+`<div class="W">
+  <div class="eye">Real-World Application · Analogies</div>
+  <div class="T">Connecting Concepts to Real Life</div>
+  <div class="hr"></div>
+  <div class="g2" style="gap:18px;align-items:start">
+    <div>
+      <div style="font-size:15px;font-weight:700;color:var(--gold);letter-spacing:.06em;text-transform:uppercase;margin-bottom:13px">🕷 Data Harvesting = The Search Engine</div>
+      <div class="card" style="margin-bottom:12px;border-left:3px solid var(--a1)">
+        <div style="font-size:15px;color:var(--mute);line-height:1.65">Google's crawler <strong style="color:var(--txt)">visits millions of websites</strong>, reads their content (harvesting), catalogs the metadata, and indexes it so you can find anything in one search box — without visiting each website yourself.</div>
+      </div>
+      <div class="card" style="border-left:3px solid var(--a3)">
+        <div style="font-size:13px;font-weight:700;color:var(--a3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:7px">Real Use Case</div>
+        <div style="font-size:15px;color:var(--mute);line-height:1.65">A data scientist at a university needs price data from 50 different online shops. Instead of visiting each manually, they write a scraping script that <strong style="color:var(--txt)">harvests all 50 stores into one CSV file in minutes</strong> — then runs analysis on the clean dataset.</div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:15px;font-weight:700;color:var(--a2);letter-spacing:.06em;text-transform:uppercase;margin-bottom:13px">💬 Interactive Platform = The Town Square</div>
+      <div class="card" style="margin-bottom:12px;border-left:3px solid var(--a2)">
+        <div style="font-size:15px;color:var(--mute);line-height:1.65">A static website is like a <strong style="color:var(--txt)">notice board</strong> — you can read it but not interact. An interactive platform is like a <strong style="color:var(--txt)">town square</strong> — people come, post notices, reply, vote, discuss, and shape what happens there in real time.</div>
+      </div>
+      <div class="card" style="border-left:3px solid var(--rose)">
+        <div style="font-size:13px;font-weight:700;color:var(--rose);letter-spacing:.07em;text-transform:uppercase;margin-bottom:7px">Your Chat App</div>
+        <div style="font-size:15px;color:var(--mute);line-height:1.65">The blog chat you just built is a miniature interactive platform — users send messages (user-generated content), replies appear dynamically (real-time interaction), and the input clears automatically (seamless UX) — just like Messenger or WhatsApp Web.</div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+// ── 12 KEY QUOTES ─────────────────────────────────────────────────────────────
+`<div class="W">
+  <div class="eye">Key Quotes</div>
+  <div class="T">Words That Frame the Module</div>
+  <div class="hr"></div>
+  <div style="display:flex;flex-direction:column;gap:20px;max-width:860px;margin:0 auto">
+    <div class="qt" style="border-color:var(--a1)">
+      "Data harvesting and interaction platforms are powerful tools used to gather, process, and analyze large volumes of data from various sources, enabling businesses and organizations to make informed decisions, gain insights, and improve their operations."
+      <cite>— Module 11–12 Introduction</cite>
+    </div>
+    <div class="qt" style="border-color:var(--a2)">
+      "Success doesn't come to you, you've got to go to it."
+      <cite>— Marva Collins, Educator</cite>
+    </div>
+  </div>
+  <div class="card" style="margin-top:22px;max-width:860px;margin-left:auto;margin-right:auto;padding:13px 18px;text-align:center">
+    <div style="font-size:15px;color:var(--mute)">💡 The second quote applies directly to data harvesting — data doesn't come to you. You build the tools to go get it.</div>
+  </div>
+</div>`,
+
+// ── 13 RECAP ─────────────────────────────────────────────────────────────────
+`<div class="W">
+  <div class="eye">Module 11–12 Recap</div>
+  <div class="T">What We Covered</div>
+  <div class="hr"></div>
+  <div class="g2" style="gap:14px;align-items:start">
+    <div>
+      <div class="ri"><div class="ric">🕷</div><div class="rit"><strong>Data Harvesting</strong> copies datasets and metadata between catalogs — also called web scraping or data scraping.</div></div>
+      <div class="ri"><div class="ric">🏪</div><div class="rit">Key benefits: <strong>One-Stop Shop</strong> (single search point) and <strong>Broader Exposure</strong> (larger audience for data).</div></div>
+      <div class="ri"><div class="ric">⚙</div><div class="rit">The <strong>5-step process:</strong> Identify Source → Extract → Parse → Clean → Store.</div></div>
+      <div class="ri"><div class="ric">🌐</div><div class="rit"><strong>Interactive Platforms</strong> provide dynamic, engaging web experiences — unlike static pages that only display info.</div></div>
+    </div>
+    <div>
+      <div class="ri"><div class="ric">7️⃣</div><div class="rit"><strong>7 types:</strong> Social Media, Online Forums, E-Learning, Web Games, Collaborative Tools, Data Visualization, Virtual Events.</div></div>
+      <div class="ri"><div class="ric">⚡</div><div class="rit"><strong>6 key characteristics:</strong> Real-Time Interaction, User Content, Element Interactivity, Dynamic Content, Feedback, Personalization.</div></div>
+      <div class="ri"><div class="ric">🗺</div><div class="rit">An <strong>iframe</strong> embeds external content (like Google Maps) directly inside an HTML page.</div></div>
+      <div class="ri"><div class="ric">💬</div><div class="rit">A <strong>3-file chat app</strong> (HTML + CSS + JS) demonstrates the core pattern of any interactive platform: input → process → display.</div></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px;text-align:center;padding:12px 18px">
+    <div style="font-size:15px;color:var(--mute)">🚀 Up next: test your knowledge with Multiple Choice and Identification questions.</div>
+  </div>
+</div>`,
+
+// ── 14 MULTIPLE CHOICE ────────────────────────────────────────────────────────
+`<div class="W">
+  <div class="eye">Skill-Building Check · Activities</div>
+  <div class="T">Multiple Choice</div>
+  <div class="sub">Select the best answer — answers revealed on the Answer Key slide.</div>
+  <div class="g2" style="gap:11px">
+    <div class="qcard">
+      <div class="qnum">Question 1</div>
+      <div class="qtext">Data harvesting is also commonly known as:</div>
+      <div class="opts">
+        <div class="opt"><span>A.</span>Data mining</div>
+        <div class="opt"><span>B.</span>Web scraping or data scraping</div>
+        <div class="opt"><span>C.</span>Data compression</div>
+        <div class="opt"><span>D.</span>Content delivery</div>
+      </div>
+    </div>
+    <div class="qcard">
+      <div class="qnum">Question 2</div>
+      <div class="qtext">Which step in the data harvesting process involves converting raw HTML/XML/JSON into structured CSV or database formats?</div>
+      <div class="opts">
+        <div class="opt"><span>A.</span>Data Source Identification</div>
+        <div class="opt"><span>B.</span>Data Extraction</div>
+        <div class="opt"><span>C.</span>Data Parsing</div>
+        <div class="opt"><span>D.</span>Data Cleaning</div>
+      </div>
+    </div>
+    <div class="qcard">
+      <div class="qnum">Question 3</div>
+      <div class="qtext">Which HTML element is used to embed a Google Maps widget inside a web page?</div>
+      <div class="opts">
+        <div class="opt"><span>A.</span>&lt;embed&gt;</div>
+        <div class="opt"><span>B.</span>&lt;frame&gt;</div>
+        <div class="opt"><span>C.</span>&lt;iframe&gt;</div>
+        <div class="opt"><span>D.</span>&lt;object&gt;</div>
+      </div>
+    </div>
+    <div class="qcard">
+      <div class="qnum">Question 4</div>
+      <div class="qtext">What does the JavaScript function <code style="background:var(--bord);padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:12px">trim()</code> do in the chat app?</div>
+      <div class="opts">
+        <div class="opt"><span>A.</span>Deletes the entire message</div>
+        <div class="opt"><span>B.</span>Removes extra spaces from the start and end of a string</div>
+        <div class="opt"><span>C.</span>Converts text to uppercase</div>
+        <div class="opt"><span>D.</span>Sends the message to a server</div>
+      </div>
+    </div>
+    <div class="qcard">
+      <div class="qnum">Question 5</div>
+      <div class="qtext">Which characteristic of interactive platforms means content updates without requiring a full page refresh?</div>
+      <div class="opts">
+        <div class="opt"><span>A.</span>Real-Time Interaction</div>
+        <div class="opt"><span>B.</span>Feedback Mechanisms</div>
+        <div class="opt"><span>C.</span>Dynamic Content</div>
+        <div class="opt"><span>D.</span>Personalization</div>
+      </div>
+    </div>
+    <div class="qcard">
+      <div class="qnum">Question 6</div>
+      <div class="qtext">In the chat app, what does <code style="background:var(--bord);padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:12px">setTimeout(sendReply, 1000)</code> simulate?</div>
+      <div class="opts">
+        <div class="opt"><span>A.</span>Clearing the input field after 1 second</div>
+        <div class="opt"><span>B.</span>A chat reply arriving after a short delay</div>
+        <div class="opt"><span>C.</span>Auto-saving the message to a database</div>
+        <div class="opt"><span>D.</span>Reloading the entire page</div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+// ── 15 IDENTIFICATION ─────────────────────────────────────────────────────────
+`<div class="W">
+  <div class="eye">Skill-Building Check · Activities</div>
+  <div class="T">Identification</div>
+  <div class="sub">Fill in the blank with the correct term, keyword, or concept.</div>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div class="idq"><div class="idnum">1</div><div class="idtxt">The process of copying datasets and metadata between two or more data catalogs — also known as web scraping — is called <span class="blank"></span>.</div></div>
+    <div class="idq"><div class="idnum">2</div><div class="idtxt">In the data harvesting process, step 4 involves removing irrelevant or duplicate information and fixing errors. This step is called <span class="blank"></span>.</div></div>
+    <div class="idq"><div class="idnum">3</div><div class="idtxt">An interactive platform that enables real-time collaboration on documents, such as Google Docs or Slack, falls under the type called <span class="blank"></span>.</div></div>
+    <div class="idq"><div class="idnum">4</div><div class="idtxt">The JavaScript method <span class="blank"></span> is used to schedule a function to run after a specified delay in milliseconds.</div></div>
+    <div class="idq"><div class="idnum">5</div><div class="idtxt">The HTML tag used to embed external content such as a live map or video from another URL into a web page is the <span class="blank"></span> element.</div></div>
+    <div class="idq"><div class="idnum">6</div><div class="idtxt">The characteristic of interactive platforms where users can provide ratings, comments, and reactions — fostering community building — is called <span class="blank"></span>.</div></div>
+  </div>
+</div>`,
+
+// ── 16 ANSWER KEY ─────────────────────────────────────────────────────────────
+`<div class="W">
+  <div class="eye">Answer Key</div>
+  <div class="T">Activity Answers &amp; Explanations</div>
+  <div class="hr"></div>
+  <div class="g2" style="gap:18px;align-items:start">
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--a1);letter-spacing:.09em;text-transform:uppercase;margin-bottom:10px">Multiple Choice</div>
+      <div class="card" style="padding:12px 16px">
+        <div class="arow"><div class="anum">Q1</div><div class="aans">B. Web scraping</div><div class="aexp">Data harvesting is officially also called web scraping or data scraping — all three terms describe the same process.</div></div>
+        <div class="arow"><div class="anum">Q2</div><div class="aans">C. Data Parsing</div><div class="aexp">Parsing converts raw unstructured formats (HTML, XML, JSON) into clean structured formats like CSV, Excel, or databases.</div></div>
+        <div class="arow"><div class="anum">Q3</div><div class="aans">C. &lt;iframe&gt;</div><div class="aexp">The &lt;iframe&gt; (Inline Frame) element embeds external HTML content — including live Google Maps widgets — inside a page.</div></div>
+        <div class="arow"><div class="anum">Q4</div><div class="aans">B. Removes spaces</div><div class="aexp">trim() strips whitespace from the beginning and end of a string, preventing empty or space-only messages from being sent.</div></div>
+        <div class="arow"><div class="anum">Q5</div><div class="aans">C. Dynamic Content</div><div class="aexp">Dynamic Content is specifically defined as content that updates without page refreshes, providing a seamless experience.</div></div>
+        <div class="arow"><div class="anum">Q6</div><div class="aans">B. A chat reply delay</div><div class="aexp">setTimeout(sendReply, 1000) waits 1000ms (1 second) before calling sendReply(), simulating a reply arriving with a short delay.</div></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--a2);letter-spacing:.09em;text-transform:uppercase;margin-bottom:10px">Identification</div>
+      <div class="card" style="padding:12px 16px">
+        <div class="arow"><div class="anum">I1</div><div class="aans">Data Harvesting</div><div class="aexp">The overarching process of copying datasets and metadata between catalogs — also called web or data scraping.</div></div>
+        <div class="arow"><div class="anum">I2</div><div class="aans">Data Cleaning</div><div class="aexp">Step 4: cleansing extracted data by removing duplicates, irrelevant entries, and fixing inconsistencies.</div></div>
+        <div class="arow"><div class="anum">I3</div><div class="aans">Collaborative Tools</div><div class="aexp">Type 5: platforms like Google Docs, Trello, and Slack that enable real-time collaboration and file sharing.</div></div>
+        <div class="arow"><div class="anum">I4</div><div class="aans">setTimeout()</div><div class="aexp">JavaScript's built-in function that schedules another function to execute after a specified delay in milliseconds.</div></div>
+        <div class="arow"><div class="anum">I5</div><div class="aans">&lt;iframe&gt;</div><div class="aexp">The Inline Frame element — the standard HTML way to embed external content from another URL inside the current page.</div></div>
+        <div class="arow"><div class="anum">I6</div><div class="aans">Feedback Mechanisms</div><div class="aexp">The characteristic covering comments, ratings, and reactions — all of which foster user engagement and community.</div></div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+// ── 17 CLOSING ────────────────────────────────────────────────────────────────
+`<div class="W" style="text-align:center;display:flex;flex-direction:column;align-items:center">
+  <div class="eye" style="margin-bottom:16px">Module 11–12 Complete</div>
+  <div class="qt" style="max-width:700px;margin-bottom:28px;font-size:clamp(16px,1.5vw,21px);border-color:var(--a2)">
+    "Success doesn't come to you, you've got to go to it."
+    <cite>— Marva Collins</cite>
+  </div>
+  <div style="font-size:clamp(26px,3.5vw,46px);font-weight:900;line-height:1.1;margin-bottom:16px" class="grad">
+    You crushed Module 11–12! 🎉
+  </div>
+  <div style="font-size:clamp(15px,1.2vw,18px);color:var(--mute);max-width:580px;line-height:1.7;margin-bottom:30px">
+    You now know how data is gathered across the web, how interactive platforms work, and you've built a real Google Maps embed and a working JavaScript chat app. That's not theory — that's actual web development.
+  </div>
+  <div style="display:flex;gap:13px;flex-wrap:wrap;justify-content:center">
+    <div class="card" style="min-width:140px"><div style="font-size:22px;margin-bottom:5px">🕷</div><div style="font-size:15px;font-weight:700">Data Harvesting</div></div>
+    <div class="card" style="min-width:140px"><div style="font-size:22px;margin-bottom:5px">⚡</div><div style="font-size:15px;font-weight:700">Interactive Platforms</div></div>
+    <div class="card" style="min-width:140px"><div style="font-size:22px;margin-bottom:5px">🗺</div><div style="font-size:15px;font-weight:700">Google Maps Embed</div></div>
+    <div class="card" style="min-width:140px"><div style="font-size:22px;margin-bottom:5px">💬</div><div style="font-size:15px;font-weight:700">Chat App Built</div></div>
+  </div>
+</div>`,
+
+];
+
+// ── Engine ──────────────────────────────────────────────────────────────────
+let cur = 0;
+const total = S.length;
+const deck  = document.getElementById('deck');
+const prog  = document.getElementById('prog');
+const ctr   = document.getElementById('ctr');
+
+function build() {
+  S.forEach((html, i) => {
+    const el = document.createElement('div');
+    el.className = 'slide' + (i === 0 ? ' active' : '');
+    el.innerHTML = html;
+    deck.appendChild(el);
+  });
+  ui();
+}
+
+function all() { return deck.querySelectorAll('.slide'); }
+
+function go(n, dir) {
+  if (n < 0 || n >= total) return;
+  const ss = all();
+  ss[cur].classList.remove('active');
+  ss[cur].classList.add('out');
+  setTimeout(() => ss[cur].classList.remove('out'), 380);
+  cur = n;
+  const nx = ss[cur];
+  nx.style.transform = dir === 'f' ? 'translateX(54px)' : 'translateX(-54px)';
+  nx.classList.add('active');
+  requestAnimationFrame(() => requestAnimationFrame(() => { nx.style.transform = ''; }));
+  ui();
+}
+
+function ui() {
+  prog.style.width = ((cur + 1) / total * 100) + '%';
+  ctr.textContent  = (cur + 1) + ' / ' + total;
+}
+
+function next() { go(cur + 1, 'f'); }
+function prev() { go(cur - 1, 'b'); }
+
+document.addEventListener('keydown', e => {
+  if      (e.key === 'ArrowRight' || e.key === 'ArrowDown')  next();
+  else if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')    prev();
+  else if (e.key === 'Home')  go(0, 'b');
+  else if (e.key === 'End')   go(total - 1, 'f');
+  else if (e.key === '?' || e.key === '/') document.getElementById('modal').classList.toggle('show');
+  else if (e.key === 'Escape') document.getElementById('modal').classList.remove('show');
+});
+
+['contextmenu','auxclick'].forEach(ev =>
+  document.addEventListener(ev, e => { e.preventDefault(); e.stopImmediatePropagation(); }, { capture:true, passive:false })
+);
+document.addEventListener('mousedown', e => {
+  if (e.target.closest('button,a,input,select,textarea,label')) return;
+  if      (e.button === 2) { e.preventDefault(); e.stopImmediatePropagation(); next(); }
+  else if (e.button === 3) { e.preventDefault(); e.stopImmediatePropagation(); prev(); }
+  else if (e.button === 4) { e.preventDefault(); e.stopImmediatePropagation(); next(); }
+}, { capture:true, passive:false });
+
+let tx = null;
+document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive:true });
+document.addEventListener('touchend', e => {
+  if (tx === null) return;
+  const dx = e.changedTouches[0].clientX - tx;
+  if (Math.abs(dx) > 42) dx < 0 ? next() : prev();
+  tx = null;
+}, { passive:true });
+
+document.getElementById('mclose').addEventListener('click', () =>
+  document.getElementById('modal').classList.remove('show')
+);
+
+function doCopy(preId, btnId) {
+  const pre = document.getElementById(preId);
+  const btn = document.getElementById(btnId);
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('ok'); }, 2200);
+  });
+}
+
+build();
+</script>
+</body>
+</html>
