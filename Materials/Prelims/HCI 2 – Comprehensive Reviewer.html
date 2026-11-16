@@ -1,0 +1,1892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HCI 2 – Comprehensive Reviewer</title>
+    <style>
+        /* ── Reset & Base ── */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0f1117;
+            color: #eef2f7;
+        }
+
+        /* ── Presentation Container ── */
+        #presentation {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: #0f1117;
+        }
+
+        /* ── Slide Wrapper ── */
+        .slide-wrapper {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 60px 60px 60px;
+            opacity: 0;
+            transform: translateX(30px);
+            transition: opacity 0.35s ease, transform 0.35s ease;
+            pointer-events: none;
+            will-change: transform, opacity;
+            overflow-y: auto;
+        }
+        .slide-wrapper.active {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+        }
+        .slide-wrapper.exit-left {
+            opacity: 0;
+            transform: translateX(-30px);
+        }
+        .slide-wrapper.exit-right {
+            opacity: 0;
+            transform: translateX(30px);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .slide-wrapper {
+                transition: none !important;
+                transform: none !important;
+            }
+            .slide-wrapper.exit-left,
+            .slide-wrapper.exit-right {
+                opacity: 0;
+                transform: none !important;
+            }
+        }
+
+        /* ── Slide Card ── */
+        .slide {
+            width: 100%;
+            max-width: 1200px;
+            max-height: 100%;
+            background: #1a1d27;
+            border-radius: 20px;
+            padding: 32px 40px 36px 40px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #3a3f4e transparent;
+        }
+        .slide::-webkit-scrollbar {
+            width: 5px;
+        }
+        .slide::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .slide::-webkit-scrollbar-thumb {
+            background: #3a3f4e;
+            border-radius: 4px;
+        }
+
+        /* ── Slide Content Layout ── */
+        .slide-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: 0;
+        }
+        .slide-content.expanded {
+            gap: 16px;
+        }
+
+        .eyebrow {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: #7a8ba8;
+            border-bottom: 2px solid #2a2f3e;
+            padding-bottom: 6px;
+            margin-bottom: 2px;
+        }
+
+        .slide-title {
+            font-size: clamp(26px, 3.6vw, 44px);
+            font-weight: 700;
+            line-height: 1.15;
+            color: #ffffff;
+            letter-spacing: -0.3px;
+        }
+        .slide-title .accent {
+            color: #6db3f2;
+        }
+        .slide-title .accent-green {
+            color: #6fcf97;
+        }
+        .slide-title .accent-orange {
+            color: #f2a86d;
+        }
+        .slide-title .accent-purple {
+            color: #b98cfa;
+        }
+
+        .slide-sub {
+            font-size: 16px;
+            color: #9aacbf;
+            margin-top: -4px;
+        }
+
+        .body-text {
+            font-size: 15px;
+            line-height: 1.65;
+            color: #d6dfe8;
+            max-width: 860px;
+        }
+        .body-text strong {
+            color: #f0f4fa;
+            font-weight: 600;
+        }
+        .body-text .highlight {
+            color: #6db3f2;
+            font-weight: 500;
+        }
+
+        /* ── Grid / Columns ── */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px 28px;
+            min-width: 0;
+        }
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px 24px;
+            min-width: 0;
+        }
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px 18px;
+            min-width: 0;
+        }
+        .grid-2>*,
+        .grid-3>*,
+        .grid-4>* {
+            min-width: 0;
+        }
+
+        .card {
+            background: #232836;
+            border-radius: 14px;
+            padding: 16px 18px;
+            border-left: 4px solid #6db3f2;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            min-width: 0;
+        }
+        .card.green {
+            border-left-color: #6fcf97;
+        }
+        .card.orange {
+            border-left-color: #f2a86d;
+        }
+        .card.purple {
+            border-left-color: #b98cfa;
+        }
+        .card.red {
+            border-left-color: #e97474;
+        }
+        .card.cyan {
+            border-left-color: #6dd5ed;
+        }
+        .card.no-border {
+            border-left-color: transparent;
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #bcc9db;
+            letter-spacing: 0.3px;
+            margin-bottom: 4px;
+        }
+        .card-title .badge {
+            font-size: 11px;
+            background: #2f3548;
+            padding: 1px 10px;
+            border-radius: 30px;
+            margin-left: 8px;
+            color: #9aacbf;
+            font-weight: 400;
+        }
+        .card-body {
+            font-size: 14px;
+            line-height: 1.55;
+            color: #d6dfe8;
+        }
+        .card-body strong {
+            color: #f0f4fa;
+        }
+        .card-body ul {
+            list-style: none;
+            padding: 0;
+            margin: 4px 0 0 0;
+        }
+        .card-body ul li {
+            padding: 2px 0 2px 18px;
+            position: relative;
+            font-size: 13.5px;
+            line-height: 1.5;
+        }
+        .card-body ul li::before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: #6db3f2;
+            font-weight: 600;
+        }
+        .card-body ul li .muted {
+            color: #889bb0;
+            font-size: 12.5px;
+        }
+
+        .tag {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 600;
+            background: #2f3548;
+            padding: 1px 12px;
+            border-radius: 30px;
+            color: #9aacbf;
+            letter-spacing: 0.3px;
+            margin-right: 4px;
+        }
+        .tag.blue {
+            background: #1f3a5a;
+            color: #6db3f2;
+        }
+        .tag.green {
+            background: #1a3d2e;
+            color: #6fcf97;
+        }
+        .tag.orange {
+            background: #4a3220;
+            color: #f2a86d;
+        }
+        .tag.purple {
+            background: #362a4a;
+            color: #b98cfa;
+        }
+
+        /* ── Tables ── */
+        .table-wrap {
+            overflow-x: auto;
+            margin: 4px 0 2px 0;
+            border-radius: 12px;
+            border: 1px solid #2a2f3e;
+        }
+        .table-wrap table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+            min-width: 360px;
+        }
+        .table-wrap th {
+            background: #232836;
+            color: #bcc9db;
+            font-weight: 600;
+            text-align: left;
+            padding: 10px 14px;
+            border-bottom: 2px solid #2f3548;
+            font-size: 12.5px;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+        .table-wrap td {
+            padding: 9px 14px;
+            border-bottom: 1px solid #262c3c;
+            color: #d6dfe8;
+            line-height: 1.45;
+        }
+        .table-wrap tr:last-child td {
+            border-bottom: none;
+        }
+        .table-wrap td .highlight {
+            color: #6db3f2;
+            font-weight: 500;
+        }
+        .table-wrap td .highlight-green {
+            color: #6fcf97;
+            font-weight: 500;
+        }
+        .table-wrap td .highlight-orange {
+            color: #f2a86d;
+            font-weight: 500;
+        }
+        .table-wrap td .dim {
+            color: #889bb0;
+            font-size: 12.5px;
+        }
+
+        /* ── Code Blocks ── */
+        .code-block {
+            position: relative;
+            background: #0d1017;
+            border-radius: 12px;
+            padding: 16px 18px 14px 18px;
+            margin: 6px 0 4px 0;
+            border: 1px solid #262c3c;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #d4dce6;
+            tab-size: 4;
+        }
+        .code-block pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .code-block .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            background: #232836;
+            border: none;
+            color: #9aacbf;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+            letter-spacing: 0.3px;
+            font-family: inherit;
+        }
+        .code-block .copy-btn:hover {
+            background: #2f3548;
+            color: #eef2f7;
+        }
+        .code-block .copy-btn.copied {
+            background: #1a3d2e;
+            color: #6fcf97;
+        }
+        /* syntax tokens */
+        .code-block .kw {
+            color: #c792ea;
+        }
+        .code-block .str {
+            color: #c3e88d;
+        }
+        .code-block .cmt {
+            color: #546e7a;
+            font-style: italic;
+        }
+        .code-block .fn {
+            color: #82aaff;
+        }
+        .code-block .num {
+            color: #f78c6c;
+        }
+        .code-block .op {
+            color: #89ddff;
+        }
+        .code-block .cls {
+            color: #ffcb6b;
+        }
+        .code-block .var {
+            color: #eeffff;
+        }
+        .code-block .builtin {
+            color: #c792ea;
+        }
+
+        /* ── Progress Bar ── */
+        #progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #6db3f2, #b98cfa);
+            z-index: 999;
+            width: 0%;
+            transition: width 0.35s ease;
+            border-radius: 0 2px 2px 0;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            #progress-bar {
+                transition: none;
+            }
+        }
+
+        /* ── Slide Counter ── */
+        #slide-counter {
+            position: fixed;
+            bottom: 18px;
+            right: 28px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #6a7b90;
+            background: rgba(15, 17, 23, 0.75);
+            padding: 6px 16px;
+            border-radius: 30px;
+            backdrop-filter: blur(6px);
+            border: 1px solid #262c3c;
+            z-index: 999;
+            letter-spacing: 0.3px;
+            user-select: none;
+        }
+
+        /* ── Keyboard Shortcuts hint ── */
+        #shortcuts-hint {
+            position: fixed;
+            bottom: 18px;
+            left: 28px;
+            font-size: 12px;
+            color: #4a5a6e;
+            background: rgba(15, 17, 23, 0.7);
+            padding: 5px 14px;
+            border-radius: 30px;
+            backdrop-filter: blur(6px);
+            border: 1px solid #1e2330;
+            z-index: 999;
+            letter-spacing: 0.2px;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        #shortcuts-hint kbd {
+            background: #232836;
+            padding: 1px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: inherit;
+            color: #9aacbf;
+            border: 1px solid #2f3548;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 820px) {
+            .slide-wrapper {
+                padding: 20px 20px 50px 20px;
+            }
+            .slide {
+                padding: 22px 20px 24px 20px;
+                border-radius: 14px;
+            }
+            .grid-2,
+            .grid-3,
+            .grid-4 {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            .slide-title {
+                font-size: clamp(22px, 5vw, 32px);
+            }
+            .body-text {
+                font-size: 14px;
+            }
+            #shortcuts-hint {
+                display: none;
+            }
+            #slide-counter {
+                bottom: 12px;
+                right: 16px;
+                font-size: 12px;
+                padding: 4px 12px;
+            }
+            .code-block {
+                font-size: 12px;
+                padding: 14px 14px 12px 14px;
+            }
+            .table-wrap table {
+                font-size: 12px;
+                min-width: 280px;
+            }
+            .table-wrap th,
+            .table-wrap td {
+                padding: 6px 10px;
+            }
+        }
+        @media (max-width: 480px) {
+            .slide-wrapper {
+                padding: 12px 12px 40px 12px;
+            }
+            .slide {
+                padding: 16px 14px 18px 14px;
+                border-radius: 10px;
+            }
+            .slide-title {
+                font-size: clamp(20px, 4.5vw, 26px);
+            }
+            .eyebrow {
+                font-size: 11px;
+            }
+            .card {
+                padding: 12px 14px;
+            }
+            .card-body {
+                font-size: 13px;
+            }
+            #slide-counter {
+                bottom: 10px;
+                right: 12px;
+                font-size: 11px;
+                padding: 3px 10px;
+            }
+        }
+
+        /* ── Utility ── */
+        .mt-1 {
+            margin-top: 4px;
+        }
+        .mt-2 {
+            margin-top: 10px;
+        }
+        .mb-1 {
+            margin-bottom: 4px;
+        }
+        .gap-1 {
+            gap: 6px;
+        }
+        .gap-2 {
+            gap: 12px;
+        }
+        .flex-1 {
+            flex: 1;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .text-muted {
+            color: #889bb0;
+        }
+        .text-small {
+            font-size: 13px;
+        }
+        .text-xs {
+            font-size: 12px;
+        }
+        .fw-600 {
+            font-weight: 600;
+        }
+        .inline-block {
+            display: inline-block;
+        }
+
+        /* ── Quote block ── */
+        .quote-block {
+            background: #1e2330;
+            border-left: 4px solid #b98cfa;
+            padding: 14px 20px;
+            border-radius: 0 12px 12px 0;
+            margin: 6px 0;
+            font-style: italic;
+            color: #d6dfe8;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        .quote-block .attrib {
+            display: block;
+            margin-top: 6px;
+            font-style: normal;
+            font-size: 13px;
+            color: #7a8ba8;
+        }
+
+        /* ── Title Slide Special ── */
+        .slide-title-main {
+            font-size: clamp(38px, 5vw, 62px);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            line-height: 1.1;
+            color: #ffffff;
+        }
+        .slide-title-main .accent {
+            color: #6db3f2;
+        }
+        .slide-subtitle {
+            font-size: clamp(16px, 1.5vw, 22px);
+            color: #9aacbf;
+            margin-top: 4px;
+        }
+        .title-meta {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 18px;
+            font-size: 14px;
+            color: #6a7b90;
+        }
+        .title-meta span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* ── Analogies / callouts ── */
+        .analogy {
+            background: #1a212e;
+            border-radius: 10px;
+            padding: 10px 16px;
+            border: 1px solid #2a3142;
+            font-size: 13.5px;
+            color: #bcc9db;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin: 2px 0;
+        }
+        .analogy .icon {
+            font-size: 20px;
+        }
+
+        /* ── Two-col with min-width fix ── */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px 28px;
+            min-width: 0;
+        }
+        .two-col>* {
+            min-width: 0;
+        }
+        @media (max-width: 700px) {
+            .two-col {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+        }
+
+        /* Ensure code blocks don't overflow */
+        .code-block pre code {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="presentation">
+        <div id="progress-bar"></div>
+        <div id="slide-counter">1 / 1</div>
+        <div id="shortcuts-hint">
+            <span><kbd>←</kbd> <kbd>→</kbd> or click</span>
+            <span><kbd>Home</kbd> <kbd>End</kbd></span>
+            <span><kbd>?</kbd> shortcuts</span>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SLIDE 1 – TITLE                                               -->
+        <!-- ============================================================ -->
+        <div class="slide-wrapper active" data-index="0">
+            <div class="slide" style="justify-content:center;align-items:center;text-align:center;background:linear-gradient(145deg,#181e2a,#0f1117);">
+                <div class="slide-content" style="align-items:center;justify-content:center;gap:14px;">
+                    <div style="font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#6a7b90;">Comprehensive Reviewer</div>
+                    <div class="slide-title-main">
+                        HCI <span class="accent">2</span>
+                    </div>
+                    <div style="font-size:clamp(18px,2.2vw,30px);font-weight:300;color:#bcc9db;max-width:720px;line-height:1.4;">
+                        Handheld Devices · Touch Interfaces ·<br />
+                        Auditory Systems · Visual Perception · QR Codes
+                    </div>
+                    <div class="title-meta">
+                        <span>📱 Modules 2–7</span>
+                        <span>⚡ Interactive Presentation</span>
+                        <span>⌨️ <kbd style="background:#1e2330;padding:1px 8px;border-radius:4px;border:1px solid #2f3548;font-family:inherit;color:#9aacbf;">← →</kbd> navigate</span>
+                    </div>
+                    <div style="margin-top:18px;display:flex;flex-wrap:wrap;gap:8px 14px;justify-content:center;">
+                        <span class="tag blue">Handheld &amp; Wearable</span>
+                        <span class="tag green">Touch UI</span>
+                        <span class="tag orange">Auditory</span>
+                        <span class="tag purple">QR &amp; Python</span>
+                        <span class="tag" style="background:#1f3a4a;color:#6dd5ed;">Visual Perception</span>
+                    </div>
+                    <div style="margin-top:10px;font-size:13px;color:#4a5a6e;">Click anywhere or use arrow keys · Progress bar at top</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SLIDE 2 – MODULE 2: Handheld & Wearable – Core               -->
+        <!-- ============================================================ -->
+        <div class="slide-wrapper" data-index="1">
+            <div class="slide">
+                <div class="slide-content expanded">
+                    <div class="eyebrow">Module 2</div>
+                    <div class="slide-title">Handheld &amp; Wearable <span class="accent">Devices</span></div>
+                    <div class="slide-sub">Core Concepts &amp; Definition</div>
+                    <div class="grid-2" style="margin-top:4px;">
+                        <div class="card">
+                            <div class="card-title">Technological Device</div>
+                            <div class="card-body">
+                                Any computing system, cellular phone, smartphone, digital camera, video camera, audio recording instrument, or specialized electronic architecture engineered to <strong>create</strong>, <strong>store</strong>, securely isolate, or <strong>transmit</strong> electronic data.
+                            </div>
+                        </div>
+                        <div class="card green">
+                            <div class="card-title">Key Capabilities</div>
+                            <div class="card-body">
+                                <ul>
+                                    <li><strong>Creation</strong> – capture raw inputs → digital metrics</li>
+                                    <li><strong>Storage</strong> – local retention of transactional &amp; telemetry data</li>
+                                    <li><strong>Transmission</strong> – move payloads across distributed networks</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="card orange" style="grid-column:1/2;">
+                            <div class="card-title">Handheld Device Anatomy</div>
+                            <div class="card-body">
+                                <ul>
+                                    <li><strong>Display:</strong> LCD or OLED frameworks</li>
+                                    <li><strong>Input:</strong> Dual-modality (touchscreens + physical keypads or virtual matrices)</li>
+                                    <li><strong>Connectivity:</strong> Wi‑Fi, Bluetooth, cellular (3G+), NFC</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="card purple" style="grid-column:2/3;">
+                            <div class="card-title">Wearable Systems</div>
+                            <div class="card-body">
+                                Products controlled by integrated electronic components &amp; embedded micro-software engines incorporated into clothing or worn on the body.
+                                <ul style="margin-top:4px;">
+                                    <li>Smart Glasses (OHMDs)</li>
+                                    <li>Smartwatches</li>
+                                    <li>Biosensors · HMDs (AR/VR)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="analogy" style="margin-top:2px;"><span class="icon">💡</span> Wearables are like <strong>“computing you wear”</strong> – from fitness bands to AR glasses.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SLIDE 3 – MODULE 2: Timeline & Form Factors                   -->
+        <!-- ============================================================ -->
+        <div class="slide-wrapper" data-index="2">
+            <div class="slide">
+                <div class="slide-content expanded">
+                    <div class="eyebrow">Module 2</div>
+                    <div class="slide-title">Mobility Curve &amp; <span class="accent">Form Factors</span></div>
+                    <div class="two-col" style="margin-top:2px;">
+                        <div>
+                            <div class="card" style="border-left-color:#f2a86d;">
+                                <div class="card-title">Historical Timeline</div>
+                                <div class="card-body" style="font-size:13px;">
+                                    <ul>
+                                        <li><strong>1985–1995</strong> – Genesis of Portability</li>
+                                        <li><strong>2000</strong> – Convergence Threshold</li>
+                                        <li><strong>2005</strong> – High‑Speed Infrastructure (GPRS/3G)</li>
+                                        <li><strong>2007</strong> – <span class="highlight">Apple iPhone &amp; Microsoft Surface</span></li>
+                                        <li><strong>2009+</strong> – Modern Smartphone Matrix</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="card" style="border-left-color:#6dd5ed;margin-top:8px;">
+                                <div class="card-title">Wearable Classifications</div>
+                                <div class="card-body" style="font-size:13px;">
+                                    <ul>
+                                        <li><strong>Smart Jewelry</strong> – rings, bracelets, pins</li>
+                                        <li><strong>Body‑Mounted Biosensors</strong> – medical‑grade</li>
+                                        <li><strong>Fitness Trackers</strong> – wristbands, straps</li>
+                                        <li><strong>Smart Clothing</strong> – tech textiles</li>
+                                        <li><strong>AI Hearing Aids</strong> – hearables</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="card green" style="border-left-color:#6fcf97;">
+                                <div class="card-title">Taxonomy of Handheld Form Factors</div>
+                                <div class="card-body" style="font-size:13px;">
+                                    <ul>
+                                        <li><strong>PDAs</strong> – displaced by smartphones</li>
+                                        <li><strong>Tablets &amp; Slates</strong> – between phone &amp; laptop</li>
+                                        <li><strong>PMPs</strong> – portable media players</li>
+                                        <li><strong>Auxiliary</strong> – pagers, feature phones, game consoles, GPS</li>
+                                    </ul>
+                                    <div style="margin-top:8px;background:#1a212e;border-radius:8px;padding:8px 12px;font-size:12.5px;color:#9aacbf;">
+                                        <span class="tag blue" style="font-size:10px;">Evolution</span> PDAs → smartphones (Android/iOS)
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card purple" style="border-left-color:#b98cfa;margin-top:8px;">
+                                <div class="card-title">Smart Glasses &amp; HMDs</div>
+                                <div class="card-body" style="font-size:13px;">
+                                    Optical head‑mounted displays (OHMDs) · AR/VR devices<br />
+                                    <span class="text-muted text-xs">Wrist‑worn computers, biosensors on skin</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SLIDE 4 – MODULE 3: Touch User Interfaces                     -->
+        <!-- ============================================================ -->
+        <div class="slide-wrapper" data-index="3">
+            <div class="slide">
+                <div class="slide-content expanded">
+                    <div class="eyebrow">Module 3</div>
+                    <div class="slide-title">Touch User Interfaces <span class="accent">(TUI)</span></div>
+                    <div class="slide-sub">Definition · GUI vs TUI · Design Considerations</div>
+                    <div class="grid-2" style="margin-top:2px;">
+                        <div class="card">
+                            <div class="card-title">What is TUI?</div>
+                            <div class="card-body">
+                                A computer‑pointing technology based upon the <strong>sense of touch</strong> (haptics).<br />
+                                <span class="tag blue" style="font-size:10px;">Accessibility</span> Provides tactile/Braille input – beneficial for users with visual impairments.
+                            </div>
+                        </div>
+                        <div class="card orange">
+                            <div class="card-title">GUI vs TUI</div>
+                            <div class="card-body" style="font-size:13.5px;">
+                                <ul>
+                                    <li><strong>GUI:</strong> relies primarily on sight; windows, icons, menus; indirect input (mouse)</li>
+                                    <li><strong>TUI:</strong> relies on touch; direct physical manipulation</li>
+                                </ul>
+                                <div style="margin-top:6px;background:#1a212e;border-radius:6px;padding:6px 12px;font-size:13px;color:#bcc9db;">
+                                    ⚡ Mainstream breakthrough: <span class="highlight">2007</span> (Microsoft Surface + Apple iPhone)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid-2" style="margin-top:0;">
+                        <div class="card green">
+                            <div class="card-title">Design Considerations <span class="badge">Wigdor &amp; Wixon, 2011</span></div>
+                            <div class="card-body" style="font-size:13.5px;">
+                                <ol style="padding-left:20px;margin:0;">
+                                    <li><strong>Extension of the Body</strong> – feels natural</li>
+                                    <li><strong>Natural Experience</strong> – intuitive, real‑world physics</li>
+                                    <li><strong>Immediate Feedback</strong> – instant response</li>
+                                    <li><strong>Size Factor</strong> – ergonomics &amp; finger size</li>
+                                </ol>
+                            </div>
+                        </div>
+                        <div class="card purple">
+                            <div class="card-title">Core Interaction Techniques</div>
+                            <div class="card-body" style="font-size:13.5px;">
+                                <ul>
+                                    <li><strong>Tapping‑it</strong> – most common; brief touch</li>
+                                    <li><strong>Crossing‑in</strong> – drag across target; aids motor‑impaired</li>
+                                    <li><strong>Directional Gesturing</strong> – no predefined targets; motion‑based</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="analogy" style="margin-top:0;"><span class="icon">🖐️</span> TUI is like <strong>“touching the interface”</strong> – direct, immediate, and natural.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SLIDE 5 – MODULE 3: Touchscreen Technologies (part 1)        -->
+        <!-- ============================================================ -->
+        <div class="slide-wrapper" data-index="4">
+            <div class="slide">
+                <div class="slide-content expanded">
+                    <div class="eyebrow">Module 3</div>
+                    <div class="slide-title">Touchscreen <span class="accent">Technologies</span></div>
+                    <div class="slide-sub">Resistive · Capacitive · SAW · IR</div>
+                    <div class="grid-2" style="margin-top:2px;">
+                        <div class="card" style="border-left-color:#e97474;">
+                            <div class="card-title">1. Wire Resistive</div>
+                            <div class="card-body" style="font-size:13px;">
+                                <strong>How:</strong> Pressure forces layers to contact, changing voltage.<br />
+                                <span class="highlight">Any input</span> (finger, stylus, gloved hand).<br />
+                                <span class="text-muted">Low cost · Low power · Vulnerable to scratches</span>
+                            </div>
+                        </div>
+                        <div class="card" style="border-left-color:#6db3f2;">
+                            <div class="card-title">2. Surface Capacitive</div>
+                            <div class="card-body" style="font-size:13px;">
+                                <strong>How:</strong> Reacts to static electrical capacity of human body.<br />
+                                <span class="highlight">Skin only</span> (or specialized stylus).<br />
+                                <span class="text-muted">Superior clarity · Durable</span>
+                            </div>
+                        </div>
+                        <div class="card" style="border-left-color:#6fcf97;">
+                            <div class="card-title">3. Projected Capacitive (P‑CAP)</div>
+                            <div class="card-body" style="font-size:13px;">
+                                <strong>How:</strong> 3D electrostatic field via embedded IC chip.<br />
+                                <span class="highlight">Skin or thin gloves</span> · Multi‑touch.<br />
+                                <span class="text-muted">Excellent clarity · Scratch‑resistant</span>
+                            </div>
+                        </div>
+                        <div class="card" style="border-left-color:#f2a86d;">
+                            <div class="card-title">4. Surface Acoustic Wave (SAW)</div>
+                            <div class="card-body" style="font-size:13px;">
+                                <strong>How:</strong> Ultrasonic waves; absorption maps touch.<br />
+                                <span class="highlight">Bare finger or soft glove</span> · Multi‑touch.<br />
+                                <span class="text-muted">Excellent clarity · Sensitive to contaminants</span>
+                            </div>
+                        </div>
+                        <div class="card" style="border-left-color:#b98cfa;grid-column:1/3;">
+                            <div class="card-title">5. Infrared (IR) Touchscreen</div>
+                            <div class="card-body" style="font-size:13px;">
+                                <strong>How:</strong> IR emitters/sensors create light grid; interruption maps location.<br />
+                                <span class="highlight">Highest</span> clarity &amp; light transmission · Infinite durability · <span class="highlight">Any object</span> that blocks beams.<br />
+                                <span class="text-muted">Higher cost · Sensitive to water droplets, ambient light</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SLIDE 6 – MODULE 3: Comparison Table                         -->
+        <!-- ============================================================ -->
+        <div class="slide-wrapper" data-index="5">
+            <div class="slide">
+                <div class="slide-content expanded">
+                    <div class="eyebrow">Module 3</div>
+                    <div class="slide-title">Touchscreen <span class="accent">Comparison</span></div>
+                    <div class="table-wrap" style="margin-top:4px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Technology</th>
+                                    <th>Activation</th>
+                                    <th>Clarity</th>
+                                    <th>Multi‑touch</th>
+                                    <th>Durability</th>
+                                    <th>Cost</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><strong>Resistive</strong></td><td>Any object</td><td>Low</td><td>No</td><td>Vulnerable</td><td>Low</td></tr>
+                                <tr><td><strong>Surface Capacitive</strong></td><td>Skin only</td><td>Good</td><td>No</td><td>Durable</td><td>Medium</td></tr>
+                                <tr><td><strong>Projected Capacitive</strong></td><td>Skin / thin glove</td><td>Excellent</td><td><span class="highlight">Yes</span></td><td>Scratch‑resistant</td><td>High</td></tr>
+                                <tr><td><strong>SAW</strong></td><td>Bare / soft glove</td><td>Excellent</td><td><span class="highlight">Yes</span></td><td>Scratch‑resistant</td><td>High</td></tr>
+                                <tr><td><strong>Infrared (IR)</strong></td><td>Any object (blocks)</td><td><span class="highlight">Highest</span></td><td><span class="highlight">Yes</span></td><td><span class="highlight">Infinite</span></td><td>Highest</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="analogy" style="margin-top:4px;"><span class="icon">🔍</span> Each technology is like a different <strong>“lens”</strong> – trade‑offs between clarity, durability, and cost.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SLIDE 7 – MODULE 4: Auditory Interfaces                      -->
+        <!-- ============================================================ -->
+        <div class="slide-wrapper" data-index="6">
+            <div class="slide">
+                <div class="slide-content expanded">
+                    <div class="eyebrow">Module 4</div>
+                    <div class="slide-title">Auditory Interfaces &amp; <span class="accent-orange">Sonification</span></div>
+                    <div class="slide-sub">Why sound? · The Processing Loop</div>
+                    <div class="grid-2" style="margin-top:2px;">
+                        <div class="card">
+                            <div class="card-title">Why Auditory Interfaces?</div>
+                            <div class="card-body">
+                                <ul>
+                                    <li>Complement visual interfaces</li>
+                                    <li>Reduce <strong>visual overload</strong></li>
+                                    <li>Support tasks where sight is limited</li>
+                                    <li>Enable multitasking (e.g., driving)</li>
+                                    <li>Provide situational awareness</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="card green">
+                            <div class="card-title">Auditory Interface Definition</div>
+                            <div class="card-body">
+                                A bidirectional, communicative connection between human and product.
+                                <ul style="margin-top:4px;">
+                                    <li><strong>Machine side:</strong> listening, speech recognition, dialogue</li>
+                                    <li><strong>Human side:</strong> auditory displays (sounds → information)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card" style="border-left-color:#6dd5ed;margin-top:0;">
+                        <div class="card-title">The Processing Loop</div>
+                        <div class="card-body" style="font-size:13px;font-family:monospace;background:#0d1017;padding:10px 14px;border-radius:8px;color:#bcc9db;">
+                            DATA → A (Representation) → B (Application Loop) → C (Sonification/Rendering) → D (Sound Display) → USER<br />
+                            <span style="color:#6a7b90;">↑                                                          ↓</span><br />
+                            <span style="color:#6a7b90;">└──────────────────── INTERACTIONS ─────────────────────┘</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SLIDE 8 – MODULE 4: Types of Auditory Interfaces             -->
+        <!-- ============================================================ -->
+        <div class="slide-wrapper" data-index="7">
+            <div class="slide">
+                <div class="slide-content expanded">
+                    <div class="eyebrow">Module 4</div>
+                    <div class="slide-title">4 Types of <span class="accent-orange">Auditory Interfaces</span></div>
+                    <div class="grid-2" style="margin-top:2px;">
+                        <div class="card" style="border-left-color:#6db3f2;">
+                            <div class="card-title">1. Audification</div>
+                            <div class="card-body">
+                                Direct translation of a data waveform to the audible domain.<br />
+                                <span class="highlight">Example:</span> Seismic data sped up – vibrations become rumble/roar.<br />
+                                <span class="text-muted text-xs">Works best with large datasets with periodic features.</span>
+                            </div>
+                        </div>
+                        <div class="card green" style="border-left-color:#6fcf97;">
+                            <div class="card-title">2. Sonification</div>
+                            <div class="card-body">
+                                Use of <strong>non‑speech audio</strong> to convey information or perceptualize data.<br />
+                                <span class="highlight">Example:</span> Geiger counter – faster clicks = higher radiation.<br />
+                                <span class="text-muted text-xs">Auditory perception excels at temporal, spatial, amplitude, frequency.</span>
+                            </div>
+                        </div>
+                        <div class="card orange" style="border-left-color:#f2a86d;">
+                            <div class="card-title">3. Earcon</div>
+                            <div class="card-body">
+                                Brief, distinctive sound representing a specific event.<br />
+                                Coined by <strong>D.A. Sumikawa (1985)</strong> – pun on “icon”.<br />
+                                <span class="highlight">Examples:</span> OS error beep, startup/shutdown sounds, NBC three‑tone chime.
+                            </div>
+                        </div>
+                        <div class="card purple" style="border-left-color:#b98cfa;">
+                            <div class="card-title">4. Voicemail System</div>
+                            <div class="card-body">
+                                Computer‑based system for exchanging personal voice messages.<br />
+                                Also known as: voice message or voice bank.<br />
+                                <span class="highlight">Example:</span> <code style="background:#0d1017;padding:1px 8px;border-radius:4px;font-size:12px;">*98</code> Vertical Service Code (US landlines).
+                            </div>
+                        </div>
+                    </div>
+                    <div class="analogy" style="margin-top:2px;"><span class="icon">🔊</span> Auditory interfaces are like <strong>“sound as data”</strong> – each type tells a different story.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SLIDE 9 – MODULE 4: Comparison Table                         -->
+        <!-- ============================================================ -->
+        <div class="slide-wrapper" data-index="8">
+            <div class="slide">
+                <div class="slide-content expanded">
+                    <div class="eyebrow">Module 4</div>
+                    <div class="slide-title">Auditory Interface <span class="accent-orange">Types</span></div>
+                    <div class="table-wrap" style="margin-top:4px;">
+                        <table>
+                            <thead>
+                                <tr><th>Type</th><th>Definition</th><th>Example</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><strong>Audification</strong></td><td>Direct waveform translation</td><td>Seismic data sped up to sound</td></tr>
+                                <tr><td><strong>Sonification</strong></td><td>Non‑speech audio conveying data</td><td>Geiger counter clicks</td></tr>
+                                <tr><td><strong>Earcon</strong></td><td>Brief symbolic sound for events</td><td>OS error beep, NBC chime</td></tr>
+                                <tr><td><strong>Voicemail</strong></td><td>Voice message exchange</td><td><code style="background:#0d1017;padding:1px 8px;border-radius:4px;font-size:12px;">*98</code> voicemail access</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="quote-block" style="margin-top:4px;">
+                        “Auditory perception excels at temporal resolution, spatial perception, amplitude discrimination, and frequency resolution.”
+                        <span class="attrib">— Module 4</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SLIDE 10 – MODULE 5: QR Codes – Definition & History         -->
+        <!-- ============================================================ -->
+        <div class="slide-wrapper" data-index="9">
+            <div class="slide">
+                <div class="slide-content expanded">
+                    <div class="eyebrow">Module 5</div>
+                    <div class="slide-title">QR Codes <span class="accent-purple">(Quick Response)</span></div>
+                    <div class="slide-sub">Definition · History · Barcode vs QR</div>
+                    <div class="grid-2" style="margin-top:2px;">
+                        <div class="card">
+                            <div class="card-title">What is a QR Code?</div>
+                            <div class="card-body">
+                                A 2D matrix barcode that stores data in a grid of modules.<br />
+                                <span class="highlight">Invented in 1994</span> by <strong>Denso Wave</strong> (Toyota subsidiary) for vehicle/parts tracking.<br />
+                                Approved as ISO international standard in <span class="highlight">2000</span>.
+                            </div>
+                        </div>
+                        <div class="card green">
+                            <div class="card-title">1D Barcode vs QR Code</div>
+                            <div class="card-body" style="font-size:13.5px;">
+                                <ul>
+                                    <li><strong>1D Barcode:</strong> parallel lines, read left→right, small data (ID number)</li>
+                                    <li><strong>QR Code:</strong> 2D grid, <span class="highlight">any direction</span>, large data (Kanji, alphanumeric)</li>
+                                </ul>
+                                <div style="margin-top:6px;background:#1a212e;border-radius:6px;padding:6px 12px;font-size:13px;color:#bcc9db;">
+                                    📖 Analogy: 1D = a sentence · QR = a paragraph
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid-2" style="margin-top:0;">
+                        <div class="card orange" style="border-left-color:#f2a86d;">
+                            <div class="card-title">QR Variants</div>
+                            <div class="card-body" style="font-size:12.5px;">
+                                <ul>
+                                    <li><strong>Micro QR</strong> – compact, 11×11, up to 21 chars</li>
+                                    <li><strong>Model 1</strong> – original, ~707 chars max</li>
+                                    <li><strong>Model 2</strong> – improved, 1–40 versions, 4,296 chars</li>
+                                    <li><strong>IQR</strong> – square/rectangular, 61 formats</li>
+                                    <li><strong>SQRC</strong> – secret function, password‑locked</li>
+                                    <li><strong>Frame QR</strong> – customizable center area</li>
+                                </ul>
+                                <span class="text-muted text-xs">“A set of camera lenses” – same base, different job.</span>
+                            </div>
+                        </div>
+                        <div class="card purple" style="border-left-color:#b98cfa;">
+                            <div class="card-title">Anatomy of a QR Code</div>
+                            <div class="card-body" style="font-size:13px;">
+                                <ul>
+                                    <li><strong>Finder Patterns</strong> – 3 corner squares for orientation</li>
+                                    <li><strong>Data Modules</strong> – scattered bits; <span class="highlight">position, not color, carries info</span></li>
+                                    <li><strong>Quiet Zone</strong> – outer safety border (min 4 modules)</li>
+                                    <li><strong>Frame/Logo Area</strong> – reserved center for branding (Frame QR)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SLIDE 11 – MODULE 5: Error Correction                        -->
+        <!-- ============================================================ -->
+        <div class="slide-wrapper" data-index="10">
+            <div class="slide">
+                <div class="slide-content expanded">
+                    <div class="eyebrow">Module 5</div>
+                    <div class="slide-title">QR Code <span class="accent-purple">Error Correction</span></div>
+                    <div class="slide-sub">“A safety net with different mesh sizes”</div>
+                    <div class="table-wrap" style="margin-top:4px;">
+                        <table>
+                            <thead>
+                                <tr><th>Level</th><th>Correctable Damage</th><th>Best For</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><strong>L</strong></td><td>Up to 7%</td><td>Clean environments</td></tr>
+                                <tr><td><strong>M</strong> (default)</td><td>Up to <span class="highlight">15%</span></td><td>General use</td></tr>
+                                <tr><td><strong>Q</strong></td><td>Up to 25%</td><td>Business / commercial</td></tr>
+                                <tr><td><strong>H</strong></td><td>Up to <span class="highlight">30%</span></td><td>Logos/graphics, high damage risk</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="grid-2" style="margin-top:4px;">
+                        <div class="card" style="border-left-color:#6db3f2;">
+                            <div class="card-title">Error Correction Codes</div>
+                            <div class="card-body" style="font-size:13px;">
+                                <code style="background:#0d1017;padding:2px 8px;border-radius:4px;font-size:12px;">ERROR_CORRECT_L</code> · <code style="background:#0d1017;padding:2px 8px;border-radius:4px;font-size:12px;">ERROR_CORRECT_M</code><br />
+                                <code style="background:#0d1017;padding:2px 8px;border-radius:4px;font-size:12px;">ERROR_CORRECT_Q</code> · <code style="background:#0d1017;padding:2px 8px;border-radius:4px;font-size:12px;">ERROR_CORRECT_H</code>
+                            </div>
+                        </div>
+                        <div class="card green" style="border-left-color:#6fcf97;">
+                            <div class="card-title">Analogy</div>
+                            <div class="card-body" style="font-size:13px;">
+                                <span class="highlight">L</span> = small safety net (minor falls)<br />
+                                <span class="highlight">H</span> = dense net (catches almost anything)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SLIDE 12 – MODULE 5: QR Code Generation (Python)             -->
+        <!-- ============================================================ -->
+        <div class="slide-wrapper" data-index="11">
+            <div class="slide">
+                <div class="slide-content expanded">
+                    <div class="eyebrow">Module 5</div>
+                    <div class="slide-title">QR Code <span class="accent-purple">Generation</span> with Python</div>
+                    <div class="grid-2" style="margin-top:2px;">
+                        <div>
+                            <div class="card" style="border-left-color:#6db3f2;">
+                                <div class="card-title">Installation</div>
+                                <div class="code-block" style="margin:2px 0 4px 0;font-size:12.5px;">
+                                    <pre><code><span class="cmt"># pip install qrcode pillow</span>
+                                        <span class="kw">import</span> qrcode</code></pre>
+                                    <button class="copy-btn" aria-label="Copy code">Copy</button>
+                                </div>
+                            </div>
+                            <div class="card green" style="border-left-color:#6fcf97;margin-top:6px;">
+                                <div class="card-title">Quick Generation</div>
+                                <div class="code-block" style="margin:2px 0 4px 0;font-size:12.5px;">
+                                    <pre><code>img = qrcode.make(<span class="str">"https://your-target-url.com"</span>)
+                                        img.save(<span class="str">"quick_qr.png"</span>)</code></pre>
+                                    <button class="copy-btn" aria-label="Copy code">Copy</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="card orange" style="border-left-color:#f2a86d;">
+                                <div class="card-title">Advanced Customization</div>
+                                <div class="code-block" style="margin:2px 0 4px 0;font-size:12px;">
+                                    <pre><code>qr = qrcode.QRCode(
+                                        version=<span class="num">3</span>,              <span class="cmt"># 1–40 (matrix size)</span>
+                                        box_size=<span class="num">12</span>,            <span class="cmt"># pixels per module</span>
+                                        border=<span class="num">4</span>,              <span class="cmt"># quiet zone (min 4)</span>
+                                        error_correction=qrcode.constants.ERROR_CORRECT_M
+                                        )
+                                        qr.add_data(<span class="str">"Customized Styling"</span>)
+                                        qr.make(fit=<span class="kw">True</span>)
+
+                                        img = qr.make_image(fill_color=<span class="str">"darkgreen"</span>, back_color=<span class="str">"lightyellow"</span>)
+                                        img.save(<span class="str">"styled_qr.png"</span>)</code></pre>
+                                    <button class="copy-btn" aria-label="Copy code">Copy</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SLIDE 13 – MODULE 5: Decoding & Permutations                 -->
+        <!-- ============================================================ -->
+        <div class="slide-wrapper" data-index="12">
+            <div class="slide">
+                <div class="slide-content expanded">
+                    <div class="eyebrow">Module 5</div>
+                    <div class="slide-title">Decoding &amp; <span class="accent">itertools.permutations</span></div>
+                    <div class="grid-2" style="margin-top:2px;">
+                        <div>
+                            <div class="card" style="border-left-color:#6dd5ed;">
+                                <div class="card-title">QR Decoding with OpenCV</div>
+                                <div class="code-block" style="margin:2px 0 4px 0;font-size:12px;">
+                                    <pre><code><span class="kw">import</span> cv2
+
+                                        detector = cv2.QRCodeDetector()
+                                        data, points, _ = detector.detectAndDecode(cv2.imread(<span class="str">"qr.png"</span>))
+
+                                        <span class="kw">if</span> points <span class="kw">is not</span> <span class="kw">None</span>:
+                                        <span class="fn">print</span>(<span class="str">f"Decoded: {data}"</span>)
+                                        <span class="kw">else</span>:
+                                        <span class="fn">print</span>(<span class="str">"No QR found."</span>)</code></pre>
+                                    <button class="copy-btn" aria-label="Copy code">Copy</button>
+                                </div>
+                                <div class="card-body text-xs text-muted" style="margin-top:4px;">
+                                    Handles perspective &amp; rotation automatically.
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="card" style="border-left-color:#b98cfa;">
+                                <div class="card-title">Python Permutations</div>
+                                <div class="card-body" style="font-size:13px;">
+                                    <strong>Permutation</strong> = arrangement where <span class="highlight">order matters</span>.<br />
+                                    <span class="text-muted">n! = n × (n−1) × … × 1</span>
+                                </div>
+                                <div class="code-block" style="margin:4px 0 2px 0;font-size:12px;">
+                                    <pre><code><span class="kw">import</span> itertools
+                                        val = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>]
+                                        <span class="kw">for</span> p <span class="kw">in</span> itertools.permutations(val):
+                                        <span class="fn">print</span>(p)  <span class="cmt"># 24 permutations (4!)</span></code></pre>
+                                    <button class="copy-btn" aria-label="Copy code">Copy</button>
+                                </div>
+                                <div class="card-body text-xs text-muted">
+                                    <span class="tag" style="font-size:9px;">Lazy</span> Generates only when asked · Memory efficient
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SLIDE 14 – MODULE 6: Visual Sensation, Perception, Cognition -->
+        <!-- ============================================================ -->
+        <div class="slide-wrapper" data-index="13">
+            <div class="slide">
+                <div class="slide-content expanded">
+                    <div class="eyebrow">Module 6</div>
+                    <div class="slide-title">Visual Sensation · Perception · <span class="accent">Cognition</span></div>
+                    <div class="slide-sub">“A camera pipeline”</div>
+                    <div class="grid-2" style="margin-top:2px;">
+                        <div class="card" style="border-left-color:#6db3f2;">
+                            <div class="card-title">The Visual Pathway</div>
+                            <div class="card-body" style="font-family:monospace;background:#0d1017;padding:10px 14px;border-radius:8px;color:#bcc9db;font-size:13px;">
+                                Light Stimulus → <span class="highlight">SENSATION</span> (eye/retina) → <span class="highlight">PERCEPTION</span> (brain) → <span class="highlight">COGNITION</span> (memory &amp; action)
+                            </div>
+                            <div class="card-body" style="margin-top:6px;font-size:13px;">
+                                <strong>Analogy:</strong> Sensation = sensor capturing raw light; Perception = image processor recognizing a face; Cognition = deciding to smile or wave.
+                            </div>
+                        </div>
+                        <div class="card green" style="border-left-color:#6fcf97;">
+                            <div class="card-title">Sensation vs Perception</div>
+                            <div class="card-body" style="font-size:13px;">
+                                <ul>
+                                    <li><strong>Sensation:</strong> physical experience of light; <span class="highlight">same for all</span> sighted individuals</li>
+                                    <li><strong>Perception:</strong> mental recognition of colors, patterns; <span class="highlight">highly subjective</span></li>
+                                </ul>
+                                <div style="margin-top:6px;background:#1a212e;border-radius:6px;padding:6px 12px;font-size:13px;color:#bcc9db;">
+                                    📷 “Camera sensor vs. photo editor” – raw capture vs. interpretation.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid-2" style="margin-top:0;">
+                        <div class="card orange" style="border-left-color:#f2a86d;">
+                            <div class="card-title">How the Eye Works</div>
+                            <div class="card-body" style="font-size:13px;">
+                                <ul>
+                                    <li>Lens refracts light onto <strong>rods &amp; cones</strong> (photoreceptors)</li>
+                                    <li>Rods/cones convert light photons → <span class="highlight">neural impulses</span> → brain</li>
+                                    <li>Brightness adaptation: eye cannot transition instantly between extreme dark and light</li>
+                                </ul>
+                                <span class="text-muted text-xs">Pupil = aperture · Lens = focuses · Retina = sensor</span>
+                            </div>
+                        </div>
+                        <div class="card purple" style="border-left-color:#b98cfa;">
+                            <div class="card-title">Cognition</div>
+                            <div class="card-body" style="font-size:13px;">
+                                The mental engine that drives action; transforms perceived information into meaningful action.
+                                <ul style="margin-top:4px;">
+                                    <li><strong>Basic:</strong> attention, awareness, orientation</li>
+                                    <li><strong>Complex:</strong> memory, language, reasoning, problem‑solving, decision‑making</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SLIDE 15 – MODULE 6: UI Design Principles                    -->
+        <!-- ============================================================ -->
+        <div class="slide-wrapper" data-index="14">
+            <div class="slide">
+                <div class="slide-content expanded">
+                    <div class="eyebrow">Module 6</div>
+                    <div class="slide-title">UI Design <span class="accent">Principles</span></div>
+                    <div class="slide-sub">Based on the Visual System</div>
+                    <div class="grid-2" style="margin-top:4px;">
+                        <div class="card" style="border-left-color:#6db3f2;">
+                            <div class="card-title">1. High Contrast Elements</div>
+                            <div class="card-body">Interactive components must stand out sharply.</div>
+                        </div>
+                        <div class="card green" style="border-left-color:#6fcf97;">
+                            <div class="card-title">2. Consistent Luminance</div>
+                            <div class="card-body">Abrupt brightness changes cause visual fatigue.</div>
+                        </div>
+                        <div class="card orange" style="border-left-color:#f2a86d;">
+                            <div class="card-title">3. Clear Structure</div>
+                            <div class="card-body">Grouping elements guides attention.</div>
+                        </div>
+                        <div class="card purple" style="border-left-color:#b98cfa;">
+                            <div class="card-title">4. Container Grouping</div>
+                            <div class="card-body">Styled containers focus visual attention.</div>
+                        </div>
+                    </div>
+                    <div class="analogy" style="margin-top:4px;"><span class="icon">🎭</span> “Lighting a stage” – smooth, consistent luminance keeps users comfortable and focused.</div>
+                    <div class="quote-block" style="margin-top:2px;">
+                        “The eye cannot transition instantly between extreme dark and light. Adjusts sensitivity over time.”
+                        <span class="attrib">— Module 6</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SLIDE 16 – MODULE 7: Advanced QR & Itertools Chunking        -->
+        <!-- ============================================================ -->
+        <div class="slide-wrapper" data-index="15">
+            <div class="slide">
+                <div class="slide-content expanded">
+                    <div class="eyebrow">Module 7</div>
+                    <div class="slide-title">Itertools <span class="accent-green">Chunking</span></div>
+                    <div class="slide-sub">The <code style="background:#0d1017;padding:1px 10px;border-radius:4px;font-size:14px;">grouper()</code> Recipe</div>
+                    <div class="grid-2" style="margin-top:2px;">
+                        <div>
+                            <div class="card" style="border-left-color:#6db3f2;">
+                                <div class="card-title">The Problem</div>
+                                <div class="card-body" style="font-size:13px;">
+                                    Need to process data in fixed‑size batches (chunks) for:
+                                    <ul>
+                                        <li>API pagination</li>
+                                        <li>Memory‑limited environments</li>
+                                        <li>Parallel processing</li>
+                                        <li>Rate‑limited APIs</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="card green" style="border-left-color:#6fcf97;margin-top:6px;">
+                                <div class="card-title">Key Features</div>
+                                <div class="card-body" style="font-size:13px;">
+                                    <ul>
+                                        <li><span class="highlight">Memory‑efficient</span> – processes one chunk at a time</li>
+                                        <li>Predictable batches</li>
+                                        <li><span class="highlight">Lazy evaluation</span> – only consumes as iterated</li>
+                                        <li>Works with any iterable</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="card" style="border-left-color:#b98cfa;">
+                                <div class="card-title">grouper() Implementation</div>
+                                <div class="code-block" style="margin:2px 0 4px 0;font-size:12px;">
+                                    <pre><code><span class="kw">import</span> itertools <span class="kw">as</span> it
+
+                                        <span class="kw">def</span> <span class="fn">grouper</span>(inputs, n, fillvalue=<span class="kw">None</span>):
+                                        iters = [<span class="fn">iter</span>(inputs)] * n
+                                        <span class="kw">return</span> it.zip_longest(*iters, fillvalue=fillvalue)
+
+                                        alpha = [<span class="str">'a'</span>, <span class="str">'b'</span>, <span class="str">'c'</span>, <span class="str">'d'</span>, <span class="str">'e'</span>, <span class="str">'f'</span>, <span class="str">'g'</span>, <span class="str">'h'</span>, <span class="str">'i'</span>, <span class="str">'j'</span>, <span class="str">'k'</span>, <span class="str">'l'</span>, <span class="str">'m'</span>]
+                                        chunks = <span class="fn">list</span>(<span class="fn">grouper</span>(alpha, <span class="num">3</span>))
+                                        <span class="cmt"># [('a','b','c'), ('d','e','f'), ... ('m', None, None)]</span></code></pre>
+                                    <button class="copy-btn" aria-label="Copy code">Copy</button>
+                                </div>
+                                <div class="card-body text-xs text-muted">
+                                    Creates <strong>n references</strong> to the same iterator; pads with <code>fillvalue</code>.
+                                </div>
+                            </div>
+                            <div class="analogy" style="margin-top:4px;"><span class="icon">🍕</span> “Eating a pizza slice by slice” – one chunk at a time.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SLIDE 17 – MODULE 7: Complete QR Workflow                    -->
+        <!-- ============================================================ -->
+        <div class="slide-wrapper" data-index="16">
+            <div class="slide">
+                <div class="slide-content expanded">
+                    <div class="eyebrow">Module 7</div>
+                    <div class="slide-title">QR Code <span class="accent-purple">Complete Workflow</span></div>
+                    <div class="grid-2" style="margin-top:2px;">
+                        <div>
+                            <div class="card" style="border-left-color:#6db3f2;">
+                                <div class="card-title">Generation Workflow</div>
+                                <div class="code-block" style="margin:2px 0 4px 0;font-size:11.5px;">
+                                    <pre><code><span class="cmt"># 1. Install</span>
+                                        <span class="cmt"># pip install qrcode pillow opencv-python</span>
+
+                                        <span class="cmt"># 2. Generate basic</span>
+                                        <span class="kw">import</span> qrcode
+                                        img = qrcode.make(<span class="str">"https://example.com"</span>)
+                                        img.save(<span class="str">"basic_qr.png"</span>)
+
+                                        <span class="cmt"># 3. Generate styled</span>
+                                        qr = qrcode.QRCode(version=<span class="num">3</span>, box_size=<span class="num">12</span>, border=<span class="num">4</span>)
+                                        qr.add_data(<span class="str">"Styled content"</span>)
+                                        qr.make(fit=<span class="kw">True</span>)
+                                        styled = qr.make_image(fill_color=<span class="str">"darkgreen"</span>, back_color=<span class="str">"lightyellow"</span>)
+                                        styled.save(<span class="str">"styled_qr.png"</span>)</code></pre>
+                                    <button class="copy-btn" aria-label="Copy code">Copy</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="card green" style="border-left-color:#6fcf97;">
+                                <div class="card-title">Decoding Workflow</div>
+                                <div class="code-block" style="margin:2px 0 4px 0;font-size:12px;">
+                                    <pre><code><span class="cmt"># 4. Decode QR</span>
+                                        <span class="kw">import</span> cv2
+                                        detector = cv2.QRCodeDetector()
+                                        data, points, _ = detector.detectAndDecode(cv2.imread(<span class="str">"styled_qr.png"</span>))
+                                        <span class="kw">if</span> points <span class="kw">is not</span> <span class="kw">None</span>:
+                                        <span class="fn">print</span>(<span class="str">f"Decoded: {data}"</span>)
+                                        <span class="kw">else</span>:
+                                        <span class="fn">print</span>(<span class="str">"No QR found"</span>)</code></pre>
+                                    <button class="copy-btn" aria-label="Copy code">Copy</button>
+                                </div>
+                            </div>
+                            <div class="card orange" style="border-left-color:#f2a86d;margin-top:6px;">
+                                <div class="card-title">Error Correction Summary</div>
+                                <div class="card-body" style="font-size:12.5px;">
+                                    <span class="tag blue">L</span> 7% · <span class="tag green">M</span> 15% (default) · <span class="tag orange">Q</span> 25% · <span class="tag purple">H</span> 30%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SLIDE 18 – Key Quotes                                        -->
+        <!-- ============================================================ -->
+        <div class="slide-wrapper" data-index="17">
+            <div class="slide">
+                <div class="slide-content expanded">
+                    <div class="eyebrow">Key Quotes</div>
+                    <div class="slide-title">Notable <span class="accent-orange">Insights</span></div>
+                    <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px;">
+                        <div class="quote-block">
+                            “A technological device encompasses any computing system, cellular phone, smartphone, digital camera, video camera, audio recording instrument, or specialized electronic architecture engineered to create, store, securely isolate, or transmit information in the form of electronic data.”
+                            <span class="attrib">— Module 2</span>
+                        </div>
+                        <div class="quote-block" style="border-left-color:#6db3f2;">
+                            “The interface should feel like a natural extension of the user's body.”
+                            <span class="attrib">— Wigdor &amp; Wixon, 2011 (Module 3)</span>
+                        </div>
+                        <div class="quote-block" style="border-left-color:#6fcf97;">
+                            “Auditory perception excels at temporal resolution, spatial perception, amplitude discrimination, and frequency resolution.”
+                            <span class="attrib">— Module 4</span>
+                        </div>
+                        <div class="quote-block" style="border-left-color:#b98cfa;">
+                            “Sensation is the physical experience of light entering the eyes. Perception is the mental ability to recognize colors, patterns, and structures. Cognition transforms perceived information into meaningful action.”
+                            <span class="attrib">— Module 6</span>
+                        </div>
+                        <div class="quote-block" style="border-left-color:#f2a86d;">
+                            “A QR code is like a paragraph compared to a 1D barcode which is like a sentence.”
+                            <span class="attrib">— Module 5</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SLIDE 19 – Quick Reference / Recap                           -->
+        <!-- ============================================================ -->
+        <div class="slide-wrapper" data-index="18">
+            <div class="slide">
+                <div class="slide-content expanded">
+                    <div class="eyebrow">Recap</div>
+                    <div class="slide-title">Module <span class="accent">Summary</span></div>
+                    <div class="table-wrap" style="margin-top:4px;">
+                        <table>
+                            <thead>
+                                <tr><th>Module</th><th>Topic</th><th>Key Takeaway</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><strong>2</strong></td><td>Handheld &amp; Wearable</td><td>Evolution from PDAs to smartwatches; form factors &amp; ecosystems</td></tr>
+                                <tr><td><strong>3</strong></td><td>Touch User Interfaces</td><td>5 touchscreen technologies; design considerations; interaction techniques</td></tr>
+                                <tr><td><strong>4</strong></td><td>Auditory Interfaces</td><td>4 types: Audification, Sonification, Earcon, Voicemail</td></tr>
+                                <tr><td><strong>5</strong></td><td>QR Codes &amp; Permutations</td><td>QR variants; generation/decoding; <code style="background:#0d1017;padding:0 6px;border-radius:4px;font-size:11px;">itertools.permutations</code></td></tr>
+                                <tr><td><strong>6</strong></td><td>Visual Sensation/Perception/Cognition</td><td>Sensation→Perception→Cognition pathway; UI design implications</td></tr>
+                                <tr><td><strong>7</strong></td><td>Advanced QR &amp; Itertools</td><td><code style="background:#0d1017;padding:0 6px;border-radius:4px;font-size:11px;">grouper</code> recipe; styled QR generation; OpenCV decoding</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:6px;justify-content:center;">
+                        <span class="tag blue">Handheld &amp; Wearable</span>
+                        <span class="tag green">Touch UI</span>
+                        <span class="tag orange">Auditory</span>
+                        <span class="tag purple">QR &amp; Python</span>
+                        <span class="tag" style="background:#1f3a4a;color:#6dd5ed;">Visual Perception</span>
+                    </div>
+                    <div class="analogy" style="margin-top:4px;justify-content:center;"><span class="icon">📌</span> Six modules, one cohesive view of HCI – from hardware to human perception.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SLIDE 20 – End / Thank You                                   -->
+        <!-- ============================================================ -->
+        <div class="slide-wrapper" data-index="19">
+            <div class="slide" style="justify-content:center;align-items:center;text-align:center;background:linear-gradient(145deg,#181e2a,#0f1117);">
+                <div class="slide-content" style="align-items:center;justify-content:center;gap:10px;">
+                    <div style="font-size:48px;line-height:1;">🎯</div>
+                    <div class="slide-title-main" style="font-size:clamp(32px,4vw,52px);">
+                        Ready for <span class="accent">review</span>?
+                    </div>
+                    <div style="font-size:18px;color:#9aacbf;max-width:600px;line-height:1.5;">
+                        You've covered Handheld Devices, Touch Interfaces, Auditory Systems, Visual Perception, QR Codes, and Python tools.
+                    </div>
+                    <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:10px 20px;justify-content:center;font-size:14px;color:#6a7b90;">
+                        <span>📱 Modules 2–7</span>
+                        <span>⚡ Interactive slides</span>
+                        <span><kbd style="background:#1e2330;padding:1px 8px;border-radius:4px;border:1px solid #2f3548;font-family:inherit;color:#9aacbf;">← →</kbd> navigate</span>
+                    </div>
+                    <div style="margin-top:12px;font-size:13px;color:#4a5a6e;">Press <kbd style="background:#1e2330;padding:1px 8px;border-radius:4px;border:1px solid #2f3548;font-family:inherit;color:#9aacbf;">Home</kbd> to restart · <kbd style="background:#1e2330;padding:1px 8px;border-radius:4px;border:1px solid #2f3548;font-family:inherit;color:#9aacbf;">End</kbd> to finish</div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /presentation -->
+
+    <script>
+        (function() {
+            'use strict';
+
+            const slides = document.querySelectorAll('.slide-wrapper');
+            let current = 0;
+            const total = slides.length;
+            let transitioning = false;
+
+            const progress = document.getElementById('progress-bar');
+            const counter = document.getElementById('slide-counter');
+
+            function updateUI() {
+                // update progress
+                const pct = ((current + 1) / total) * 100;
+                progress.style.width = pct + '%';
+                counter.textContent = (current + 1) + ' / ' + total;
+            }
+
+            function goTo(index, direction) {
+                if (transitioning) return;
+                if (index < 0) index = 0;
+                if (index >= total) index = total - 1;
+                if (index === current) return;
+
+                const oldSlide = slides[current];
+                const newSlide = slides[index];
+
+                // Determine exit direction
+                const dir = direction || (index > current ? 1 : -1);
+
+                // Remove active from old
+                oldSlide.classList.remove('active', 'exit-left', 'exit-right');
+
+                // Set exit class based on direction
+                if (dir === 1) {
+                    oldSlide.classList.add('exit-left');
+                } else {
+                    oldSlide.classList.add('exit-right');
+                }
+
+                // Prepare new slide (position off-screen)
+                newSlide.classList.remove('active', 'exit-left', 'exit-right');
+                // Force reflow
+                void newSlide.offsetWidth;
+
+                // Position new slide based on direction
+                if (dir === 1) {
+                    newSlide.style.transform = 'translateX(30px)';
+                } else {
+                    newSlide.style.transform = 'translateX(-30px)';
+                }
+                newSlide.style.opacity = '0';
+                newSlide.style.transition = 'none';
+                newSlide.style.pointerEvents = 'none';
+
+                // Force reflow
+                void newSlide.offsetWidth;
+
+                // Restore transition
+                newSlide.style.transition = '';
+                newSlide.style.transform = '';
+                newSlide.style.opacity = '';
+                newSlide.style.pointerEvents = '';
+
+                // Activate new slide
+                newSlide.classList.add('active');
+
+                // Clean up old slide after animation
+                setTimeout(() => {
+                    oldSlide.classList.remove('exit-left', 'exit-right');
+                    oldSlide.style.transform = '';
+                    oldSlide.style.opacity = '';
+                    oldSlide.style.pointerEvents = '';
+                }, 400);
+
+                current = index;
+                updateUI();
+                transitioning = false;
+            }
+
+            function next() {
+                if (current < total - 1) {
+                    goTo(current + 1, 1);
+                }
+            }
+
+            function prev() {
+                if (current > 0) {
+                    goTo(current - 1, -1);
+                }
+            }
+
+            function first() {
+                goTo(0, -1);
+            }
+
+            function last() {
+                goTo(total - 1, 1);
+            }
+
+            // ── Keyboard ──
+            document.addEventListener('keydown', function(e) {
+                const tag = e.target.tagName.toLowerCase();
+                if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+                switch (e.key) {
+                    case 'ArrowRight':
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        next();
+                        break;
+                    case 'ArrowLeft':
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        prev();
+                        break;
+                    case 'Home':
+                        e.preventDefault();
+                        first();
+                        break;
+                    case 'End':
+                        e.preventDefault();
+                        last();
+                        break;
+                    case '?':
+                        e.preventDefault();
+                        alert(
+                            'Keyboard shortcuts:\n\n' +
+                            '← / →  or  ↑ / ↓  – navigate slides\n' +
+                            'Home – go to first slide\n' +
+                            'End  – go to last slide\n' +
+                            '?    – show this help'
+                        );
+                        break;
+                }
+            });
+
+            // ── Click anywhere (except interactive elements) ──
+            document.addEventListener('click', function(e) {
+                const target = e.target.closest('.copy-btn');
+                if (target) return;
+                const codeBlock = e.target.closest('.code-block');
+                if (codeBlock) return;
+                const link = e.target.closest('a');
+                if (link) return;
+                const input = e.target.closest('input, textarea, select, button:not(.copy-btn)');
+                if (input) return;
+
+                // click on slide wrapper -> next
+                next();
+            });
+
+            // ── Touch swipe ──
+            let touchStartX = 0;
+            let touchStartY = 0;
+            document.addEventListener('touchstart', function(e) {
+                const touch = e.touches[0];
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
+            }, { passive: true });
+
+            document.addEventListener('touchend', function(e) {
+                if (touchStartX === 0) return;
+                const touchEnd = e.changedTouches[0];
+                const dx = touchEnd.clientX - touchStartX;
+                const dy = touchEnd.clientY - touchStartY;
+                if (Math.abs(dx) < 30 && Math.abs(dy) < 30) {
+                    // tap -> next
+                    next();
+                    return;
+                }
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    if (dx < 0) next();
+                    else prev();
+                }
+                touchStartX = 0;
+            }, { passive: true });
+
+            // ── Copy buttons ──
+            document.querySelectorAll('.copy-btn').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const block = this.closest('.code-block');
+                    const codeEl = block.querySelector('pre code');
+                    let text = '';
+                    if (codeEl) {
+                        text = codeEl.textContent;
+                    } else {
+                        const pre = block.querySelector('pre');
+                        if (pre) text = pre.textContent;
+                    }
+                    // clean up extra spaces
+                    text = text.replace(/\n\s*\n/g, '\n').trim();
+                    navigator.clipboard.writeText(text).then(() => {
+                        const orig = this.textContent;
+                        this.textContent = '✓ Copied!';
+                        this.classList.add('copied');
+                        setTimeout(() => {
+                            this.textContent = orig;
+                            this.classList.remove('copied');
+                        }, 2000);
+                    }).catch(() => {
+                        // fallback
+                        const area = document.createElement('textarea');
+                        area.value = text;
+                        document.body.appendChild(area);
+                        area.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(area);
+                        const orig = this.textContent;
+                        this.textContent = '✓ Copied!';
+                        this.classList.add('copied');
+                        setTimeout(() => {
+                            this.textContent = orig;
+                            this.classList.remove('copied');
+                        }, 2000);
+                    });
+                });
+            });
+
+            // ── Init ──
+            updateUI();
+
+            // Ensure first slide is properly shown
+            slides.forEach((s, i) => {
+                if (i === 0) {
+                    s.classList.add('active');
+                } else {
+                    s.classList.remove('active');
+                }
+            });
+
+            // ── Fix for slide transitions on load ──
+            window.addEventListener('load', function() {
+                // ensure no stray transforms
+                slides.forEach(s => {
+                    s.style.transform = '';
+                    s.style.opacity = '';
+                    s.style.pointerEvents = '';
+                });
+                slides[0].classList.add('active');
+                updateUI();
+            });
+
+            // Handle resize: ensure slides are visible
+            let resizeTimer;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(() => {
+                    // just ensure active slide is visible
+                    slides.forEach((s, i) => {
+                        if (i === current) {
+                            s.classList.add('active');
+                        } else {
+                            s.classList.remove('active');
+                        }
+                    });
+                }, 100);
+            });
+
+            // ── Expose for debugging ──
+            window.__slides = { goTo, next, prev, first, last, current, total };
+
+        })();
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Human Visual Sensation, Perception &amp; Cognition — HCI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-deep: #080c16;
+      --bg-mid: #0e1526;
+      --glass-bg: rgba(255,255,255,0.055);
+      --glass-border: rgba(255,255,255,0.14);
+      --glass-border-strong: rgba(255,255,255,0.24);
+      --accent-cyan: #4fd8e8;
+      --accent-violet: #9d8cff;
+      --accent-amber: #f5c26b;
+      --text-primary: #f2f5fb;
+      --text-secondary: #a9b4c9;
+      --text-faint: #6b7690;
+      --code-bg: rgba(6,10,20,0.55);
+      --shadow-deep: 0 20px 60px -20px rgba(0,0,0,0.6);
+      --radius-lg: 22px;
+      --radius-md: 14px;
+      --dur: 400ms;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background:
+        radial-gradient(60% 50% at 12% 8%, rgba(157,140,255,0.20), transparent 60%),
+        radial-gradient(50% 45% at 88% 15%, rgba(79,216,232,0.16), transparent 60%),
+        radial-gradient(70% 60% at 50% 100%, rgba(79,216,232,0.08), transparent 60%),
+        linear-gradient(180deg, var(--bg-deep), var(--bg-mid) 60%, var(--bg-deep));
+      color: var(--text-primary);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      cursor: pointer;
+      -webkit-font-smoothing: antialiased;
+    }
+    ::selection { background: rgba(79,216,232,0.35); }
+
+    .ambient { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.5;
+    }
+    .blob1 { width: 420px; height: 420px; top: -120px; left: -100px; background: radial-gradient(circle, rgba(157,140,255,0.35), transparent 70%); }
+    .blob2 { width: 380px; height: 380px; bottom: -140px; right: -80px; background: radial-gradient(circle, rgba(79,216,232,0.30), transparent 70%); }
+
+    .finder {
+      position: fixed;
+      width: 46px;
+      height: 46px;
+      z-index: 5;
+      pointer-events: none;
+      opacity: 0.55;
+    }
+    .finder svg { width: 100%; height: 100%; display: block; }
+    .finder.tl { top: 22px; left: 22px; }
+    .finder.br { bottom: 22px; right: 22px; transform: rotate(180deg); }
+
+    #deck { position: relative; width: 100vw; height: 100vh; z-index: 1; }
+
+    .slide {
+      position: absolute; inset: 0;
+      overflow-y: auto; overflow-x: hidden;
+      transition: transform var(--dur) cubic-bezier(.22,.68,.35,1), opacity var(--dur) ease;
+      -webkit-overflow-scrolling: touch;
+    }
+    .slide.pos-current { transform: translateX(0) scale(1); opacity: 1; z-index: 3; }
+    .slide.pos-next { transform: translateX(4.5%) scale(0.97); opacity: 0; z-index: 2; }
+    .slide.pos-prev { transform: translateX(-4.5%) scale(0.97); opacity: 0; z-index: 2; }
+    .slide.pos-far { transform: translateX(0) scale(0.97); opacity: 0; z-index: 1; }
+
+    .slide-outer {
+      min-height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 88px 56px 96px;
+    }
+    .slide-content { width: 100%; max-width: 1120px; min-width: 0; }
+
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--accent-cyan);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      padding: 6px 14px 6px 10px;
+      border-radius: 100px;
+      margin-bottom: 26px;
+    }
+    .eyebrow::before {
+      content: "";
+      width: 8px; height: 8px; border-radius: 2px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+      display: inline-block;
+    }
+    h1.title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: clamp(30px, 4.4vw, 54px);
+      line-height: 1.08;
+      margin: 0 0 20px;
+      letter-spacing: -0.01em;
+      background: linear-gradient(180deg, #ffffff 30%, #c9d3ea 100%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    p.subtitle {
+      font-size: clamp(15px, 1.5vw, 18px);
+      color: var(--text-secondary);
+      max-width: 70ch;
+      line-height: 1.6;
+      margin: 0 0 34px;
+    }
+    .analogy {
+      margin-top: 28px;
+      padding: 16px 20px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(120deg, rgba(157,140,255,0.10), rgba(79,216,232,0.07));
+      border: 1px solid var(--glass-border);
+      font-size: 14.5px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+    .analogy b { color: var(--text-primary); font-weight: 600; }
+    .analogy .tag {
+      font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--accent-amber); display: block; margin-bottom: 6px;
+    }
+
+    .glass {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
+      box-shadow: var(--shadow-deep), inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    ul.bullets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+    ul.bullets li {
+      display: flex; gap: 14px; align-items: flex-start;
+      font-size: 16.5px; line-height: 1.55; color: var(--text-primary);
+      padding: 16px 20px; min-width: 0;
+    }
+    ul.bullets li .dot {
+      flex: 0 0 auto; width: 9px; height: 9px; border-radius: 50%; margin-top: 8px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+    }
+    ul.bullets li b { color: var(--accent-cyan); font-weight: 600; }
+
+    .cols2 { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 22px; }
+    .col-card { padding: 26px 26px 28px; min-width: 0; }
+    .col-card h3 {
+      font-family: 'Space Grotesk', sans-serif; font-size: 19px; margin: 0 0 14px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .col-card h3 .chip {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 3px 9px; border-radius: 6px;
+      background: rgba(255,255,255,0.08); color: var(--text-secondary); letter-spacing: 0.05em;
+    }
+    .col-card ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 11px; }
+    .col-card li { font-size: 14.5px; line-height: 1.55; color: var(--text-secondary); padding-left: 16px; position: relative; }
+    .col-card li::before { content: "—"; position: absolute; left: 0; color: var(--text-faint); }
+    .col-card.accent-a { border-color: rgba(245,194,107,0.35); }
+    .col-card.accent-b { border-color: rgba(79,216,232,0.35); }
+
+    .grid-cards { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; }
+    .grid-cards.cols2g { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .card { padding: 20px 20px 22px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+    .card .badge {
+      width: 30px; height: 30px; border-radius: 9px;
+      background: linear-gradient(135deg, rgba(79,216,232,0.25), rgba(157,140,255,0.25));
+      border: 1px solid var(--glass-border-strong);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent-cyan);
+    }
+    .card .badge.icon-badge {
+      width: 56px; height: 56px; border-radius: 12px;
+      background: linear-gradient(145deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
+      padding: 8px;
+    }
+    .card .badge.icon-badge svg { width: 100%; height: 100%; display: block; }
+    .card .badge.photo-badge {
+      width: 64px; height: 64px; border-radius: 12px;
+      background: #0e1526; padding: 0; overflow: hidden;
+    }
+    .card .badge.photo-badge img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .card h4 { margin: 2px 0 0; font-family: 'Space Grotesk', sans-serif; font-size: 16px; }
+    .card p { margin: 0; font-size: 13.3px; line-height: 1.55; color: var(--text-secondary); }
+    .card .capacity {
+      margin-top: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: var(--accent-amber); padding-top: 8px; border-top: 1px solid var(--glass-border);
+    }
+
+    .steps { display: flex; flex-direction: column; gap: 14px; }
+    .step { display: flex; gap: 18px; align-items: flex-start; padding: 18px 22px; min-width: 0; }
+    .step .num {
+      flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet)); color: #0b0f1a;
+    }
+    .step h4 { margin: 0 0 4px; font-size: 15.5px; font-family: 'Space Grotesk', sans-serif; }
+    .step p { margin: 0; font-size: 13.8px; color: var(--text-secondary); line-height: 1.5; }
+
+    .code-layout { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(0,0.9fr); gap: 22px; align-items: stretch; }
+    .code-panel { padding: 0; overflow: hidden; min-width: 0; }
+    .code-head {
+      display: flex; align-items: center; gap: 8px; padding: 12px 18px;
+      border-bottom: 1px solid var(--glass-border);
+      font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--text-faint);
+    }
+    .code-head .dots { display: flex; gap: 6px; margin-right: 6px; }
+    .code-head .dots span { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+    .code-head .dots span:nth-child(1) { background: #ff5f57; }
+    .code-head .dots span:nth-child(2) { background: #febc2e; }
+    .code-head .dots span:nth-child(3) { background: #28c840; }
+    pre.code {
+      margin: 0; padding: 20px; background: var(--code-bg);
+      font-family: 'JetBrains Mono', monospace; font-size: 13.3px; line-height: 1.65;
+      color: #dbe4f3; overflow-x: auto; min-width: 0;
+    }
+    .tok-comment { color: #6b7690; font-style: italic; }
+    .tok-string { color: #a8e6b8; }
+    .tok-keyword { color: #9d8cff; font-weight: 600; }
+    .tok-builtin { color: #4fd8e8; }
+    .tok-number { color: #f5c26b; }
+    .explain { padding: 24px 24px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+    .explain h4 { margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 16px; }
+    .explain p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--text-secondary); }
+    .output-box {
+      font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--accent-cyan);
+      background: rgba(79,216,232,0.07); border: 1px solid rgba(79,216,232,0.25);
+      border-radius: 10px; padding: 10px 14px; white-space: pre-wrap; word-break: break-word;
+    }
+
+    .qr-layout { display: grid; grid-template-columns: minmax(0,0.85fr) minmax(0,1.15fr); gap: 32px; align-items: center; }
+    .qr-visual { display: flex; align-items: center; justify-content: center; padding: 28px; }
+    .qr-visual svg { width: min(280px, 90%); height: auto; filter: drop-shadow(0 20px 40px rgba(0,0,0,0.5)); }
+    .callouts { display: flex; flex-direction: column; gap: 12px; }
+    .callout { display: flex; gap: 12px; padding: 14px 18px; min-width: 0; }
+    .callout .mark {
+      flex: 0 0 auto; width: 8px; border-radius: 4px;
+      background: linear-gradient(180deg, var(--accent-cyan), var(--accent-violet));
+    }
+    .callout h5 { margin: 0 0 3px; font-size: 14.5px; font-family: 'Space Grotesk', sans-serif; }
+    .callout p { margin: 0; font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+
+    .statement { display: flex; flex-direction: column; align-items: flex-start; }
+    .statement .big {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+      font-size: clamp(26px, 3.6vw, 44px); line-height: 1.2; max-width: 18ch;
+      background: linear-gradient(120deg, #fff, var(--accent-cyan) 60%, var(--accent-violet));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+
+    .recap-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 18px; }
+    .recap-card { padding: 26px; min-width: 0; }
+    .recap-card .tag {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--accent-violet); margin-bottom: 10px; display: block;
+    }
+    .recap-card h4 { margin: 0 0 10px; font-size: 18px; font-family: 'Space Grotesk', sans-serif; }
+    .recap-card p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--text-secondary); }
+
+    .quiz-item {
+      padding: 14px 22px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .quiz-item .qnum {
+      flex: 0 0 28px;
+      font-weight: 600;
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .quiz-item .qtext { color: var(--text-primary); }
+    .quiz-item .qtext code {
+      background: rgba(255,255,255,0.08);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--accent-amber);
+    }
+
+    .answer-grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px 40px;
+      padding: 8px 0;
+    }
+    .answer-col {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .answer-col .ans-row {
+      display: flex;
+      gap: 10px;
+      font-size: 14px;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      align-items: baseline;
+    }
+    .answer-col .ans-num {
+      color: var(--text-faint);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      width: 28px;
+      flex-shrink: 0;
+    }
+    .answer-col .ans-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      font-size: 13px;
+      min-width: 20px;
+      flex-shrink: 0;
+    }
+    .answer-col .ans-val.true { color: var(--accent-cyan); }
+    .answer-col .ans-val.false { color: #ff7b72; }
+    .answer-col .ans-val.neutral { color: var(--accent-amber); }
+    .answer-col .ans-explain {
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .flow-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 16px 0;
+    }
+    .flow-diagram .node {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      padding: 10px 18px;
+      font-size: 14px;
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+    }
+    .flow-diagram .node .sub {
+      font-size: 11px;
+      color: var(--text-faint);
+      font-weight: 400;
+      display: block;
+      margin-top: 2px;
+    }
+    .flow-diagram .arrow {
+      color: var(--accent-cyan);
+      font-size: 20px;
+      font-weight: 300;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin: 0 0 12px 0;
+    }
+    .table-wrap table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    .table-wrap table th {
+      text-align: left;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      color: var(--text-primary);
+      padding: 10px 12px;
+      border-bottom: 2px solid var(--glass-border);
+    }
+    .table-wrap table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--glass-border);
+      vertical-align: top;
+    }
+    .table-wrap table td:first-child {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    #progress-wrap {
+      position: fixed; top: 0; left: 0; width: 100%; height: 3px; z-index: 50;
+      background: rgba(255,255,255,0.06);
+    }
+    #progress-bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--accent-violet), var(--accent-cyan));
+      box-shadow: 0 0 14px 1px rgba(79,216,232,0.6);
+      transition: width var(--dur) ease;
+    }
+    #counter {
+      position: fixed; bottom: 22px; right: 28px; z-index: 50;
+      font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--text-secondary);
+      background: var(--glass-bg); border: 1px solid var(--glass-border);
+      padding: 7px 14px; border-radius: 100px; backdrop-filter: blur(14px);
+      pointer-events: none;
+    }
+    #hint {
+      position: fixed; bottom: 22px; left: 28px; z-index: 50;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-faint);
+      letter-spacing: 0.04em; pointer-events: none;
+    }
+
+    @media (max-width: 860px) {
+      .cols2, .code-layout, .qr-layout, .recap-grid, .answer-grid-2col { grid-template-columns: minmax(0,1fr); }
+      .grid-cards { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .grid-cards.cols2g { grid-template-columns: minmax(0,1fr); }
+      .slide-outer { padding: 70px 22px 90px; }
+      #hint { display: none; }
+      .flow-diagram { flex-direction: column; gap: 6px; }
+      .flow-diagram .arrow { transform: rotate(90deg); }
+    }
+    @media (max-width: 520px) {
+      .grid-cards { grid-template-columns: minmax(0,1fr); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .slide { transition: opacity 180ms linear !important; transform: none !important; }
+      .slide.pos-next, .slide.pos-prev, .slide.pos-far { transform: none !important; }
+    }
+
+    /* Login form preview */
+    .login-preview {
+      background: #c4ecf7;
+      border-radius: var(--radius-md);
+      padding: 20px;
+      max-width: 320px;
+      margin: 0 auto;
+    }
+    .login-preview .card {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 16px 18px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.08);
+    }
+    .login-preview .card h4 {
+      color: #18181b;
+      margin: 0 0 12px 0;
+      text-align: center;
+      font-size: 15px;
+    }
+    .login-preview .card .field {
+      background: #e4e4e7;
+      border-radius: 4px;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      font-size: 11px;
+      color: #3f3f46;
+    }
+    .login-preview .card .field label {
+      display: block;
+      font-weight: 600;
+      font-size: 10px;
+      color: #3f3f46;
+      margin-bottom: 2px;
+    }
+    .login-preview .card .field .input {
+      background: white;
+      border: 2px solid green;
+      border-radius: 4px;
+      padding: 6px 10px;
+      font-size: 11px;
+      color: #a1a1aa;
+    }
+    .login-preview .card .btn {
+      background: green;
+      color: yellow;
+      font-weight: 700;
+      text-align: center;
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 13px;
+      margin: 6px 0 10px 0;
+    }
+    .login-preview .card .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10px;
+      color: #18181b;
+    }
+    .login-preview .card .row a { color: #0000ee; }
+    .login-preview .card .actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    .login-preview .card .actions .btn-sm {
+      padding: 6px 16px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .login-preview .card .actions .btn-sm.green { background: green; color: yellow; }
+    .login-preview .card .actions .btn-sm.gray { background: #e4e4e7; border: 1px solid #a1a1aa; color: #18181b; }
+  </style>
+</head>
+<body>
+
+  <div class="ambient">
+    <div class="blob blob1"></div>
+    <div class="blob blob2"></div>
+  </div>
+
+  <div class="finder tl">
+    <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="1" width="38" height="38" rx="7" fill="none" stroke="#4fd8e8" stroke-width="2.4"/>
+      <rect x="12" y="12" width="16" height="16" rx="3" fill="#4fd8e8"/>
+    </svg>
+  </div>
+  <div class="finder br">
+    <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="1" width="38" height="38" rx="7" fill="none" stroke="#9d8cff" stroke-width="2.4"/>
+      <rect x="12" y="12" width="16" height="16" rx="3" fill="#9d8cff"/>
+    </svg>
+  </div>
+
+  <div id="progress-wrap"><div id="progress-bar"></div></div>
+  <div id="counter">1 / 1</div>
+  <div id="hint">click or → to advance · ← back</div>
+
+  <div id="deck"></div>
+
+  <script>
+    (function() {
+
+      // ---------- highlighter ----------
+      function escapeHtml(str) {
+        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      }
+      function highlightPython(code) {
+        var escaped = escapeHtml(code);
+        var tokenRe = /(?<comment>#[^\n]*)|(?<string>'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")|(?<keyword>\b(?:import|for|in|def|return|as|from)\b)|(?<builtin>\b(?:itertools|permutations|print|join|range|list)\b)|(?<number>\b\d+(?:\.\d+)?\b)/g;
+        return escaped.replace(tokenRe, function(match, comment, string, keyword, builtin, number, offset, whole, groups) {
+          var g = groups || {comment:comment, string:string, keyword:keyword, builtin:builtin, number:number};
+          if (g.comment) return '<span class="tok-comment">' + match + '</span>';
+          if (g.string)  return '<span class="tok-string">' + match + '</span>';
+          if (g.keyword) return '<span class="tok-keyword">' + match + '</span>';
+          if (g.builtin) return '<span class="tok-builtin">' + match + '</span>';
+          if (g.number)  return '<span class="tok-number">' + match + '</span>';
+          return match;
+        });
+      }
+
+      // highlight HTML/CSS in code blocks (simple)
+      function highlightHtml(code) {
+        var escaped = escapeHtml(code);
+        // very basic highlighting for tags, attributes, strings
+        return escaped
+          .replace(/&lt;(\/?)(\w+)([^&gt;]*)&gt;/g, function(m, slash, tag, attrs) {
+            return '&lt;<span class="tok-keyword">' + slash + tag + '</span>' + attrs + '&gt;';
+          })
+          .replace(/(style|class|id|type|name|placeholder|value|href|rel|for|method|action|src|alt)=/g, '<span class="tok-builtin">$1</span>=')
+          .replace(/"(?:[^"\\]|\\.)*"/g, '<span class="tok-string">$&</span>')
+          .replace(/(\b(?:html|head|body|form|div|input|button|label|a|hr|center|style|title|link|meta)\b)/g, '<span class="tok-keyword">$1</span>');
+      }
+
+      // ---------- helpers ----------
+      function eyebrow(text) { return '<div class="eyebrow">' + text + '</div>'; }
+      function renderAnalogy(a) {
+        return '<div class="analogy"><span class="tag">Think of it like</span><b>' + a.lead + '</b> ' + a.body + '</div>';
+      }
+      function bulletsList(items) {
+        var html = '<ul class="bullets">';
+        items.forEach(function(it) {
+          html += '<li class="glass"><span class="dot"></span><span class="body">' + it + '</span></li>';
+        });
+        html += '</ul>';
+        return html;
+      }
+
+      // ---------- renderers ----------
+      var renderers = {
+        title: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            '<p class="subtitle">' + s.subtitle + '</p>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        bullets: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            (s.subtitle ? '<p class="subtitle">' + s.subtitle + '</p>' : '') +
+            bulletsList(s.items) +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        cols2: function(s) {
+          var c = s.columns;
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            (s.subtitle ? '<p class="subtitle">' + s.subtitle + '</p>' : '') +
+            '<div class="cols2">' +
+              c.map(function(col, i) {
+                return '<div class="glass col-card ' + (i===0?'accent-a':'accent-b') + '">' +
+                  '<h3>' + col.title + ' <span class="chip">' + col.chip + '</span></h3>' +
+                  '<ul>' + col.points.map(function(p){ return '<li>' + p + '</li>'; }).join('') + '</ul>' +
+                '</div>';
+              }).join('') +
+            '</div>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        cards: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            (s.subtitle ? '<p class="subtitle">' + s.subtitle + '</p>' : '') +
+            '<div class="grid-cards' + (s.cols2 ? ' cols2g' : '') + '">' +
+              s.cards.map(function(c) {
+                return '<div class="glass card">' +
+                  (c.img ? '<div class="badge photo-badge"><img src="' + c.img + '" alt="' + c.title + '" loading="lazy"></div>' :
+                   c.icon ? '<div class="badge icon-badge">' + c.icon + '</div>' :
+                   '<div class="badge">#</div>') +
+                  '<h4>' + c.title + '</h4>' +
+                  '<p>' + c.body + '</p>' +
+                  (c.capacity ? '<div class="capacity">' + c.capacity + '</div>' : '') +
+                '</div>';
+              }).join('') +
+            '</div>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        steps: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            (s.subtitle ? '<p class="subtitle">' + s.subtitle + '</p>' : '') +
+            '<div class="steps">' +
+              s.steps.map(function(st, i) {
+                return '<div class="glass step"><div class="num">' + (i+1) + '</div>' +
+                  '<div><h4>' + st.title + '</h4><p>' + st.body + '</p></div></div>';
+              }).join('') +
+            '</div>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        code: function(s) {
+          var highlighted = s.lang === 'html' ? highlightHtml(s.code) : highlightPython(s.code);
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            '<div class="code-layout">' +
+              '<div class="glass code-panel">' +
+                '<div class="code-head"><span class="dots"><span></span><span></span><span></span></span>' + s.filename + '</div>' +
+                '<pre class="code"><code>' + highlighted + '</code></pre>' +
+              '</div>' +
+              '<div class="glass explain">' +
+                '<h4>' + s.explain.title + '</h4>' +
+                '<p>' + s.explain.body + '</p>' +
+                (s.explain.output ? '<div class="output-box">' + s.explain.output + '</div>' : '') +
+              '</div>' +
+            '</div>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        qr: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            '<div class="qr-layout">' +
+              '<div class="glass qr-visual">' + s.svg + '</div>' +
+              '<div class="callouts">' +
+                s.callouts.map(function(c) {
+                  return '<div class="glass callout"><div class="mark"></div><div><h5>' + c.title + '</h5><p>' + c.body + '</p></div></div>';
+                }).join('') +
+              '</div>' +
+            '</div>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        statement: function(s) {
+          return '<div class="slide-content statement">' +
+            eyebrow(s.eyebrow) +
+            '<div class="big">' + s.big + '</div>' +
+            (s.subtitle ? '<p class="subtitle" style="margin-top:22px;">' + s.subtitle + '</p>' : '') +
+          '</div>';
+        },
+        recap: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            '<div class="recap-grid">' +
+              s.cards.map(function(c) {
+                return '<div class="glass recap-card"><span class="tag">' + c.tag + '</span><h4>' + c.title + '</h4><p>' + c.body + '</p></div>';
+              }).join('') +
+            '</div>' +
+            (s.subtitle ? '<p class="subtitle" style="margin-top:26px;">' + s.subtitle + '</p>' : '') +
+          '</div>';
+        },
+        quiz: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            '<p class="subtitle">' + s.subtitle + '</p>' +
+            '<div>' +
+              s.questions.map(function(q, i) {
+                return '<div class="glass quiz-item"><span class="qnum">' + (i+1) + '.</span><span class="qtext">' + q.text + '</span></div>';
+              }).join('') +
+            '</div>' +
+            (s.footer ? '<p class="subtitle" style="margin-top:24px;font-size:14px;color:var(--text-faint);">' + s.footer + '</p>' : '') +
+          '</div>';
+        },
+        answerkey: function(s) {
+          var mid = Math.ceil(s.answers.length / 2);
+          var left = s.answers.slice(0, mid);
+          var right = s.answers.slice(mid);
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            '<div class="glass" style="padding:28px 32px;">' +
+              '<div class="answer-grid-2col">' +
+                '<div class="answer-col">' +
+                  left.map(function(a, i) {
+                    var label = '', cls = 'neutral';
+                    if (a.correct === true) { label = 'T'; cls = 'true'; }
+                    else if (a.correct === false) { label = 'F'; cls = 'false'; }
+                    else { label = '➔'; cls = 'neutral'; }
+                    return '<div class="ans-row"><span class="ans-num">' + (i+1) + '.</span><span class="ans-val ' + cls + '">' + label + '</span><span class="ans-explain">' + a.explanation + '</span></div>';
+                  }).join('') +
+                '</div>' +
+                '<div class="answer-col">' +
+                  right.map(function(a, i) {
+                    var label = '', cls = 'neutral';
+                    if (a.correct === true) { label = 'T'; cls = 'true'; }
+                    else if (a.correct === false) { label = 'F'; cls = 'false'; }
+                    else { label = '➔'; cls = 'neutral'; }
+                    var num = i + mid + 1;
+                    return '<div class="ans-row"><span class="ans-num">' + num + '.</span><span class="ans-val ' + cls + '">' + label + '</span><span class="ans-explain">' + a.explanation + '</span></div>';
+                  }).join('') +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+            (s.subtitle ? '<p class="subtitle" style="margin-top:26px;">' + s.subtitle + '</p>' : '') +
+          '</div>';
+        },
+        // special: table slide for Core Differences
+        table: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            (s.subtitle ? '<p class="subtitle">' + s.subtitle + '</p>' : '') +
+            '<div class="glass" style="padding:20px 24px;">' +
+              '<div class="table-wrap">' +
+                '<table>' +
+                  '<thead><tr>' + s.headers.map(function(h){ return '<th>' + h + '</th>'; }).join('') + '</tr></thead>' +
+                  '<tbody>' +
+                    s.rows.map(function(row) {
+                      return '<tr>' + row.map(function(cell){ return '<td>' + cell + '</td>'; }).join('') + '</tr>';
+                    }).join('') +
+                  '</tbody>' +
+                '</table>' +
+              '</div>' +
+            '</div>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        // flow diagram
+        flow: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            (s.subtitle ? '<p class="subtitle">' + s.subtitle + '</p>' : '') +
+            '<div class="glass" style="padding:28px 24px;">' +
+              '<div class="flow-diagram">' +
+                s.nodes.map(function(n, i) {
+                  var arrow = (i < s.nodes.length - 1) ? '<span class="arrow">⟶</span>' : '';
+                  return '<div class="node">' + n.label + (n.sub ? '<span class="sub">' + n.sub + '</span>' : '') + '</div>' + arrow;
+                }).join('') +
+              '</div>' +
+            '</div>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        // login preview with SVG embed
+        login: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            (s.subtitle ? '<p class="subtitle">' + s.subtitle + '</p>' : '') +
+            '<div class="cols2" style="align-items:center;">' +
+              '<div class="login-preview">' +
+                '<div class="card">' +
+                  '<h4>Student Login Form</h4>' +
+                  '<div class="field"><label>Username :</label><div class="input">Enter Username</div></div>' +
+                  '<div class="field"><label>Password :</label><div class="input">Enter Password</div></div>' +
+                  '<div class="btn">Login</div>' +
+                  '<div class="row"><span><input type="checkbox" checked> Remember me</span><a href="#">Forgot password?</a></div>' +
+                  '<div class="actions"><span class="btn-sm green">Cancel</span><span class="btn-sm gray">Erase</span></div>' +
+                '</div>' +
+              '</div>' +
+              '<div class="glass" style="padding:20px;min-width:0;">' +
+                '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--text-faint);margin-bottom:8px;">SVG · UI structure</div>' +
+                s.svg +
+              '</div>' +
+            '</div>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        }
+      };
+
+      // ---------- SVG for login structure ----------
+      var loginSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 380" width="100%" height="320" style="display:block;max-width:100%;">' +
+        '<rect width="320" height="380" rx="12" fill="#c4ecf7"/>' +
+        '<rect x="20" y="20" width="280" height="340" rx="8" fill="#ffffff" stroke="#e4e4e7" stroke-width="2"/>' +
+        '<text x="160" y="55" font-family="Arial,sans-serif" font-size="16" font-weight="bold" fill="#18181b" text-anchor="middle">Student Login Form</text>' +
+        '<rect x="35" y="75" width="250" height="265" rx="6" fill="#cccccc"/>' +
+        '<text x="45" y="100" font-family="Arial,sans-serif" font-size="11" font-weight="bold" fill="#3f3f46">Username :</text>' +
+        '<rect x="45" y="108" width="230" height="30" rx="4" fill="#ffffff" stroke="green" stroke-width="2"/>' +
+        '<text x="55" y="127" font-family="Arial,sans-serif" font-size="10" fill="#a1a1aa">Enter Username</text>' +
+        '<text x="45" y="160" font-family="Arial,sans-serif" font-size="11" font-weight="bold" fill="#3f3f46">Password :</text>' +
+        '<rect x="45" y="168" width="230" height="30" rx="4" fill="#ffffff" stroke="green" stroke-width="2"/>' +
+        '<text x="55" y="187" font-family="Arial,sans-serif" font-size="10" fill="#a1a1aa">Enter Password</text>' +
+        '<rect x="45" y="215" width="230" height="35" rx="4" fill="green"/>' +
+        '<text x="160" y="237" font-family="Arial,sans-serif" font-size="13" font-weight="bold" fill="yellow" text-anchor="middle">Login</text>' +
+        '<rect x="45" y="262" width="10" height="10" rx="2" fill="#3f3f46"/>' +
+        '<text x="60" y="271" font-family="Arial,sans-serif" font-size="9" fill="#18181b">Remember me</text>' +
+        '<text x="275" y="271" font-family="Arial,sans-serif" font-size="9" fill="#0000ee" text-anchor="end">Forgot password?</text>' +
+        '<rect x="65" y="295" width="80" height="28" rx="4" fill="green"/>' +
+        '<text x="105" y="313" font-family="Arial,sans-serif" font-size="11" font-weight="bold" fill="yellow" text-anchor="middle">Cancel</text>' +
+        '<rect x="175" y="295" width="80" height="28" rx="4" fill="#e4e4e7" stroke="#a1a1aa" stroke-width="1"/>' +
+        '<text x="215" y="312" font-family="Arial,sans-serif" font-size="11" fill="#18181b" text-anchor="middle">Erase</text>' +
+      '</svg>';
+
+      // ---------- slide data ----------
+      var slides = [
+        {
+          type: 'title',
+          eyebrow: 'HCI · Visual System',
+          title: 'Human Visual Sensation, Perception &amp; Cognition',
+          subtitle: 'A practical, functional developer\'s guide to how the human visual system processes information — paired with clean front‑end code for interfaces designed around human limitations.'
+        },
+        {
+          type: 'cols2',
+          eyebrow: 'Roadmap',
+          title: 'From light to action',
+          subtitle: 'How visual stimulus flows through the human system and into interface design decisions.',
+          columns: [
+            { title: 'Part 1 — Sensation → Perception', chip: 'THEORY', points: [
+              'The physical experience of light entering the eye',
+              'Mental recognition of colors, patterns, and structure',
+              'How context and culture shape interpretation',
+              'Cognition: memory, reasoning, decision‑making'
+            ]},
+            { title: 'Part 2 — UI Design', chip: 'PRACTICE', points: [
+              'Brightness adaptation & visual fatigue',
+              'High‑contrast interactive elements',
+              'Consistent luminance across screens',
+              'Container grouping to guide attention'
+            ]}
+          ]
+        },
+        {
+          type: 'flow',
+          eyebrow: 'Part 1 · The pathway',
+          title: 'Sensation → Perception → Cognition',
+          subtitle: 'The complete journey from physical light to mental action.',
+          nodes: [
+            { label: 'Light Stimulus', sub: 'photons' },
+            { label: 'Sensation', sub: 'eye / retina' },
+            { label: 'Perception', sub: 'brain / interpretation' },
+            { label: 'Cognition', sub: 'memory & action' }
+          ],
+          analogy: { lead: 'a camera pipeline.', body: 'Sensation is the sensor capturing raw light. Perception is the image processor that recognizes a face. Cognition is deciding to smile or wave — the action that follows recognition.' }
+        },
+        {
+          type: 'table',
+          eyebrow: 'Part 1 · Core differences',
+          title: 'Sensation vs. Perception',
+          subtitle: 'Two sides of the same visual coin — one physical, one mental.',
+          headers: ['Feature', 'Visual Sensation', 'Visual Perception'],
+          rows: [
+            ['Definition', 'The physical experience of light entering the eyes. Light serves as the primary physical stimulus.', 'The mental ability to recognize colors, patterns, and structures from visual inputs.'],
+            ['Nature', 'A physiological process involving physical structures (cornea, pupil, lens, retina, rods, cones, optic nerve).', 'Involves physiological, mental, and psychological interpretations.'],
+            ['Consistency', 'Fundamentally the same for all sighted individuals with intact vision.', 'Highly subjective; varies based on experience, culture, expectations, and emotional state.'],
+            ['Behavior', 'Identical visual stimuli yield identical physical sensations across individuals.', 'The same sensory details can be interpreted in completely different ways depending on context.']
+          ],
+          analogy: { lead: 'a camera sensor vs. a photo editor.', body: 'Sensation is the raw capture — the sensor records the same light for everyone. Perception is the editing: one person sees a sunset, another sees a warning sky, even with the same raw image.' }
+        },
+        {
+          type: 'bullets',
+          eyebrow: 'Part 1 · What is cognition?',
+          title: 'Beyond sensation & perception',
+          subtitle: 'Cognition is the mental engine that drives action.',
+          items: [
+            '<b>Basic mental processes:</b> attention, awareness, and orientation',
+            '<b>Complex operations:</b> memory, language use, reasoning, problem‑solving, and decision‑making',
+            'Cognition transforms perceived information into <b>meaningful action</b>',
+            'In HCI, cognition determines how users <b>interpret</b> and <b>respond</b> to interface elements'
+          ],
+          analogy: { lead: 'a decision‑maker in a control room.', body: 'Sensation is the screen displaying data. Perception is the operator recognizing a pattern. Cognition is the operator deciding which button to press — and then pressing it.' }
+        },
+        {
+          type: 'bullets',
+          eyebrow: 'Part 1 · Basic elements',
+          title: 'How the eye works',
+          subtitle: 'The physical structures that enable visual sensation.',
+          items: [
+            '<b>Structure of the Eye:</b> slightly asymmetrical sphere, 20mm–25mm diameter, ~6.5cc volume — acts like a physical camera',
+            '<b>Image Formation:</b> lens refracts light onto the retina\'s photoreceptive cells (rods and cones)',
+            'Rods and cones convert light photons into <b>neural impulses</b> sent directly to the brain',
+            '<b>Brightness Adaptation:</b> the eye cannot transition instantly between extreme dark and light — it adjusts sensitivity over time'
+          ],
+          analogy: { lead: 'a camera with autofocus and auto‑ISO.', body: 'The pupil is the aperture, the lens focuses light, the retina is the sensor. Rods and cones are like high‑ISO vs. low‑ISO pixels — they trade detail for sensitivity depending on the light.' }
+        },
+        {
+          type: 'bullets',
+          eyebrow: 'Part 2 · UI design',
+          title: 'Brightness adaptation & interface design',
+          subtitle: 'Designing for the limits of human vision.',
+          items: [
+            '<b>High Contrast Elements:</b> interactive components (like submit buttons) must stand out sharply against their background',
+            '<b>Consistent Luminance:</b> abrupt, extreme changes in interface brightness cause momentary visual fatigue',
+            '<b>Clear Structure:</b> grouping input forms within styled container cards guides a user\'s attention',
+            'These principles are rooted in how the human eye <b>adapts</b> and <b>discriminates</b> brightness'
+          ],
+          analogy: { lead: 'lighting a stage.', body: 'You wouldn\'t shine a spotlight directly into the audience\'s eyes, then plunge them into darkness. Interfaces work the same way — smooth, consistent luminance keeps users comfortable and focused.' }
+        },
+        {
+          type: 'code',
+          eyebrow: 'Part 3 · Code',
+          title: 'Student Login Form — HTML/CSS',
+          filename: 'index.html',
+          lang: 'html',
+          code: '<!DOCTYPE html>\n<html>\n<head>\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n  <title>Student Login Form</title>\n  <style>\n    body {\n      font-family: Arial, sans-serif;\n      background-color: #c4ecf7;\n      margin: 0;\n      padding: 40px 20px;\n      display: flex;\n      justify-content: center;\n    }\n    form {\n      border: 3px solid #f1f1f1;\n      background: #ffffff;\n      border-radius: 8px;\n      max-width: 450px;\n      width: 100%;\n      box-shadow: 0 4px 6px rgba(0,0,0,0.1);\n    }\n    .container {\n      padding: 25px;\n      background: #ccc;\n      opacity: 0.95;\n      border-radius: 5px;\n    }\n    input[type=text], input[type=password] {\n      width: 100%;\n      padding: 12px 20px;\n      margin: 8px 0 20px 0;\n      border: 2px solid green;\n      border-radius: 4px;\n    }\n    button {\n      background: green;\n      width: 100%;\n      color: yellow;\n      padding: 15px;\n      border: none;\n      border-radius: 4px;\n      font-weight: bold;\n      cursor: pointer;\n    }\n    button:hover { opacity: 0.7; }\n    .cancelbtn {\n      width: auto;\n      padding: 10px 18px;\n      background: green;\n      color: yellow;\n    }\n    .erase {\n      width: auto;\n      padding: 10px 18px;\n      background: #e4e4e7;\n      border: 1px solid #a1a1aa;\n    }\n    .footer-options {\n      display: flex;\n      justify-content: space-between;\n      align-items: center;\n      font-size: 14px;\n      margin-top: 15px;\n    }\n  </style>\n</head>\n<body>\n  <form>\n    <center><h1>Student Login Form</h1></center>\n    <div class="container">\n      <label for="username">Username :</label>\n      <input type="text" placeholder="Enter Username" name="username" required>\n      <label for="password">Password :</label>\n      <input type="password" placeholder="Enter Password" name="password" required>\n      <button type="submit">Login</button>\n      <div class="footer-options">\n        <div><input type="checkbox" checked> <label>Remember me</label></div>\n        <a href="#">Forgot password?</a>\n      </div>\n      <hr>\n      <center>\n        <button type="button" class="cancelbtn">Cancel</button>\n        <input type="reset" class="erase" value="Erase">\n      </center>\n    </div>\n  </form>\n</body>\n</html>',
+          explain: {
+            title: 'Design notes',
+            body: 'This login form demonstrates high‑contrast interactive elements (green submit button with yellow text), a soft blue background that reduces eye strain, and a grouped container card that guides attention. The gray inner container provides visual structure, while the "Remember me" and action buttons maintain consistent luminance.'
+          },
+          analogy: { lead: 'a well‑lit control panel.', body: 'Every button and input is clearly visible, grouped logically, and doesn\'t force the user to hunt for what matters — just like a dashboard designed for quick, accurate decisions.' }
+        },
+        {
+          type: 'login',
+          eyebrow: 'Part 3 · UI structure',
+          title: 'Login form — visual layout',
+          subtitle: 'How the interface maps onto the human visual field using color hierarchy and container grouping.',
+          svg: loginSvg,
+          analogy: { lead: 'a blueprint for a control panel.', body: 'The SVG diagram shows the exact same layout as the HTML code — the gray container groups the inputs, the green button draws the eye, and the "Remember me" and action buttons sit in a logical secondary position.' }
+        },
+        {
+          type: 'recap',
+          eyebrow: 'Wrap‑up',
+          title: 'Three layers, one goal',
+          cards: [
+            { tag: 'Sensation', title: 'Light enters the eye', body: 'The physical capture of light through the cornea, pupil, lens, and retina. Identical for all sighted individuals with intact vision.' },
+            { tag: 'Perception', title: 'The brain interprets', body: 'Recognition of colors, patterns, and structure. Highly subjective — shaped by experience, culture, and expectations.' },
+            { tag: 'Cognition', title: 'Action follows', body: 'Memory, reasoning, problem‑solving, and decision‑making. Transforms perceived information into meaningful action.' }
+          ],
+          subtitle: 'Great interfaces respect all three layers: they are physically comfortable to look at (sensation), visually clear to understand (perception), and easy to act upon (cognition).'
+        },
+        // ----- QUIZ -----
+        {
+          type: 'quiz',
+          eyebrow: 'Check your understanding',
+          title: 'True / False & Identification',
+          subtitle: 'Questions 1–5: True or False. Questions 6–10: Fill in the blank or short answer.',
+          footer: 'Answers on the next page →',
+          questions: [
+            { text: 'Visual sensation is a subjective process that varies from person to person.' },
+            { text: 'The retina acts like the film in a camera, converting light into neural impulses.' },
+            { text: 'Perception is the physical experience of light entering the eyes.' },
+            { text: 'Cognition includes memory, reasoning, and decision‑making.' },
+            { text: 'Brightness adaptation allows the eye to transition instantly between dark and light environments.' },
+            { text: 'The three corner squares used for orientation in QR codes are called ______ patterns. (not from this module — but you know this!)' },
+            { text: 'The colored part of the eye that controls the size of the pupil is the ______.' },
+            { text: 'In the login form demo, the submit button uses ______ text on a green background.' },
+            { text: 'The process of converting light photons into neural impulses happens in the ______.' },
+            { text: 'What does HCI stand for?' }
+          ]
+        },
+        // ----- ANSWER KEY -----
+        {
+          type: 'answerkey',
+          eyebrow: 'Answer key',
+          title: 'Quiz answers',
+          subtitle: 'Check your work.',
+          answers: [
+            { correct: false, explanation: 'Sensation is physical and consistent; perception is subjective.' },
+            { correct: true, explanation: 'The retina converts light into neural signals.' },
+            { correct: false, explanation: 'That is sensation — perception is the mental interpretation.' },
+            { correct: true, explanation: 'Cognition covers memory, reasoning, problem‑solving, and decision‑making.' },
+            { correct: false, explanation: 'The eye adapts gradually — it cannot transition instantly.' },
+            { correct: null, explanation: '<b>finder</b> patterns.' },
+            { correct: null, explanation: '<b>iris</b> (or pupil — the iris controls the pupil).' },
+            { correct: null, explanation: '<b>yellow</b> (high contrast against green).' },
+            { correct: null, explanation: '<b>retina</b> (specifically the rods and cones).' },
+            { correct: null, explanation: '<b>Human‑Computer Interaction</b>.' }
+          ]
+        }
+      ];
+
+      // ---------- deck engine ----------
+      var deckEl = document.getElementById('deck');
+      var progressBar = document.getElementById('progress-bar');
+      var counterEl = document.getElementById('counter');
+      var current = 0;
+      var total = slides.length;
+      var slideEls = [];
+
+      slides.forEach(function(s, i) {
+        var el = document.createElement('section');
+        el.className = 'slide';
+        el.innerHTML = '<div class="slide-outer">' + renderers[s.type](s) + '</div>';
+        deckEl.appendChild(el);
+        slideEls.push(el);
+      });
+
+      function update() {
+        slideEls.forEach(function(el, i) {
+          el.classList.remove('pos-current','pos-next','pos-prev','pos-far');
+          if (i === current) el.classList.add('pos-current');
+          else if (i === current + 1) el.classList.add('pos-next');
+          else if (i === current - 1) el.classList.add('pos-prev');
+          else el.classList.add('pos-far');
+          if (i === current) el.scrollTop = 0;
+        });
+        progressBar.style.width = (((current + 1) / total) * 100) + '%';
+        counterEl.textContent = (current + 1) + ' / ' + total;
+      }
+
+      function goTo(idx) {
+        if (idx < 0 || idx > total - 1 || idx === current) return;
+        current = idx;
+        update();
+      }
+      function next() { if (current < total - 1) goTo(current + 1); }
+      function prev() { if (current > 0) goTo(current - 1); }
+
+      document.addEventListener('click', function(e) {
+        if (e.target.closest('a')) return;
+        next();
+      });
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
+        else if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+        else if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+        else if (e.key === 'End') { e.preventDefault(); goTo(total - 1); }
+      });
+
+      update();
+    })();
+  </script>
+</body>
+</html>

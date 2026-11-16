@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QR Codes &amp; Python Permutations — Module 05</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-deep: #080c16;
+      --bg-mid: #0e1526;
+      --glass-bg: rgba(255,255,255,0.055);
+      --glass-border: rgba(255,255,255,0.14);
+      --glass-border-strong: rgba(255,255,255,0.24);
+      --accent-cyan: #4fd8e8;
+      --accent-violet: #9d8cff;
+      --accent-amber: #f5c26b;
+      --text-primary: #f2f5fb;
+      --text-secondary: #a9b4c9;
+      --text-faint: #6b7690;
+      --code-bg: rgba(6,10,20,0.55);
+      --shadow-deep: 0 20px 60px -20px rgba(0,0,0,0.6);
+      --radius-lg: 22px;
+      --radius-md: 14px;
+      --dur: 400ms;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background:
+        radial-gradient(60% 50% at 12% 8%, rgba(157,140,255,0.20), transparent 60%),
+        radial-gradient(50% 45% at 88% 15%, rgba(79,216,232,0.16), transparent 60%),
+        radial-gradient(70% 60% at 50% 100%, rgba(79,216,232,0.08), transparent 60%),
+        linear-gradient(180deg, var(--bg-deep), var(--bg-mid) 60%, var(--bg-deep));
+      color: var(--text-primary);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      cursor: pointer;
+      -webkit-font-smoothing: antialiased;
+    }
+    ::selection { background: rgba(79,216,232,0.35); }
+
+    .ambient { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.5;
+    }
+    .blob1 { width: 420px; height: 420px; top: -120px; left: -100px; background: radial-gradient(circle, rgba(157,140,255,0.35), transparent 70%); }
+    .blob2 { width: 380px; height: 380px; bottom: -140px; right: -80px; background: radial-gradient(circle, rgba(79,216,232,0.30), transparent 70%); }
+
+    .finder {
+      position: fixed;
+      width: 46px;
+      height: 46px;
+      z-index: 5;
+      pointer-events: none;
+      opacity: 0.55;
+    }
+    .finder svg { width: 100%; height: 100%; display: block; }
+    .finder.tl { top: 22px; left: 22px; }
+    .finder.br { bottom: 22px; right: 22px; transform: rotate(180deg); }
+
+    #deck { position: relative; width: 100vw; height: 100vh; z-index: 1; }
+
+    .slide {
+      position: absolute; inset: 0;
+      overflow-y: auto; overflow-x: hidden;
+      transition: transform var(--dur) cubic-bezier(.22,.68,.35,1), opacity var(--dur) ease;
+      -webkit-overflow-scrolling: touch;
+    }
+    .slide.pos-current { transform: translateX(0) scale(1); opacity: 1; z-index: 3; }
+    .slide.pos-next { transform: translateX(4.5%) scale(0.97); opacity: 0; z-index: 2; }
+    .slide.pos-prev { transform: translateX(-4.5%) scale(0.97); opacity: 0; z-index: 2; }
+    .slide.pos-far { transform: translateX(0) scale(0.97); opacity: 0; z-index: 1; }
+
+    .slide-outer {
+      min-height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 88px 56px 96px;
+    }
+    .slide-content { width: 100%; max-width: 1120px; min-width: 0; }
+
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--accent-cyan);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      padding: 6px 14px 6px 10px;
+      border-radius: 100px;
+      margin-bottom: 26px;
+    }
+    .eyebrow::before {
+      content: "";
+      width: 8px; height: 8px; border-radius: 2px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+      display: inline-block;
+    }
+    h1.title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: clamp(30px, 4.4vw, 54px);
+      line-height: 1.08;
+      margin: 0 0 20px;
+      letter-spacing: -0.01em;
+      background: linear-gradient(180deg, #ffffff 30%, #c9d3ea 100%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    p.subtitle {
+      font-size: clamp(15px, 1.5vw, 18px);
+      color: var(--text-secondary);
+      max-width: 70ch;
+      line-height: 1.6;
+      margin: 0 0 34px;
+    }
+    .analogy {
+      margin-top: 28px;
+      padding: 16px 20px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(120deg, rgba(157,140,255,0.10), rgba(79,216,232,0.07));
+      border: 1px solid var(--glass-border);
+      font-size: 14.5px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+    .analogy b { color: var(--text-primary); font-weight: 600; }
+    .analogy .tag {
+      font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--accent-amber); display: block; margin-bottom: 6px;
+    }
+
+    .glass {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
+      box-shadow: var(--shadow-deep), inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    ul.bullets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+    ul.bullets li {
+      display: flex; gap: 14px; align-items: flex-start;
+      font-size: 16.5px; line-height: 1.55; color: var(--text-primary);
+      padding: 16px 20px; min-width: 0;
+    }
+    ul.bullets li .dot {
+      flex: 0 0 auto; width: 9px; height: 9px; border-radius: 50%; margin-top: 8px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+    }
+    ul.bullets li b { color: var(--accent-cyan); font-weight: 600; }
+
+    .cols2 { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 22px; }
+    .col-card { padding: 26px 26px 28px; min-width: 0; }
+    .col-card h3 {
+      font-family: 'Space Grotesk', sans-serif; font-size: 19px; margin: 0 0 14px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .col-card h3 .chip {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 3px 9px; border-radius: 6px;
+      background: rgba(255,255,255,0.08); color: var(--text-secondary); letter-spacing: 0.05em;
+    }
+    .col-card ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 11px; }
+    .col-card li { font-size: 14.5px; line-height: 1.55; color: var(--text-secondary); padding-left: 16px; position: relative; }
+    .col-card li::before { content: "—"; position: absolute; left: 0; color: var(--text-faint); }
+    .col-card.accent-a { border-color: rgba(245,194,107,0.35); }
+    .col-card.accent-b { border-color: rgba(79,216,232,0.35); }
+
+    .grid-cards { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; }
+    .grid-cards.cols2g { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .card { padding: 20px 20px 22px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+    .card .badge {
+      width: 30px; height: 30px; border-radius: 9px;
+      background: linear-gradient(135deg, rgba(79,216,232,0.25), rgba(157,140,255,0.25));
+      border: 1px solid var(--glass-border-strong);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent-cyan);
+    }
+    .card .badge.photo-badge {
+      width: 64px; height: 64px; border-radius: 12px;
+      background: #0e1526; padding: 0; overflow: hidden;
+    }
+    .card .badge.photo-badge img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .card .badge.photo-badge.model1-bg img { background: white; object-fit: contain; padding: 4px; }
+    .card .badge.photo-badge.iqr-bg img { object-fit: contain; background: transparent; transform: scale(1.25); }
+    .card h4 { margin: 2px 0 0; font-family: 'Space Grotesk', sans-serif; font-size: 16px; }
+    .card p { margin: 0; font-size: 13.3px; line-height: 1.55; color: var(--text-secondary); }
+    .card .capacity {
+      margin-top: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: var(--accent-amber); padding-top: 8px; border-top: 1px solid var(--glass-border);
+    }
+
+    .steps { display: flex; flex-direction: column; gap: 14px; }
+    .step { display: flex; gap: 18px; align-items: flex-start; padding: 18px 22px; min-width: 0; }
+    .step .num {
+      flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet)); color: #0b0f1a;
+    }
+    .step h4 { margin: 0 0 4px; font-size: 15.5px; font-family: 'Space Grotesk', sans-serif; }
+    .step p { margin: 0; font-size: 13.8px; color: var(--text-secondary); line-height: 1.5; }
+
+    .code-layout { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(0,0.9fr); gap: 22px; align-items: stretch; }
+    .code-panel { padding: 0; overflow: hidden; min-width: 0; }
+    .code-head {
+      display: flex; align-items: center; gap: 8px; padding: 12px 18px;
+      border-bottom: 1px solid var(--glass-border);
+      font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--text-faint);
+    }
+    .code-head .dots { display: flex; gap: 6px; margin-right: 6px; }
+    .code-head .dots span { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+    .code-head .dots span:nth-child(1) { background: #ff5f57; }
+    .code-head .dots span:nth-child(2) { background: #febc2e; }
+    .code-head .dots span:nth-child(3) { background: #28c840; }
+    pre.code {
+      margin: 0; padding: 20px; background: var(--code-bg);
+      font-family: 'JetBrains Mono', monospace; font-size: 13.3px; line-height: 1.65;
+      color: #dbe4f3; overflow-x: auto; min-width: 0;
+    }
+    .tok-comment { color: #6b7690; font-style: italic; }
+    .tok-string { color: #a8e6b8; }
+    .tok-keyword { color: #9d8cff; font-weight: 600; }
+    .tok-builtin { color: #4fd8e8; }
+    .tok-number { color: #f5c26b; }
+    .explain { padding: 24px 24px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+    .explain h4 { margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 16px; }
+    .explain p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--text-secondary); }
+    .output-box {
+      font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--accent-cyan);
+      background: rgba(79,216,232,0.07); border: 1px solid rgba(79,216,232,0.25);
+      border-radius: 10px; padding: 10px 14px; white-space: pre-wrap; word-break: break-word;
+    }
+
+    .qr-layout { display: grid; grid-template-columns: minmax(0,0.85fr) minmax(0,1.15fr); gap: 32px; align-items: center; }
+    .qr-visual { display: flex; align-items: center; justify-content: center; padding: 28px; }
+    .qr-visual svg { width: min(280px, 90%); height: auto; filter: drop-shadow(0 20px 40px rgba(0,0,0,0.5)); }
+    .callouts { display: flex; flex-direction: column; gap: 12px; }
+    .callout { display: flex; gap: 12px; padding: 14px 18px; min-width: 0; }
+    .callout .mark {
+      flex: 0 0 auto; width: 8px; border-radius: 4px;
+      background: linear-gradient(180deg, var(--accent-cyan), var(--accent-violet));
+    }
+    .callout h5 { margin: 0 0 3px; font-size: 14.5px; font-family: 'Space Grotesk', sans-serif; }
+    .callout p { margin: 0; font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+
+    .statement { display: flex; flex-direction: column; align-items: flex-start; }
+    .statement .big {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+      font-size: clamp(26px, 3.6vw, 44px); line-height: 1.2; max-width: 18ch;
+      background: linear-gradient(120deg, #fff, var(--accent-cyan) 60%, var(--accent-violet));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+
+    .recap-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 18px; }
+    .recap-card { padding: 26px; min-width: 0; }
+    .recap-card .tag {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--accent-violet); margin-bottom: 10px; display: block;
+    }
+    .recap-card h4 { margin: 0 0 10px; font-size: 18px; font-family: 'Space Grotesk', sans-serif; }
+    .recap-card p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--text-secondary); }
+
+    .quiz-item {
+      padding: 14px 22px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .quiz-item .qnum {
+      flex: 0 0 28px;
+      font-weight: 600;
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .quiz-item .qtext { color: var(--text-primary); }
+    .quiz-item .qtext code {
+      background: rgba(255,255,255,0.08);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--accent-amber);
+    }
+
+    /* answer key two-column layout */
+    .answer-grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px 40px;
+      padding: 8px 0;
+    }
+    .answer-col {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .answer-col .ans-row {
+      display: flex;
+      gap: 10px;
+      font-size: 14px;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      align-items: baseline;
+    }
+    .answer-col .ans-num {
+      color: var(--text-faint);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      width: 28px;
+      flex-shrink: 0;
+    }
+    .answer-col .ans-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      font-size: 13px;
+      min-width: 20px;
+      flex-shrink: 0;
+    }
+    .answer-col .ans-val.true { color: var(--accent-cyan); }
+    .answer-col .ans-val.false { color: #ff7b72; }
+    .answer-col .ans-val.neutral { color: var(--accent-amber); }
+    .answer-col .ans-explain {
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    #progress-wrap {
+      position: fixed; top: 0; left: 0; width: 100%; height: 3px; z-index: 50;
+      background: rgba(255,255,255,0.06);
+    }
+    #progress-bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--accent-violet), var(--accent-cyan));
+      box-shadow: 0 0 14px 1px rgba(79,216,232,0.6);
+      transition: width var(--dur) ease;
+    }
+    #counter {
+      position: fixed; bottom: 22px; right: 28px; z-index: 50;
+      font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--text-secondary);
+      background: var(--glass-bg); border: 1px solid var(--glass-border);
+      padding: 7px 14px; border-radius: 100px; backdrop-filter: blur(14px);
+      pointer-events: none;
+    }
+    #hint {
+      position: fixed; bottom: 22px; left: 28px; z-index: 50;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-faint);
+      letter-spacing: 0.04em; pointer-events: none;
+    }
+
+    @media (max-width: 860px) {
+      .cols2, .code-layout, .qr-layout, .recap-grid, .answer-grid-2col { grid-template-columns: minmax(0,1fr); }
+      .grid-cards { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .grid-cards.cols2g { grid-template-columns: minmax(0,1fr); }
+      .slide-outer { padding: 70px 22px 90px; }
+      #hint { display: none; }
+    }
+    @media (max-width: 520px) {
+      .grid-cards { grid-template-columns: minmax(0,1fr); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .slide { transition: opacity 180ms linear !important; transform: none !important; }
+      .slide.pos-next, .slide.pos-prev, .slide.pos-far { transform: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ambient">
+    <div class="blob blob1"></div>
+    <div class="blob blob2"></div>
+  </div>
+
+  <div class="finder tl">
+    <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="1" width="38" height="38" rx="7" fill="none" stroke="#4fd8e8" stroke-width="2.4"/>
+      <rect x="12" y="12" width="16" height="16" rx="3" fill="#4fd8e8"/>
+    </svg>
+  </div>
+  <div class="finder br">
+    <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="1" width="38" height="38" rx="7" fill="none" stroke="#9d8cff" stroke-width="2.4"/>
+      <rect x="12" y="12" width="16" height="16" rx="3" fill="#9d8cff"/>
+    </svg>
+  </div>
+
+  <div id="progress-wrap"><div id="progress-bar"></div></div>
+  <div id="counter">1 / 1</div>
+  <div id="hint">click or → to advance · ← back</div>
+
+  <div id="deck"></div>
+
+  <script>
+    (function() {
+
+      // ---------- highlighter ----------
+      function escapeHtml(str) {
+        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      }
+      function highlightPython(code) {
+        var escaped = escapeHtml(code);
+        var tokenRe = /(?<comment>#[^\n]*)|(?<string>'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")|(?<keyword>\b(?:import|for|in|def|return|as|from)\b)|(?<builtin>\b(?:itertools|permutations|print|join|range|list)\b)|(?<number>\b\d+(?:\.\d+)?\b)/g;
+        return escaped.replace(tokenRe, function(match, comment, string, keyword, builtin, number, offset, whole, groups) {
+          var g = groups || {comment:comment, string:string, keyword:keyword, builtin:builtin, number:number};
+          if (g.comment) return '<span class="tok-comment">' + match + '</span>';
+          if (g.string)  return '<span class="tok-string">' + match + '</span>';
+          if (g.keyword) return '<span class="tok-keyword">' + match + '</span>';
+          if (g.builtin) return '<span class="tok-builtin">' + match + '</span>';
+          if (g.number)  return '<span class="tok-number">' + match + '</span>';
+          return match;
+        });
+      }
+
+      // ---------- helpers ----------
+      function eyebrow(text) { return '<div class="eyebrow">' + text + '</div>'; }
+      function renderAnalogy(a) {
+        return '<div class="analogy"><span class="tag">Think of it like</span><b>' + a.lead + '</b> ' + a.body + '</div>';
+      }
+      function bulletsList(items) {
+        var html = '<ul class="bullets">';
+        items.forEach(function(it) {
+          html += '<li class="glass"><span class="dot"></span><span class="body">' + it + '</span></li>';
+        });
+        html += '</ul>';
+        return html;
+      }
+
+      // ---------- renderers ----------
+      var renderers = {
+        title: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            '<p class="subtitle">' + s.subtitle + '</p>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        bullets: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            (s.subtitle ? '<p class="subtitle">' + s.subtitle + '</p>' : '') +
+            bulletsList(s.items) +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        cols2: function(s) {
+          var c = s.columns;
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            (s.subtitle ? '<p class="subtitle">' + s.subtitle + '</p>' : '') +
+            '<div class="cols2">' +
+              c.map(function(col, i) {
+                return '<div class="glass col-card ' + (i===0?'accent-a':'accent-b') + '">' +
+                  '<h3>' + col.title + ' <span class="chip">' + col.chip + '</span></h3>' +
+                  '<ul>' + col.points.map(function(p){ return '<li>' + p + '</li>'; }).join('') + '</ul>' +
+                '</div>';
+              }).join('') +
+            '</div>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        cards: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            (s.subtitle ? '<p class="subtitle">' + s.subtitle + '</p>' : '') +
+            '<div class="grid-cards' + (s.cols2 ? ' cols2g' : '') + '">' +
+              s.cards.map(function(c) {
+                var cls = 'photo-badge';
+                if (c.model1Bg) cls += ' model1-bg';
+                if (c.iqrBg) cls += ' iqr-bg';
+                return '<div class="glass card">' +
+                  (c.img ? '<div class="badge ' + cls + '"><img src="' + c.img + '" alt="' + c.title + '" loading="lazy"></div>' : '<div class="badge">#</div>') +
+                  '<h4>' + c.title + '</h4>' +
+                  '<p>' + c.body + '</p>' +
+                  (c.capacity ? '<div class="capacity">' + c.capacity + '</div>' : '') +
+                '</div>';
+              }).join('') +
+            '</div>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        steps: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            (s.subtitle ? '<p class="subtitle">' + s.subtitle + '</p>' : '') +
+            '<div class="steps">' +
+              s.steps.map(function(st, i) {
+                return '<div class="glass step"><div class="num">' + (i+1) + '</div>' +
+                  '<div><h4>' + st.title + '</h4><p>' + st.body + '</p></div></div>';
+              }).join('') +
+            '</div>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        code: function(s) {
+          var highlighted = highlightPython(s.code);
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            '<div class="code-layout">' +
+              '<div class="glass code-panel">' +
+                '<div class="code-head"><span class="dots"><span></span><span></span><span></span></span>' + s.filename + '</div>' +
+                '<pre class="code"><code>' + highlighted + '</code></pre>' +
+              '</div>' +
+              '<div class="glass explain">' +
+                '<h4>' + s.explain.title + '</h4>' +
+                '<p>' + s.explain.body + '</p>' +
+                (s.explain.output ? '<div class="output-box">' + s.explain.output + '</div>' : '') +
+              '</div>' +
+            '</div>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        qr: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            '<div class="qr-layout">' +
+              '<div class="glass qr-visual">' + s.svg + '</div>' +
+              '<div class="callouts">' +
+                s.callouts.map(function(c) {
+                  return '<div class="glass callout"><div class="mark"></div><div><h5>' + c.title + '</h5><p>' + c.body + '</p></div></div>';
+                }).join('') +
+              '</div>' +
+            '</div>' +
+            (s.analogy ? renderAnalogy(s.analogy) : '') +
+          '</div>';
+        },
+        statement: function(s) {
+          return '<div class="slide-content statement">' +
+            eyebrow(s.eyebrow) +
+            '<div class="big">' + s.big + '</div>' +
+            (s.subtitle ? '<p class="subtitle" style="margin-top:22px;">' + s.subtitle + '</p>' : '') +
+          '</div>';
+        },
+        recap: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            '<div class="recap-grid">' +
+              s.cards.map(function(c) {
+                return '<div class="glass recap-card"><span class="tag">' + c.tag + '</span><h4>' + c.title + '</h4><p>' + c.body + '</p></div>';
+              }).join('') +
+            '</div>' +
+            (s.subtitle ? '<p class="subtitle" style="margin-top:26px;">' + s.subtitle + '</p>' : '') +
+          '</div>';
+        },
+        quiz: function(s) {
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            '<p class="subtitle">' + s.subtitle + '</p>' +
+            '<div>' +
+              s.questions.map(function(q, i) {
+                return '<div class="glass quiz-item"><span class="qnum">' + (i+1) + '.</span><span class="qtext">' + q.text + '</span></div>';
+              }).join('') +
+            '</div>' +
+            (s.footer ? '<p class="subtitle" style="margin-top:24px;font-size:14px;color:var(--text-faint);">' + s.footer + '</p>' : '') +
+          '</div>';
+        },
+        answerkey: function(s) {
+          // split answers into two columns: 1-5 left, 6-10 right
+          var mid = Math.ceil(s.answers.length / 2);
+          var left = s.answers.slice(0, mid);
+          var right = s.answers.slice(mid);
+          return '<div class="slide-content">' +
+            eyebrow(s.eyebrow) +
+            '<h1 class="title">' + s.title + '</h1>' +
+            '<div class="glass" style="padding:28px 32px;">' +
+              '<div class="answer-grid-2col">' +
+                '<div class="answer-col">' +
+                  left.map(function(a, i) {
+                    var label = '', cls = 'neutral';
+                    if (a.correct === true) { label = 'T'; cls = 'true'; }
+                    else if (a.correct === false) { label = 'F'; cls = 'false'; }
+                    else { label = '➔'; cls = 'neutral'; }
+                    return '<div class="ans-row"><span class="ans-num">' + (i+1) + '.</span><span class="ans-val ' + cls + '">' + label + '</span><span class="ans-explain">' + a.explanation + '</span></div>';
+                  }).join('') +
+                '</div>' +
+                '<div class="answer-col">' +
+                  right.map(function(a, i) {
+                    var label = '', cls = 'neutral';
+                    if (a.correct === true) { label = 'T'; cls = 'true'; }
+                    else if (a.correct === false) { label = 'F'; cls = 'false'; }
+                    else { label = '➔'; cls = 'neutral'; }
+                    var num = i + mid + 1;
+                    return '<div class="ans-row"><span class="ans-num">' + num + '.</span><span class="ans-val ' + cls + '">' + label + '</span><span class="ans-explain">' + a.explanation + '</span></div>';
+                  }).join('') +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+            (s.subtitle ? '<p class="subtitle" style="margin-top:26px;">' + s.subtitle + '</p>' : '') +
+          '</div>';
+        }
+      };
+
+      // ---------- SVG asset ----------
+      var qrSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">' +
+        '<rect width="200" height="200" rx="20" fill="#f4f4f5"/>' +
+        '<rect x="25" y="25" width="40" height="40" rx="6" fill="#18181b" stroke="#ffffff" stroke-width="4"/>' +
+        '<rect x="35" y="35" width="20" height="20" rx="2" fill="#18181b"/>' +
+        '<rect x="135" y="25" width="40" height="40" rx="6" fill="#18181b" stroke="#ffffff" stroke-width="4"/>' +
+        '<rect x="145" y="35" width="20" height="20" rx="2" fill="#18181b"/>' +
+        '<rect x="25" y="135" width="40" height="40" rx="6" fill="#18181b" stroke="#ffffff" stroke-width="4"/>' +
+        '<rect x="35" y="145" width="20" height="20" rx="2" fill="#18181b"/>' +
+        '<rect x="80" y="25" width="10" height="10" rx="2" fill="#18181b"/>' +
+        '<rect x="100" y="35" width="10" height="10" rx="2" fill="#18181b"/>' +
+        '<rect x="80" y="55" width="10" height="10" rx="2" fill="#18181b"/>' +
+        '<rect x="110" y="50" width="10" height="10" rx="2" fill="#18181b"/>' +
+        '<rect x="25" y="80" width="10" height="10" rx="2" fill="#18181b"/>' +
+        '<rect x="50" y="90" width="10" height="10" rx="2" fill="#18181b"/>' +
+        '<rect x="140" y="80" width="10" height="10" rx="2" fill="#18181b"/>' +
+        '<rect x="160" y="100" width="10" height="10" rx="2" fill="#18181b"/>' +
+        '<rect x="80" y="140" width="10" height="10" rx="2" fill="#18181b"/>' +
+        '<rect x="105" y="155" width="10" height="10" rx="2" fill="#18181b"/>' +
+        '<rect x="75" y="75" width="50" height="50" rx="8" fill="#ffffff" stroke="#e4e4e7" stroke-width="2"/>' +
+        '<circle cx="100" cy="100" r="12" fill="#3f3f46"/>' +
+        '<path d="M95 105 L100 95 L105 105 Z" fill="#ffffff"/>' +
+      '</svg>';
+
+      // ---------- slide data ----------
+      var slides = [
+        {
+          type: 'title',
+          eyebrow: 'HCI · Module 05',
+          title: 'QR Codes &amp; Python Permutations',
+          subtitle: 'From two‑dimensional matrix barcodes to combinatorial code — two very different systems that both live or die by how their pieces are arranged.'
+        },
+        {
+          type: 'cols2',
+          eyebrow: 'Roadmap',
+          title: 'One idea, two halves',
+          subtitle: 'Everything today comes back to arrangement — how discrete units (grid modules, list items) are laid out changes what they mean or produce.',
+          columns: [
+            { title: 'Part 1 — QR Codes', chip: 'ENCODING', points: [
+              'A 2D grid encodes data by which modules are filled',
+              'History from barcodes to Denso Wave\'s 1994 invention',
+              'Six standard variants for different use cases',
+              'How to generate and read one yourself'
+            ]},
+            { title: 'Part 2 — Permutations', chip: 'PYTHON', points: [
+              'Every possible ordering of a fixed set of items',
+              'The itertools library generates them lazily',
+              'Works the same on numbers or letters',
+              'Order changes identity, even with identical items'
+            ]}
+          ]
+        },
+        {
+          type: 'cols2',
+          eyebrow: 'Part 1 · Origins',
+          title: 'From stripes to grids',
+          columns: [
+            { title: 'Traditional Barcode', chip: '1D · 1960s', points: [
+              'First put to practical use by U.S. railroads',
+              'Parallel lines of varying widths, read left to right',
+              'Read using optical scanners',
+              'Stores a small amount of data — usually just an ID number'
+            ]},
+            { title: 'QR Code', chip: '2D · 1994', points: [
+              'Invented by Denso Wave, a Toyota subsidiary',
+              'Built to track vehicles and parts during manufacturing',
+              'Approved as an ISO international standard in 2000',
+              'Data stored as a grid of modules — holds Kanji, Kana, and alphanumeric text'
+            ]}
+          ],
+          analogy: { lead: 'a sentence vs. a paragraph.', body: 'A barcode is one line of text — you can only make it longer by stretching it sideways. A QR code writes in both directions at once, like filling a page instead of a single line, so the same size tag can hold vastly more.' }
+        },
+        {
+          type: 'cards',
+          eyebrow: 'Part 1 · Variants',
+          title: 'Not all QR codes are the same',
+          subtitle: 'Same underlying grid idea, six different jobs.',
+          cards: [
+            { title: 'Micro QR Code', body: 'A highly compact version designed for small spaces.', capacity: '11×11 modules · up to 21 chars', img: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Micro_QR_Example.svg' },
+            { title: 'Model 1 QR Code', body: 'The original prototype of QR codes.', capacity: '1–14 versions · ~707 chars max', img: 'https://upload.wikimedia.org/wikipedia/commons/c/c6/QR_Code_Model_1_Example.svg', model1Bg: true },
+            { title: 'Model 2 QR Code', body: 'Improved version with an alignment pattern for better position adjustment.', capacity: '1–40 versions · 4,296 chars max', img: 'https://i.etsystatic.com/22942637/r/il/dc030e/6806004005/il_1080xN.6806004005_sqqr.jpg' },
+            { title: 'IQR Code', body: 'Flexible formats generated in squares or rectangles for extremely tight spaces.', capacity: '61 available formats', img: 'https://upload.wikimedia.org/wikipedia/commons/7/75/IQRCode.svg', iqrBg: true },
+            { title: 'SQRC', body: 'Secret‑function code with a restricted reading area for private info.', capacity: 'Public + password‑locked data', img: 'https://satoasiapacific.com/malaysia/wp-content/uploads/sites/21/2019/08/security_qr_thumb-1.png' },
+            { title: 'Frame QR', body: 'Features a customizable frame area in the center for graphics or photos.', capacity: 'Logo‑safe, still scannable', img: 'https://images.template.net/513211/QR-Code-Viewing-Menu-Template-edit-online.png' }
+          ],
+          analogy: { lead: 'a set of camera lenses.', body: 'Same basic function — capturing a scene — but a different lens for a different job: a macro lens (Micro QR) for tight spaces, a wide‑capacity lens (Model 2) when you need to store much more.' }
+        },
+        {
+          type: 'steps',
+          eyebrow: 'Part 1 · Practice',
+          title: 'Building your own QR code',
+          steps: [
+            { title: 'Open a generator', body: 'Navigate to a generator such as qr-code-generator.com.' },
+            { title: 'Enter your destination', body: 'Type in the URL (or text) you want the code to point to.' },
+            { title: 'Customize the look', body: 'Adjust the frame, module shape, and color to match your brand.' },
+            { title: 'Download the asset', body: 'Click Download and save the image file.' },
+            { title: 'Deploy it', body: 'Add the QR code to your print collateral or digital application.' }
+          ],
+          analogy: { lead: 'following a recipe.', body: 'This one really is a strict sequence — skip the "enter destination" step and you\'ll happily print a code that scans to nothing, the same way skipping "preheat the oven" ruins the rest of the bake.' }
+        },
+        {
+          type: 'qr',
+          eyebrow: 'Part 1 · Anatomy',
+          title: 'Anatomy of a Frame QR code',
+          svg: qrSvg,
+          callouts: [
+            { title: 'Finder patterns (corners)', body: 'The three bold squares tell a scanner which way is up and where the grid begins — orientation before decoding.' },
+            { title: 'Data modules', body: 'The scattered small squares are the actual encoded bits — position, not color, carries the information.' },
+            { title: 'Frame / logo area', body: 'A deliberately reserved center zone where a brand mark can sit without breaking readability.' }
+          ],
+          analogy: { lead: 'corner flags on a map.', body: 'Finder patterns work like the corner markers on a printed map — your phone\'s camera spots them first to figure out the grid\'s orientation, before it ever tries to read the data inside.' }
+        },
+        {
+          type: 'statement',
+          eyebrow: 'Part 2 · Python',
+          big: 'Now, permutations: arranging a list every possible way.',
+          subtitle: 'Same tool the QR spec relies on conceptually — the position of things carries meaning — now applied to a Python list.'
+        },
+        {
+          type: 'bullets',
+          eyebrow: 'Part 2 · Concept',
+          title: 'A permutation is order made visible',
+          items: [
+            '<b>Definition:</b> an arrangement of a set where the order of elements matters',
+            'The same 4 items can be arranged in <b>24 distinct ways</b> (4 factorial)',
+            'Python\'s <b>itertools</b> library generates these efficiently as an iterator, not a stored list',
+            'That efficiency matters once your set gets larger — the count of arrangements grows very fast'
+          ],
+          analogy: { lead: 'a race finish line, or a padlock.', body: 'Four runners can cross the line in 24 different orders even though it\'s always the same four people — change the order, get a different result. A 3‑digit padlock works the same way: the digits 4‑1‑7 don\'t open the lock that 7‑1‑4 does, even though both use identical digits.' }
+        },
+        {
+          type: 'code',
+          eyebrow: 'Part 2 · Code',
+          title: 'Permuting numbers with itertools',
+          filename: 'permute_numbers.py',
+          code: 'import itertools\n\n# Define a set of numbers\nval = [1, 2, 3, 4]\n\n# Generate all unique permutations\nperm_set = itertools.permutations(val)\n\n# Print the permutations\nfor i in perm_set:\n    print(i)',
+          explain: {
+            title: 'What happens here',
+            body: 'itertools.permutations(val) returns an iterator — it computes each ordering only when asked for it, rather than building all 24 tuples in memory up front. The for loop pulls them out one at a time.',
+            output: '(1, 2, 3, 4)\n(1, 2, 4, 3)\n(1, 3, 2, 4)\n...\n(4, 3, 1, 2)\n→ 24 total permutations (4!)'
+          },
+          analogy: { lead: 'a vending machine, not a printed catalog.', body: 'Instead of printing all 24 arrangements onto paper before handing them to you, itertools dispenses one arrangement at a time on request — far less memory used, especially once the list gets long.' }
+        },
+        {
+          type: 'code',
+          eyebrow: 'Part 2 · Code',
+          title: 'Permuting letters in a name',
+          filename: 'permute_name.py',
+          code: 'import itertools\n\n# Replace with your target string\nname = "someone"\n\n# Generate and print letter permutations\nfor x in itertools.permutations(name):\n    print("".join(x))',
+          explain: {
+            title: 'Strings work the same way',
+            body: 'A string is just an ordered set of characters, so permutations() treats "someone" exactly like the number list — it walks through every possible reordering of its seven letters and joins each tuple back into text.',
+            output: 'someone\nsomeneo\nsomeoen\n...\n→ 7! = 5040 arrangements'
+          },
+          analogy: { lead: 'shaking a bag of Scrabble tiles.', body: 'Imagine tiles spelling S‑O‑M‑E‑O‑N‑E shaken and laid out in every possible order. Almost none of the 5040 results will be real words — the computer doesn\'t know or care, it just exhausts every arrangement.' }
+        },
+        {
+          type: 'recap',
+          eyebrow: 'Wrap‑up',
+          title: 'Two lessons in arrangement',
+          cards: [
+            { tag: 'Part 1', title: 'QR codes encode by position', body: 'A QR code doesn\'t store data in a line — it stores it across a 2D grid, where finder patterns establish orientation and the position of each module carries the actual bits.' },
+            { tag: 'Part 2', title: 'Permutations exhaust every order', body: 'itertools.permutations() walks through every possible reordering of a set — the elements never change, but each new order is treated as a genuinely distinct result.' }
+          ],
+          subtitle: 'Same underlying theme: arrangement is not decoration — for a QR code it\'s the message itself, and for a permutation it\'s the entire point.'
+        },
+        // ----- QUIZ (no answers shown) -----
+        {
+          type: 'quiz',
+          eyebrow: 'Check your understanding',
+          title: 'True / False & Identification',
+          subtitle: 'Questions 1–5: True or False. Questions 6–10: Fill in the blank or write the output.',
+          footer: 'Answers on the next page →',
+          questions: [
+            { text: 'QR codes store data in a 1D line of modules.' },
+            { text: 'The three finder patterns help the scanner determine orientation.' },
+            { text: 'Model 2 QR codes can hold more data than Model 1.' },
+            { text: 'itertools.permutations() generates all permutations eagerly (all at once).' },
+            { text: 'A list of 4 unique items has 24 permutations.' },
+            { text: 'The three corner squares used for orientation are called ______ patterns.' },
+            { text: 'How many unique tuples are in <code>list(itertools.permutations([1, 1, 2]))</code>?' },
+            { text: 'What is the length of <code>list(itertools.permutations("ab"))</code>?' },
+            { text: 'What is the first tuple returned by <code>itertools.permutations([1, 2, 3])</code>?' },
+            { text: 'How many permutations does a list with one element have?' }
+          ]
+        },
+        // ----- ANSWER KEY (two columns: 1-5 left, 6-10 right) -----
+        {
+          type: 'answerkey',
+          eyebrow: 'Answer key',
+          title: 'Quiz answers',
+          subtitle: 'Check your work.',
+          answers: [
+            { correct: false, explanation: 'QR codes are 2D grids, not 1D lines.' },
+            { correct: true, explanation: 'The three corner squares are the finder pattern.' },
+            { correct: true, explanation: 'Model 2 has up to 40 versions and higher capacity.' },
+            { correct: false, explanation: 'itertools.permutations() returns a lazy iterator.' },
+            { correct: true, explanation: '4! = 24.' },
+            { correct: null, explanation: '<b>finder</b> patterns.' },
+            { correct: null, explanation: '<b>3</b> (since 3!/2! = 3).' },
+            { correct: null, explanation: '<b>2</b> (2! = 2).' },
+            { correct: null, explanation: '<b>(1, 2, 3)</b> (lexicographically first).' },
+            { correct: null, explanation: '<b>1</b> (only one arrangement).' }
+          ]
+        }
+      ];
+
+      // ---------- deck engine ----------
+      var deckEl = document.getElementById('deck');
+      var progressBar = document.getElementById('progress-bar');
+      var counterEl = document.getElementById('counter');
+      var current = 0;
+      var total = slides.length;
+      var slideEls = [];
+
+      slides.forEach(function(s, i) {
+        var el = document.createElement('section');
+        el.className = 'slide';
+        el.innerHTML = '<div class="slide-outer">' + renderers[s.type](s) + '</div>';
+        deckEl.appendChild(el);
+        slideEls.push(el);
+      });
+
+      function update() {
+        slideEls.forEach(function(el, i) {
+          el.classList.remove('pos-current','pos-next','pos-prev','pos-far');
+          if (i === current) el.classList.add('pos-current');
+          else if (i === current + 1) el.classList.add('pos-next');
+          else if (i === current - 1) el.classList.add('pos-prev');
+          else el.classList.add('pos-far');
+          if (i === current) el.scrollTop = 0;
+        });
+        progressBar.style.width = (((current + 1) / total) * 100) + '%';
+        counterEl.textContent = (current + 1) + ' / ' + total;
+      }
+
+      function goTo(idx) {
+        if (idx < 0 || idx > total - 1 || idx === current) return;
+        current = idx;
+        update();
+      }
+      function next() { if (current < total - 1) goTo(current + 1); }
+      function prev() { if (current > 0) goTo(current - 1); }
+
+      document.addEventListener('click', function(e) {
+        if (e.target.closest('a')) return;
+        next();
+      });
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
+        else if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+        else if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+        else if (e.key === 'End') { e.preventDefault(); goTo(total - 1); }
+      });
+
+      update();
+    })();
+  </script>
+</body>
+</html>

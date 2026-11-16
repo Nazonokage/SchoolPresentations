@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Module 20 &mdash; How to Use the gTTS Module in Python</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:#090c18;color:#e8edf5}
+#deck{position:relative;width:100vw;height:100vh;overflow:hidden}
+.sw{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:28px 48px 50px;opacity:0;transform:translateX(40px);transition:opacity .35s ease,transform .35s ease;pointer-events:none;overflow-y:auto}
+.sw.active{opacity:1;transform:translateX(0);pointer-events:auto}
+.sw.xl{opacity:0;transform:translateX(-40px)}
+.sw.xr{opacity:0;transform:translateX(40px)}
+@media(prefers-reduced-motion:reduce){.sw{transition:none!important;transform:none!important}.sw.xl,.sw.xr{opacity:0;transform:none!important}}
+.slide{width:100%;max-width:1260px;max-height:100%;background:#131726;border-radius:22px;padding:32px 42px 36px;box-shadow:0 24px 72px rgba(0,0,0,.78);display:flex;flex-direction:column;gap:13px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#232d47 transparent}
+.slide::-webkit-scrollbar{width:5px}.slide::-webkit-scrollbar-thumb{background:#232d47;border-radius:4px}
+.eyebrow{font-size:13px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#4a6888;border-bottom:2px solid #1b2236;padding-bottom:7px}
+.stitle{font-size:clamp(26px,3.3vw,44px);font-weight:900;line-height:1.12;color:#fff;letter-spacing:-.5px}
+.ssub{font-size:16px;color:#7592b2;line-height:1.6}
+.ab{color:#5cb8ff}.ag{color:#4ee3a0}.ao{color:#ffaa5e}.ap{color:#b98cfa}.ar{color:#f87171}.ac{color:#22d3ee}.ay{color:#fbbf24}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px 22px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 18px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 14px}
+.card{background:#1b2236;border-radius:14px;padding:16px 19px;border-left:4px solid #5cb8ff;min-width:0}
+.card.g{border-left-color:#4ee3a0}.card.o{border-left-color:#ffaa5e}.card.p{border-left-color:#b98cfa}.card.r{border-left-color:#f87171}.card.c{border-left-color:#22d3ee}.card.y{border-left-color:#fbbf24}
+.ct{font-size:14px;font-weight:700;color:#96b0ca;letter-spacing:.3px;margin-bottom:6px}
+.cb{font-size:15px;line-height:1.65;color:#c6d4e4}
+.cb strong{color:#eef2fa}
+.cb ul{list-style:none;padding:0;margin:6px 0 0}
+.cb ul li{padding:3px 0 3px 20px;position:relative;font-size:15px;line-height:1.5}
+.cb ul li::before{content:"▸";position:absolute;left:0;color:#5cb8ff;font-weight:700}
+.pre{background:#0c1020;border-radius:13px;border:1px solid #1b2236;overflow:hidden}
+.prebar{display:flex;align-items:center;justify-content:space-between;padding:8px 15px;background:#151b2c;border-bottom:1px solid #1b2236}
+.prelang{font-size:13px;font-weight:700;color:#4a6888;letter-spacing:.9px;text-transform:uppercase}
+.copybtn{font-size:13px;font-weight:700;background:#1b2236;color:#7592b2;border:1px solid #252f48;border-radius:8px;padding:4px 13px;cursor:pointer;transition:all .2s}
+.copybtn:hover{background:#5cb8ff;color:#0c1020;border-color:#5cb8ff}
+.copybtn.ok{background:#4ee3a0;color:#0c1020;border-color:#4ee3a0}
+pre{padding:16px 20px;overflow-x:auto;overflow-y:auto;max-height:340px;line-height:1.8;margin:0;scrollbar-width:thin;scrollbar-color:#232d47 transparent;font-size:14px;font-family:Consolas,'Courier New',monospace}
+pre::-webkit-scrollbar{width:5px;height:5px}
+pre::-webkit-scrollbar-thumb{background:#232d47;border-radius:4px}
+.kw{color:#c084fc}.fn{color:#5cb8ff}.st{color:#4ee3a0}.cm{color:#4a6888;font-style:italic}.bi{color:#fbbf24}
+.tw{overflow-x:auto;border-radius:12px;border:1px solid #1b2236}
+.tw table{width:100%;border-collapse:collapse;font-size:14px}
+.tw th{background:#171d2e;color:#7592b2;font-size:12px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;padding:9px 14px;text-align:left;border-bottom:1px solid #1b2236}
+.tw td{padding:9px 14px;border-bottom:1px solid #171d2e;color:#c6d4e4;vertical-align:top;line-height:1.55;font-size:14px}
+.tw td:first-child{font-weight:700;color:#5cb8ff;white-space:nowrap;font-size:13px}
+.tw tr:last-child td{border-bottom:none}
+.tw tr:hover td{background:rgba(92,184,255,.04)}
+#prog{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#5cb8ff,#4ee3a0,#b98cfa);transition:width .3s ease;z-index:100;border-radius:0 2px 2px 0}
+#ctr{position:fixed;bottom:17px;right:22px;font-size:13px;font-weight:700;color:#334d66;z-index:100}
+#sco{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center}
+#sco.show{display:flex}
+#scb{background:#1b2236;border-radius:18px;padding:30px 38px;max-width:460px;width:92%}
+#scb h3{font-size:18px;font-weight:900;color:#fff;margin-bottom:16px}
+.sk{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #1b2236;font-size:15px;color:#c6d4e4}
+.sk:last-child{border-bottom:none}
+.key{font-family:monospace;background:#131726;padding:2px 9px;border-radius:6px;color:#5cb8ff;font-size:13px}
+.scclose{margin-top:18px;background:#5cb8ff;color:#090c18;border:none;border-radius:10px;padding:9px 24px;font-size:15px;font-weight:700;cursor:pointer;width:100%}
+/* step cards */
+.step{display:flex;align-items:flex-start;gap:14px}
+.stepnum{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;font-weight:900;font-size:16px;flex-shrink:0}
+.steplabel{font-size:15px;font-weight:700;color:#eef2fa;margin-bottom:4px}
+.stepdesc{font-size:14px;color:#c6d4e4;line-height:1.6}
+/* ordering activity */
+.orow{display:flex;align-items:center;gap:14px;background:#1b2236;border-radius:12px;padding:12px 18px}
+.onum{font-size:20px;font-weight:900;color:#4ee3a0;min-width:32px;flex-shrink:0;text-align:center}
+.olabel{font-size:15px;color:#c6d4e4;flex:1;line-height:1.5}
+.otag{font-size:12px;font-weight:700;padding:3px 10px;border-radius:8px;flex-shrink:0}
+/* answer key */
+.akrow{display:flex;gap:12px;align-items:flex-start;background:#16281e;border-radius:12px;padding:10px 15px}
+.akn{font-size:15px;font-weight:900;color:#4ee3a0;min-width:26px;padding-top:1px}
+.aka{font-size:14px;font-weight:700;color:#4ee3a0}
+.akx{font-size:13px;color:#3d7a58;margin-top:2px;line-height:1.5}
+.qqt{background:#1b2236;border-radius:14px;padding:20px 26px;border-left:5px solid #fbbf24;font-size:16px;line-height:1.75;color:#d6e2f0;font-style:italic}
+.qqt .qsrc{font-size:14px;color:#7592b2;font-style:normal;margin-top:8px;font-weight:600}
+.pill{display:inline-block;font-size:14px;font-weight:700;padding:4px 13px;border-radius:20px;margin:3px}
+.pill.b{background:#1a2e48;color:#5cb8ff}.pill.g{background:#162a1e;color:#4ee3a0}.pill.o{background:#381f10;color:#ffaa5e}.pill.p{background:#261840;color:#b98cfa}.pill.c{background:#0e2432;color:#22d3ee}
+code{font-family:monospace;font-size:14px;background:#1b2236;padding:1px 7px;border-radius:5px;color:#5cb8ff}
+.tgiant{font-size:clamp(36px,5vw,66px);font-weight:900;line-height:1.06;letter-spacing:-1.5px}
+.note{background:#102038;border:1px solid #1e3a5a;border-radius:11px;padding:12px 16px;font-size:15px;color:#7ab8e0;line-height:1.65}
+.warn{background:#2a1a10;border:1px solid #7a4a20;border-radius:11px;padding:12px 16px;font-size:15px;color:#ffaa5e;line-height:1.65}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<div id="ctr"></div>
+<div id="deck"></div>
+<div id="sco">
+  <div id="scb">
+    <h3>&#x2328;&#xFE0F; Keyboard Shortcuts</h3>
+    <div class="sk"><span>Next slide</span><span><span class="key">&rarr;</span> <span class="key">Right-click</span></span></div>
+    <div class="sk"><span>Previous slide</span><span><span class="key">&larr;</span> <span class="key">Mouse3</span></span></div>
+    <div class="sk"><span>First / Last</span><span><span class="key">Home</span> / <span class="key">End</span></span></div>
+    <div class="sk"><span>This help</span><span><span class="key">?</span></span></div>
+    <button class="scclose" onclick="document.getElementById('sco').classList.remove('show')">Close</button>
+  </div>
+</div>
+<script>
+function doCopy(btn,id){
+  var txt=document.getElementById(id).innerText;
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(txt).then(function(){flash(btn);}).catch(function(){fallback(btn,txt);});}
+  else{fallback(btn,txt);}
+}
+function fallback(btn,txt){
+  var ta=document.createElement('textarea');ta.value=txt;
+  ta.style.cssText='position:fixed;opacity:0;top:0;left:0;width:1px;height:1px';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');}catch(e){}
+  document.body.removeChild(ta);flash(btn);
+}
+function flash(btn){btn.textContent='Copied!';btn.classList.add('ok');setTimeout(function(){btn.textContent='Copy';btn.classList.remove('ok');},1800);}
+var slides,cur,tot,busy;
+function initDeck(){slides=document.querySelectorAll('.sw');cur=0;tot=slides.length;busy=false;slides[0].classList.add('active');ui();}
+function ui(){document.getElementById('prog').style.width=((cur+1)/tot*100)+'%';document.getElementById('ctr').textContent=(cur+1)+' / '+tot;}
+function go(idx,dir){
+  if(busy||idx===cur||idx<0||idx>=tot)return;busy=true;
+  var pv=slides[cur],nx=slides[idx];
+  pv.classList.remove('active');pv.classList.add(dir===1?'xl':'xr');
+  nx.style.transform=dir===1?'translateX(40px)':'translateX(-40px)';nx.style.opacity='0';
+  nx.classList.add('active');
+  requestAnimationFrame(function(){requestAnimationFrame(function(){nx.style.transform='';nx.style.opacity='';});});
+  cur=idx;ui();setTimeout(function(){pv.classList.remove('xl','xr');busy=false;},380);
+}
+document.addEventListener('DOMContentLoaded',function(){initDeck();});
+document.addEventListener('keydown',function(e){
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')go(cur+1,1);
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(cur-1,-1);
+  else if(e.key==='Home')go(0,-1);
+  else if(e.key==='End')go(tot-1,1);
+  else if(e.key==='?')document.getElementById('sco').classList.toggle('show');
+  else if(e.key==='Escape')document.getElementById('sco').classList.remove('show');
+});
+document.addEventListener('mousedown',function(e){
+  if(e.button===2){e.preventDefault();e.stopImmediatePropagation();go(cur+1,1);}
+  else if(e.button===3){e.preventDefault();e.stopImmediatePropagation();go(cur-1,-1);}
+  else if(e.button===4){e.preventDefault();e.stopImmediatePropagation();go(cur+1,1);}
+},true);
+document.addEventListener('contextmenu',function(e){e.preventDefault();},true);
+document.addEventListener('auxclick',function(e){if(e.button!==0)e.preventDefault();},true);
+var tx=0;
+document.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;},{passive:true});
+document.addEventListener('touchend',function(e){var dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50)go(cur+(dx<0?1:-1),dx<0?1:-1);},{passive:true});
+</script>
+
+<!-- ══════════════════════ SLIDES ══════════════════════ -->
+
+<!-- 0 TITLE -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Module 20 &middot; ITE 380 Human Computer Interaction 2</div>
+  <div class="tgiant" style="margin-top:10px">How to Use<br>the <span class="ab">gTTS</span> Module<br>in <span class="ag">Python</span></div>
+  <div class="ssub" style="margin-top:14px">Install &rarr; Import &rarr; Input &rarr; Create &rarr; Save &rarr; Play &mdash; a complete hands-on walkthrough</div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:20px">
+    <span class="pill b">What is gTTS?</span>
+    <span class="pill g">6-Step Workflow</span>
+    <span class="pill o">Full Code Project</span>
+    <span class="pill p">mpg321 Player</span>
+    <span class="pill c">Language Codes</span>
+  </div>
+  <div style="margin-top:22px;font-size:14px;color:#2e4560">Right-click or &rarr; to navigate &middot; Press ? for shortcuts</div>
+</div></div>
+
+<!-- 1 WHAT IS gTTS -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Lesson Preview &middot; What is gTTS?</div>
+  <div class="stitle">Google <span class="ab">Text-to-Speech</span> &mdash; Reviewed</div>
+  <div class="ssub" style="margin-bottom:12px">Building on M19 &mdash; this module is entirely <strong>hands-on</strong>. We write a complete Python program that converts any text into a playable MP3 file.</div>
+  <div class="g2" style="margin-bottom:14px">
+    <div class="card">
+      <div class="ct">&#x1F4CB; What gTTS Is</div>
+      <div class="cb"><strong>gTTS</strong> = <strong>Google Text-to-Speech</strong>.<br><br>A Python <strong>library</strong> and <strong>CLI tool</strong> that interfaces with the Google Translate TTS API.<ul>
+        <li><strong>Output:</strong> Returns an <code>.mp3</code> audio file</li>
+        <li><strong>Languages:</strong> English, Hindi, Tamil, French, German &amp; more</li>
+        <li><strong>Speed:</strong> Fast or slow (set via <code>slow=True / False</code>)</li>
+        <li><strong>Limit:</strong> Cannot change voice type (male/female) in the free API</li>
+      </ul></div>
+    </div>
+    <div class="card g">
+      <div class="ct">&#x1F504; The Data Flow</div>
+      <div class="cb" style="margin-bottom:12px">Here&#x27;s how gTTS transforms text into audio:</div>
+      <div style="display:flex;align-items:center;gap:10px;justify-content:center;flex-wrap:wrap">
+        <div style="background:#0c1020;border:2px solid #5cb8ff;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:700;color:#5cb8ff;text-align:center">&#x1F4C4;<br>.txt file<br><span style="font-size:12px;font-weight:400;color:#4a6888">your text</span></div>
+        <div style="color:#334d66;font-size:22px">&rarr;</div>
+        <div style="background:#0c1020;border:2px solid #b98cfa;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:700;color:#b98cfa;text-align:center">&#x2601;&#xFE0F;<br>gTTS API<br><span style="font-size:12px;font-weight:400;color:#4a6888">Google servers</span></div>
+        <div style="color:#334d66;font-size:22px">&rarr;</div>
+        <div style="background:#0c1020;border:2px solid #4ee3a0;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:700;color:#4ee3a0;text-align:center">&#x1F3B5;<br>.mp3 file<br><span style="font-size:12px;font-weight:400;color:#4a6888">audio output</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="card o">
+    <div class="ct">&#x1F5FA;&#xFE0F; The 6-Step Workflow Ahead</div>
+    <div class="cb" style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;text-align:center;font-size:13px;margin-top:4px">
+      <div style="background:#0c1020;padding:8px 4px;border-radius:8px;border:1px solid #1b2236"><div style="font-weight:700;color:#5cb8ff;margin-bottom:2px">1</div>Install</div>
+      <div style="background:#0c1020;padding:8px 4px;border-radius:8px;border:1px solid #1b2236"><div style="font-weight:700;color:#4ee3a0;margin-bottom:2px">2</div>Import</div>
+      <div style="background:#0c1020;padding:8px 4px;border-radius:8px;border:1px solid #1b2236"><div style="font-weight:700;color:#ffaa5e;margin-bottom:2px">3</div>Input</div>
+      <div style="background:#0c1020;padding:8px 4px;border-radius:8px;border:1px solid #1b2236"><div style="font-weight:700;color:#b98cfa;margin-bottom:2px">4</div>Create</div>
+      <div style="background:#0c1020;padding:8px 4px;border-radius:8px;border:1px solid #1b2236"><div style="font-weight:700;color:#22d3ee;margin-bottom:2px">5</div>Save</div>
+      <div style="background:#0c1020;padding:8px 4px;border-radius:8px;border:1px solid #1b2236"><div style="font-weight:700;color:#f87171;margin-bottom:2px">6</div>Play</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 2 STEPS 1-2 -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Step-by-Step Guide &middot; Steps 1 &amp; 2</div>
+  <div class="stitle">Install &amp; <span class="ag">Import</span></div>
+  <div style="display:flex;flex-direction:column;gap:14px;flex:1">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="step">
+        <div class="stepnum" style="background:#1a2e48;color:#5cb8ff">1</div>
+        <div>
+          <div class="steplabel">Install gTTS on Your System</div>
+          <div class="stepdesc">Before writing any code, install the gTTS module using Python&#x27;s package manager <code>pip</code>. Open your Terminal, Command Prompt, or PowerShell and run:</div>
+        </div>
+      </div>
+      <div class="pre">
+        <div class="prebar"><span class="prelang">bash &mdash; terminal</span><button class="copybtn" onclick="doCopy(this,'s1')">Copy</button></div>
+        <pre id="s1">pip install gTTS</pre>
+      </div>
+      <div class="note">&#x1F4A1; <strong>pip</strong> is Python&#x27;s <em>package management system</em> &mdash; it is NOT the same as Python itself. It is used exclusively to install and manage third-party packages like gTTS. Most modern Python installs include pip automatically.</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="step">
+        <div class="stepnum" style="background:#162a1e;color:#4ee3a0">2</div>
+        <div>
+          <div class="steplabel">Import gTTS to Your Program</div>
+          <div class="stepdesc">Inside your Python script, import the <code>gTTS</code> class and the built-in <code>os</code> module. The <code>os</code> module lets Python interact with your system&#x27;s audio player to play the output file.</div>
+        </div>
+      </div>
+      <div class="pre">
+        <div class="prebar"><span class="prelang">python</span><button class="copybtn" onclick="doCopy(this,'s2')">Copy</button></div>
+        <pre id="s2"><span class="kw">from</span> gtts <span class="kw">import</span> gTTS
+<span class="kw">import</span> os</pre>
+      </div>
+      <div class="card p" style="font-size:14px">
+        <div class="ct">&#x2753; Why two imports?</div>
+        <div class="cb"><code>gTTS</code> handles the text-to-speech conversion and MP3 creation. <code>os</code> is needed later to call the system audio player (<code>mpg321</code>) to actually play the file back. Neither can do the other&#x27;s job.</div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 3 STEPS 3-4 -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Step-by-Step Guide &middot; Steps 3 &amp; 4</div>
+  <div class="stitle">Get Input &amp; <span class="ap">Create</span> the Object</div>
+  <div style="display:flex;flex-direction:column;gap:14px;flex:1">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="step">
+        <div class="stepnum" style="background:#381f10;color:#ffaa5e">3</div>
+        <div>
+          <div class="steplabel">Get User Input</div>
+          <div class="stepdesc">Ask the user for the text they want to convert. Use Python&#x27;s built-in <code>input()</code> function to capture their response and store it in a variable.</div>
+        </div>
+      </div>
+      <div class="pre">
+        <div class="prebar"><span class="prelang">python</span><button class="copybtn" onclick="doCopy(this,'s3')">Copy</button></div>
+        <pre id="s3"><span class="cm"># Ask the user for the text to convert</span>
+text = <span class="fn">input</span>(<span class="st">"Enter a word or sentence: "</span>)</pre>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="step">
+        <div class="stepnum" style="background:#261840;color:#b98cfa">4</div>
+        <div>
+          <div class="steplabel">Create a Text-to-Speech Object</div>
+          <div class="stepdesc">Pass the user&#x27;s text into the <code>gTTS</code> constructor to create an audio object. Specify the language and speed as parameters.</div>
+        </div>
+      </div>
+      <div class="pre">
+        <div class="prebar"><span class="prelang">python</span><button class="copybtn" onclick="doCopy(this,'s4')">Copy</button></div>
+        <pre id="s4"><span class="cm"># Create the gTTS object</span>
+tts = <span class="fn">gTTS</span>(text=text, lang=<span class="st">'en'</span>, slow=<span class="bi">False</span>)</pre>
+      </div>
+      <div class="g2">
+        <div class="card c">
+          <div class="ct">&#x1F4CC; Parameter Breakdown</div>
+          <div class="cb">
+            <div style="font-size:14px;display:flex;flex-direction:column;gap:5px;margin-top:4px">
+              <div style="background:#0c1020;padding:7px 12px;border-radius:8px;border:1px solid #1b2236"><code>text=text</code> &mdash; the string to synthesize</div>
+              <div style="background:#0c1020;padding:7px 12px;border-radius:8px;border:1px solid #1b2236"><code>lang='en'</code> &mdash; language code (English)</div>
+              <div style="background:#0c1020;padding:7px 12px;border-radius:8px;border:1px solid #1b2236"><code>slow=False</code> &mdash; normal speed &middot; <code>True</code> = slower</div>
+            </div>
+          </div>
+        </div>
+        <div class="card y">
+          <div class="ct">&#x1F310; Language Code Examples</div>
+          <div class="cb">
+            <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px;margin-top:4px">
+              <code>'en'</code><span style="color:#7592b2">English</span>
+              <code>'es'</code><span style="color:#7592b2">Spanish</span>
+              <code>'fr'</code><span style="color:#7592b2">French</span>
+              <code>'de'</code><span style="color:#7592b2">German</span>
+              <code>'hi'</code><span style="color:#7592b2">Hindi</span>
+              <code>'tl'</code><span style="color:#7592b2">Filipino</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 4 STEPS 5-6 -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Step-by-Step Guide &middot; Steps 5 &amp; 6</div>
+  <div class="stitle">Save &amp; <span class="ar">Play</span> the Audio</div>
+  <div style="display:flex;flex-direction:column;gap:14px;flex:1">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="step">
+        <div class="stepnum" style="background:#0e2432;color:#22d3ee">5</div>
+        <div>
+          <div class="steplabel">Save the Audio File</div>
+          <div class="stepdesc">Call <code>.save()</code> on the gTTS object to write the MP3 file to disk. The file will be saved in the same folder where your Python script is running.</div>
+        </div>
+      </div>
+      <div class="pre">
+        <div class="prebar"><span class="prelang">python</span><button class="copybtn" onclick="doCopy(this,'s5')">Copy</button></div>
+        <pre id="s5"><span class="cm"># Export the audio object to an mp3 file</span>
+tts.<span class="fn">save</span>(<span class="st">"output.mp3"</span>)</pre>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="step">
+        <div class="stepnum" style="background:#2a1010;color:#f87171">6</div>
+        <div>
+          <div class="steplabel">Play the Audio File</div>
+          <div class="stepdesc">Use <code>os.system()</code> to tell the operating system to play the MP3. On Windows, this requires <strong>mpg321</strong> &mdash; a lightweight MP3 player that must be installed and added to your PATH.</div>
+        </div>
+      </div>
+      <div class="pre">
+        <div class="prebar"><span class="prelang">python</span><button class="copybtn" onclick="doCopy(this,'s6')">Copy</button></div>
+        <pre id="s6"><span class="cm"># Play the audio file (requires mpg321 on Windows)</span>
+os.<span class="fn">system</span>(<span class="st">"mpg321 output.mp3"</span>)</pre>
+      </div>
+      <div class="warn">&#x26A0;&#xFE0F; <strong>Windows users:</strong> Download <code>mpg321.exe</code> from its official website and add it to your system&#x27;s <strong>PATH environment variable</strong>. Without this, <code>os.system()</code> will not find the player and your program will crash at this step.</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 5 FULL CODE -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Full Code &middot; Complete Project</div>
+  <div class="stitle">All 6 Steps <span class="ag">Together</span></div>
+  <div class="ssub" style="margin-bottom:12px">Save as <code>tts.py</code>, run with <code>python tts.py</code>, and type a sentence when prompted.</div>
+  <div class="pre">
+    <div class="prebar"><span class="prelang">python &mdash; tts.py</span><button class="copybtn" onclick="doCopy(this,'full1')">Copy</button></div>
+    <pre id="full1"><span class="kw">from</span> gtts <span class="kw">import</span> gTTS
+<span class="kw">import</span> os
+
+<span class="cm"># 1. Get the text input from the user</span>
+text = <span class="fn">input</span>(<span class="st">"Enter a word or sentence: "</span>)
+
+<span class="cm"># 2. Create the text-to-speech object</span>
+<span class="cm">#    lang='en' sets it to English, slow=False sets it to normal speed</span>
+tts = <span class="fn">gTTS</span>(text=text, lang=<span class="st">'en'</span>, slow=<span class="bi">False</span>)
+
+<span class="cm"># 3. Save the audio file to disk</span>
+tts.<span class="fn">save</span>(<span class="st">"output.mp3"</span>)
+
+<span class="cm"># 4. Play the audio file</span>
+<span class="cm">#    Requires 'mpg321' installed &amp; added to PATH on Windows</span>
+os.<span class="fn">system</span>(<span class="st">"mpg321 output.mp3"</span>)</pre>
+  </div>
+  <div class="g2" style="margin-top:4px">
+    <div class="card g">
+      <div class="ct">&#x1F4A1; Pro Tip &mdash; Change the Language</div>
+      <div class="cb">Replace <code>lang='en'</code> with any language code to synthesize in a different language. Make sure your <code>text</code> variable contains text <em>written</em> in that language for best results.<br><br>
+      Example: <code>lang='es'</code> for Spanish, <code>lang='fr'</code> for French.</div>
+    </div>
+    <div class="card o">
+      <div class="ct">&#x26A0;&#xFE0F; Common Crash Fix</div>
+      <div class="cb">If your program crashes at <code>os.system("mpg321 output.mp3")</code>:<ul>
+        <li>Check that <code>mpg321.exe</code> is downloaded</li>
+        <li>Verify it is in a folder on your <strong>PATH</strong></li>
+        <li>Try running <code>mpg321 output.mp3</code> directly in terminal first</li>
+      </ul></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 6 ANALOGIES & USE CASES -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Analogies &amp; Use Cases</div>
+  <div class="stitle">Making It <span class="ao">Click</span></div>
+  <div class="g2" style="flex:1">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card y">
+        <div class="ct">&#x1F3A4; The Instant Voice-Over Artist Analogy</div>
+        <div class="cb">Think of gTTS like hiring a voice-over artist in a faraway studio:<ul>
+          <li><strong>Your script</strong> = the <code>text</code> input</li>
+          <li><strong>The courier</strong> = the <code>gTTS</code> library sending text to Google</li>
+          <li><strong>The artist</strong> = Google&#x27;s TTS neural network</li>
+          <li><strong>The MP3 back</strong> = the <code>output.mp3</code> file saved to disk</li>
+          <li><strong>Pressing play</strong> = <code>os.system("mpg321 output.mp3")</code></li>
+        </ul></div>
+      </div>
+      <div class="card">
+        <div class="ct">&#x1F4AC; pip vs Python &mdash; Cleared Up</div>
+        <div class="cb"><strong>pip</strong> is a <em>package management system</em> written in Python. It installs third-party packages like gTTS into your Python environment. It is NOT Python itself &mdash; it is a tool that works alongside Python.</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card g">
+        <div class="ct">&#x1F30D; Use Case 1 &mdash; Language Learning</div>
+        <div class="cb">A developer creates a Python script that generates pronunciation guides for any word a user types. By changing <code>lang='en'</code> to <code>lang='es'</code>, the program reads Spanish words aloud, giving English speakers an instant audio pronunciation reference.</div>
+      </div>
+      <div class="card p">
+        <div class="ct">&#x1F4E7; Use Case 2 &mdash; Email Accessibility</div>
+        <div class="cb">An office worker uses a Python script to turn long emails into MP3 files. They listen during their commute &mdash; catching up on important communications hands-free while driving or walking.</div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 7 FAQ -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">FAQs</div>
+  <div class="stitle">Common Questions <span class="ao">Answered</span></div>
+  <div style="display:flex;flex-direction:column;gap:12px;flex:1">
+    <div class="card p">
+      <div class="ct">&#x2753; How do I install pip on my system?</div>
+      <div class="cb">Most modern Python installations come with pip pre-installed. If missing, run <code>python get-pip.py</code> in your terminal. This installs or upgrades pip along with <code>setuptools</code> and <code>wheels</code>.<br><br>
+      <strong>Tip:</strong> Avoid using a system-managed Python installation; use a standalone Python install to avoid conflicts.</div>
+    </div>
+    <div class="card g">
+      <div class="ct">&#x2753; Is pip the same as Python?</div>
+      <div class="cb"><strong>No.</strong> pip is a <strong>package management system</strong> written in Python &mdash; used exclusively to install and manage third-party software packages (like gTTS) into your Python environment. The Python Software Foundation officially recommends pip for installing applications and dependencies during deployment.</div>
+    </div>
+    <div class="card r">
+      <div class="ct">&#x2753; Does gTTS work offline?</div>
+      <div class="cb"><strong>No.</strong> gTTS uses the web-based Google Translate API, so your computer must have an active internet connection when you run the script. For offline TTS in Python, use <strong>pyttsx3</strong> instead (covered in Module 19).</div>
+    </div>
+    <div class="card o">
+      <div class="ct">&#x2753; My program crashes on os.system(). Why?</div>
+      <div class="cb">This usually means <code>mpg321</code> is not installed or not added to your PATH environment variable.<ul>
+        <li>Download <code>mpg321.exe</code> and place it in a recognized folder</li>
+        <li>Add that folder to your PATH, or specify the full file path in <code>os.system()</code></li>
+        <li>Test in terminal first: type <code>mpg321 output.mp3</code> directly</li>
+      </ul></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 8 KEY QUOTES -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Key Quotes &amp; Takeaways</div>
+  <div class="stitle">Words Worth <span class="ay">Remembering</span></div>
+  <div style="display:flex;flex-direction:column;gap:14px;flex:1;justify-content:center">
+    <div class="qqt">The bad news is time flies. The good news is you&#x27;re the pilot.
+      <div class="qsrc">&mdash; Michael Altshuler &middot; quoted in Module 20</div></div>
+    <div class="qqt" style="border-left-color:#4ee3a0;font-style:normal">
+      <div style="font-size:13px;font-weight:800;color:#4ee3a0;letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px">Module 20 Key Takeaways</div>
+      <ul style="list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;font-size:15px">
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>gTTS = Google Text-to-Speech &mdash; Python library + CLI tool</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>Flow: .txt &rarr; gTTS API (Google) &rarr; .mp3 file</li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>Step 1: <code>pip install gTTS</code></li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>Step 2: <code>from gtts import gTTS</code> + <code>import os</code></li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>Step 3: <code>text = input("...")</code></li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>Step 4: <code>tts = gTTS(text=text, lang='en', slow=False)</code></li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>Step 5: <code>tts.save("output.mp3")</code></li>
+        <li style="padding:3px 0 3px 18px;position:relative;color:#c6d4e4"><span style="position:absolute;left:0;color:#4ee3a0">▸</span>Step 6: <code>os.system("mpg321 output.mp3")</code></li>
+      </ul>
+    </div>
+  </div>
+</div></div>
+
+<!-- 9 ORDERING ACTIVITY -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Skill-Building Check &middot; Ordering Activity</div>
+  <div class="stitle">Put the Steps in <span class="ap">Correct Order</span></div>
+  <div class="ssub" style="margin-bottom:12px">The steps below are listed in the <strong>wrong order</strong>. Number them 1&ndash;6 in the correct chronological sequence. Answer on the next slide.</div>
+  <div style="display:flex;flex-direction:column;gap:10px;flex:1;justify-content:center">
+    <div class="orow">
+      <div class="onum" style="color:#4a6888">__</div>
+      <div class="olabel">Save the audio file</div>
+      <span class="otag" style="background:#0e2432;color:#22d3ee">tts.save()</span>
+    </div>
+    <div class="orow">
+      <div class="onum" style="color:#4a6888">__</div>
+      <div class="olabel">Play the audio file</div>
+      <span class="otag" style="background:#2a1010;color:#f87171">os.system()</span>
+    </div>
+    <div class="orow">
+      <div class="onum" style="color:#4a6888">__</div>
+      <div class="olabel">Import gTTS to your program</div>
+      <span class="otag" style="background:#162a1e;color:#4ee3a0">from gtts import gTTS</span>
+    </div>
+    <div class="orow">
+      <div class="onum" style="color:#4a6888">__</div>
+      <div class="olabel">Install gTTS on your system</div>
+      <span class="otag" style="background:#1a2e48;color:#5cb8ff">pip install gTTS</span>
+    </div>
+    <div class="orow">
+      <div class="onum" style="color:#4a6888">__</div>
+      <div class="olabel">Get user input</div>
+      <span class="otag" style="background:#381f10;color:#ffaa5e">input()</span>
+    </div>
+    <div class="orow">
+      <div class="onum" style="color:#4a6888">__</div>
+      <div class="olabel">Create a text-to-speech object</div>
+      <span class="otag" style="background:#261840;color:#b98cfa">gTTS(text, lang, slow)</span>
+    </div>
+  </div>
+</div></div>
+
+<!-- 10 ANSWER KEY -->
+<div class="sw"><div class="slide">
+  <div class="eyebrow">Answer Key &middot; Ordering Activity</div>
+  <div class="stitle">Correct <span class="ag">Order</span></div>
+  <div style="display:flex;flex-direction:column;gap:10px;flex:1;justify-content:center">
+    <div class="orow"><div class="onum">1</div><div class="olabel"><strong style="color:#eef2fa">Install gTTS on your system</strong> &mdash; You must install the library before anything else. Run <code>pip install gTTS</code> in the terminal.</div><span class="otag" style="background:#1a2e48;color:#5cb8ff">pip install gTTS</span></div>
+    <div class="orow"><div class="onum">2</div><div class="olabel"><strong style="color:#eef2fa">Import gTTS to your program</strong> &mdash; Add <code>from gtts import gTTS</code> and <code>import os</code> at the top of your Python file.</div><span class="otag" style="background:#162a1e;color:#4ee3a0">from gtts import gTTS</span></div>
+    <div class="orow"><div class="onum">3</div><div class="olabel"><strong style="color:#eef2fa">Get user input</strong> &mdash; Use <code>text = input("Enter a word or sentence: ")</code> to capture what the user wants to hear.</div><span class="otag" style="background:#381f10;color:#ffaa5e">input()</span></div>
+    <div class="orow"><div class="onum">4</div><div class="olabel"><strong style="color:#eef2fa">Create a text-to-speech object</strong> &mdash; Pass the text to <code>gTTS(text=text, lang='en', slow=False)</code> to build the audio object.</div><span class="otag" style="background:#261840;color:#b98cfa">gTTS(text, lang, slow)</span></div>
+    <div class="orow"><div class="onum">5</div><div class="olabel"><strong style="color:#eef2fa">Save the audio file</strong> &mdash; Call <code>tts.save("output.mp3")</code> to write the MP3 file to your local disk.</div><span class="otag" style="background:#0e2432;color:#22d3ee">tts.save()</span></div>
+    <div class="orow"><div class="onum">6</div><div class="olabel"><strong style="color:#eef2fa">Play the audio file</strong> &mdash; Finally, call <code>os.system("mpg321 output.mp3")</code> to play the saved file through your system speakers.</div><span class="otag" style="background:#2a1010;color:#f87171">os.system()</span></div>
+  </div>
+</div></div>
+
+<!-- 11 CLOSING -->
+<div class="sw"><div class="slide" style="align-items:center;justify-content:center;text-align:center">
+  <div class="eyebrow" style="border-bottom:none">Module 20 &middot; Complete</div>
+  <div class="tgiant" style="font-size:clamp(34px,4.6vw,60px);margin-top:10px">You&#x27;re the <span class="ab">Pilot</span>.<br>Now <span class="ag">Fly</span>.</div>
+  <div class="qqt" style="max-width:740px;text-align:left;border-left-color:#fbbf24;font-size:16px;margin-top:14px">
+    The bad news is time flies. The good news is you&#x27;re the pilot. You now have the exact 6-step workflow to take any text &mdash; in any language &mdash; and turn it into a real MP3 audio file using just Python and three lines of gTTS code.
+    <div class="qsrc">&mdash; Michael Altshuler &middot; applied &#x1F680;</div>
+  </div>
+  <div class="g4" style="max-width:1080px;margin-top:14px">
+    <div class="card" style="text-align:left"><div class="ct">Run It</div><div class="cb" style="font-size:14px">Save <code>tts.py</code>, run <code>python tts.py</code>, type any sentence, and listen to the MP3 your code generated.</div></div>
+    <div class="card g" style="text-align:left"><div class="ct">Try Languages</div><div class="cb" style="font-size:14px">Change <code>lang='en'</code> to <code>'es'</code>, <code>'fr'</code>, and <code>'tl'</code>. Type the same word in each language and compare pronunciations.</div></div>
+    <div class="card p" style="text-align:left"><div class="ct">Try Slow Mode</div><div class="cb" style="font-size:14px">Set <code>slow=True</code> and regenerate the audio. Hear how the speed changes &mdash; useful for language learning apps.</div></div>
+    <div class="card o" style="text-align:left"><div class="ct">Challenge</div><div class="cb" style="font-size:14px">Read text from a <code>.txt</code> file instead of <code>input()</code>. Use <code>open("file.txt").read()</code> and convert an entire article to audio.</div></div>
+  </div>
+  <div style="font-size:14px;color:#2e4560;margin-top:14px">Press <span style="color:#5cb8ff">Home</span> to restart &middot; <span style="color:#5cb8ff">?</span> for shortcuts</div>
+</div></div>
+
+</body>
+</html>

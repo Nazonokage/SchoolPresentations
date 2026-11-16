@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HCI 2 Pre-Final Summative Review Deck</title>
+    <style>
+        /* CSS RESET & BASE STYLES */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg-body: #0b0f19;
+            --bg-slide: #131a2b;
+            --bg-card: #1e293b;
+            --bg-darker: #0f172a;
+            --border: #334155;
+            --text-main: #f1f5f9;
+            --text-dim: #94a3b8;
+            --accent-cyan: #22d3ee;
+            --accent-emerald: #34d399;
+            --accent-violet: #a78bfa;
+            --accent-amber: #fbbf24;
+            --accent-rose: #fb7185;
+            --font-base: 18px; /* Strict compliance: NO SUB-16px text */
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-body);
+            color: var(--text-main);
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            font-size: var(--font-base);
+            line-height: 1.6;
+        }
+
+        /* TYPOGRAPHY */
+        h1, h2, h3, h4, .title, .eyebrow, .counter, .badge, .btn, pre, code, li, td, th {
+            font-size: 16px; /* Absolute floor safeguard */
+        }
+        .eyebrow { font-size: 18px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent-cyan); border-bottom: 2px solid var(--border); padding-bottom: 8px; margin-bottom: 12px; }
+        .slide-title { font-size: clamp(32px, 4vw, 48px); font-weight: 900; line-height: 1.2; margin-bottom: 16px; color: #fff; }
+        .slide-subtitle { font-size: 20px; color: var(--text-dim); margin-bottom: 24px; }
+        
+        .cyan-text { color: var(--accent-cyan); }
+        .emerald-text { color: var(--accent-emerald); }
+        .violet-text { color: var(--accent-violet); }
+        .amber-text { color: var(--accent-amber); }
+
+        /* NAVIGATION & PROGRESS */
+        #progress-bar { position: fixed; top: 0; left: 0; height: 4px; background: linear-gradient(90deg, var(--accent-cyan), var(--accent-violet)); transition: width 350ms ease; z-index: 100; border-radius: 0 2px 2px 0; }
+        #counter { position: fixed; bottom: 20px; right: 30px; font-size: 18px; font-weight: 800; color: #475569; z-index: 100; user-select: none; }
+        
+        /* SLIDE CONTAINER */
+        #deck { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+        .slide-wrapper {
+            position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+            opacity: 0; transform: translateX(50px); transition: opacity 350ms ease, transform 350ms ease;
+            pointer-events: none; padding: 20px 40px; overflow: hidden;
+        }
+        .slide-wrapper.active { opacity: 1; transform: translateX(0); pointer-events: auto; }
+        .slide-wrapper.exit-left { opacity: 0; transform: translateX(-50px); }
+        .slide-wrapper.exit-right { opacity: 0; transform: translateX(50px); }
+        
+        @media (prefers-reduced-motion: reduce) {
+            .slide-wrapper { transition: none !important; transform: none !important; }
+        }
+
+        .slide-content {
+            background: var(--bg-slide); border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7);
+            border: 1px solid var(--border); width: 100%; max-width: 1400px; max-height: 100%;
+            overflow-y: auto; padding: 40px 50px; display: flex; flex-direction: column; gap: 20px;
+            min-height: 0; scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+        }
+        .slide-content::-webkit-scrollbar { width: 8px; }
+        .slide-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+        /* LAYOUT GRIDS */
+        .grid-2col { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; flex: 1; min-height: 0; }
+        .grid-3col { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; flex: 1; }
+        .grid-2x2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto auto; gap: 20px; flex: 1; align-content: start; }
+        .flex-col { display: flex; flex-direction: column; gap: 16px; flex: 1; min-height: 0; }
+
+        /* CARDS */
+        .card { background: var(--bg-card); border-radius: 16px; padding: 20px 24px; border-top: 4px solid var(--accent-cyan); display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+        .card.emerald { border-top-color: var(--accent-emerald); }
+        .card.violet { border-top-color: var(--accent-violet); }
+        .card.amber { border-top-color: var(--accent-amber); }
+        .card.rose { border-top-color: var(--accent-rose); }
+        .card-title { font-size: 20px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 10px; }
+        
+        /* MCQ / ITEM BLOCKS */
+        .q-block { background: var(--bg-card); border-radius: 16px; padding: 24px; border-left: 5px solid var(--accent-violet); display: flex; flex-direction: column; gap: 12px; height: 100%; }
+        .q-num { font-size: 18px; font-weight: 900; color: var(--accent-violet); text-transform: uppercase; letter-spacing: 1px; }
+        .q-text { font-size: 18px; font-weight: 600; color: #fff; line-height: 1.5; }
+        .q-options { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
+        .q-options li { font-size: 16px; background: var(--bg-darker); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); color: var(--text-dim); }
+        .q-options li span { font-weight: 900; color: var(--accent-violet); margin-right: 8px; }
+        
+        .id-block { background: var(--bg-card); border-radius: 16px; padding: 24px; border-left: 5px solid var(--accent-emerald); display: flex; flex-direction: column; gap: 12px; height: 100%; }
+        .id-num { font-size: 18px; font-weight: 900; color: var(--accent-emerald); }
+        .id-blank { display: inline-block; min-width: 150px; border-bottom: 2px solid var(--text-dim); margin-top: auto; height: 24px; }
+
+        /* TABLES */
+        .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-card); }
+        table { width: 100%; border-collapse: collapse; font-size: 18px; }
+        th { background: var(--bg-darker); color: var(--text-dim); font-weight: 800; text-transform: uppercase; padding: 14px 18px; text-align: left; border-bottom: 2px solid var(--border); }
+        td { padding: 14px 18px; border-bottom: 1px solid var(--border); color: var(--text-main); }
+        td:first-child { font-weight: 800; color: var(--accent-cyan); }
+        tr:hover td { background: rgba(34, 211, 238, 0.05); }
+
+        /* CODE PANELS */
+        .code-panel { display: flex; flex-direction: column; background: var(--bg-darker); border-radius: 16px; border: 1px solid var(--border); overflow: hidden; height: 100%; min-height: 0; }
+        .code-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: #0f1423; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .code-lang { font-size: 16px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+        .copy-btn { font-size: 16px; font-weight: 700; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); border-radius: 8px; padding: 6px 16px; cursor: pointer; transition: all 0.2s; box-shadow: inset 2px 2px 5px rgba(255,255,255,0.05), 2px 2px 5px rgba(0,0,0,0.3); }
+        .copy-btn:hover { background: var(--accent-cyan); color: #000; border-color: var(--accent-cyan); }
+        .copy-btn.copied { background: var(--accent-emerald); color: #000; border-color: var(--accent-emerald); box-shadow: inset 2px 2px 5px rgba(0,0,0,0.3); }
+        
+        pre { padding: 20px; overflow: auto; flex: 1; margin: 0; font-family: 'Courier New', Courier, monospace; font-size: 16px; line-height: 1.7; scrollbar-width: thin; scrollbar-color: var(--border) transparent; color: #e2e8f0; }
+        
+        /* SYNTAX HIGHLIGHTING */
+        .kw { color: #c084fc; font-weight: 700; }
+        .fn { color: #38bdf8; }
+        .st { color: #34d399; }
+        .cm { color: #64748b; font-style: italic; }
+        .op { color: #f472b6; }
+        .num { color: #fbbf24; }
+        .tg { color: #fb7185; }
+        .at { color: #fbbf24; }
+
+        /* VISUALS & BADGES */
+        .img-container { width: 100%; height: clamp(200px, 35vh, 320px); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); background: var(--bg-darker); display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .img-container svg { width: 100%; height: 100%; object-fit: contain; }
+        
+        .badges { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+        .badge { display: inline-flex; align-items: center; font-size: 16px; font-weight: 800; padding: 6px 16px; border-radius: 20px; background: var(--bg-darker); border: 1px solid var(--border); color: var(--text-main); }
+        .badge.cyan { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+        .badge.emerald { border-color: var(--accent-emerald); color: var(--accent-emerald); }
+        .badge.violet { border-color: var(--accent-violet); color: var(--accent-violet); }
+        
+        .quote-box { background: var(--bg-card); border-left: 5px solid var(--accent-amber); padding: 24px 30px; border-radius: 16px; font-size: 20px; font-style: italic; line-height: 1.7; }
+        .quote-author { display: block; margin-top: 12px; font-size: 18px; font-style: normal; font-weight: 700; color: var(--text-dim); }
+
+        ul.styled-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+        ul.styled-list li { position: relative; padding-left: 24px; font-size: 18px; }
+        ul.styled-list li::before { content: "▸"; position: absolute; left: 0; color: var(--accent-cyan); font-weight: 900; }
+
+        /* SHORTCUTS OVERLAY */
+        #shortcuts { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        #shortcuts.show { opacity: 1; pointer-events: auto; }
+        .shortcuts-box { background: var(--bg-card); padding: 40px; border-radius: 24px; border: 1px solid var(--border); width: 100%; max-width: 500px; }
+        .shortcuts-box h3 { font-size: 24px; font-weight: 900; margin-bottom: 24px; color: #fff; }
+        .sk-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 18px; }
+        .sk-row:last-of-type { border-bottom: none; }
+        .sk-key { background: var(--bg-darker); padding: 4px 12px; border-radius: 8px; font-family: monospace; color: var(--accent-cyan); font-weight: 700; border: 1px solid var(--border); }
+        .close-btn { margin-top: 24px; width: 100%; padding: 14px; border-radius: 12px; background: var(--accent-cyan); color: #000; font-size: 18px; font-weight: 800; border: none; cursor: pointer; }
+
+        /* ANSWER KEY */
+        .ans-row { display: flex; gap: 16px; align-items: flex-start; background: var(--bg-card); padding: 16px 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 12px; }
+        .ans-num { font-size: 20px; font-weight: 900; color: var(--accent-emerald); min-width: 30px; }
+        .ans-content { display: flex; flex-direction: column; gap: 4px; }
+        .ans-letter { font-size: 18px; font-weight: 800; color: #fff; }
+        .ans-desc { font-size: 16px; color: var(--text-dim); }
+    </style>
+</head>
+<body>
+
+    <div id="progress-bar"></div>
+    <div id="counter"></div>
+
+    <div id="deck">
+        
+        <!-- SLIDE 0: TITLE -->
+        <div class="slide-wrapper active">
+            <div class="slide-content" style="align-items: center; justify-content: center; text-align: center; border: 2px solid var(--accent-cyan);">
+                <div class="img-container" style="background: transparent; border: none; height: 120px; margin-bottom: 20px;">
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="#22d3ee" stroke-width="4" stroke-dasharray="10 5" />
+                        <rect x="35" y="35" width="30" height="30" fill="#a78bfa" rx="4" />
+                        <path d="M50 20 L50 35 M50 65 L50 80 M20 50 L35 50 M65 50 L80 50" stroke="#34d399" stroke-width="4" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div class="eyebrow" style="border: none;">HCI 2 &bull; ITE 380</div>
+                <h1 class="slide-title" style="font-size: clamp(40px, 5vw, 64px); margin-bottom: 20px;">
+                    Pre-Final <span class="cyan-text">Periodical Exam</span><br>
+                    <span class="violet-text">Summative Review</span>
+                </h1>
+                <p class="slide-subtitle" style="max-width: 700px;">Comprehensive review covering AR fundamentals, WebAR platforms, Python TTS, Form Integration, and Map APIs &mdash; followed by a 30-item practice exam.</p>
+                <div class="badges" style="justify-content: center; margin-top: 20px;">
+                    <span class="badge cyan">Module 16 &mdash; 23</span>
+                    <span class="badge emerald">Review Deck</span>
+                    <span class="badge violet">30 Practice Items</span>
+                </div>
+                <p style="margin-top: 40px; font-size: 18px; color: var(--text-dim);">Press <strong class="cyan-text">Right Arrow</strong>, <strong class="cyan-text">Right Click</strong>, or <strong class="cyan-text">Swipe</strong> to begin &bull; Press <strong class="cyan-text">?</strong> for shortcuts</p>
+            </div>
+        </div>
+
+        <!-- SLIDE 1: M16 AR REVIEW -->
+        <div class="slide-wrapper">
+            <div class="slide-content">
+                <div class="eyebrow">Module 16 Review</div>
+                <h2 class="slide-title">Introduction to <span class="cyan-text">Augmented Reality</span></h2>
+                
+                <div class="grid-2col">
+                    <div class="flex-col">
+                        <div class="card">
+                            <div class="card-title"><span style="font-size:24px">&#x1F9E0;</span> 3 Core Features of AR</div>
+                            <ul class="styled-list">
+                                <li><strong>Combination</strong> of real and virtual worlds</li>
+                                <li><strong>Real-time interaction</strong> between user and digital</li>
+                                <li><strong>Accurate 3D registration</strong> of virtual & real objects</li>
+                            </ul>
+                        </div>
+                        <div class="card emerald">
+                            <div class="card-title"><span style="font-size:24px">&#x2694;&#xFE0F;</span> AR vs VR vs MR</div>
+                            <p style="font-size: 18px;"><strong>AR</strong> <span class="cyan-text">enhances</span> reality by adding layers on top.<br>
+                            <strong>VR</strong> <span class="violet-text">replaces</span> reality entirely (headset required).<br>
+                            <strong>MR</strong> lets digital and physical objects <span class="emerald-text">interact</span>.</p>
+                        </div>
+                    </div>
+                    <div class="card violet">
+                        <div class="card-title"><span style="font-size:24px">&#x1F527;</span> The 6 Types of AR</div>
+                        <div class="table-wrap">
+                            <table>
+                                <tr><td>Marker-Based</td><td>Uses image recognition / specific QR patterns</td></tr>
+                                <tr><td>Markerless</td><td>Uses sensors (GPS/Gyros) instead of images</td></tr>
+                                <tr><td>Projection-Based</td><td>Immersive light projected on flat surfaces</td></tr>
+                                <tr><td>Location-Based</td><td>Triggered by GPS (e.g., Pokémon GO)</td></tr>
+                                <tr><td>Overlay</td><td>Replaces physical view with enhanced 3D image</td></tr>
+                                <tr><td>Contour-Based</td><td>Outlines real objects (safe nighttime driving)</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+                <div class="slide-wrapper">
+            <div class="slide-content">
+<div class="eyebrow">Module 16 Review</div><h2 class="slide-title">AR <span class="cyan-text">Hardware</span> &amp; Display Types</h2><div class="grid-2col" style="grid-template-columns:minmax(0,2fr) minmax(0,3fr)"><div class="flex-col"><div class="card "><div class="card-title">MEMS &rarr; 6DoF</div><ul class="styled-list"><li><strong>MEMS</strong> = tiny embedded sensors: cameras, accelerometers, GPS, solid-state compasses</li><li>Together they enable <strong>6 Degrees of Freedom (6DoF)</strong> tracking</li><li>Core hardware: Processor, Display, Sensors, Input devices</li></ul></div><div class="card violet"><div class="card-title">SLAM</div><ul class="styled-list"><li><strong>S</strong>imultaneous <strong>L</strong>ocalization <strong>a</strong>nd <strong>M</strong>apping</li><li>Used by Projection-Based &amp; Contour-Based AR</li></ul></div></div><div class="table-wrap"><table><thead><tr><th>8 Display Types</th><th>Key Fact</th></tr></thead><tbody><tr><td>HMD</td><td>Worn on forehead; 6DoF sensors match virtual info to physical space</td></tr><tr><td>Eyeglasses</td><td>Looks like eyewear; re-displays augmented view in the eyepieces</td></tr><tr><td>HUD</td><td>Transparent display; <strong>developed in the 1950s for pilots</strong></td></tr><tr><td>Contact Lenses</td><td>Bionic lenses; patented by Steve Mann (1999)</td></tr><tr><td>VRD</td><td>Scans image directly onto the retina (Univ. of Washington)</td></tr><tr><td>Eyetap</td><td>&ldquo;Generation-2 Glass&rdquo;; swaps real light for computer light</td></tr><tr><td>Handheld</td><td>Smartphones; early = fiducial markers, now GPS + MEMS</td></tr><tr><td>Projector Mapping</td><td>Projects on objects; display detached from users &rarr; collocated collaboration</td></tr></tbody></table></div></div>
+            </div>
+        </div>
+        <!-- SLIDE 2: M17 WEBAR PLATFORMS -->
+        <div class="slide-wrapper">
+            <div class="slide-content">
+                <div class="eyebrow">Module 17 Review</div>
+                <h2 class="slide-title">15 <span class="violet-text">WebAR</span> Platforms</h2>
+                
+                <div class="grid-3col" style="margin-bottom: 10px;">
+                    <div class="card" style="align-items: center; text-align: center; padding: 24px;">
+                        <span style="font-size: 32px; margin-bottom: 10px;">&#x1F52C;</span>
+                        <div style="font-weight: 800; font-size: 20px; color: var(--accent-cyan);">8th Wall</div>
+                        <p style="color: var(--text-dim); font-size: 16px;">Professional Code-Heavy</p>
+                    </div>
+                    <div class="card emerald" style="align-items: center; text-align: center; padding: 24px;">
+                        <span style="font-size: 32px; margin-bottom: 10px;">&#x1FA9B;</span>
+                        <div style="font-weight: 800; font-size: 20px; color: var(--accent-emerald);">Augmania</div>
+                        <p style="color: var(--text-dim); font-size: 16px;">No-Code Drag & Drop</p>
+                    </div>
+                    <div class="card violet" style="align-items: center; text-align: center; padding: 24px;">
+                        <span style="font-size: 32px; margin-bottom: 10px;">&#x1F58C;&#xFE0F;</span>
+                        <div style="font-weight: 800; font-size: 20px; color: var(--accent-violet);">Banuba</div>
+                        <p style="color: var(--text-dim); font-size: 16px;">Face AR Specialist</p>
+                    </div>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Platform</th><th>Specialty</th><th>Coding Requirement</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>EasyAR</td><td>SLAM & Cloud Spatial Map (City-scale)</td><td>SDK (Code)</td></tr>
+                            <tr><td>Gravity Jack</td><td>Enterprise custom builds, QAR patent</td><td>Custom Dev</td></tr>
+                            <tr><td>PlugXR</td><td>Marketing, print, product visualization</td><td>No-Code</td></tr>
+                            <tr><td>ARGO</td><td>Document AR, augmented PDFs, analytics</td><td>Platform</td></tr>
+                            <tr><td>Zappar</td><td>ZapWorks toolkit & ZapBox MR kit</td><td>Toolkit</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+                <div class="slide-wrapper">
+            <div class="slide-content">
+<div class="eyebrow">Module 17 Review</div><h2 class="slide-title">WebAR <span class="violet-text">Categories</span> &amp; Other Platforms</h2><div class="grid-3col" style="flex:none"><div class="card "><div class="card-title">Code-Based SDK</div><p>Full JS/API control; dev skills needed.</p><p style="color:var(--text-dim)">8th Wall, EasyAR, Banuba, Zappar</p></div><div class="card emerald"><div class="card-title">No-Code SaaS</div><p>Drag-and-drop; upload assets &amp; publish.</p><p style="color:var(--text-dim)">Augmania, XR.+, PlugXR, Onirix</p></div><div class="card violet"><div class="card-title">Full-Service Studio</div><p>Custom agency-built AR for enterprise.</p><p style="color:var(--text-dim)">Gravity Jack, AWE, ViewAR</p></div></div><div class="table-wrap"><table><thead><tr><th>Remaining Platforms</th><th>Specialty</th></tr></thead><tbody><tr><td>XR.+</td><td>No-code cloud: alpha blending, hand tracking, 360&deg; portals</td></tr><tr><td>Blipper</td><td>Advertising &amp; print: image/object recognition</td></tr><tr><td>AWE</td><td>Augmented World Enterprise: web-based MR (phones, tablets, VR goggles)</td></tr><tr><td>ViewAR</td><td>Product visualization: digital twins</td></tr><tr><td>WorldCast</td><td>ShowCAST (object), PrintCAST (print), GeoCAST (location)</td></tr><tr><td>Geenee AR</td><td>Interactive NFTs, gamified experiences, eCommerce</td></tr><tr><td>Onirix</td><td>Image recognition + spatial AR (marketing &amp; education)</td></tr></tbody></table></div>
+            </div>
+        </div>
+        <div class="slide-wrapper">
+            <div class="slide-content">
+<div class="eyebrow">Module 17 Review</div><h2 class="slide-title">CSS <span class="amber-text">perspective</span> Drill</h2><div class="grid-2col"><div class="code-panel"><div class="code-header"><span class="code-lang">CSS / JS &mdash; AR.html</span><button class="copy-btn" onclick="copyCode('persp-snip', this)">Copy</button></div><pre id="persp-snip"><span class="cm">/* parent sets the depth */</span>
+#div1 { <span class="at">perspective</span>: <span class="num">200px</span>; }
+<span class="cm">/* child is tilted away */</span>
+#div2 { transform: <span class="fn">rotateX</span>(<span class="num">45deg</span>); }
+
+<span class="kw">function</span> <span class="fn">changePersp</span>(value) {
+  document.<span class="fn">getElementById</span>(<span class="st">'div1'</span>)
+    .style.perspective = value + <span class="st">"px"</span>;
+}</pre></div><div class="flex-col"><div class="card amber"><div class="card-title">What it does</div><ul class="styled-list"><li><code>perspective</code> = distance from the viewer's eye to the 3D plane</li><li><strong>Low (45px)</strong> = very distorted / close</li><li><strong>High (2000px)</strong> = nearly flat / far</li><li><code>rotateX(45deg)</code> tilts the child; the <strong>parent's</strong> perspective sets how 3D it looks</li></ul></div><div class="card "><div class="card-title">Link to WebAR</div><p>AR engines compute viewer distance/angle and adjust the depth of virtual objects. CSS <strong>perspective</strong> is the browser-native version of that math.</p></div></div></div>
+            </div>
+        </div>
+        <!-- SLIDE 3: M19-20 PYTHON TTS -->
+        <div class="slide-wrapper">
+            <div class="slide-content">
+                <div class="eyebrow">Modules 19 & 20 Review</div>
+                <h2 class="slide-title">Python <span class="emerald-text">Text-to-Speech</span></h2>
+                
+                <div class="grid-2col">
+                    <div class="card cyan">
+                        <div class="card-title">gTTS (Google TTS)</div>
+                        <ul class="styled-list">
+                            <li><strong>Online only:</strong> Requires active internet.</li>
+                            <li><strong>Output:</strong> High-quality `.mp3` audio files.</li>
+                            <li><strong>Pros:</strong> Single end-to-end model, no local DB needed.</li>
+                            <li><strong>Cons:</strong> Flat prosody (due to L1/L2 loss functions), API rate limits.</li>
+                            <li><strong>Windows Playback:</strong> Requires `os.system("mpg321 output.mp3")`.</li>
+                        </ul>
+                    </div>
+                    <div class="card emerald">
+                        <div class="card-title">pyttsx3</div>
+                        <ul class="styled-list">
+                            <li><strong>Offline completely:</strong> Uses native OS engines.</li>
+                            <li><strong>Engines:</strong> sapi5 (Win), nsss (Mac), espeak (Linux).</li>
+                            <li><strong>Output:</strong> Real-time playback (no direct MP3).</li>
+                            <li><strong>Init:</strong> Uses a factory function `pyttsx3.init()` to return the engine reference.</li>
+                            <li><strong>Action:</strong> Call `engine.say()` then `engine.runAndWait()`.</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="card amber" style="margin-top: 10px; flex-direction: row; align-items: center; gap: 20px;">
+                    <div style="font-size: 40px;">&#x23E9;</div>
+                    <div>
+                        <div style="font-size: 18px; font-weight: 800; color: var(--accent-amber);">The 6-Step gTTS Workflow</div>
+                        <p style="font-size: 18px;"><strong>1.</strong> Install &nbsp;&bull;&nbsp; <strong>2.</strong> Import &nbsp;&bull;&nbsp; <strong>3.</strong> Input &nbsp;&bull;&nbsp; <strong>4.</strong> Create <code>gTTS()</code> &nbsp;&bull;&nbsp; <strong>5.</strong> Save &nbsp;&bull;&nbsp; <strong>6.</strong> Play <code>os.system()</code></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+                <div class="slide-wrapper">
+            <div class="slide-content">
+<div class="eyebrow">Modules 19 &amp; 20 Review</div><h2 class="slide-title"><span class="emerald-text">pip</span>, gTTS Parameters &amp; pyttsx3 Script</h2><div class="grid-2col"><div class="flex-col"><div class="card emerald"><div class="card-title">pip</div><ul class="styled-list"><li>Python's <strong>package management system</strong> (NOT Python itself)</li><li><code>pip install gTTS</code></li><li><code>pip install pyttsx3</code></li></ul></div><div class="card "><div class="card-title">gTTS(text, lang, slow)</div><ul class="styled-list"><li><code>text</code> = string to speak</li><li><code>lang</code> = &#39;en&#39;, &#39;es&#39;, &#39;fr&#39;, &#39;de&#39;, &#39;hi&#39;, &#39;tl&#39; (Filipino)</li><li><code>slow</code> = False normal, True slower</li><li>Save: <code>tts.save("output.mp3")</code></li></ul></div></div><div class="code-panel"><div class="code-header"><span class="code-lang">Python &mdash; pyttsx3 (offline)</span><button class="copy-btn" onclick="copyCode('tts-snip', this)">Copy</button></div><pre id="tts-snip"><span class="kw">import</span> pyttsx3
+engine = pyttsx3.<span class="fn">init</span>()
+text = <span class="fn">input</span>(<span class="st">"Enter the text you want to hear: "</span>)
+engine.<span class="fn">say</span>(text)
+engine.<span class="fn">runAndWait</span>()
+<span class="fn">print</span>(<span class="st">"Finished speaking!"</span>)</pre></div></div>
+            </div>
+        </div>
+        <!-- SLIDE 4: M22 FORM + AR -->
+        <div class="slide-wrapper">
+            <div class="slide-content">
+                <div class="eyebrow">Module 22 Review</div>
+                <h2 class="slide-title">Form with <span class="amber-text">Augmented Reality</span></h2>
+                
+                <div class="grid-2col">
+                    <div class="flex-col">
+                        <div class="card">
+                            <div class="card-title">HCI & AR Symbiosis</div>
+                            <p style="font-size: 18px;">AR enhances HCI by providing:</p>
+                            <ul class="styled-list">
+                                <li><strong>Immersive & Interactive Experiences</strong></li>
+                                <li><strong>Accessibility & Usability</strong> (voice control)</li>
+                                <li><strong>Creativity & Learning</strong> (3D simulations)</li>
+                            </ul>
+                        </div>
+                        <div class="card amber">
+                            <div class="card-title">The QR Code Bridge</div>
+                            <p style="font-size: 18px;">When linking Google Forms to WebAR, the <strong>QR Code acts as the bridge</strong>. Users scan it within the form to launch the AR experience without installing apps.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="code-panel">
+                        <div class="code-header">
+                            <span class="code-lang">Python &mdash; qrcode</span>
+                            <button class="copy-btn" onclick="copyCode('qr-code-snip', this)">Copy</button>
+                        </div>
+                        <pre id="qr-code-snip"><span class="kw">import</span> qrcode
+
+<span class="cm"># 1. Create the QR code object</span>
+qr = qrcode.<span class="fn">QRCode</span>(
+    version=<span class="num">1</span>, 
+    box_size=<span class="num">10</span>, 
+    border=<span class="num">4</span>
+)
+
+<span class="cm"># 2. Add URL data and make</span>
+qr.<span class="fn">add_data</span>(<span class="st">"https://ar-link.com"</span>)
+qr.<span class="fn">make</span>(fit=<span class="kw">True</span>)
+
+<span class="cm"># 3. Create image (color customizable)</span>
+img = qr.<span class="fn">make_image</span>(
+    fill_color=<span class="st">"black"</span>, 
+    back_color=<span class="st">"white"</span>
+)
+
+<span class="cm"># 4. Save to file</span>
+img.<span class="fn">save</span>(<span class="st">"qr-code.png"</span>)</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+                <div class="slide-wrapper">
+            <div class="slide-content">
+<div class="eyebrow">Module 22 Review</div><h2 class="slide-title">qrcode <span class="amber-text">Parameters</span> &amp; Full Script</h2><div class="grid-2col"><div class="table-wrap"><table><thead><tr><th>Parameter</th><th>Meaning</th></tr></thead><tbody><tr><td>version=1</td><td>matrix size</td></tr><tr><td>box_size=10</td><td><strong>pixels per box</strong></td></tr><tr><td>border=4</td><td>white margin size</td></tr><tr><td>error_correction</td><td>damage tolerance (ERROR_CORRECT_L)</td></tr><tr><td>fill_color / back_color</td><td>any HTML/CSS color</td></tr></tbody></table></div><div class="code-panel"><div class="code-header"><span class="code-lang">Python &mdash; qrcode (full)</span><button class="copy-btn" onclick="copyCode('qr-full', this)">Copy</button></div><pre id="qr-full"><span class="kw">import</span> qrcode
+qr = qrcode.<span class="fn">QRCode</span>(
+  version=<span class="num">1</span>,
+  error_correction=qrcode.constants.ERROR_CORRECT_L,
+  box_size=<span class="num">10</span>,
+  border=<span class="num">4</span>,
+)
+qr.<span class="fn">add_data</span>(<span class="st">"https://www.example.com"</span>)
+qr.<span class="fn">make</span>(fit=<span class="kw">True</span>)
+img = qr.<span class="fn">make_image</span>(fill_color=<span class="st">"black"</span>, back_color=<span class="st">"white"</span>)
+img.<span class="fn">save</span>(<span class="st">"qr-code.png"</span>)
+<span class="fn">print</span>(<span class="st">"QR Code saved as qr-code.png!"</span>)</pre></div></div>
+            </div>
+        </div>
+        <!-- SLIDE 5: M23 MAP APIS -->
+        <div class="slide-wrapper">
+            <div class="slide-content">
+                <div class="eyebrow">Module 23 Review</div>
+                <h2 class="slide-title"><span class="rose-text">Map APIs</span> & Spatial Intelligence</h2>
+                
+                <div class="grid-2col">
+                    <div class="card rose">
+                        <div class="card-title">Geocoding Operations</div>
+                        <div style="background: var(--bg-darker); padding: 16px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 12px;">
+                            <div style="font-weight: 800; color: var(--accent-cyan); font-size: 18px;">&#x1F4CD; Geocoding</div>
+                            <p style="font-size: 16px;">Converts a human-readable address into exact GPS coordinates (Lat/Lng).</p>
+                        </div>
+                        <div style="background: var(--bg-darker); padding: 16px; border-radius: 12px; border: 1px solid var(--border);">
+                            <div style="font-weight: 800; color: var(--accent-emerald); font-size: 18px;">&#x1F310; Reverse Geocoding</div>
+                            <p style="font-size: 16px;">Takes GPS coordinates and converts them back into a human-readable address.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex-col">
+                        <div class="card">
+                            <div class="card-title">Top Providers</div>
+                            <ul class="styled-list">
+                                <li><strong>Google Maps:</strong> Industry standard, broadest features.</li>
+                                <li><strong>Mapbox:</strong> Highly customizable vector maps (50k free views).</li>
+                                <li><strong>Foursquare:</strong> Best for venue data and analytics.</li>
+                            </ul>
+                        </div>
+                        <div class="card amber">
+                            <div class="card-title">Embed & APIs</div>
+                            <p style="font-size: 18px;">To embed a map without an API key, simply use an <strong><code>&lt;iframe&gt;</code></strong> tag. To locate the user dynamically in JS, use the browser's built-in <strong><code>navigator.geolocation</code></strong> API.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 6: CODE SHOWCASE 1 -->
+        <div class="slide-wrapper">
+            <div class="slide-content">
+                <div class="eyebrow">Code Showcase</div>
+                <h2 class="slide-title">Interactive <span class="cyan-text">Map Prototype</span></h2>
+                
+                <div class="grid-2col" style="height: min(580px, 65vh);">
+                    <div class="code-panel">
+                        <div class="code-header">
+                            <span class="code-lang">HTML / JS &mdash; map.html</span>
+                            <button class="copy-btn" onclick="copyCode('map-code', this)">Copy</button>
+                        </div>
+                        <pre id="map-code"><span class="tg">&lt;button</span> <span class="at">onclick</span>=<span class="st">"map_data()"</span><span class="tg">&gt;</span>Map it<span class="tg">&lt;/button&gt;</span>
+<span class="tg">&lt;p</span> <span class="at">id</span>=<span class="st">"demo"</span><span class="tg">&gt;&lt;/p&gt;</span>
+
+<span class="tg">&lt;script&gt;</span>
+<span class="kw">function</span> <span class="fn">map_data</span>() {
+    <span class="cm">// Ask the user for a location string</span>
+    <span class="kw">let</span> x = <span class="fn">prompt</span>(<span class="st">"Enter location"</span>);
+    
+    <span class="cm">// Check conditional logic</span>
+    <span class="kw">if</span> (x == <span class="st">"iloilo"</span>) {
+        <span class="cm">// Open new tab to map</span>
+        window.<span class="fn">open</span>(<span class="st">"https://www.google.com/maps/place/Iloilo+City"</span>);
+    } <span class="kw">else</span> {
+        <span class="cm">// Target paragraph and manipulate DOM</span>
+        document.<span class="fn">getElementById</span>(<span class="st">"demo"</span>).innerHTML = 
+            <span class="st">"404! Location not found."</span>;
+    }
+}
+<span class="tg">&lt;/script&gt;</span></pre>
+                    </div>
+                    
+                    <div class="flex-col">
+                        <div class="card" style="height: 100%;">
+                            <div class="card-title">Logic Breakdown</div>
+                            <br>
+                            <ul class="styled-list" style="gap: 16px;">
+                                <li><strong>Event Listener:</strong> The <code>onclick</code> attribute on the button triggers the JS function immediately.</li>
+                                <li><strong>Input:</strong> <code>prompt()</code> is used to capture a string from the user.</li>
+                                <li><strong>Routing:</strong> The <code>if/else</code> checks the string. If matched, it uses <code>window.open()</code>.</li>
+                                <li><strong>DOM Manipulation:</strong> If unmatched, it uses <code>document.getElementById().innerHTML</code> to display an error text natively on the page.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 7: ANALOGIES -->
+        <div class="slide-wrapper">
+            <div class="slide-content">
+                <div class="eyebrow">Making it Click</div>
+                <h2 class="slide-title">Real-Life <span class="violet-text">Scenarios</span></h2>
+                
+                <div class="grid-2x2">
+                    <div class="card">
+                        <div class="card-title">Location-Based AR</div>
+                        <p style="font-size: 18px;">A mobile game spawns digital monsters dynamically based on the user's real-world GPS coordinates (e.g., Pokémon GO). Content is locked to a geographic region.</p>
+                    </div>
+                    <div class="card emerald">
+                        <div class="card-title">Overlay AR</div>
+                        <p style="font-size: 18px;">A furniture app lets a customer view a highly detailed 3D model of a couch inside their actual living room, replacing the empty space with a virtual configuration.</p>
+                    </div>
+                    <div class="card amber">
+                        <div class="card-title">Offline TTS (pyttsx3)</div>
+                        <p style="font-size: 18px;">A developer is deployed to a rural school with zero internet access and must build a script that reads digital textbooks aloud. They must use the native OS engine.</p>
+                    </div>
+                    <div class="card violet">
+                        <div class="card-title">Contour-Based AR</div>
+                        <p style="font-size: 18px;">A car manufacturer uses SLAM and night-vision cameras to highlight the silhouettes of pedestrians on dark roads long before headlights illuminate them.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 8: KEY QUOTES -->
+        <div class="slide-wrapper">
+            <div class="slide-content">
+                <div class="eyebrow">Insights</div>
+                <h2 class="slide-title">Key <span class="emerald-text">Quotes</span></h2>
+                
+                <div class="flex-col" style="gap: 24px;">
+                    <div class="quote-box" style="border-left-color: var(--accent-cyan);">
+                        "A little progress each day adds up to big results."
+                        <span class="quote-author">&mdash; Satya Nani (Module 16)</span>
+                    </div>
+                    <div class="quote-box" style="border-left-color: var(--accent-violet);">
+                        "I find that the harder I work, the more luck I seem to have."
+                        <span class="quote-author">&mdash; Thomas Jefferson (Module 17)</span>
+                    </div>
+                    <div class="quote-box" style="border-left-color: var(--accent-emerald);">
+                        "Spread love everywhere you go. Let no one ever come to you without leaving happier."
+                        <span class="quote-author">&mdash; Mother Teresa (Module 19)</span>
+                    </div>
+                    <div class="quote-box" style="border-left-color: var(--accent-amber);">
+                        "Motivation is what gets you started. Habit is what keeps you going."
+                        <span class="quote-author">&mdash; Jim Ryun (Module 23)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 9: RECAP -->
+        <div class="slide-wrapper">
+            <div class="slide-content" style="align-items: center; text-align: center;">
+                <div class="eyebrow">Transition</div>
+                <h2 class="slide-title" style="font-size: 54px;">Ready for the <span class="cyan-text">Summative Review</span>?</h2>
+                <p class="slide-subtitle" style="max-width: 800px; margin: 20px auto 40px;">The next section contains 30 practice items matching your exact Pre-Final Periodical Exam structure. Grab a piece of paper or open a text editor to write down your answers.</p>
+                
+                <div class="badges" style="justify-content: center; margin-bottom: 40px;">
+                    <span class="badge cyan" style="font-size: 20px; padding: 12px 24px;">10 Multiple Choice</span>
+                    <span class="badge emerald" style="font-size: 20px; padding: 12px 24px;">10 Identification</span>
+                    <span class="badge violet" style="font-size: 20px; padding: 12px 24px;">10 Enumeration</span>
+                </div>
+                
+                <div class="card" style="max-width: 600px; width: 100%; text-align: left; border-top-color: var(--accent-rose);">
+                    <div class="card-title">&#x26A0;&#xFE0F; Rules</div>
+                    <p style="font-size: 18px; color: var(--text-dim);">Answers are <strong>hidden</strong> on the question slides. The complete Answer Key is provided at the very end of the deck. No cheating!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 10: MCQ 1 -->
+        <div class="slide-wrapper">
+            <div class="slide-content">
+                <div class="eyebrow">Summative Review &bull; Multiple Choice</div>
+                <h2 class="slide-title">Part 1: Questions <span class="violet-text">1&ndash;4</span></h2>
+                
+                <div class="grid-2x2">
+                    <div class="q-block">
+                        <div class="q-num">Question 1</div>
+                        <div class="q-text">Which AR type uses image recognition to scan specific images or QR codes to anchor 3D objects?</div>
+                        <ul class="q-options">
+                            <li><span>A)</span>Markerless AR</li>
+                            <li><span>B)</span>Location-Based AR</li>
+                            <li><span>C)</span>Marker-Based AR</li>
+                            <li><span>D)</span>Contour-Based AR</li>
+                        </ul>
+                    </div>
+                    <div class="q-block">
+                        <div class="q-num">Question 2</div>
+                        <div class="q-text">What is the primary difference between Augmented Reality (AR) and Virtual Reality (VR)?</div>
+                        <ul class="q-options">
+                            <li><span>A)</span>AR requires a headset; VR does not.</li>
+                            <li><span>B)</span>AR enhances reality; VR replaces it entirely.</li>
+                            <li><span>C)</span>AR replaces reality; VR blends both interactively.</li>
+                            <li><span>D)</span>AR operates at 75% virtual capacity; VR at 25%.</li>
+                        </ul>
+                    </div>
+                    <div class="q-block">
+                        <div class="q-num">Question 3</div>
+                        <div class="q-text">Which WebAR platform is considered a high-end, code-heavy solution for professional developers?</div>
+                        <ul class="q-options">
+                            <li><span>A)</span>Augmania</li>
+                            <li><span>B)</span>PlugXR</li>
+                            <li><span>C)</span>8th Wall</li>
+                            <li><span>D)</span>XR.+</li>
+                        </ul>
+                    </div>
+                    <div class="q-block">
+                        <div class="q-num">Question 4</div>
+                        <div class="q-text">If a developer needs a WebAR platform tailored for Face AR (makeup try-ons, background removal), which should they choose?</div>
+                        <ul class="q-options">
+                            <li><span>A)</span>Banuba</li>
+                            <li><span>B)</span>EasyAR</li>
+                            <li><span>C)</span>ViewAR</li>
+                            <li><span>D)</span>Gravity Jack</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 11: MCQ 2 -->
+        <div class="slide-wrapper">
+            <div class="slide-content">
+                <div class="eyebrow">Summative Review &bull; Multiple Choice</div>
+                <h2 class="slide-title">Part 1: Questions <span class="violet-text">5&ndash;8</span></h2>
+                
+                <div class="grid-2x2">
+                    <div class="q-block">
+                        <div class="q-num">Question 5</div>
+                        <div class="q-text">Which Python library performs Text-to-Speech (TTS) completely offline using the OS's native engine?</div>
+                        <ul class="q-options">
+                            <li><span>A)</span>gTTS</li>
+                            <li><span>B)</span>pyttsx3</li>
+                            <li><span>C)</span>mpg321</li>
+                            <li><span>D)</span>requests</li>
+                        </ul>
+                    </div>
+                    <div class="q-block">
+                        <div class="q-num">Question 6</div>
+                        <div class="q-text">What is a major disadvantage of using the gTTS library for Python projects?</div>
+                        <ul class="q-options">
+                            <li><span>A)</span>It lacks Python 3 support.</li>
+                            <li><span>B)</span>It requires an active internet connection.</li>
+                            <li><span>C)</span>It cannot save files as MP3.</li>
+                            <li><span>D)</span>It requires a heavy database of audio.</li>
+                        </ul>
+                    </div>
+                    <div class="q-block">
+                        <div class="q-num">Question 7</div>
+                        <div class="q-text">What command is required to actually play the audio file generated by gTTS on a Windows machine?</div>
+                        <ul class="q-options">
+                            <li><span>A)</span>tts.play()</li>
+                            <li><span>B)</span>os.system("mpg321 output.mp3")</li>
+                            <li><span>C)</span>engine.runAndWait()</li>
+                            <li><span>D)</span>engine.say("output.mp3")</li>
+                        </ul>
+                    </div>
+                    <div class="q-block">
+                        <div class="q-num">Question 8</div>
+                        <div class="q-text">Which technology uses tiny embedded sensors like cameras, accelerometers, and compasses to enable 6DoF tracking in AR devices?</div>
+                        <ul class="q-options">
+                            <li><span>A)</span>SLAM</li>
+                            <li><span>B)</span>QAR</li>
+                            <li><span>C)</span>MEMS</li>
+                            <li><span>D)</span>HUD</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 12: MCQ 3 -->
+        <div class="slide-wrapper">
+            <div class="slide-content">
+                <div class="eyebrow">Summative Review &bull; Multiple Choice</div>
+                <h2 class="slide-title">Part 1: Questions <span class="violet-text">9&ndash;10</span></h2>
+                
+                <div class="grid-2col" style="justify-content: center; max-width: 1000px; margin: 0 auto;">
+                    <div class="q-block">
+                        <div class="q-num">Question 9</div>
+                        <div class="q-text">Which Map API is best known for the most customizable vector maps and offers 50,000 free map views per month?</div>
+                        <ul class="q-options">
+                            <li><span>A)</span>Google Maps</li>
+                            <li><span>B)</span>Bing Maps</li>
+                            <li><span>C)</span>Mapbox</li>
+                            <li><span>D)</span>Foursquare</li>
+                        </ul>
+                    </div>
+                    <div class="q-block">
+                        <div class="q-num">Question 10</div>
+                        <div class="q-text">Which type of AR uses SLAM and advanced computer vision to highlight silhouettes of hazards on dark roads for nighttime drivers?</div>
+                        <ul class="q-options">
+                            <li><span>A)</span>Location-Based AR</li>
+                            <li><span>B)</span>Overlay AR</li>
+                            <li><span>C)</span>Contour-Based AR</li>
+                            <li><span>D)</span>Projection-Based AR</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 13: ID 1 -->
+        <div class="slide-wrapper">
+            <div class="slide-content">
+                <div class="eyebrow">Summative Review &bull; Situational Identification</div>
+                <h2 class="slide-title">Part 2: Questions <span class="emerald-text">11&ndash;14</span></h2>
+                
+                <div class="grid-2x2">
+                    <div class="id-block">
+                        <div class="id-num">Item 11</div>
+                        <div class="q-text">A developer is building a mobile game that spawns digital monsters based on the user's real-world GPS coordinates, similar to Pokémon GO. What type of AR is being utilized?</div>
+                        <div class="id-blank"></div>
+                    </div>
+                    <div class="id-block">
+                        <div class="id-num">Item 12</div>
+                        <div class="q-text">A furniture store wants customers to see a 3D model of a couch inside their actual living room via their phone camera. What specific type of AR allows this virtual replacement?</div>
+                        <div class="id-blank"></div>
+                    </div>
+                    <div class="id-block">
+                        <div class="id-num">Item 13</div>
+                        <div class="q-text">You are deployed to a rural school with zero internet connectivity and need a Python script that reads digital textbooks aloud. Which Python library must you use?</div>
+                        <div class="id-blank"></div>
+                    </div>
+                    <div class="id-block">
+                        <div class="id-num">Item 14</div>
+                        <div class="q-text">A delivery app takes the address "Rizal Park, Manila" entered by a user and converts it into exact latitude and longitude coordinates to drop a pin on the map. What is this process called?</div>
+                        <div class="id-blank"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 14: ID 2 -->
+        <div class="slide-wrapper">
+            <div class="slide-content">
+                <div class="eyebrow">Summative Review &bull; Situational Identification</div>
+                <h2 class="slide-title">Part 2: Questions <span class="emerald-text">15&ndash;18</span></h2>
+                
+                <div class="grid-2x2">
+                    <div class="id-block">
+                        <div class="id-num">Item 15</div>
+                        <div class="q-text">A marketing team with no coding experience wants to create a WebAR campaign by dragging and dropping 3D models into a browser editor. What broad category of WebAR platform are they looking for?</div>
+                        <div class="id-blank"></div>
+                    </div>
+                    <div class="id-block">
+                        <div class="id-num">Item 16</div>
+                        <div class="q-text">A museum visitor scans a specific image printed on a plaque to make a 3D dinosaur appear anchored to that exact spot. What type of AR requires this specific image trigger?</div>
+                        <div class="id-blank"></div>
+                    </div>
+                    <div class="id-block">
+                        <div class="id-num">Item 17</div>
+                        <div class="q-text">Your script generates a gTTS MP3 file, but the program crashes on the <code>os.system()</code> line on a Windows PC. What lightweight MP3 player is likely missing from the system's PATH?</div>
+                        <div class="id-blank"></div>
+                    </div>
+                    <div class="id-block">
+                        <div class="id-num">Item 18</div>
+                        <div class="q-text">An Instagram user uploads a photo, and the app reads the image's embedded GPS coordinates to automatically suggest the location tag "Iloilo City." What mapping process just occurred?</div>
+                        <div class="id-blank"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 15: ID 3 -->
+        <div class="slide-wrapper">
+            <div class="slide-content">
+                <div class="eyebrow">Summative Review &bull; Situational Identification</div>
+                <h2 class="slide-title">Part 2: Questions <span class="emerald-text">19&ndash;20</span></h2>
+                
+                <div class="grid-2col" style="justify-content: center; max-width: 1000px; margin: 0 auto;">
+                    <div class="id-block">
+                        <div class="id-num">Item 19</div>
+                        <div class="q-text">An HCI researcher adds hands-free voice control to an AR simulation to assist users with limited mobility. Which of the three ways AR enhances HCI does this directly address?</div>
+                        <div class="id-blank"></div>
+                    </div>
+                    <div class="id-block">
+                        <div class="id-num">Item 20</div>
+                        <div class="q-text">A developer wants to embed a Google Map into a website without generating an API key or writing JavaScript. What HTML element should they use to paste the map code into the page?</div>
+                        <div class="id-blank"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 16: ENUMERATION -->
+        <div class="slide-wrapper">
+            <div class="slide-content">
+                <div class="eyebrow">Summative Review &bull; Enumeration</div>
+                <h2 class="slide-title">Part 3: Questions <span class="amber-text">21&ndash;30</span></h2>
+                
+                <div class="grid-3col">
+                    <div class="card">
+                        <div class="card-title">Core Features of AR</div>
+                        <p style="font-size: 16px; color: var(--text-dim); margin-bottom: 10px;">Name the three (3) core features required for true AR.</p>
+                        <div class="flex-col" style="gap: 12px;">
+                            <div style="display: flex; gap: 10px;"><span style="font-weight: 800; color: var(--accent-cyan);">21.</span><div style="border-bottom: 2px solid var(--border); flex: 1;"></div></div>
+                            <div style="display: flex; gap: 10px;"><span style="font-weight: 800; color: var(--accent-cyan);">22.</span><div style="border-bottom: 2px solid var(--border); flex: 1;"></div></div>
+                            <div style="display: flex; gap: 10px;"><span style="font-weight: 800; color: var(--accent-cyan);">23.</span><div style="border-bottom: 2px solid var(--border); flex: 1;"></div></div>
+                        </div>
+                    </div>
+                    <div class="card amber">
+                        <div class="card-title">Ways AR Enhances HCI</div>
+                        <p style="font-size: 16px; color: var(--text-dim); margin-bottom: 10px;">Name the three (3) ways AR fundamentally improves HCI.</p>
+                        <div class="flex-col" style="gap: 12px;">
+                            <div style="display: flex; gap: 10px;"><span style="font-weight: 800; color: var(--accent-amber);">24.</span><div style="border-bottom: 2px solid var(--border); flex: 1;"></div></div>
+                            <div style="display: flex; gap: 10px;"><span style="font-weight: 800; color: var(--accent-amber);">25.</span><div style="border-bottom: 2px solid var(--border); flex: 1;"></div></div>
+                            <div style="display: flex; gap: 10px;"><span style="font-weight: 800; color: var(--accent-amber);">26.</span><div style="border-bottom: 2px solid var(--border); flex: 1;"></div></div>
+                        </div>
+                    </div>
+                    <div class="card rose">
+                        <div class="card-title">AR Display Hardware</div>
+                        <p style="font-size: 16px; color: var(--text-dim); margin-bottom: 10px;">Name four (4) types of AR Display Hardware.</p>
+                        <div class="flex-col" style="gap: 12px;">
+                            <div style="display: flex; gap: 10px;"><span style="font-weight: 800; color: var(--accent-rose);">27.</span><div style="border-bottom: 2px solid var(--border); flex: 1;"></div></div>
+                            <div style="display: flex; gap: 10px;"><span style="font-weight: 800; color: var(--accent-rose);">28.</span><div style="border-bottom: 2px solid var(--border); flex: 1;"></div></div>
+                            <div style="display: flex; gap: 10px;"><span style="font-weight: 800; color: var(--accent-rose);">29.</span><div style="border-bottom: 2px solid var(--border); flex: 1;"></div></div>
+                            <div style="display: flex; gap: 10px;"><span style="font-weight: 800; color: var(--accent-rose);">30.</span><div style="border-bottom: 2px solid var(--border); flex: 1;"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+                <!-- SLIDE 17: ANSWER KEY 1 -->
+        <div class="slide-wrapper">
+            <div class="slide-content">
+                <div class="eyebrow">Answer Key</div>
+                <h2 class="slide-title">Part 1 & 2: <span class="emerald-text">MCQ & Identification</span></h2>
+                
+                <div class="grid-2col">
+                    <div class="flex-col">
+                        <div class="ans-row">
+                            <div class="ans-num">1-5</div>
+                            <div class="ans-content">
+                                <div class="ans-letter">1. C &nbsp;&bull;&nbsp; 2. B &nbsp;&bull;&nbsp; 3. C &nbsp;&bull;&nbsp; 4. A &nbsp;&bull;&nbsp; 5. B</div>
+                                <div class="ans-desc">Marker-Based uses images (1). AR enhances, VR replaces (2). 8th Wall is code-heavy (3). Banuba specializes in Face AR (4). pyttsx3 is offline (5).</div>
+                            </div>
+                        </div>
+                        <div class="ans-row">
+                            <div class="ans-num">6-10</div>
+                            <div class="ans-content">
+                                <div class="ans-letter">6. B &nbsp;&bull;&nbsp; 7. B &nbsp;&bull;&nbsp; 8. C &nbsp;&bull;&nbsp; 9. C &nbsp;&bull;&nbsp; 10. C</div>
+                                <div class="ans-desc">gTTS requires internet (6). mpg321 plays MP3 on Windows (7). MEMS enables 6DoF (8). Mapbox provides custom vector maps (9). Contour-Based outlines hazards (10).</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-col">
+                        <div class="ans-row" style="border-left: 4px solid var(--accent-emerald);">
+                            <div class="ans-num">11-15</div>
+                            <div class="ans-content">
+                                <div class="ans-letter">11. Location-Based AR <br> 12. Overlay AR <br> 13. pyttsx3 <br> 14. Geocoding <br> 15. No-Code SaaS</div>
+                            </div>
+                        </div>
+                        <div class="ans-row" style="border-left: 4px solid var(--accent-emerald);">
+                            <div class="ans-num">16-20</div>
+                            <div class="ans-content">
+                                <div class="ans-letter">16. Marker-Based AR <br> 17. mpg321 <br> 18. Reverse Geocoding <br> 19. Accessibility & Usability <br> 20. iframe</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 18: ANSWER KEY 2 -->
+        <div class="slide-wrapper">
+            <div class="slide-content">
+                <div class="eyebrow">Answer Key</div>
+                <h2 class="slide-title">Part 3: <span class="amber-text">Enumeration</span></h2>
+                
+                <div class="grid-3col">
+                    <div class="card">
+                        <div class="card-title" style="color: var(--accent-cyan);">Q 21 &ndash; 23</div>
+                        <p style="font-size: 16px; color: var(--text-dim);">Core Features of AR (Any order)</p>
+                        <ul class="styled-list">
+                            <li>Combination of real and virtual worlds</li>
+                            <li>Real-time interaction</li>
+                            <li>Accurate 3D registration</li>
+                        </ul>
+                    </div>
+                    <div class="card amber">
+                        <div class="card-title" style="color: var(--accent-amber);">Q 24 &ndash; 26</div>
+                        <p style="font-size: 16px; color: var(--text-dim);">Ways AR Enhances HCI (Any order)</p>
+                        <ul class="styled-list">
+                            <li>Immersive & Interactive Experience</li>
+                            <li>Accessibility & Usability</li>
+                            <li>Creativity & Learning</li>
+                        </ul>
+                    </div>
+                    <div class="card rose">
+                        <div class="card-title" style="color: var(--accent-rose);">Q 27 &ndash; 30</div>
+                        <p style="font-size: 16px; color: var(--text-dim);">AR Display Hardware (Any 4)</p>
+                        <ul class="styled-list">
+                            <li>Head-Mounted Display (HMD)</li>
+                            <li>Eyeglasses</li>
+                            <li>Head-Up Display (HUD)</li>
+                            <li>Virtual Retinal Display (VRD)</li>
+                            <li>Projector Mapping / Eyetap / Handheld</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+                <!-- SLIDE 19: CLOSING -->
+        <div class="slide-wrapper">
+            <div class="slide-content" style="align-items: center; justify-content: center; text-align: center; border: 2px solid var(--accent-emerald);">
+                <div class="img-container" style="background: transparent; border: none; height: 160px; margin-bottom: 20px;">
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="50" cy="50" r="45" fill="#1e293b" stroke="#34d399" stroke-width="4" />
+                        <path d="M30 50 L45 65 L70 35" stroke="#34d399" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                    </svg>
+                </div>
+                <div class="eyebrow" style="border: none; color: var(--accent-emerald);">Review Complete</div>
+                <h1 class="slide-title" style="font-size: clamp(40px, 5vw, 64px); margin-bottom: 20px;">
+                    Good Luck on your<br><span class="emerald-text">Pre-Final Exam!</span>
+                </h1>
+                <p class="slide-subtitle" style="max-width: 600px;">You've covered all the core concepts across Augmented Reality, Python TTS, Form Integration, and Map APIs.</p>
+                <div style="font-size: 20px; font-weight: 800; color: #fff; margin-top: 20px;">Press <span class="emerald-text">Home</span> to restart the deck.</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- SHORTCUTS OVERLAY -->
+    <div id="shortcuts">
+        <div class="shortcuts-box">
+            <h3>Keyboard & Mouse Shortcuts</h3>
+            <div class="sk-row"><span>Next Slide</span> <div><span class="sk-key">&rarr;</span> or <span class="sk-key">Right-Click</span></div></div>
+            <div class="sk-row"><span>Previous Slide</span> <div><span class="sk-key">&larr;</span> or <span class="sk-key">Mouse3</span></div></div>
+            <div class="sk-row"><span>First / Last Slide</span> <div><span class="sk-key">Home</span> / <span class="sk-key">End</span></div></div>
+            <div class="sk-row"><span>Toggle this menu</span> <span class="sk-key">?</span></div>
+            <div class="sk-row" style="border:none; margin-top: 10px; font-size: 16px; color: var(--text-dim); justify-content: center;">Swipe left/right on touch devices</div>
+            <button class="close-btn" onclick="toggleShortcuts()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        // SLIDE NAVIGATION LOGIC
+        const slides = document.querySelectorAll('.slide-wrapper');
+        const progressBar = document.getElementById('progress-bar');
+        const counter = document.getElementById('counter');
+        const shortcutsOverlay = document.getElementById('shortcuts');
+        
+        let currentSlide = 0;
+        let isAnimating = false;
+        
+        function updateUI() {
+            progressBar.style.width = `${((currentSlide + 1) / slides.length) * 100}%`;
+            counter.textContent = `${currentSlide + 1} / ${slides.length}`;
+        }
+
+        function goToSlide(index, direction = 'next') {
+            if (isAnimating || index === currentSlide || index < 0 || index >= slides.length) return;
+            isAnimating = true;
+            
+            const prev = slides[currentSlide];
+            const next = slides[index];
+            
+            prev.classList.remove('active');
+            prev.classList.add(direction === 'next' ? 'exit-left' : 'exit-right');
+            
+            next.style.transition = 'none';
+            next.style.transform = direction === 'next' ? 'translateX(50px)' : 'translateX(-50px)';
+            next.style.opacity = '0';
+            
+            // Force reflow
+            void next.offsetWidth;
+            
+            next.style.transition = '';
+            next.style.transform = '';
+            next.style.opacity = '';
+            next.classList.add('active');
+            
+            currentSlide = index;
+            updateUI();
+            
+            setTimeout(() => {
+                prev.classList.remove('exit-left', 'exit-right');
+                isAnimating = false;
+            }, 350);
+        }
+
+        function nextSlide() { goToSlide(currentSlide + 1, 'next'); }
+        function prevSlide() { goToSlide(currentSlide - 1, 'prev'); }
+        
+        function toggleShortcuts() {
+            shortcutsOverlay.classList.toggle('show');
+        }
+
+        // EVENT LISTENERS: KEYBOARD
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+                e.preventDefault(); nextSlide();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
+                e.preventDefault(); prevSlide();
+            } else if (e.key === 'Home') {
+                e.preventDefault(); goToSlide(0, 'prev');
+            } else if (e.key === 'End') {
+                e.preventDefault(); goToSlide(slides.length - 1, 'next');
+            } else if (e.key === '?' || e.key === '/') {
+                toggleShortcuts();
+            } else if (e.key === 'Escape') {
+                shortcutsOverlay.classList.remove('show');
+            }
+        });
+
+        // EVENT LISTENERS: MOUSE (Capture phase to block default browser behavior)
+        document.addEventListener('mousedown', (e) => {
+            // Block Right-click (2), Back (3), Forward (4)
+            if (e.button === 2 || e.button === 3 || e.button === 4) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+            }
+        }, true);
+
+        document.addEventListener('mouseup', (e) => {
+            if (e.button === 2 || e.button === 4) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                nextSlide();
+            } else if (e.button === 3) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                prevSlide();
+            }
+        }, true);
+
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+        }, true);
+
+        // EVENT LISTENERS: TOUCH
+        let touchStartX = 0;
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+        
+        document.addEventListener('touchend', (e) => {
+            let touchEndX = e.changedTouches[0].screenX;
+            if (touchStartX - touchEndX > 50) nextSlide();
+            else if (touchEndX - touchStartX > 50) prevSlide();
+        }, { passive: true });
+
+        // COPY CODE FUNCTIONALITY
+        function copyCode(elementId, btn) {
+            const text = document.getElementById(elementId).innerText;
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(() => flashBtn(btn));
+            } else {
+                // Fallback
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); flashBtn(btn); } catch (err) {}
+                document.body.removeChild(ta);
+            }
+        }
+        
+        function flashBtn(btn) {
+            const originalText = btn.innerText;
+            btn.innerText = 'Copied!';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.classList.remove('copied');
+            }, 1800);
+        }
+
+        // INIT
+        updateUI();
+    </script>
+</body>
+</html>
