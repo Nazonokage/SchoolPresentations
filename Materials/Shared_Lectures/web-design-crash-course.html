@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Web Design in 30 Minutes — HTML, CSS &amp; JavaScript</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-base:#14161c;
+    --bg-panel:#1a1d25;
+    --bg-panel-2:#20232d;
+    --line:#2a2e3a;
+    --text-primary:#eceef2;
+    --text-muted:#8b93a7;
+    --text-dim:#5b6272;
+    --accent-html:#ff8a5c;
+    --accent-css:#6cc6ff;
+    --accent-js:#ffd866;
+    --accent-html-dim:rgba(255,138,92,0.12);
+    --accent-css-dim:rgba(108,198,255,0.12);
+    --accent-js-dim:rgba(255,216,102,0.12);
+    --green:#8fd48a;
+    --pink:#ff9edb;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{
+    height:100%;
+    background:var(--bg-base);
+    color:var(--text-primary);
+    font-family:'Inter',sans-serif;
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{ background:rgba(255,255,255,0.15); }
+
+  /* ---------- shell ---------- */
+  #shell{
+    position:relative;
+    height:100vh;
+    width:100vw;
+    display:flex;
+    flex-direction:column;
+  }
+
+  /* ---------- top progress rail ---------- */
+  #progress-rail{
+    position:fixed; top:0; left:0; right:0; height:3px;
+    background:var(--line); z-index:50;
+  }
+  #progress-fill{
+    height:100%; width:0%;
+    background:linear-gradient(90deg,var(--accent-html),var(--accent-css),var(--accent-js));
+    transition:width .35s ease;
+  }
+
+  /* ---------- editor tab bar ---------- */
+  #tabbar{
+    height:44px;
+    display:flex;
+    align-items:stretch;
+    background:var(--bg-panel);
+    border-bottom:1px solid var(--line);
+    padding-left:18px;
+    flex-shrink:0;
+    -webkit-app-region:no-drag;
+  }
+  #tabbar .dots{
+    display:flex; align-items:center; gap:7px; padding-right:18px; margin-right:6px; border-right:1px solid var(--line);
+  }
+  #tabbar .dots span{ width:10px; height:10px; border-radius:50%; background:var(--line); }
+  .tab{
+    display:flex; align-items:center; gap:8px;
+    padding:0 18px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    color:var(--text-dim);
+    border-right:1px solid var(--line);
+    position:relative;
+    transition:color .3s ease;
+    letter-spacing:.2px;
+  }
+  .tab .dot{ width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.4; }
+  .tab.active{ color:var(--text-primary); background:var(--bg-panel-2); }
+  .tab.active .dot{ opacity:1; }
+  .tab.active::after{
+    content:''; position:absolute; bottom:-1px; left:0; right:0; height:2px;
+  }
+  .tab[data-file="html"].active{ }
+  .tab[data-file="html"].active::after{ background:var(--accent-html); }
+  .tab[data-file="css"].active::after{ background:var(--accent-css); }
+  .tab[data-file="js"].active::after{ background:var(--accent-js); }
+  .tab[data-file="html"].active .dot{ color:var(--accent-html); }
+  .tab[data-file="css"].active .dot{ color:var(--accent-css); }
+  .tab[data-file="js"].active .dot{ color:var(--accent-js); }
+
+  /* ---------- main stage ---------- */
+  #stage{
+    flex:1;
+    display:flex;
+    position:relative;
+    overflow:hidden;
+  }
+
+  /* line-number rail */
+  #rail{
+    width:64px;
+    flex-shrink:0;
+    background:var(--bg-panel);
+    border-right:1px solid var(--line);
+    display:flex; flex-direction:column; align-items:center;
+    padding-top:22px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    color:var(--text-dim);
+    gap:0;
+    overflow:hidden;
+  }
+  #rail .num{
+    height:14px;
+    line-height:14px;
+    margin-bottom:11px;
+    transition:color .3s ease, transform .3s ease;
+  }
+  #rail .num.current{ color:var(--text-primary); font-weight:700; transform:scale(1.15); }
+
+  /* slide viewport */
+  #viewport{
+    flex:1;
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:48px 64px;
+    cursor:pointer;
+  }
+
+  .slide{
+    position:absolute;
+    inset:0;
+    display:flex;
+    padding:40px 72px;
+    opacity:0;
+    transform:translateY(18px) scale(.985);
+    pointer-events:none;
+    overflow-y:auto;
+    overflow-x:hidden;
+    transition:opacity .4s cubic-bezier(.2,.7,.3,1), transform .45s cubic-bezier(.2,.7,.3,1);
+    scrollbar-width:thin;
+    scrollbar-color:var(--line) transparent;
+  }
+  .slide::-webkit-scrollbar{ width:8px; }
+  .slide::-webkit-scrollbar-thumb{ background:var(--line); border-radius:4px; }
+  .slide::-webkit-scrollbar-track{ background:transparent; }
+  .slide.active{
+    opacity:1;
+    transform:translateY(0) scale(1);
+    pointer-events:auto;
+  }
+  .slide-inner{
+    width:100%;
+    max-width:980px;
+    margin:auto;
+    padding-bottom:8px;
+  }
+
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    margin-bottom:14px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow .bracket{ opacity:.5; }
+  h1.slide-title, h2.slide-title{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    line-height:1.15;
+    letter-spacing:-.5px;
+    margin-bottom:26px;
+  }
+  h1.slide-title{ font-size:clamp(34px,4.6vw,58px); }
+  h2.slide-title{ font-size:clamp(26px,3.2vw,38px); }
+
+  .subtitle{
+    font-size:19px; color:var(--text-muted); margin-bottom:8px; font-weight:500;
+  }
+  .presenter{ font-size:14px; color:var(--text-dim); margin-bottom:34px; font-family:'JetBrains Mono',monospace; }
+
+  .quote-block{
+    border-left:3px solid var(--accent-js);
+    padding:14px 22px;
+    background:var(--accent-js-dim);
+    border-radius:0 8px 8px 0;
+    font-size:17px;
+    color:var(--text-primary);
+    max-width:640px;
+    margin-top:8px;
+    font-style:italic;
+  }
+
+  ul.bullets{ list-style:none; display:flex; flex-direction:column; gap:12px; margin-bottom:8px; }
+  ul.bullets li{
+    font-size:16.5px; color:var(--text-primary); line-height:1.55;
+    padding-left:20px; position:relative;
+  }
+  ul.bullets li::before{
+    content:'›'; position:absolute; left:0; top:0;
+    color:var(--tab-accent, var(--accent-html));
+    font-weight:700;
+  }
+  ul.bullets li b, ul.bullets li strong{ color:var(--text-primary); font-weight:700;}
+  ul.bullets li .hl{ color:var(--tab-accent, var(--accent-html)); font-weight:600; }
+  ul.bullets.numbered{ counter-reset: item; }
+  ul.bullets.numbered li{ padding-left:30px; }
+  ul.bullets.numbered li::before{
+    counter-increment:item; content: counter(item);
+    font-family:'JetBrains Mono',monospace; font-size:12px;
+    width:18px; height:18px; border-radius:4px;
+    background:var(--tab-accent-dim, var(--accent-html-dim));
+    color:var(--tab-accent, var(--accent-html));
+    display:flex; align-items:center; justify-content:center;
+    top:1px;
+  }
+
+  .two-col{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:34px; align-items:start; min-width:0; }
+  .two-col > *{ min-width:0; }
+
+  .tri-grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; margin-top:6px; min-width:0; }
+  .tri-card{
+    min-width:0;
+    background:var(--bg-panel-2);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:18px;
+  }
+  .tri-card .col-title{ margin-bottom:8px; }
+  .tri-desc{ font-size:13.5px; color:var(--text-muted); line-height:1.55; margin-bottom:4px; min-height:40px; }
+  .tri-card .code-block{ margin-top:10px; }
+  .tri-card .code-head{ padding:6px 12px; font-size:10.5px; }
+  .tri-card pre.code{ font-size:12px; padding:12px 14px; line-height:1.55; }
+  .col-title{
+    font-family:'JetBrains Mono',monospace; font-weight:700; font-size:14px;
+    color:var(--tab-accent,var(--accent-html)); margin-bottom:10px; letter-spacing:.3px;
+  }
+
+  .code-block{
+    background:var(--bg-panel-2);
+    border:1px solid var(--line);
+    border-radius:10px;
+    overflow:hidden;
+    margin-top:14px;
+    min-width:0;
+    box-shadow:0 8px 24px rgba(0,0,0,0.25);
+  }
+  .code-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 14px;
+    border-bottom:1px solid var(--line);
+    font-family:'JetBrains Mono',monospace;
+    font-size:11.5px;
+    color:var(--text-dim);
+  }
+  .code-head .fname{ color:var(--text-muted); }
+  pre.code{
+    margin:0; padding:16px 18px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13.5px; line-height:1.65;
+    overflow:auto;
+    color:#c9cdd6;
+    white-space:pre;
+  }
+  .tk-tag{ color:#ff8a5c; }
+  .tk-attr{ color:#ffd866; }
+  .tk-str{ color:#8fd48a; }
+  .tk-comment{ color:#5b6272; font-style:italic; }
+  .tk-kw{ color:#ff9edb; }
+  .tk-prop{ color:#6cc6ff; }
+  .tk-val{ color:#8fd48a; }
+  .tk-num{ color:#ffd866; }
+  .tk-sel{ color:#ff8a5c; font-weight:600; }
+  .tk-punct{ color:#8b93a7; }
+
+  table.ref{ width:100%; border-collapse:collapse; margin-top:10px; font-size:14px; }
+  table.ref th{
+    text-align:left; font-family:'JetBrains Mono',monospace; font-size:11.5px;
+    color:var(--text-dim); text-transform:uppercase; letter-spacing:.5px;
+    padding:8px 12px; border-bottom:1px solid var(--line);
+  }
+  table.ref td{
+    padding:9px 12px; border-bottom:1px solid var(--line); color:var(--text-primary);
+  }
+  table.ref td:first-child{ font-family:'JetBrains Mono',monospace; color:var(--tab-accent,var(--accent-html)); }
+  table.ref tr:last-child td{ border-bottom:none; }
+
+  .footer-note{
+    margin-top:22px; font-size:13.5px; color:var(--text-dim);
+    font-family:'JetBrains Mono',monospace;
+  }
+  .footer-note b{ color:var(--text-muted); }
+
+  .badge-row{ display:flex; gap:10px; margin-top:18px; flex-wrap:wrap; }
+  .badge{
+    font-family:'JetBrains Mono',monospace; font-size:12px;
+    padding:6px 12px; border-radius:20px;
+    border:1px solid var(--line); color:var(--text-muted);
+  }
+
+  .cta-box{
+    margin-top:28px; padding:20px 24px;
+    border:1px solid var(--line); border-radius:12px;
+    background:var(--bg-panel-2);
+  }
+  .cta-box .cta-title{ font-family:'JetBrains Mono',monospace; font-weight:700; font-size:15px; color:var(--accent-js); margin-bottom:6px; }
+  .cta-box p{ font-size:14.5px; color:var(--text-muted); line-height:1.6; }
+
+  /* ---------- nav affordances ---------- */
+  #nav-hint{
+    position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
+    font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--text-dim);
+    display:flex; align-items:center; gap:8px; z-index:40;
+    background:rgba(20,22,28,0.7); backdrop-filter:blur(6px);
+    padding:6px 14px; border-radius:20px; border:1px solid var(--line);
+    opacity:1; transition:opacity .6s ease;
+  }
+  #nav-hint kbd{
+    background:var(--bg-panel-2); border:1px solid var(--line);
+    border-radius:4px; padding:1px 6px; color:var(--text-muted); font-size:11px;
+  }
+  #nav-hint.fade{ opacity:0; }
+
+  #counter{
+    position:fixed; top:12px; right:20px; z-index:40;
+    font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-dim);
+    letter-spacing:.5px;
+  }
+  #counter b{ color:var(--text-primary); }
+
+  .edge-btn{
+    position:fixed; top:0; bottom:0; width:64px; z-index:30;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--text-dim); font-size:20px;
+    opacity:0; transition:opacity .2s ease, color .2s ease;
+    background:linear-gradient(90deg, rgba(0,0,0,0.15), transparent);
+  }
+  .edge-btn:hover{ opacity:1; color:var(--text-primary); }
+  #edge-prev{ left:0; }
+  #edge-next{ right:0; transform:scaleX(-1); background:linear-gradient(90deg, rgba(0,0,0,0.15), transparent); }
+
+  @media (max-width:820px){
+    #rail{ width:36px; }
+    .two-col{ grid-template-columns:1fr; }
+    .tri-grid{ grid-template-columns:1fr; }
+    .slide{ padding:24px 26px; }
+    h1.slide-title{ font-size:32px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition:opacity .2s linear; transform:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress-rail"><div id="progress-fill"></div></div>
+
+<div id="shell">
+  <div id="tabbar">
+    <div class="dots"><span></span><span></span><span></span></div>
+    <div class="tab" data-file="html"><span class="dot"></span>index.html</div>
+    <div class="tab" data-file="css"><span class="dot"></span>style.css</div>
+    <div class="tab" data-file="js"><span class="dot"></span>script.js</div>
+  </div>
+
+  <div id="stage">
+    <div id="rail"></div>
+    <div id="viewport">
+      <div id="slides"></div>
+    </div>
+  </div>
+</div>
+
+<div class="edge-btn" id="edge-prev">‹</div>
+<div class="edge-btn" id="edge-next">‹</div>
+<div id="counter"><b id="counter-cur">1</b> / <span id="counter-total">27</span></div>
+<div id="nav-hint">click / <kbd>→</kbd> next &nbsp;·&nbsp; <kbd>←</kbd> back</div>
+
+<script>
+/* ============ Syntax highlight (lightweight, presentational only) ============ */
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function hlHTML(code){
+  const s = esc(code);
+  const re = /(&lt;!--[\s\S]*?--&gt;)|(&lt;\/?)([a-zA-Z][\w-]*)|([a-zA-Z-]+)(=)("[^"]*")/g;
+  return s.replace(re, (m, comment, bracket, tag, attrName, eq, attrVal) => {
+    if(comment) return `<span class="tk-comment">${comment}</span>`;
+    if(bracket) return `${bracket}<span class="tk-tag">${tag}</span>`;
+    if(attrName) return `<span class="tk-attr">${attrName}</span>${eq}<span class="tk-str">${attrVal}</span>`;
+    return m;
+  });
+}
+function hlCSS(code){
+  const s = esc(code);
+  const re = /(\/\*[\s\S]*?\*\/)|([#.]?[a-zA-Z][\w-]*)(\s*\{)|([a-zA-Z-]+)(\s*:\s*)([^;{}]+)(;)/g;
+  return s.replace(re, (m, comment, sel, brace, prop, colon, val, semi) => {
+    if(comment) return `<span class="tk-comment">${comment}</span>`;
+    if(sel) return `<span class="tk-sel">${sel}</span>${brace}`;
+    if(prop) return `<span class="tk-prop">${prop}</span>${colon}<span class="tk-val">${val}</span>${semi}`;
+    return m;
+  });
+}
+function hlJS(code){
+  const s = esc(code);
+  const kws = ['var','let','const','function','if','else','for','return','true','false','new'];
+  const kwAlt = kws.join('|');
+  const re = new RegExp(
+    '(\\/\\/.*$)' +
+    '|("(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\')' +
+    '|\\b(' + kwAlt + ')\\b' +
+    '|\\b(\\d+(?:\\.\\d+)?)\\b'
+  , 'gm');
+  return s.replace(re, (m, comment, str, kw, num) => {
+    if(comment) return `<span class="tk-comment">${comment}</span>`;
+    if(str) return `<span class="tk-str">${str}</span>`;
+    if(kw) return `<span class="tk-kw">${kw}</span>`;
+    if(num) return `<span class="tk-num">${num}</span>`;
+    return m;
+  });
+}
+function code(lang, filename, raw){
+  const fn = lang==='html'?hlHTML:lang==='css'?hlCSS:hlJS;
+  return `<div class="code-block">
+    <div class="code-head"><span class="fname">${filename||('example.'+lang)}</span><span>${lang.toUpperCase()}</span></div>
+    <pre class="code">${fn(raw)}</pre>
+  </div>`;
+}
+
+/* ============ Slide content ============ */
+const S = []; // {file:'html'|'css'|'js'|'title', html: '...'}
+
+function slide(file, html){ S.push({file, html}); }
+
+/* ---- Title ---- */
+slide('title', `
+  <div class="eyebrow" style="color:var(--accent-js)"><span class="bracket">&lt;</span>crash course<span class="bracket">/&gt;</span></div>
+  <h1 class="slide-title">Web Design in 30 Minutes</h1>
+  <div class="subtitle">HTML, CSS &amp; JavaScript — a crash course for beginners</div>
+  <div class="presenter">presenter: <span style="color:var(--text-muted)">[Your Name Here]</span></div>
+  <div class="quote-block">Learning web design is a profitable skill for any career — and life in general.</div>
+`);
+
+/* ---- Tools ---- */
+slide('html', `
+  <div class="eyebrow" style="color:var(--accent-html)">setup</div>
+  <h2 class="slide-title">Setting Up Your Development Environment</h2>
+  <ul class="bullets" style="--tab-accent:var(--accent-html)">
+    <li><span class="hl">Text editor</span> — the software you'll use to write your code.</li>
+    <li><b>Recommended:</b> VS Code (Visual Studio Code) — search "VS Code," download the build for your OS (Mac, Windows, Linux).</li>
+    <li><span class="hl">Web browser</span> — used to view and test your pages (Chrome, Firefox, etc).</li>
+  </ul>
+  <div class="footer-note"><b>Note —</b> Sublime Text or Notepad++ work fine too. Chrome is recommended for its Developer Tools.</div>
+`);
+
+/* ---- First HTML Page ---- */
+slide('html', `
+  <div class="eyebrow" style="color:var(--accent-html)">html basics</div>
+  <h2 class="slide-title">Your First HTML Page</h2>
+  <div class="two-col">
+    <div>
+      <div class="col-title">Instructions</div>
+      <ul class="bullets numbered" style="--tab-accent:var(--accent-html); --tab-accent-dim:var(--accent-html-dim)">
+        <li>Create a folder on your desktop named <code>HTML</code>.</li>
+        <li>Open the folder in VS Code.</li>
+        <li>Create a file named <code>index.html</code>.</li>
+        <li>Type <code>Hello World</code> and save.</li>
+        <li>Double-click the file to open it in your browser.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="col-title">What is HTML?</div>
+      <ul class="bullets" style="--tab-accent:var(--accent-html)">
+        <li>HyperText Markup Language.</li>
+        <li>It's the <b>structure</b> of a web page.</li>
+        <li>Think of it as the skeleton of a building.</li>
+      </ul>
+      ${code('html','index.html','Hello World')}
+    </div>
+  </div>
+`);
+
+/* ---- Syntax & tags ---- */
+slide('html', `
+  <div class="eyebrow" style="color:var(--accent-html)">syntax</div>
+  <h2 class="slide-title">HTML Syntax: Tags &amp; Document Structure</h2>
+  <div class="two-col">
+    <div>
+      <ul class="bullets" style="--tab-accent:var(--accent-html)">
+        <li>Every document starts with <code>&lt;!DOCTYPE html&gt;</code>.</li>
+        <li><b>&lt;html&gt;</b> — the root element.</li>
+        <li><b>&lt;head&gt;</b> — meta-information (title, styles).</li>
+        <li><b>&lt;body&gt;</b> — the visible content.</li>
+        <li><b>Tag</b> — text in angle brackets, e.g. <code>&lt;p&gt;</code>.</li>
+        <li>Always close a tag with <code>/</code>: <code>&lt;p&gt;...&lt;/p&gt;</code></li>
+      </ul>
+    </div>
+    <div>
+      ${code('html','index.html', `<!DOCTYPE html>
+<html>
+<head>
+    <title>My First Webpage</title>
+</head>
+<body>
+    <p>Hello, world!</p>
+</body>
+</html>`)}
+    </div>
+  </div>
+`);
+
+/* ---- Common elements ---- */
+slide('html', `
+  <div class="eyebrow" style="color:var(--accent-html)">elements</div>
+  <h2 class="slide-title">Essential HTML Tags for Content</h2>
+  <div class="two-col">
+    <div>
+      <ul class="bullets" style="--tab-accent:var(--accent-html)">
+        <li><b>Headings</b> — <code>&lt;h1&gt;</code> to <code>&lt;h6&gt;</code> (h1 is largest).</li>
+        <li><b>Paragraphs</b> — <code>&lt;p&gt;</code> for text blocks.</li>
+        <li><b>Lists</b> — <code>&lt;ul&gt;</code> with <code>&lt;li&gt;</code> items.</li>
+        <li><b>Links</b> — <code>&lt;a&gt;</code> with an <code>href</code> attribute.</li>
+        <li><b>Images</b> — <code>&lt;img&gt;</code> with <code>src</code> (self-closing).</li>
+      </ul>
+    </div>
+    <div>
+      ${code('html','index.html', `<body>
+    <h1>This is a Heading</h1>
+    <p>This is a paragraph of text.</p>
+
+    <ul>
+        <li>Eggs</li>
+        <li>Milk</li>
+        <li>Cheese</li>
+    </ul>
+
+    <a href="https://google.com">Link to Google</a>
+    <br>
+    <img src="image_url_here.jpg" alt="My Image">
+</body>`)}
+    </div>
+  </div>
+`);
+
+/* ---- Advanced elements ---- */
+slide('html', `
+  <div class="eyebrow" style="color:var(--accent-html)">structure</div>
+  <h2 class="slide-title">Tables, Divs &amp; Forms</h2>
+  <div class="tri-grid">
+    <div class="tri-card">
+      <div class="col-title">Tables</div>
+      <p class="tri-desc">For structuring tabular data.</p>
+      ${code('html','index.html', `<table border="1">
+  <tr>
+    <td>Row 1, Cell 1</td>
+    <td>Row 1, Cell 2</td>
+  </tr>
+</table>`)}
+    </div>
+    <div class="tri-card">
+      <div class="col-title">Divs</div>
+      <p class="tri-desc">A generic container/box for grouping content — used extensively for layout.</p>
+      ${code('html','index.html', `<div>
+  <p>This is inside
+     a div container.</p>
+</div>`)}
+    </div>
+    <div class="tri-card">
+      <div class="col-title">Forms</div>
+      <p class="tri-desc">For capturing user input.</p>
+      ${code('html','index.html', `<form action="/" method="get">
+  <input type="text" name="username"
+    placeholder="Enter name">
+  <button type="submit">Submit</button>
+</form>`)}
+    </div>
+  </div>
+`);
+
+/* ---- HTML Summary ---- */
+slide('html', `
+  <div class="eyebrow" style="color:var(--accent-html)">review</div>
+  <h2 class="slide-title">HTML Review: The Building Blocks</h2>
+  <ul class="bullets numbered" style="--tab-accent:var(--accent-html); --tab-accent-dim:var(--accent-html-dim)">
+    <li>Headings — <code>&lt;h1&gt;</code>–<code>&lt;h6&gt;</code></li>
+    <li>Paragraphs — <code>&lt;p&gt;</code></li>
+    <li>Lists — <code>&lt;ul&gt;</code> &amp; <code>&lt;li&gt;</code></li>
+    <li>Links — <code>&lt;a href="..."&gt;</code></li>
+    <li>Images — <code>&lt;img src="..."&gt;</code></li>
+    <li>Tables — <code>&lt;table&gt;</code>, <code>&lt;tr&gt;</code>, <code>&lt;td&gt;</code></li>
+    <li>Containers — <code>&lt;div&gt;</code></li>
+    <li>User input — <code>&lt;form&gt;</code> &amp; <code>&lt;input&gt;</code></li>
+  </ul>
+  <div class="footer-note">Next up — <b>adding style with CSS.</b></div>
+`);
+
+/* ---- What is CSS ---- */
+slide('css', `
+  <div class="eyebrow" style="color:var(--accent-css)">css</div>
+  <h2 class="slide-title">CSS: Styling Your Webpage</h2>
+  <ul class="bullets" style="--tab-accent:var(--accent-css)">
+    <li>CSS stands for <b>Cascading Style Sheets</b>.</li>
+    <li>It controls the <span class="hl">presentation</span> and <span class="hl">layout</span> of the HTML structure.</li>
+    <li>Determines colors, fonts, spacing, positioning, and responsive design.</li>
+  </ul>
+  <div class="footer-note"><b>Exercise —</b> create a folder named <code>CSS</code>, then create <code>index.html</code> and <code>style.css</code>.</div>
+`);
+
+/* ---- Three ways: inline/internal ---- */
+slide('css', `
+  <div class="eyebrow" style="color:var(--accent-css)">adding css</div>
+  <h2 class="slide-title">Adding CSS: Inline &amp; Internal</h2>
+  <div class="two-col">
+    <div>
+      <div class="col-title">1. Inline styles</div>
+      <ul class="bullets" style="--tab-accent:var(--accent-css)">
+        <li>Added directly to an element via the <code>style</code> attribute.</li>
+        <li>Best for quick, one-off styling.</li>
+      </ul>
+      ${code('html','index.html', `<p style="color: blue;">This text is blue.</p>`)}
+    </div>
+    <div>
+      <div class="col-title">2. Internal styles</div>
+      <ul class="bullets" style="--tab-accent:var(--accent-css)">
+        <li>Added inside <code>&lt;head&gt;</code> using a <code>&lt;style&gt;</code> tag.</li>
+        <li>Best for styling a single page.</li>
+      </ul>
+      ${code('html','index.html', `<head>
+  <style>
+    p { color: white; background-color: blue; }
+  </style>
+</head>`)}
+    </div>
+  </div>
+`);
+
+/* ---- External css ---- */
+slide('css', `
+  <div class="eyebrow" style="color:var(--accent-css)">best practice</div>
+  <h2 class="slide-title">The Standard: External Stylesheets</h2>
+  <div class="two-col">
+    <div>
+      <ul class="bullets" style="--tab-accent:var(--accent-css)">
+        <li>Uses a <code>&lt;link&gt;</code> tag in <code>&lt;head&gt;</code> pointing to a separate <code>.css</code> file.</li>
+        <li><b>Advantages:</b> reusable across pages, clean separation, easier maintenance.</li>
+      </ul>
+      ${code('html','index.html', `<head>
+  <link rel="stylesheet" href="style.css">
+</head>`)}
+    </div>
+    <div>
+      ${code('css','style.css', `p {
+    color: white;
+    background-color: red;
+}`)}
+    </div>
+  </div>
+`);
+
+/* ---- Syntax & properties ---- */
+slide('css', `
+  <div class="eyebrow" style="color:var(--accent-css)">syntax</div>
+  <h2 class="slide-title">CSS Syntax: Properties &amp; Values</h2>
+  ${code('css','style.css', `selector {
+    property: value;
+}`)}
+  <table class="ref">
+    <tr><th>Property</th><th>Description</th><th>Example</th></tr>
+    <tr><td>color</td><td>Text color</td><td>white, #FF0000</td></tr>
+    <tr><td>background</td><td>Element's background</td><td>blue, url("...")</td></tr>
+    <tr><td>font-size</td><td>Size of the text</td><td>30px, 2em</td></tr>
+    <tr><td>font-style</td><td>Font style</td><td>italic, normal</td></tr>
+    <tr><td>width / height</td><td>Element size</td><td>100px, 50%, auto</td></tr>
+    <tr><td>border</td><td>Element's border</td><td>2px solid red</td></tr>
+  </table>
+  <div class="footer-note">More properties at <b>w3schools.com</b>.</div>
+`);
+
+/* ---- IDs & Classes ---- */
+slide('css', `
+  <div class="eyebrow" style="color:var(--accent-css)">selectors</div>
+  <h2 class="slide-title">Targeting Elements: IDs &amp; Classes</h2>
+  <div class="two-col">
+    <div>
+      <ul class="bullets" style="--tab-accent:var(--accent-css)">
+        <li><b>IDs (#)</b> — unique, used once per page. Selector: <code>#idName</code></li>
+        <li><b>Classes (.)</b> — reusable across many elements. Selector: <code>.className</code></li>
+      </ul>
+      ${code('html','index.html', `<div id="unique-box">...</div>
+<div class="style-me">...</div>
+<div class="style-me">...</div>`)}
+    </div>
+    <div>
+      ${code('css','style.css', `#unique-box {
+    background-color: yellow;
+}
+.style-me {
+    font-weight: bold;
+}`)}
+    </div>
+  </div>
+`);
+
+/* ---- Box model ---- */
+slide('css', `
+  <div class="eyebrow" style="color:var(--accent-css)">layout</div>
+  <h2 class="slide-title">The CSS Box Model</h2>
+  <div class="two-col">
+    <div>
+      <ul class="bullets numbered" style="--tab-accent:var(--accent-css); --tab-accent-dim:var(--accent-css-dim)">
+        <li><b>Content</b> — the text or image inside.</li>
+        <li><b>Padding</b> — space inside the border, around the content.</li>
+        <li><b>Border</b> — a line around the padding.</li>
+        <li><b>Margin</b> — space outside the border, separating elements.</li>
+      </ul>
+    </div>
+    <div>
+      ${code('css','style.css', `div {
+    width: 100px;
+    height: 100px;
+    background-color: lightblue;
+    padding: 20px;  /* inside spacing */
+    margin: 10px;   /* outside spacing */
+    border: 2px solid red;
+}`)}
+    </div>
+  </div>
+`);
+
+/* ---- Float & position ---- */
+slide('css', `
+  <div class="eyebrow" style="color:var(--accent-css)">layout</div>
+  <h2 class="slide-title">Advanced Layout: Float &amp; Position</h2>
+  <div class="two-col">
+    <div>
+      <ul class="bullets" style="--tab-accent:var(--accent-css)">
+        <li><code>float: left / right</code> — sits elements side-by-side horizontally.</li>
+        <li><code>position: static</code> — default, normal page flow.</li>
+        <li><code>position: relative</code> — offset from its normal position.</li>
+        <li><code>position: absolute</code> — placed relative to nearest positioned ancestor, using <code>top/left/right/bottom</code>.</li>
+      </ul>
+    </div>
+    <div>
+      ${code('css','style.css', `.box {
+    float: left;
+}
+
+.menu {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+}`)}
+    </div>
+  </div>
+  <div class="footer-note"><b>Practice tip —</b> inspect any website and try to copy its layout.</div>
+`);
+
+/* ---- CSS summary ---- */
+slide('css', `
+  <div class="eyebrow" style="color:var(--accent-css)">review</div>
+  <h2 class="slide-title">CSS Review: Styling the Structure</h2>
+  <ul class="bullets numbered" style="--tab-accent:var(--accent-css); --tab-accent-dim:var(--accent-css-dim)">
+    <li>3 ways to include CSS: inline, internal, external (external is best).</li>
+    <li>Syntax: <code>selector { property: value; }</code></li>
+    <li>Selectors: <code>#</code> for IDs (unique), <code>.</code> for classes (reusable).</li>
+    <li>Box model: <code>margin</code>, <code>border</code>, <code>padding</code>, <code>content</code>.</li>
+    <li>Layout: <code>float</code> and <code>position</code> to control placement.</li>
+  </ul>
+  <div class="footer-note">Next up — <b>adding interactivity with JavaScript.</b></div>
+`);
+
+/* ---- What is JS ---- */
+slide('js', `
+  <div class="eyebrow" style="color:var(--accent-js)">javascript</div>
+  <h2 class="slide-title">JavaScript: Adding Interactivity</h2>
+  <ul class="bullets" style="--tab-accent:var(--accent-js)">
+    <li>A programming language that makes web pages interactive.</li>
+    <li>Reacts to user events — clicks, hovers, input.</li>
+    <li>Can manipulate HTML elements and CSS styles in real time.</li>
+  </ul>
+  <div class="footer-note"><b>Exercise —</b> create a folder named <code>JavaScript</code>, then create <code>index.html</code>.</div>
+`);
+
+/* ---- Adding JS ---- */
+slide('js', `
+  <div class="eyebrow" style="color:var(--accent-js)">setup</div>
+  <h2 class="slide-title">Adding JavaScript: Internal vs. External</h2>
+  <div class="two-col">
+    <div>
+      <div class="col-title">1. Internal</div>
+      <ul class="bullets" style="--tab-accent:var(--accent-js)"><li>Place <code>&lt;script&gt;</code> tags at the end of <code>&lt;body&gt;</code>.</li></ul>
+      ${code('html','index.html', `<body>
+  <div id="box">Click me</div>
+  <script>
+    console.log("Hello from internal script!");
+  <\/script>
+</body>`)}
+    </div>
+    <div>
+      <div class="col-title">2. External</div>
+      <ul class="bullets" style="--tab-accent:var(--accent-js)"><li>Use <code>&lt;script src="..."&gt;</code> to link a <code>.js</code> file — keeps code clean and separated.</li></ul>
+      ${code('html','index.html', `<script src="script.js"><\/script>`)}
+      ${code('js','script.js', `console.log("JavaScript is rad!");`)}
+    </div>
+  </div>
+`);
+
+/* ---- Console ---- */
+slide('js', `
+  <div class="eyebrow" style="color:var(--accent-js)">debugging</div>
+  <h2 class="slide-title">The Console: Your Best Friend for Debugging</h2>
+  <div class="two-col">
+    <div>
+      <ul class="bullets" style="--tab-accent:var(--accent-js)">
+        <li>A built-in browser tool for seeing errors and testing code.</li>
+        <li><code>console.log()</code> prints messages to the console.</li>
+      </ul>
+      <div class="badge-row">
+        <span class="badge">Windows: Ctrl + Shift + I</span>
+        <span class="badge">Mac: Cmd + Option + I</span>
+        <span class="badge">or right-click → Inspect</span>
+      </div>
+    </div>
+    <div>
+      ${code('js','console', `console.log("This is a message");
+var age = 21;
+console.log("I am " + age + " years old.");`)}
+    </div>
+  </div>
+`);
+
+/* ---- Variables ---- */
+slide('js', `
+  <div class="eyebrow" style="color:var(--accent-js)">basics</div>
+  <h2 class="slide-title">JS Basics: Variables &amp; Data Types</h2>
+  <div class="two-col">
+    <div>
+      <ul class="bullets" style="--tab-accent:var(--accent-js)">
+        <li><b>Variables</b> — containers for storing data, declared with <code>var</code>, <code>let</code>, or <code>const</code>.</li>
+        <li><b>Number</b> — <code>10</code>, <code>3.14</code></li>
+        <li><b>String</b> — <code>"Hello World"</code></li>
+        <li><b>Boolean</b> — <code>true</code> / <code>false</code></li>
+        <li><b>Array</b> — a list of items, e.g. <code>["milk","eggs"]</code></li>
+      </ul>
+    </div>
+    <div>
+      ${code('js','script.js', `var number = 10;
+var message = "Hello";
+var isRaining = false;
+var groceries = ["milk", "eggs", "cheese"];
+
+console.log("Number + 5 =", number + 5);
+console.log("My message:", message);`)}
+    </div>
+  </div>
+`);
+
+/* ---- DOM ---- */
+slide('js', `
+  <div class="eyebrow" style="color:var(--accent-js)">dom</div>
+  <h2 class="slide-title">The DOM: Talking to Your HTML</h2>
+  <div class="two-col">
+    <div>
+      <ul class="bullets" style="--tab-accent:var(--accent-js)">
+        <li><b>Document Object Model</b> — a programming interface for web documents.</li>
+        <li>Lets JavaScript change the page's structure, style, and content.</li>
+        <li><code>document.getElementById('id')</code> gets an element by its ID.</li>
+        <li><code>.innerHTML</code> changes the content inside an element.</li>
+      </ul>
+    </div>
+    <div>
+      ${code('html','index.html', `<div id="box"></div>`)}
+      ${code('js','script.js', `document.getElementById('box').innerHTML = "I am the new text!";`)}
+    </div>
+  </div>
+`);
+
+/* ---- Conditionals ---- */
+slide('js', `
+  <div class="eyebrow" style="color:var(--accent-js)">logic</div>
+  <h2 class="slide-title">Logic in JavaScript: Conditionals</h2>
+  <div class="two-col">
+    <div>
+      <ul class="bullets" style="--tab-accent:var(--accent-js)">
+        <li>Conditionals run code only when a condition is met.</li>
+        <li><b>if / else</b> — different actions for different conditions.</li>
+        <li><b>Comparisons</b> — <code>==</code>, <code>===</code>, <code>&gt;</code>, <code>&lt;</code>, <code>&gt;=</code></li>
+      </ul>
+    </div>
+    <div>
+      ${code('js','script.js', `var age = 21;
+
+if (age >= 21) {
+    console.log("You can come in!");
+} else {
+    console.log("Sorry, not yet.");
+}`)}
+    </div>
+  </div>
+`);
+
+/* ---- Loops ---- */
+slide('js', `
+  <div class="eyebrow" style="color:var(--accent-js)">repetition</div>
+  <h2 class="slide-title">Repeating Code: Loops</h2>
+  <div class="two-col">
+    <div>
+      <ul class="bullets numbered" style="--tab-accent:var(--accent-js); --tab-accent-dim:var(--accent-js-dim)">
+        <li><b>Start</b> — <code>var i = 0</code></li>
+        <li><b>Condition</b> — <code>i &lt; array.length</code></li>
+        <li><b>Increment</b> — <code>i++</code></li>
+      </ul>
+      <div class="footer-note">The <b>for loop</b> repeats code a set number of times — perfect for iterating over arrays.</div>
+    </div>
+    <div>
+      ${code('js','script.js', `var groceries = ["Milk", "Eggs", "Cheese"];
+
+for (var i = 0; i < groceries.length; i++) {
+    console.log("Item " + i + ": " + groceries[i]);
+}
+// Item 0: Milk
+// Item 1: Eggs
+// Item 2: Cheese`)}
+    </div>
+  </div>
+`);
+
+/* ---- Functions ---- */
+slide('js', `
+  <div class="eyebrow" style="color:var(--accent-js)">reuse</div>
+  <h2 class="slide-title">Reusable Code: Functions</h2>
+  <div class="two-col">
+    <div>
+      <ul class="bullets" style="--tab-accent:var(--accent-js)">
+        <li>A block of code designed to perform a task.</li>
+        <li>Defined once, called ("invoked") as many times as needed.</li>
+      </ul>
+      ${code('js','syntax', `function functionName() {
+    // code to be executed
+}`)}
+    </div>
+    <div>
+      ${code('js','script.js', `function listGroceries() {
+    var groceries = ["Milk", "Eggs", "Cheese"];
+    for (var i = 0; i < groceries.length; i++) {
+        console.log(groceries[i]);
+    }
+}
+
+listGroceries();
+listGroceries();`)}
+    </div>
+  </div>
+`);
+
+/* ---- Events ---- */
+slide('js', `
+  <div class="eyebrow" style="color:var(--accent-js)">interactivity</div>
+  <h2 class="slide-title">Making Things Happen: Events</h2>
+  <div class="two-col">
+    <div>
+      <ul class="bullets" style="--tab-accent:var(--accent-js)">
+        <li>Event listeners "listen" for an event (like a click) and run a function.</li>
+        <li>Common events — <code>click</code>, <code>mouseover</code>, <code>keydown</code>.</li>
+      </ul>
+      ${code('js','syntax', `element.addEventListener('event', function() {
+    // do something
+});`)}
+    </div>
+    <div>
+      ${code('html','index.html', `<div id="box">Click Me!</div>`)}
+      ${code('js','script.js', `document.getElementById('box')
+  .addEventListener('click', function() {
+    alert("I got clicked!");
+});`)}
+    </div>
+  </div>
+`);
+
+/* ---- JS summary ---- */
+slide('js', `
+  <div class="eyebrow" style="color:var(--accent-js)">review</div>
+  <h2 class="slide-title">JavaScript Review: Making It Interactive</h2>
+  <ul class="bullets numbered" style="--tab-accent:var(--accent-js); --tab-accent-dim:var(--accent-js-dim)">
+    <li>Interactivity — JS makes pages dynamic.</li>
+    <li>Console — use <code>console.log()</code> to test and debug.</li>
+    <li>Variables — store data with <code>var</code>, <code>let</code>, <code>const</code>.</li>
+    <li>DOM — use <code>document.getElementById()</code> to change content.</li>
+    <li>Logic — use <code>if / else</code> for conditions.</li>
+    <li>Loops — use <code>for</code> loops to go through arrays.</li>
+    <li>Functions — organize code into reusable blocks.</li>
+    <li>Events — use <code>addEventListener()</code> to react to user actions.</li>
+  </ul>
+`);
+
+/* ---- Next steps ---- */
+slide('title', `
+  <div class="eyebrow" style="color:var(--accent-js)">what's next</div>
+  <h2 class="slide-title">Where to Go From Here</h2>
+  <div class="two-col">
+    <div>
+      <div class="col-title" style="color:var(--text-muted)">How to get better</div>
+      <ul class="bullets" style="--tab-accent:var(--accent-js)">
+        <li>Practice, practice, practice.</li>
+        <li>Copy the layout of any website you like.</li>
+        <li>Build your own simple projects.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="col-title" style="color:var(--text-muted)">Learning resources</div>
+      <ul class="bullets" style="--tab-accent:var(--accent-js)">
+        <li><b>w3schools.com</b> — quick reference and tutorials.</li>
+        <li><b>MDN Web Docs</b> — detailed documentation.</li>
+      </ul>
+      <div class="footer-note">Take it further — learn a back-end language (like PHP) and a framework (like Laravel).</div>
+    </div>
+  </div>
+`);
+
+/* ---- Conclusion ---- */
+slide('title', `
+  <div class="eyebrow" style="color:var(--accent-js)"><span class="bracket">&lt;</span>/end<span class="bracket">&gt;</span></div>
+  <h1 class="slide-title" style="font-size:clamp(28px,3.6vw,44px)">Web Design is an Invaluable Skill</h1>
+  <ul class="bullets" style="--tab-accent:var(--accent-js)">
+    <li>It's about learning the building blocks — and practicing consistently.</li>
+    <li>Web design skills are profitable and useful in any career.</li>
+  </ul>
+  <div class="cta-box">
+    <div class="cta-title">Final project</div>
+    <p>If you're interested in creating your own Software-as-a-Service (SaaS) business, check out <b style="color:var(--text-primary)">SaaS Adventure</b> — a 21-day program.</p>
+  </div>
+  <div class="footer-note" style="margin-top:24px">Thanks for watching — happy coding!</div>
+`);
+
+/* ============ Render ============ */
+const slidesEl = document.getElementById('slides');
+const railEl = document.getElementById('rail');
+S.forEach((s,i)=>{
+  const div = document.createElement('div');
+  div.className = 'slide';
+  div.dataset.index = i;
+  div.innerHTML = `<div class="slide-inner">${s.html}</div>`;
+  slidesEl.appendChild(div);
+
+  const num = document.createElement('div');
+  num.className = 'num';
+  num.textContent = String(i+1).padStart(2,'0');
+  railEl.appendChild(num);
+});
+
+document.getElementById('counter-total').textContent = S.length;
+
+let cur = 0;
+const slideNodes = document.querySelectorAll('.slide');
+const railNodes = document.querySelectorAll('#rail .num');
+const tabs = document.querySelectorAll('.tab');
+
+function render(){
+  slideNodes.forEach((n,i)=> n.classList.toggle('active', i===cur));
+  railNodes.forEach((n,i)=> n.classList.toggle('current', i===cur));
+  const centerNode = railNodes[cur];
+  if(centerNode) centerNode.scrollIntoView({block:'center', behavior:'smooth'});
+
+  const file = S[cur].file;
+  tabs.forEach(t=> t.classList.toggle('active', t.dataset.file===file));
+
+  document.getElementById('progress-fill').style.width = ((cur+1)/S.length*100)+'%';
+  document.getElementById('counter-cur').textContent = cur+1;
+}
+
+function go(delta){
+  cur = Math.min(S.length-1, Math.max(0, cur+delta));
+  render();
+}
+
+document.getElementById('viewport').addEventListener('click', (e)=>{
+  // avoid double-trigger with edge buttons
+  go(1);
+});
+document.getElementById('edge-next').addEventListener('click', (e)=>{ e.stopPropagation(); go(1); });
+document.getElementById('edge-prev').addEventListener('click', (e)=>{ e.stopPropagation(); go(-1); });
+
+document.addEventListener('keydown', (e)=>{
+  if(['ArrowRight','ArrowDown',' ','PageDown'].includes(e.key)){ e.preventDefault(); go(1); }
+  else if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){ e.preventDefault(); go(-1); }
+  else if(e.key==='Home'){ cur=0; render(); }
+  else if(e.key==='End'){ cur=S.length-1; render(); }
+});
+
+let hintTimer = setTimeout(()=> document.getElementById('nav-hint').classList.add('fade'), 4500);
+document.addEventListener('mousemove', ()=>{
+  document.getElementById('nav-hint').classList.remove('fade');
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(()=> document.getElementById('nav-hint').classList.add('fade'), 3000);
+});
+
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Anatomy of Good Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #080a14;
+    --bg2: #0d1120;
+    --panel: rgba(18,22,38,0.55);
+    --panel-strong: rgba(22,26,44,0.78);
+    --border: rgba(255,255,255,0.09);
+    --cyan: #6EE7F9;
+    --magenta: #F472D0;
+    --violet: #A78BFA;
+    --gold: #FDE68A;
+    --text: #EAF2FF;
+    --muted: #93A0C2;
+    --radius: 18px;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+
+  html,body{
+    height:100%;
+    background: radial-gradient(ellipse 120% 80% at 20% -10%, #131a33 0%, var(--bg) 55%),
+                var(--bg);
+    color: var(--text);
+    font-family:'Inter', sans-serif;
+    overflow:hidden;
+  }
+
+  /* ---------- ambient office atmosphere ---------- */
+  .studio-grid{
+    position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, black 40%, transparent 100%);
+  }
+
+  .holo-sweep{
+    position:fixed; inset:-20%; pointer-events:none; z-index:0;
+    background: conic-gradient(from 0deg at 50% 50%,
+      transparent 0deg, rgba(110,231,249,0.10) 60deg, transparent 140deg,
+      rgba(244,114,208,0.10) 220deg, transparent 300deg, transparent 360deg);
+    animation: sweepRotate 22s linear infinite;
+    mix-blend-mode: screen;
+    opacity:0.8;
+  }
+  @keyframes sweepRotate{ to{ transform: rotate(360deg); } }
+
+  /* ruler frame — the office signature element */
+  .ruler-top, .ruler-left{
+    position:fixed; z-index:5; pointer-events:none;
+    background-repeat: repeat;
+    opacity:0.5;
+  }
+  .ruler-top{
+    top:0; left:0; right:0; height:22px;
+    background-image: repeating-linear-gradient(90deg,
+      rgba(110,231,249,0.55) 0 1px, transparent 1px 40px);
+    border-bottom:1px solid var(--border);
+  }
+  .ruler-left{
+    top:0; bottom:0; left:0; width:22px;
+    background-image: repeating-linear-gradient(180deg,
+      rgba(244,114,208,0.55) 0 1px, transparent 1px 40px);
+    border-right:1px solid var(--border);
+  }
+  .coord-tag{
+    position:fixed; z-index:5; font-family:'JetBrains Mono', monospace;
+    font-size:10.5px; letter-spacing:0.06em; color: var(--muted); opacity:0.6;
+  }
+  .coord-tl{ top:5px; left:28px; }
+  .coord-br{ bottom:5px; right:14px; }
+
+  /* palette swatch strip, bottom-left */
+  .swatch-strip{
+    position:fixed; z-index:6; left:30px; bottom:16px;
+    display:flex; gap:6px; align-items:center;
+  }
+  .swatch-strip span{
+    width:9px; height:9px; border-radius:2px; display:block;
+    box-shadow: 0 0 8px currentColor;
+  }
+  .sw-cyan{ background:var(--cyan); color:var(--cyan); }
+  .sw-magenta{ background:var(--magenta); color:var(--magenta); }
+  .sw-violet{ background:var(--violet); color:var(--violet); }
+  .sw-gold{ background:var(--gold); color:var(--gold); }
+
+  /* ---------- stage & progress ---------- */
+  .stage{
+    position:relative; z-index:1;
+    height:100%; width:100%;
+    padding: 22px 22px 40px 22px;
+    display:flex; align-items:center; justify-content:center;
+    cursor: pointer;
+  }
+
+  .progress-track{
+    position:fixed; top:22px; left:22px; right:22px; z-index:8;
+    height:3px; background: rgba(255,255,255,0.08); border-radius:2px;
+    overflow:hidden;
+  }
+  .progress-fill{
+    height:100%; border-radius:2px;
+    background: linear-gradient(90deg, var(--cyan), var(--violet), var(--magenta));
+    transition: width 420ms ease;
+    box-shadow: 0 0 10px rgba(167,139,250,0.6);
+  }
+
+  .counter{
+    position:fixed; bottom:16px; right:30px; z-index:8;
+    font-family:'JetBrains Mono', monospace; font-size:12.5px;
+    color: var(--muted); letter-spacing:0.04em;
+    background: var(--panel); border:1px solid var(--border);
+    padding:5px 12px; border-radius:100px; backdrop-filter: blur(6px);
+  }
+  .counter b{ color: var(--text); font-weight:500; }
+
+  .nav-hint{
+    position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:8;
+    font-family:'JetBrains Mono', monospace; font-size:11px; color: var(--muted);
+    opacity:0.55; letter-spacing:0.05em; pointer-events:none;
+  }
+
+  /* ---------- slide shell ---------- */
+  .slide-viewport{
+    width:min(1100px, 100%); height:min(680px, 92vh);
+    position:relative;
+  }
+
+  .slide{
+    display:none;
+    width:100%; height:100%;
+    background: var(--panel);
+    border:1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 52px 60px;
+    overflow-y:auto;
+    position:relative;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset,
+                0 30px 80px -30px rgba(0,0,0,0.7);
+  }
+  .slide::before{
+    content:''; position:absolute; inset:0; border-radius:var(--radius);
+    padding:1px; pointer-events:none;
+    background: linear-gradient(135deg, rgba(110,231,249,0.5), rgba(167,139,250,0.25) 40%, rgba(244,114,208,0.5));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+    opacity:0.7;
+  }
+  .slide.active{ display:flex; flex-direction:column; }
+
+  .slide.anim-right{ animation: inRight 420ms cubic-bezier(.2,.8,.2,1); }
+  .slide.anim-left{ animation: inLeft 420ms cubic-bezier(.2,.8,.2,1); }
+  @keyframes inRight{ from{ opacity:0; transform:translateX(46px) scale(.97);} to{opacity:1; transform:none;} }
+  @keyframes inLeft{ from{ opacity:0; transform:translateX(-46px) scale(.97);} to{opacity:1; transform:none;} }
+
+  @media (prefers-reduced-motion: reduce){
+    .slide.anim-right, .slide.anim-left{ animation: fadeOnly 180ms ease; }
+    @keyframes fadeOnly{ from{opacity:0;} to{opacity:1;} }
+  }
+
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace; font-size:12.5px; letter-spacing:0.14em;
+    color: var(--cyan); text-transform:uppercase; margin-bottom:14px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::before{ content:''; width:22px; height:1px; background: var(--cyan); opacity:0.7; }
+
+  h1.title{
+    font-family:'Space Grotesk', sans-serif; font-weight:600;
+    font-size: clamp(30px, 4vw, 46px); line-height:1.08; letter-spacing:-0.01em;
+    background: linear-gradient(100deg, #fff 30%, var(--cyan) 65%, var(--violet) 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    margin-bottom:6px;
+  }
+  .subtitle{ color: var(--muted); font-size:15.5px; max-width:640px; margin-bottom:26px; line-height:1.55; }
+
+  .plain{
+    font-family:'JetBrains Mono', monospace; font-size:11.5px; color: var(--gold);
+    letter-spacing:0.02em; opacity:0.9;
+  }
+
+  .content{ flex:1; min-height:0; }
+
+  /* card grid */
+  .grid{
+    display:grid; gap:16px; min-height:0;
+  }
+  .grid.cols-2{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .grid.cols-3{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .grid.cols-4{ grid-template-columns: repeat(4, minmax(0,1fr)); }
+
+  .card{
+    min-width:0;
+    background: var(--panel-strong);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:20px 20px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .card .icon{ width:30px; height:30px; }
+  .card h3{
+    font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:16.5px;
+  }
+  .card p{ color: var(--muted); font-size:13.6px; line-height:1.55; }
+  .card .tag{
+    font-family:'JetBrains Mono', monospace; font-size:10.5px; color: var(--muted);
+    opacity:0.75; letter-spacing:0.03em;
+  }
+
+  .accent-cyan{ color: var(--cyan); }
+  .accent-magenta{ color: var(--magenta); }
+  .accent-violet{ color: var(--violet); }
+  .accent-gold{ color: var(--gold); }
+
+  .card.hl-cyan{ box-shadow: inset 0 0 0 1px rgba(110,231,249,0.35); }
+  .card.hl-magenta{ box-shadow: inset 0 0 0 1px rgba(244,114,208,0.35); }
+  .card.hl-violet{ box-shadow: inset 0 0 0 1px rgba(167,139,250,0.35); }
+  .card.hl-gold{ box-shadow: inset 0 0 0 1px rgba(253,230,138,0.35); }
+
+  /* two column comparison */
+  .compare{
+    display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap:22px; height:100%;
+  }
+  .compare-col{
+    min-width:0; background: var(--panel-strong); border:1px solid var(--border);
+    border-radius:14px; padding:22px; display:flex; flex-direction:column; gap:12px;
+  }
+  .compare-col h3{ font-family:'Space Grotesk', sans-serif; font-size:18px; }
+  .compare-col p{ color:var(--muted); font-size:13.8px; line-height:1.6; }
+  .vs-badge{
+    align-self:center; font-family:'JetBrains Mono', monospace; font-size:11px;
+    color: var(--muted); opacity:0.7;
+  }
+
+  /* preview swatch grid on title slide */
+  .preview-strip{
+    display:grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap:8px; margin-top:auto;
+  }
+  .preview-chip{
+    min-width:0; border:1px solid var(--border); border-radius:9px; padding:9px 8px;
+    background: var(--panel-strong); font-family:'JetBrains Mono', monospace;
+    font-size:10.2px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .preview-chip b{ color:var(--text); display:block; font-family:'Inter'; font-size:11.5px; margin-top:2px; font-weight:500;}
+
+  /* whitespace slide — intentionally sparse */
+  .void-slide{ align-items:center; justify-content:center; text-align:center; }
+  .void-slide .content{ display:flex; align-items:center; justify-content:center; }
+  .void-mark{
+    font-family:'JetBrains Mono', monospace; font-size:12px; color: var(--muted);
+    letter-spacing:0.2em; text-transform:uppercase;
+  }
+
+  /* type scale demo */
+  .type-demo{ display:flex; flex-direction:column; gap:6px; }
+  .type-demo .h1d{ font-family:'Space Grotesk'; font-weight:600; font-size:34px; }
+  .type-demo .h2d{ font-family:'Space Grotesk'; font-weight:600; font-size:24px; color:var(--cyan); }
+  .type-demo .h3d{ font-family:'Space Grotesk'; font-weight:500; font-size:18px; color:var(--violet); }
+  .type-demo .bd{ font-family:'Inter'; font-size:14px; color:var(--muted); }
+
+  .pairing-row{ display:flex; gap:18px; margin-top:16px; }
+  .pairing-chip{ flex:1; min-width:0; background:var(--panel-strong); border:1px solid var(--border); border-radius:12px; padding:16px; }
+  .pairing-chip .sample{ font-size:20px; margin-bottom:6px; }
+  .pairing-chip .label{ font-family:'JetBrains Mono', monospace; font-size:10.5px; color:var(--muted); }
+
+  /* 60-30-10 bar */
+  .ratio-bar{ display:flex; height:52px; border-radius:10px; overflow:hidden; border:1px solid var(--border); margin-top:10px;}
+  .ratio-bar div{ display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono', monospace; font-size:12px; }
+  .r-60{ width:60%; background:#11162a; color:var(--muted); }
+  .r-30{ width:30%; background: linear-gradient(135deg, rgba(167,139,250,0.5), rgba(167,139,250,0.25)); color:#fff; }
+  .r-10{ width:10%; background: linear-gradient(135deg, var(--gold), #f6c453); color:#181300; font-weight:600; }
+
+  /* grid demo */
+  .grid-demo{ display:grid; grid-template-columns: repeat(12, minmax(0,1fr)); gap:4px; height:70px; margin-top:14px; }
+  .grid-demo span{ background: rgba(110,231,249,0.12); border:1px solid rgba(110,231,249,0.35); border-radius:4px; }
+
+  /* device row */
+  .device-row{ display:flex; align-items:flex-end; gap:26px; justify-content:center; margin-top:8px; }
+  .device{ background:var(--panel-strong); border:1px solid var(--border); border-radius:10px; position:relative; }
+  .device.phone{ width:52px; height:100px; border-radius:12px; }
+  .device.tablet{ width:96px; height:126px; }
+  .device.desktop{ width:220px; height:126px; border-radius:8px; }
+  .device::after{ content:''; position:absolute; inset:8px; border:1px dashed rgba(255,255,255,0.15); border-radius:4px; }
+  .device-label{ text-align:center; font-family:'JetBrains Mono', monospace; font-size:10.5px; color:var(--muted); margin-top:8px; }
+  .device-col{ display:flex; flex-direction:column; align-items:center; }
+
+  /* mental model flow */
+  .flow{ display:grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap:10px; align-items:stretch; margin-top:8px; }
+  .flow-step{ background:var(--panel-strong); border:1px solid var(--border); border-radius:12px; padding:14px 10px; text-align:center; min-width:0; }
+  .flow-step .k{ font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--muted); }
+  .flow-step .v{ font-family:'Space Grotesk'; font-size:13.5px; margin-top:6px; font-weight:600; }
+  .flow-arrow{ display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:16px; }
+
+  .closing-cta{
+    margin-top:auto; padding:18px 22px; border-radius:14px;
+    background: linear-gradient(120deg, rgba(110,231,249,0.08), rgba(244,114,208,0.08));
+    border:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:16px;
+  }
+  .closing-cta p{ color:var(--muted); font-size:13.5px; }
+  .closing-cta .badge{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--gold); white-space:nowrap; }
+
+  ::-webkit-scrollbar{ width:8px; }
+  ::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.14); border-radius:8px; }
+
+  @media (max-width: 720px){
+    .slide{ padding:34px 24px; }
+    .grid.cols-4{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid.cols-3{ grid-template-columns: repeat(1, minmax(0,1fr)); }
+    .grid.cols-2{ grid-template-columns: minmax(0,1fr); }
+    .compare{ grid-template-columns: minmax(0,1fr); }
+    .flow{ grid-template-columns: minmax(0,1fr); }
+    .flow-arrow{ transform: rotate(90deg); }
+    .device-row{ flex-wrap:wrap; }
+    .ruler-left, .ruler-top{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="studio-grid"></div>
+<div class="holo-sweep"></div>
+<div class="ruler-top"></div>
+<div class="ruler-left"></div>
+<div class="coord-tag coord-tl">X:0000 · Y:0000 · ZOOM 100%</div>
+<div class="coord-tag coord-br">STUDIO / FIELD-GUIDE.SKETCH</div>
+<div class="swatch-strip">
+  <span class="sw-cyan"></span><span class="sw-violet"></span><span class="sw-magenta"></span><span class="sw-gold"></span>
+</div>
+
+<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+<div class="counter"><b id="curNum">1</b> / <span id="totalNum">14</span></div>
+<div class="nav-hint">CLICK OR → TO ADVANCE · ← BACK · HOME/END TO JUMP</div>
+
+<div class="stage" id="stage">
+  <div class="slide-viewport" id="slideViewport">
+
+    <!-- SLIDE 1 : TITLE -->
+    <section class="slide">
+      <div class="eyebrow">Design Fundamentals — a Field Guide</div>
+      <h1 class="title">The Anatomy of Good Design</h1>
+      <p class="subtitle">Thirteen principles that explain why some pages feel effortless to use — and why others feel off, even when you can't say exactly why. Plain-English, no jargon.</p>
+      <div class="content">
+        <p class="plain">// THE FULL SET — 13 PRINCIPLES</p>
+        <div class="preview-strip" id="previewStrip"></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 2 : HIERARCHY -->
+    <section class="slide">
+      <div class="eyebrow">01 · Where the eye goes first</div>
+      <h1 class="title">Visual Hierarchy</h1>
+      <p class="subtitle">Guide the eye to what matters most, in order — like a newspaper front page: biggest headline first, small print last.</p>
+      <div class="content grid cols-4">
+        <div class="card hl-cyan">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 18h4M4 12h9M4 6h16" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <h3>Size</h3>
+          <p>Bigger reads as more important. Headlines dwarf body text on purpose.</p>
+        </div>
+        <div class="card hl-magenta">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="var(--magenta)" stroke-width="2"/><circle cx="12" cy="12" r="2.5" fill="var(--magenta)"/></svg></div>
+          <h3>Color &amp; contrast</h3>
+          <p>Bold or bright elements grab attention first, before anything else.</p>
+        </div>
+        <div class="card hl-violet">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 4h6v6H4V4Zm10 10h6v6h-6v-6Z" stroke="var(--violet)" stroke-width="2"/></svg></div>
+          <h3>Position</h3>
+          <p>In left-to-right cultures, top-left is usually seen first.</p>
+        </div>
+        <div class="card hl-gold">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="9" width="4" height="6" stroke="var(--gold)" stroke-width="2"/><rect x="16" y="4" width="4" height="16" stroke="var(--gold)" stroke-width="2"/></svg></div>
+          <h3>Spacing</h3>
+          <p>Elements set apart from the rest feel more significant.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 3 : BALANCE -->
+    <section class="slide">
+      <div class="eyebrow">02 · Distributing visual weight</div>
+      <h1 class="title">Balance</h1>
+      <p class="subtitle">A page shouldn't feel lopsided. There are two honest ways to balance it.</p>
+      <div class="content compare">
+        <div class="compare-col">
+          <svg width="100%" height="70" viewBox="0 0 200 70"><rect x="20" y="15" width="60" height="40" rx="6" fill="rgba(110,231,249,0.25)" stroke="var(--cyan)"/><rect x="120" y="15" width="60" height="40" rx="6" fill="rgba(110,231,249,0.25)" stroke="var(--cyan)"/><line x1="100" y1="5" x2="100" y2="65" stroke="var(--muted)" stroke-dasharray="3 3"/></svg>
+          <h3 class="accent-cyan">Symmetrical</h3>
+          <p>A mirrored layout — the same weight on each side of a centerline. Feels formal, stable, trustworthy.</p>
+        </div>
+        <div class="compare-col">
+          <svg width="100%" height="70" viewBox="0 0 200 70"><rect x="20" y="10" width="90" height="24" rx="6" fill="rgba(244,114,208,0.25)" stroke="var(--magenta)"/><circle cx="160" cy="45" r="16" fill="rgba(167,139,250,0.3)" stroke="var(--violet)"/><rect x="20" y="42" width="30" height="14" rx="4" fill="rgba(253,230,138,0.25)" stroke="var(--gold)"/></svg>
+          <h3 class="accent-magenta">Asymmetrical</h3>
+          <p>Different elements, similar visual "weight," balance each other. Feels modern and dynamic.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 4 : CONTRAST + ALIGNMENT -->
+    <section class="slide">
+      <div class="eyebrow">03 · 04 · Standing out, lining up</div>
+      <h1 class="title">Contrast &amp; Alignment</h1>
+      <p class="subtitle">Two rules that make a page easy to scan and feel intentional, not accidental.</p>
+      <div class="content grid cols-2">
+        <div class="card hl-cyan">
+          <h3 class="accent-cyan">Contrast</h3>
+          <p>The difference between elements — color, size, shape, weight — that creates emphasis. It's why a button doesn't get lost in a wall of text: it's crucial for readability and for drawing the eye to buttons, links, and headlines.</p>
+          <svg width="100%" height="34" viewBox="0 0 220 34"><rect width="220" height="34" rx="8" fill="#11162a"/><rect x="150" y="6" width="56" height="22" rx="6" fill="var(--cyan)"/></svg>
+        </div>
+        <div class="card hl-violet">
+          <h3 class="accent-violet">Alignment</h3>
+          <p>Every element should line up with something else. Nothing sits randomly. Good alignment creates invisible lines that make a page feel clean and organized.</p>
+          <svg width="100%" height="34" viewBox="0 0 220 34"><line x1="20" y1="0" x2="20" y2="34" stroke="var(--violet)" stroke-dasharray="2 3"/><rect x="20" y="4" width="120" height="8" fill="rgba(167,139,250,0.4)"/><rect x="20" y="20" width="80" height="8" fill="rgba(167,139,250,0.4)"/></svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 5 : PROXIMITY + REPETITION -->
+    <section class="slide">
+      <div class="eyebrow">05 · 06 · Grouping &amp; familiarity</div>
+      <h1 class="title">Proximity &amp; Repetition</h1>
+      <p class="subtitle">These two rules quietly teach the reader how the page works, without a single label.</p>
+      <div class="content grid cols-2">
+        <div class="card hl-magenta">
+          <h3 class="accent-magenta">Proximity</h3>
+          <p>Related items sit close together; unrelated items get space between them. This tells people what belongs together, no borders or labels needed.</p>
+          <svg width="100%" height="46" viewBox="0 0 220 46"><rect x="10" y="6" width="16" height="6" fill="rgba(244,114,208,0.5)"/><rect x="10" y="16" width="60" height="6" fill="rgba(244,114,208,0.5)"/><rect x="150" y="6" width="16" height="6" fill="rgba(110,231,249,0.4)"/><rect x="150" y="16" width="50" height="6" fill="rgba(110,231,249,0.4)"/></svg>
+        </div>
+        <div class="card hl-gold">
+          <h3 class="accent-gold">Repetition</h3>
+          <p>Reuse colors, fonts, button styles, and spacing throughout. Once someone learns how one button works, every button should work the same way.</p>
+          <svg width="100%" height="46" viewBox="0 0 220 46"><rect x="10" y="18" width="50" height="16" rx="8" fill="none" stroke="var(--gold)"/><rect x="85" y="18" width="50" height="16" rx="8" fill="none" stroke="var(--gold)"/><rect x="160" y="18" width="50" height="16" rx="8" fill="none" stroke="var(--gold)"/></svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 6 : WHITE SPACE (deliberately sparse) -->
+    <section class="slide void-slide">
+      <div class="eyebrow">07 · The room you leave</div>
+      <h1 class="title">White Space</h1>
+      <div class="content">
+        <div>
+          <p class="subtitle" style="margin:0 auto 20px; text-align:center;">Beginners fear empty space and rush to fill it. Don't. Generous white space improves readability and focus — and it's the fastest way to make a design feel premium.</p>
+          <p class="void-mark">This slide has almost nothing on it. That's the point.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 7 : TYPOGRAPHY -->
+    <section class="slide">
+      <div class="eyebrow">08 · The voice of the page</div>
+      <h1 class="title">Typography</h1>
+      <p class="subtitle">Type carries tone before anyone reads a single word.</p>
+      <div class="content grid cols-2">
+        <div class="card hl-cyan">
+          <h3>The rules</h3>
+          <p>• No more than 2–3 fonts per site<br>• A clear scale: H1 &gt; H2 &gt; H3 &gt; body<br>• Line-height &amp; letter-spacing affect readability<br>• Serif = traditional/editorial · Sans-serif = modern/clean</p>
+        </div>
+        <div class="card hl-violet">
+          <h3>Type scale, in action</h3>
+          <div class="type-demo">
+            <div class="h1d">Headline</div>
+            <div class="h2d">Section title</div>
+            <div class="h3d">Sub-heading</div>
+            <div class="bd">Body copy sits quietly at the bottom of the scale.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 8 : COLOR THEORY -->
+    <section class="slide">
+      <div class="eyebrow">09 · Picking a palette</div>
+      <h1 class="title">Color Theory</h1>
+      <p class="subtitle">Pick a primary color, a secondary/accent, and neutrals — then keep them in proportion.</p>
+      <div class="content">
+        <div class="grid cols-3" style="margin-bottom:18px;">
+          <div class="card hl-cyan"><h3>Primary + accent</h3><p>One dominant color carries the brand; one accent highlights action.</p></div>
+          <div class="card hl-gold"><h3>60-30-10 rule</h3><p>60% dominant, 30% secondary, 10% accent. It keeps a palette from feeling chaotic.</p></div>
+          <div class="card hl-violet"><h3>Accessible contrast</h3><p>Text must stand clearly apart from its background — for everyone, not just some.</p></div>
+        </div>
+        <p class="plain">// THIS DECK'S OWN PALETTE, SHOWN AS 60-30-10</p>
+        <div class="ratio-bar">
+          <div class="r-60">60% — dark neutral</div>
+          <div class="r-30">30% — violet</div>
+          <div class="r-10">10% — gold</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 9 : GRID & LAYOUT -->
+    <section class="slide">
+      <div class="eyebrow">10 · The invisible skeleton</div>
+      <h1 class="title">Grid &amp; Layout</h1>
+      <p class="subtitle">Sites are built on invisible grid systems — commonly 12 columns — to keep spacing and alignment consistent everywhere.</p>
+      <div class="content">
+        <div class="card hl-cyan">
+          <h3>Think of it as graph paper</h3>
+          <p>Every element snaps to a column, so nothing feels randomly placed — even across very different pages.</p>
+          <p class="plain">// 12-COLUMN GRID</p>
+          <div class="grid-demo">
+            <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 10 : RESPONSIVE DESIGN -->
+    <section class="slide">
+      <div class="eyebrow">11 · One design, every screen</div>
+      <h1 class="title">Responsive Design</h1>
+      <p class="subtitle">A design has to adapt gracefully across phone, tablet, and desktop — this is non-negotiable today, not a nice-to-have.</p>
+      <div class="content" style="display:flex; align-items:center; justify-content:center;">
+        <div>
+          <div class="device-row">
+            <div class="device-col"><div class="device phone"></div><div class="device-label">Phone</div></div>
+            <div class="device-col"><div class="device tablet"></div><div class="device-label">Tablet</div></div>
+            <div class="device-col"><div class="device desktop"></div><div class="device-label">Desktop</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 11 : USABILITY -->
+    <section class="slide">
+      <div class="eyebrow">12 · Making it work, not just look good</div>
+      <h1 class="title">Usability / UX Basics</h1>
+      <p class="subtitle">People shouldn't have to "learn" your site. It should just make sense.</p>
+      <div class="content grid cols-4">
+        <div class="card hl-cyan"><h3>Clear navigation</h3><p>People always know where they are and how to get back.</p></div>
+        <div class="card hl-magenta"><h3>Obvious CTAs</h3><p>Buttons look clickable, and the same action always looks the same.</p></div>
+        <div class="card hl-violet"><h3>Fast load times</h3><p>Every second of delay costs attention — and trust.</p></div>
+        <div class="card hl-gold"><h3>Predictable</h3><p>Interactions behave the way people already expect them to.</p></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 12 : ACCESSIBILITY -->
+    <section class="slide">
+      <div class="eyebrow">13 · Designing for everyone</div>
+      <h1 class="title">Accessibility</h1>
+      <p class="subtitle">Not an extra feature — a baseline. If it only works for some users, it isn't finished.</p>
+      <div class="content grid cols-4">
+        <div class="card hl-cyan"><h3>Color contrast</h3><p>Text needs to stand out clearly from its background.</p></div>
+        <div class="card hl-violet"><h3>Readable size</h3><p>Font sizes that don't force anyone to squint or zoom.</p></div>
+        <div class="card hl-magenta"><h3>Alt text</h3><p>Every image gets a text description for screen readers.</p></div>
+        <div class="card hl-gold"><h3>Keyboard access</h3><p>Every element reachable and usable without a mouse.</p></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 13 : MENTAL MODEL -->
+    <section class="slide">
+      <div class="eyebrow">Putting it together</div>
+      <h1 class="title">One Mental Model to Hold Onto</h1>
+      <p class="subtitle">You don't need to memorize thirteen rules. You need this chain:</p>
+      <div class="content" style="display:flex; flex-direction:column; justify-content:center;">
+        <div class="flow">
+          <div class="flow-step"><div class="k">TELLS THE EYE</div><div class="v accent-cyan">Hierarchy</div><div class="k">where to look first</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step"><div class="k">MAKES IT FEEL STABLE</div><div class="v accent-violet">Balance + Alignment</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step"><div class="k">MAKES IT EASY TO SCAN</div><div class="v accent-magenta">Contrast + Repetition</div></div>
+        </div>
+        <div class="flow" style="grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); margin-top:14px;">
+          <div class="flow-step"><div class="k">MAKES IT EASY TO UNDERSTAND</div><div class="v accent-gold">White Space + Proximity</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step"><div class="k">THE TOOLS YOU EXECUTE WITH</div><div class="v">Typography · Color · Grids</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 14 : CLOSING -->
+    <section class="slide">
+      <div class="eyebrow">Recap</div>
+      <h1 class="title">That's the Whole Toolkit</h1>
+      <p class="subtitle">Thirteen principles, one mental model, and a lot of it comes down to restraint: guide the eye, keep things stable, make it easy to scan and understand.</p>
+      <div class="content grid cols-3">
+        <div class="card hl-cyan"><h3>Guide the eye</h3><p>Hierarchy, contrast, position, spacing.</p></div>
+        <div class="card hl-violet"><h3>Keep it stable</h3><p>Balance, alignment, grids, repetition.</p></div>
+        <div class="card hl-gold"><h3>Make it human</h3><p>White space, proximity, usability, accessibility.</p></div>
+      </div>
+      <div class="closing-cta">
+        <p>Want to see these ideas click? A bad-layout vs. good-layout comparison, side by side, makes the difference obvious in seconds.</p>
+        <span class="badge">ASK FOR THE VISUAL EXAMPLE →</span>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  let current = 0;
+
+  const previewStrip = document.getElementById('previewStrip');
+  const principles = [
+    'Hierarchy','Balance','Contrast','Alignment','Proximity','Repetition',
+    'White Space','Typography','Color Theory','Grid & Layout','Responsive',
+    'Usability','Accessibility'
+  ];
+  principles.forEach((name, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'preview-chip';
+    chip.innerHTML = (i+1).toString().padStart(2,'0') + '<b>' + name + '</b>';
+    previewStrip.appendChild(chip);
+  });
+
+  const progressFill = document.getElementById('progressFill');
+  const curNum = document.getElementById('curNum');
+  const totalNum = document.getElementById('totalNum');
+  totalNum.textContent = total;
+
+  function render(direction){
+    slides.forEach((s, i) => {
+      s.classList.remove('active','anim-right','anim-left');
+      if(i === current){
+        s.classList.add('active');
+        void s.offsetWidth; // force reflow to restart animation
+        s.classList.add(direction === 'back' ? 'anim-left' : 'anim-right');
+        s.scrollTop = 0;
+      }
+    });
+    progressFill.style.width = ((current+1)/total*100) + '%';
+    curNum.textContent = current + 1;
+  }
+
+  function go(delta){
+    const next = current + delta;
+    if(next < 0 || next >= total) return;
+    current = next;
+    render(delta > 0 ? 'fwd' : 'back');
+  }
+
+  function jump(index, direction){
+    if(index === current) return;
+    current = index;
+    render(direction);
+  }
+
+  document.getElementById('stage').addEventListener('click', (e) => {
+    go(1);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'ArrowRight' || e.key === ' '){ e.preventDefault(); go(1); }
+    else if(e.key === 'ArrowLeft'){ e.preventDefault(); go(-1); }
+    else if(e.key === 'Home'){ e.preventDefault(); jump(0, 'back'); }
+    else if(e.key === 'End'){ e.preventDefault(); jump(total-1, 'fwd'); }
+  });
+
+  render('fwd');
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 12 Principles of Animation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #080a14;
+    --bg2: #0d1120;
+    --panel: rgba(18,22,38,0.55);
+    --panel-strong: rgba(22,26,44,0.78);
+    --border: rgba(255,255,255,0.09);
+    --cyan: #6EE7F9;
+    --magenta: #F472D0;
+    --violet: #A78BFA;
+    --gold: #FDE68A;
+    --green: #86EFAC;
+    --red: #FCA5A5;
+    --text: #EAF2FF;
+    --muted: #93A0C2;
+    --radius: 18px;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+
+  html,body{
+    height:100%;
+    background: radial-gradient(ellipse 120% 80% at 20% -10%, #131a33 0%, var(--bg) 55%),
+                var(--bg);
+    color: var(--text);
+    font-family:'Inter', sans-serif;
+    overflow:hidden;
+  }
+
+  .studio-grid{
+    position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, black 40%, transparent 100%);
+  }
+
+  .holo-sweep{
+    position:fixed; inset:-20%; pointer-events:none; z-index:0;
+    background: conic-gradient(from 0deg at 50% 50%,
+      transparent 0deg, rgba(110,231,249,0.10) 60deg, transparent 140deg,
+      rgba(244,114,208,0.10) 220deg, transparent 300deg, transparent 360deg);
+    animation: sweepRotate 22s linear infinite;
+    mix-blend-mode: screen;
+    opacity:0.8;
+  }
+  @keyframes sweepRotate{ to{ transform: rotate(360deg); } }
+
+  .ruler-top, .ruler-left{
+    position:fixed; z-index:5; pointer-events:none;
+    background-repeat: repeat;
+    opacity:0.5;
+  }
+  .ruler-top{
+    top:0; left:0; right:0; height:22px;
+    background-image: repeating-linear-gradient(90deg,
+      rgba(110,231,249,0.55) 0 1px, transparent 1px 40px);
+    border-bottom:1px solid var(--border);
+  }
+  .ruler-left{
+    top:0; bottom:0; left:0; width:22px;
+    background-image: repeating-linear-gradient(180deg,
+      rgba(244,114,208,0.55) 0 1px, transparent 1px 40px);
+    border-right:1px solid var(--border);
+  }
+  .coord-tag{
+    position:fixed; z-index:5; font-family:'JetBrains Mono', monospace;
+    font-size:10.5px; letter-spacing:0.06em; color: var(--muted); opacity:0.6;
+  }
+  .coord-tl{ top:5px; left:28px; }
+  .coord-br{ bottom:5px; right:14px; }
+
+  .swatch-strip{
+    position:fixed; z-index:6; left:30px; bottom:16px;
+    display:flex; gap:6px; align-items:center;
+  }
+  .swatch-strip span{
+    width:9px; height:9px; border-radius:2px; display:block;
+    box-shadow: 0 0 8px currentColor;
+  }
+  .sw-cyan{ background:var(--cyan); color:var(--cyan); }
+  .sw-magenta{ background:var(--magenta); color:var(--magenta); }
+  .sw-violet{ background:var(--violet); color:var(--violet); }
+  .sw-gold{ background:var(--gold); color:var(--gold); }
+
+  .stage{
+    position:relative; z-index:1;
+    height:100%; width:100%;
+    padding: 22px 22px 40px 22px;
+    display:flex; align-items:center; justify-content:center;
+    cursor: pointer;
+  }
+
+  .progress-track{
+    position:fixed; top:22px; left:22px; right:22px; z-index:8;
+    height:3px; background: rgba(255,255,255,0.08); border-radius:2px;
+    overflow:hidden;
+  }
+  .progress-fill{
+    height:100%; border-radius:2px;
+    background: linear-gradient(90deg, var(--cyan), var(--violet), var(--magenta));
+    transition: width 420ms ease;
+    box-shadow: 0 0 10px rgba(167,139,250,0.6);
+  }
+
+  .counter{
+    position:fixed; bottom:16px; right:30px; z-index:8;
+    font-family:'JetBrains Mono', monospace; font-size:12.5px;
+    color: var(--muted); letter-spacing:0.04em;
+    background: var(--panel); border:1px solid var(--border);
+    padding:5px 12px; border-radius:100px; backdrop-filter: blur(6px);
+  }
+  .counter b{ color: var(--text); font-weight:500; }
+
+  .nav-hint{
+    position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:8;
+    font-family:'JetBrains Mono', monospace; font-size:11px; color: var(--muted);
+    opacity:0.55; letter-spacing:0.05em; pointer-events:none;
+  }
+
+  .slide-viewport{
+    width:min(1100px, 100%); height:min(680px, 92vh);
+    position:relative;
+  }
+
+  .slide{
+    display:none;
+    width:100%; height:100%;
+    background: var(--panel);
+    border:1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 52px 60px;
+    overflow-y:auto;
+    position:relative;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset,
+                0 30px 80px -30px rgba(0,0,0,0.7);
+  }
+  .slide::before{
+    content:''; position:absolute; inset:0; border-radius:var(--radius);
+    padding:1px; pointer-events:none;
+    background: linear-gradient(135deg, rgba(110,231,249,0.5), rgba(167,139,250,0.25) 40%, rgba(244,114,208,0.5));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+    opacity:0.7;
+  }
+  .slide.active{ display:flex; flex-direction:column; }
+
+  .slide.anim-right{ animation: inRight 420ms cubic-bezier(.2,.8,.2,1); }
+  .slide.anim-left{ animation: inLeft 420ms cubic-bezier(.2,.8,.2,1); }
+  @keyframes inRight{ from{ opacity:0; transform:translateX(46px) scale(.97);} to{opacity:1; transform:none;} }
+  @keyframes inLeft{ from{ opacity:0; transform:translateX(-46px) scale(.97);} to{opacity:1; transform:none;} }
+
+  @media (prefers-reduced-motion: reduce){
+    .slide.anim-right, .slide.anim-left{ animation: fadeOnly 180ms ease; }
+    @keyframes fadeOnly{ from{opacity:0;} to{opacity:1;} }
+  }
+
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace; font-size:12.5px; letter-spacing:0.14em;
+    color: var(--cyan); text-transform:uppercase; margin-bottom:14px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::before{ content:''; width:22px; height:1px; background: var(--cyan); opacity:0.7; }
+
+  h1.title{
+    font-family:'Space Grotesk', sans-serif; font-weight:600;
+    font-size: clamp(30px, 4vw, 46px); line-height:1.08; letter-spacing:-0.01em;
+    background: linear-gradient(100deg, #fff 30%, var(--cyan) 65%, var(--violet) 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    margin-bottom:6px;
+  }
+  .subtitle{ color: var(--muted); font-size:15.5px; max-width:640px; margin-bottom:26px; line-height:1.55; }
+
+  .plain{
+    font-family:'JetBrains Mono', monospace; font-size:11.5px; color: var(--gold);
+    letter-spacing:0.02em; opacity:0.9;
+  }
+
+  .content{ flex:1; min-height:0; }
+
+  .grid{ display:grid; gap:16px; min-height:0; }
+  .grid.cols-2{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .grid.cols-3{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .grid.cols-4{ grid-template-columns: repeat(4, minmax(0,1fr)); }
+
+  .card{
+    min-width:0;
+    background: var(--panel-strong);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:20px 20px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .card .icon{ width:30px; height:30px; }
+  .card h3{ font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:16.5px; }
+  .card p{ color: var(--muted); font-size:13.6px; line-height:1.55; }
+  .card .tag{
+    font-family:'JetBrains Mono', monospace; font-size:10.5px; color: var(--muted);
+    opacity:0.75; letter-spacing:0.03em;
+  }
+
+  .accent-cyan{ color: var(--cyan); }
+  .accent-magenta{ color: var(--magenta); }
+  .accent-violet{ color: var(--violet); }
+  .accent-gold{ color: var(--gold); }
+  .accent-green{ color: var(--green); }
+
+  .card.hl-cyan{ box-shadow: inset 0 0 0 1px rgba(110,231,249,0.35); }
+  .card.hl-magenta{ box-shadow: inset 0 0 0 1px rgba(244,114,208,0.35); }
+  .card.hl-violet{ box-shadow: inset 0 0 0 1px rgba(167,139,250,0.35); }
+  .card.hl-gold{ box-shadow: inset 0 0 0 1px rgba(253,230,138,0.35); }
+  .card.hl-green{ box-shadow: inset 0 0 0 1px rgba(134,239,172,0.35); }
+
+  .compare{ display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap:22px; height:100%; }
+  .compare-col{
+    min-width:0; background: var(--panel-strong); border:1px solid var(--border);
+    border-radius:14px; padding:22px; display:flex; flex-direction:column; gap:12px;
+  }
+  .compare-col h3{ font-family:'Space Grotesk', sans-serif; font-size:18px; }
+  .compare-col p{ color:var(--muted); font-size:13.8px; line-height:1.6; }
+
+  .preview-strip{ display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:8px; margin-top:auto; }
+  .preview-chip{
+    min-width:0; border:1px solid var(--border); border-radius:9px; padding:9px 8px;
+    background: var(--panel-strong); font-family:'JetBrains Mono', monospace;
+    font-size:10.2px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .preview-chip b{ color:var(--text); display:block; font-family:'Inter'; font-size:11.5px; margin-top:2px; font-weight:500;}
+
+  .void-slide{ align-items:center; justify-content:center; text-align:center; }
+  .void-slide .content{ display:flex; align-items:center; justify-content:center; }
+  .void-mark{
+    font-family:'JetBrains Mono', monospace; font-size:12px; color: var(--muted);
+    letter-spacing:0.2em; text-transform:uppercase;
+  }
+
+  .flow{ display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:10px; align-items:stretch; margin-top:8px; }
+  .flow-step{ background:var(--panel-strong); border:1px solid var(--border); border-radius:12px; padding:14px 10px; text-align:center; min-width:0; }
+  .flow-step .k{ font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--muted); }
+  .flow-step .v{ font-family:'Space Grotesk'; font-size:13.5px; margin-top:6px; font-weight:600; }
+  .flow-arrow{ display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:16px; }
+
+  .closing-cta{
+    margin-top:auto; padding:18px 22px; border-radius:14px;
+    background: linear-gradient(120deg, rgba(110,231,249,0.08), rgba(244,114,208,0.08));
+    border:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:16px;
+  }
+  .closing-cta p{ color:var(--muted); font-size:13.5px; }
+  .closing-cta .badge{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--gold); white-space:nowrap; }
+
+  /* ---------- quiz-specific ---------- */
+  .quiz-scroll{ overflow-y:auto; padding-right:4px; }
+  .quiz-q{
+    background: var(--panel-strong); border:1px solid var(--border);
+    border-radius:14px; padding:14px 18px; margin-bottom:12px;
+  }
+  .quiz-q .qhead{ display:flex; gap:10px; align-items:baseline; margin-bottom:8px; }
+  .quiz-q .qnum{
+    font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--cyan);
+    background: rgba(110,231,249,0.12); border:1px solid rgba(110,231,249,0.3);
+    border-radius:6px; padding:1px 7px; flex-shrink:0;
+  }
+  .quiz-q .qtext{ font-family:'Space Grotesk', sans-serif; font-weight:500; font-size:14.5px; line-height:1.4; }
+  .quiz-options{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:8px; margin-left:34px; }
+  .quiz-options span{
+    background:#11162a; border:1px solid var(--border); border-radius:8px;
+    padding:7px 10px; font-size:12.8px; color:var(--muted);
+  }
+  .quiz-options span b{ color:var(--cyan); font-family:'JetBrains Mono', monospace; margin-right:6px; }
+  .id-clue{ margin-left:34px; color:var(--muted); font-size:13px; line-height:1.5; }
+
+  .answer-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:22px; }
+  .answer-list{ display:flex; flex-direction:column; gap:8px; }
+  .answer-row{
+    display:flex; align-items:center; gap:10px; background:var(--panel-strong);
+    border:1px solid var(--border); border-radius:10px; padding:9px 14px;
+  }
+  .answer-row .a-num{
+    font-family:'JetBrains Mono', monospace; font-size:11.5px; color:var(--muted);
+    width:20px; flex-shrink:0;
+  }
+  .answer-row .a-val{ font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:13.8px; color:var(--green); }
+  .answer-section-label{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--gold); letter-spacing:0.06em; margin-bottom:8px; }
+
+  ::-webkit-scrollbar{ width:8px; }
+  ::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.14); border-radius:8px; }
+
+  @media (max-width: 720px){
+    .slide{ padding:34px 24px; }
+    .grid.cols-4{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid.cols-3{ grid-template-columns: repeat(1, minmax(0,1fr)); }
+    .grid.cols-2{ grid-template-columns: minmax(0,1fr); }
+    .compare{ grid-template-columns: minmax(0,1fr); }
+    .flow{ grid-template-columns: minmax(0,1fr); }
+    .flow-arrow{ transform: rotate(90deg); }
+    .quiz-options{ grid-template-columns: minmax(0,1fr); margin-left:0; }
+    .id-clue{ margin-left:0; }
+    .answer-grid{ grid-template-columns: minmax(0,1fr); }
+    .ruler-left, .ruler-top{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="studio-grid"></div>
+<div class="holo-sweep"></div>
+<div class="ruler-top"></div>
+<div class="ruler-left"></div>
+<div class="coord-tag coord-tl">MODULE 02 / ANIM</div>
+<div class="coord-tag coord-br">X:0428 Y:0117</div>
+<div class="swatch-strip">
+  <span class="sw-cyan"></span><span class="sw-magenta"></span><span class="sw-violet"></span><span class="sw-gold"></span>
+</div>
+
+<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+<div class="counter"><b id="curNum">1</b> / <span id="totalNum">18</span></div>
+<div class="nav-hint">CLICK OR → TO ADVANCE · ← BACK · HOME/END TO JUMP</div>
+
+<div class="stage" id="stage">
+  <div class="slide-viewport" id="slideViewport">
+
+    <!-- SLIDE 1 : TITLE -->
+    <section class="slide">
+      <div class="eyebrow">Module 02 · Graphic Visual Computing</div>
+      <h1 class="title">The 12 Principles of Animation</h1>
+      <p class="subtitle">The rules Disney animators Frank Thomas and Ollie Johnston wrote down in the 1980s — and every game, UI, and motion designer still leans on today.</p>
+      <div class="content">
+        <p class="plain">// THE FULL SET — 12 PRINCIPLES</p>
+        <div class="preview-strip" id="previewStrip"></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 2 : SQUASH AND STRETCH -->
+    <section class="slide">
+      <div class="eyebrow">01 · Weight and flexibility</div>
+      <h1 class="title">Squash &amp; Stretch</h1>
+      <p class="subtitle">The single most important principle. It gives an object the illusion of weight, mass, and flexibility as it moves.</p>
+      <div class="content grid cols-2">
+        <div class="card hl-cyan">
+          <svg width="100%" height="60" viewBox="0 0 200 60"><ellipse cx="50" cy="45" rx="26" ry="12" fill="rgba(110,231,249,0.3)" stroke="var(--cyan)"/><ellipse cx="150" cy="30" rx="14" ry="26" fill="rgba(110,231,249,0.3)" stroke="var(--cyan)"/></svg>
+          <h3>Bouncing ball</h3>
+          <p>Squashes flat on impact, stretches long mid-air — the classic first exercise every animator learns.</p>
+        </div>
+        <div class="card hl-magenta">
+          <h3>The one rule</h3>
+          <p>Volume stays constant. If a shape stretches taller, it must get thinner — otherwise it just looks like it's changing size, not deforming.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 3 : ANTICIPATION -->
+    <section class="slide">
+      <div class="eyebrow">02 · Preparing the viewer</div>
+      <h1 class="title">Anticipation</h1>
+      <p class="subtitle">A smaller, opposite movement before the main action — it winds up the audience's expectations so the real action reads clearly.</p>
+      <div class="content grid cols-3">
+        <div class="card hl-cyan"><h3>Before a jump</h3><p>A character crouches down first, then leaps up.</p></div>
+        <div class="card hl-violet"><h3>Before a punch</h3><p>The fist pulls back before it swings forward.</p></div>
+        <div class="card hl-gold"><h3>Without it</h3><p>Action feels sudden, robotic, or like the viewer missed something.</p></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 4 : STAGING -->
+    <section class="slide">
+      <div class="eyebrow">03 · One clear idea at a time</div>
+      <h1 class="title">Staging</h1>
+      <p class="subtitle">Present an idea so clearly the audience can't miss it — through pose, camera angle, lighting, and composition.</p>
+      <div class="content grid cols-2">
+        <div class="card hl-cyan">
+          <h3>Do this</h3>
+          <p>One clear focal point. Silhouette reads instantly, even in shadow. Only the essential action is shown at once.</p>
+        </div>
+        <div class="card hl-magenta">
+          <h3>Not this</h3>
+          <p>Too much happening at once, competing actions, or a pose that reads as ambiguous from the camera's angle.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 5 : STRAIGHT AHEAD VS POSE TO POSE -->
+    <section class="slide">
+      <div class="eyebrow">04 · Two ways to work</div>
+      <h1 class="title">Straight Ahead &amp; Pose to Pose</h1>
+      <p class="subtitle">Two different workflows for building the same motion — most animators end up mixing both.</p>
+      <div class="content compare">
+        <div class="compare-col">
+          <h3 class="accent-cyan">Straight ahead</h3>
+          <p>Draw frame by frame, in order, from start to finish. Feels spontaneous and fluid — great for fire, water, or wild action — but harder to keep on-model.</p>
+        </div>
+        <div class="compare-col">
+          <h3 class="accent-violet">Pose to pose</h3>
+          <p>Plan key poses first, then fill in the frames between. Easier to control timing and composition — the standard approach for dialogue and character acting.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 6 : FOLLOW THROUGH AND OVERLAPPING ACTION -->
+    <section class="slide">
+      <div class="eyebrow">05 · Nothing stops all at once</div>
+      <h1 class="title">Follow Through &amp; Overlapping Action</h1>
+      <p class="subtitle">Different parts of a body move at different rates and stop at different times — nothing is perfectly rigid.</p>
+      <div class="content grid cols-2">
+        <div class="card hl-gold"><h3>Follow through</h3><p>Loose parts — hair, ears, a coat — keep moving briefly after the main body has stopped.</p></div>
+        <div class="card hl-violet"><h3>Overlapping action</h3><p>Different body parts move on their own slightly offset timing, instead of all moving in perfect unison.</p></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 7 : SLOW IN AND SLOW OUT -->
+    <section class="slide">
+      <div class="eyebrow">06 · Easing the motion</div>
+      <h1 class="title">Slow In &amp; Slow Out</h1>
+      <p class="subtitle">Real objects accelerate and decelerate — they don't snap instantly from still to full speed.</p>
+      <div class="content">
+        <div class="card hl-cyan">
+          <h3>More frames near the poses, fewer in between</h3>
+          <p>Bunch up drawings close to the start and end of a movement, and space them further apart in the middle. This is exactly what CSS easing curves (ease-in, ease-out) do on a screen.</p>
+          <svg width="100%" height="40" viewBox="0 0 300 40"><path d="M10 30 C 60 30, 90 10, 150 10 C 210 10, 240 30, 290 30" fill="none" stroke="var(--cyan)" stroke-width="2"/><circle cx="10" cy="30" r="3" fill="var(--cyan)"/><circle cx="40" cy="29" r="3" fill="var(--cyan)"/><circle cx="150" cy="10" r="3" fill="var(--cyan)"/><circle cx="260" cy="29" r="3" fill="var(--cyan)"/><circle cx="290" cy="30" r="3" fill="var(--cyan)"/></svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 8 : ARCS -->
+    <section class="slide">
+      <div class="eyebrow">07 · The path of natural motion</div>
+      <h1 class="title">Arcs</h1>
+      <p class="subtitle">Almost all living motion follows a curved path — arms, eyes, heads, and thrown objects all travel in arcs, not straight lines.</p>
+      <div class="content" style="display:flex; align-items:center; justify-content:center;">
+        <svg width="320" height="120" viewBox="0 0 320 120"><path d="M10 100 Q 160 -10 310 100" fill="none" stroke="var(--violet)" stroke-width="2" stroke-dasharray="4 4"/><circle cx="10" cy="100" r="5" fill="var(--cyan)"/><circle cx="160" cy="20" r="5" fill="var(--magenta)"/><circle cx="310" cy="100" r="5" fill="var(--gold)"/></svg>
+      </div>
+    </section>
+
+    <!-- SLIDE 9 : SECONDARY ACTION -->
+    <section class="slide">
+      <div class="eyebrow">08 · Supporting the main idea</div>
+      <h1 class="title">Secondary Action</h1>
+      <p class="subtitle">A smaller motion that adds richness without competing with — or distracting from — the main action.</p>
+      <div class="content grid cols-3">
+        <div class="card hl-cyan"><h3>Example</h3><p>A character walking (main action) while their tail swishes (secondary action).</p></div>
+        <div class="card hl-magenta"><h3>The rule</h3><p>It must support the main action, never pull focus away from it.</p></div>
+        <div class="card hl-gold"><h3>In UI terms</h3><p>A subtle icon wiggle alongside a primary button press.</p></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 10 : TIMING -->
+    <section class="slide">
+      <div class="eyebrow">09 · How fast, how slow</div>
+      <h1 class="title">Timing</h1>
+      <p class="subtitle">The number of frames used for an action sets its speed — and speed itself carries emotional meaning.</p>
+      <div class="content grid cols-2">
+        <div class="card hl-cyan"><h3>Fast timing</h3><p>Reads as light, urgent, energetic, or comedic — a slap, a jump scare, a quick reaction.</p></div>
+        <div class="card hl-violet"><h3>Slow timing</h3><p>Reads as heavy, deliberate, sad, or powerful — a slow nod, a heavy door swinging shut.</p></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 11 : EXAGGERATION -->
+    <section class="slide">
+      <div class="eyebrow">10 · Pushing past realism</div>
+      <h1 class="title">Exaggeration</h1>
+      <p class="subtitle">Push a pose, expression, or action further than real life — realism alone often reads as flat or lifeless on screen.</p>
+      <div class="content">
+        <div class="card hl-gold">
+          <h3>Not about being unrealistic for its own sake</h3>
+          <p>It's about amplifying the essence of an action so it reads clearly and with more energy — a wide-eyed shock, an extra-deep crouch before a jump, an overly dramatic sigh.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 12 : SOLID DRAWING -->
+    <section class="slide">
+      <div class="eyebrow">11 · Existing in 3D space</div>
+      <h1 class="title">Solid Drawing</h1>
+      <p class="subtitle">A character needs to feel like it has real volume, weight, and balance — as if it exists in three dimensions, not just flat on a page.</p>
+      <div class="content grid cols-3">
+        <div class="card hl-cyan"><h3>Volume</h3><p>Shapes read as solid forms, not flat silhouettes.</p></div>
+        <div class="card hl-violet"><h3>Weight</h3><p>Poses look like they're affected by gravity and mass.</p></div>
+        <div class="card hl-magenta"><h3>Balance</h3><p>A pose looks stable and physically believable.</p></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 13 : APPEAL -->
+    <section class="slide">
+      <div class="eyebrow">12 · Pleasant to watch</div>
+      <h1 class="title">Appeal</h1>
+      <p class="subtitle">A character should be interesting and pleasing to look at — this applies to heroes and villains alike.</p>
+      <div class="content">
+        <div class="card hl-gold">
+          <h3>Appeal ≠ cute</h3>
+          <p>A terrifying villain can still have strong appeal through a clear, well-designed silhouette, expressive features, and confident design choices. What kills appeal is a design that's cluttered, confusing, or hard to read at a glance.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 14 : MENTAL MODEL -->
+    <section class="slide">
+      <div class="eyebrow">Putting it together</div>
+      <h1 class="title">One Mental Model to Hold Onto</h1>
+      <p class="subtitle">You don't need to memorize twelve rules in order. You need this chain:</p>
+      <div class="content" style="display:flex; flex-direction:column; justify-content:center;">
+        <div class="flow">
+          <div class="flow-step"><div class="k">GIVES IT WEIGHT</div><div class="v accent-cyan">Squash &amp; Stretch</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step"><div class="k">PREPARES THE EYE</div><div class="v accent-violet">Anticipation + Staging</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step"><div class="k">FEELS PHYSICAL</div><div class="v accent-magenta">Arcs + Slow In/Out + Follow Through</div></div>
+        </div>
+        <div class="flow" style="grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); margin-top:14px;">
+          <div class="flow-step"><div class="k">ADDS RICHNESS &amp; FEELING</div><div class="v accent-gold">Secondary Action + Timing + Exaggeration</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step"><div class="k">SELLS THE ILLUSION</div><div class="v">Solid Drawing · Appeal · Straight Ahead/Pose to Pose</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 15 : QUIZ - MULTIPLE CHOICE -->
+    <section class="slide">
+      <div class="eyebrow">Check your understanding · Part A</div>
+      <h1 class="title">Multiple Choice</h1>
+      <p class="subtitle">Choose the best answer for each question.</p>
+      <div class="content quiz-scroll">
+        <div class="quiz-q">
+          <div class="qhead"><span class="qnum">Q1</span><span class="qtext">Which principle gives objects the illusion of weight and flexibility by deforming as they move?</span></div>
+          <div class="quiz-options"><span><b>A</b>Squash &amp; Stretch</span><span><b>B</b>Timing</span><span><b>C</b>Appeal</span><span><b>D</b>Staging</span></div>
+        </div>
+        <div class="quiz-q">
+          <div class="qhead"><span class="qnum">Q2</span><span class="qtext">What is the main purpose of Anticipation?</span></div>
+          <div class="quiz-options"><span><b>A</b>To finalize a character's design</span><span><b>B</b>To prepare the viewer for a coming action</span><span><b>C</b>To add a secondary motion</span><span><b>D</b>To slow down the whole scene</span></div>
+        </div>
+        <div class="quiz-q">
+          <div class="qhead"><span class="qnum">Q3</span><span class="qtext">Which principle is about presenting one clear idea so the audience can't miss it?</span></div>
+          <div class="quiz-options"><span><b>A</b>Arcs</span><span><b>B</b>Staging</span><span><b>C</b>Solid Drawing</span><span><b>D</b>Slow In &amp; Slow Out</span></div>
+        </div>
+        <div class="quiz-q">
+          <div class="qhead"><span class="qnum">Q4</span><span class="qtext">Follow Through &amp; Overlapping Action mainly describes:</span></div>
+          <div class="quiz-options"><span><b>A</b>Parts of a body continuing to move after the main mass stops</span><span><b>B</b>How fast an action happens</span><span><b>C</b>A character's overall appeal</span><span><b>D</b>Motion along a straight line</span></div>
+        </div>
+        <div class="quiz-q">
+          <div class="qhead"><span class="qnum">Q5</span><span class="qtext">Why do most natural, living movements follow arcs instead of straight lines?</span></div>
+          <div class="quiz-options"><span><b>A</b>Arcs are quicker to draw</span><span><b>B</b>Mechanical parts move in arcs</span><span><b>C</b>Living creatures generally move along curved paths</span><span><b>D</b>Straight lines take more frames</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 16 : QUIZ - IDENTIFICATION -->
+    <section class="slide">
+      <div class="eyebrow">Check your understanding · Part B</div>
+      <h1 class="title">Identification</h1>
+      <p class="subtitle">Name the principle being described in each clue.</p>
+      <div class="content quiz-scroll">
+        <div class="quiz-q">
+          <div class="qhead"><span class="qnum">Q6</span><span class="qtext">This principle refers to how fast or slow an action happens, and it changes the emotional read of a scene — a quick slap reads very differently from a slow wave.</span></div>
+        </div>
+        <div class="quiz-q">
+          <div class="qhead"><span class="qnum">Q7</span><span class="qtext">A minor movement that supports and enriches a primary action, without pulling focus away from it — like a tail swishing while a character walks.</span></div>
+        </div>
+        <div class="quiz-q">
+          <div class="qhead"><span class="qnum">Q8</span><span class="qtext">The practice of giving a character volume, weight, and balance so it feels like it exists in three-dimensional space, not flat on the page.</span></div>
+        </div>
+        <div class="quiz-q">
+          <div class="qhead"><span class="qnum">Q9</span><span class="qtext">Pushing a pose, expression, or action further than real life so it reads more clearly and with more energy.</span></div>
+        </div>
+        <div class="quiz-q">
+          <div class="qhead"><span class="qnum">Q10</span><span class="qtext">The overall quality that makes a character pleasant and interesting to watch — even if that character is the villain.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 17 : ANSWER KEY (second-to-last) -->
+    <section class="slide">
+      <div class="eyebrow">Answer key</div>
+      <h1 class="title">How Did You Do?</h1>
+      <p class="subtitle">Check your answers below before moving on.</p>
+      <div class="content answer-grid">
+        <div>
+          <div class="answer-section-label">// PART A · MULTIPLE CHOICE</div>
+          <div class="answer-list">
+            <div class="answer-row"><span class="a-num">Q1</span><span class="a-val">A — Squash &amp; Stretch</span></div>
+            <div class="answer-row"><span class="a-num">Q2</span><span class="a-val">B — Anticipation</span></div>
+            <div class="answer-row"><span class="a-num">Q3</span><span class="a-val">B — Staging</span></div>
+            <div class="answer-row"><span class="a-num">Q4</span><span class="a-val">A — Follow Through &amp; Overlapping Action</span></div>
+            <div class="answer-row"><span class="a-num">Q5</span><span class="a-val">C — Arcs</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="answer-section-label">// PART B · IDENTIFICATION</div>
+          <div class="answer-list">
+            <div class="answer-row"><span class="a-num">Q6</span><span class="a-val">Timing</span></div>
+            <div class="answer-row"><span class="a-num">Q7</span><span class="a-val">Secondary Action</span></div>
+            <div class="answer-row"><span class="a-num">Q8</span><span class="a-val">Solid Drawing</span></div>
+            <div class="answer-row"><span class="a-num">Q9</span><span class="a-val">Exaggeration</span></div>
+            <div class="answer-row"><span class="a-num">Q10</span><span class="a-val">Appeal</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 18 : CLOSING (last) -->
+    <section class="slide">
+      <div class="eyebrow">Recap</div>
+      <h1 class="title">That's the Whole Set</h1>
+      <p class="subtitle">Twelve principles, one goal: make motion that feels alive, weighted, and readable — whether it's drawn by hand, coded in CSS, or built in a game engine.</p>
+      <div class="content grid cols-3">
+        <div class="card hl-cyan"><h3>Feels physical</h3><p>Squash &amp; Stretch, Arcs, Slow In/Out, Follow Through.</p></div>
+        <div class="card hl-violet"><h3>Reads clearly</h3><p>Staging, Anticipation, Timing, Exaggeration.</p></div>
+        <div class="card hl-gold"><h3>Feels crafted</h3><p>Solid Drawing, Appeal, Secondary Action, Straight Ahead/Pose to Pose.</p></div>
+      </div>
+      <div class="closing-cta">
+        <p>Next module: bringing these same principles into HTML/CSS keyframe animation and transitions.</p>
+        <span class="badge">ON TO MODULE 03 →</span>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  let current = 0;
+
+  const previewStrip = document.getElementById('previewStrip');
+  const principles = [
+    'Squash & Stretch','Anticipation','Staging','Straight Ahead / Pose to Pose',
+    'Follow Through','Slow In & Out','Arcs','Secondary Action',
+    'Timing','Exaggeration','Solid Drawing','Appeal'
+  ];
+  principles.forEach((name, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'preview-chip';
+    chip.innerHTML = (i+1).toString().padStart(2,'0') + '<b>' + name + '</b>';
+    previewStrip.appendChild(chip);
+  });
+
+  const progressFill = document.getElementById('progressFill');
+  const curNum = document.getElementById('curNum');
+  const totalNum = document.getElementById('totalNum');
+  totalNum.textContent = total;
+
+  function render(direction){
+    slides.forEach((s, i) => {
+      s.classList.remove('active','anim-right','anim-left');
+      if(i === current){
+        s.classList.add('active');
+        void s.offsetWidth;
+        s.classList.add(direction === 'back' ? 'anim-left' : 'anim-right');
+        s.scrollTop = 0;
+      }
+    });
+    progressFill.style.width = ((current+1)/total*100) + '%';
+    curNum.textContent = current + 1;
+  }
+
+  function go(delta){
+    const next = current + delta;
+    if(next < 0 || next >= total) return;
+    current = next;
+    render(delta > 0 ? 'fwd' : 'back');
+  }
+
+  function jump(index, direction){
+    if(index === current) return;
+    current = index;
+    render(direction);
+  }
+
+  document.getElementById('stage').addEventListener('click', (e) => {
+    go(1);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'ArrowRight' || e.key === ' '){ e.preventDefault(); go(1); }
+    else if(e.key === 'ArrowLeft'){ e.preventDefault(); go(-1); }
+    else if(e.key === 'Home'){ e.preventDefault(); jump(0, 'back'); }
+    else if(e.key === 'End'){ e.preventDefault(); jump(total-1, 'fwd'); }
+  });
+
+  render('fwd');
+})();
+</script>
+
+</body>
+</html>
