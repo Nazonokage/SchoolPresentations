@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Information management · Database programming in practice</title>
+<style>
+:root{color-scheme:light dark;--bg:#f4f6f8;--panel:#fff;--ink:#14212b;--mut:#44566a;--grid:#c9d3db;--acc:#0b6e6e;--on-acc:#fff;--ok:#1f7a3d;--err:#b3261e;--z:1}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1a22;--panel:#16252f;--ink:#e8eff4;--mut:#a7b8c4;--grid:#2c404e;--acc:#5ec8c8;--on-acc:#0f1a22;--ok:#6fd08c;--err:#ff8f87}}
+*{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:var(--acc) var(--bg)}
+@supports not (scrollbar-color:auto){*::-webkit-scrollbar{width:14px;height:14px}*::-webkit-scrollbar-track{background:var(--bg);border:2px solid var(--grid)}*::-webkit-scrollbar-thumb{background:var(--acc);border:3px solid var(--bg);border-radius:8px}*::-webkit-scrollbar-thumb:hover{filter:brightness(.8)}*::-webkit-scrollbar-corner{background:var(--bg)}}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+:root{padding-top:env(safe-area-inset-top,0)}
+.slide{position:absolute;inset:0 0 6px 0;overflow:auto;opacity:0;visibility:hidden;transform:translateX(var(--from,40px));transition:opacity .35s cubic-bezier(.2,.8,.2,1),transform .35s cubic-bezier(.2,.8,.2,1),visibility 0s .35s}
+.slide.on{opacity:1;visibility:visible;transform:none;transition:opacity .35s cubic-bezier(.2,.8,.2,1),transform .35s cubic-bezier(.2,.8,.2,1)}
+.slide.out{--from:-40px}
+@media (prefers-reduced-motion:reduce){.slide{transform:none!important}}
+.in{zoom:var(--z);padding:clamp(20px,4vw,56px) clamp(20px,6vw,80px) 64px;max-width:1280px;margin:auto}
+.eb{color:var(--acc);font-weight:600;font-size:17px;margin:0 0 4px}
+h1,h2{font-family:"Iowan Old Style",Georgia,serif;line-height:1.12;margin:0 0 18px;font-size:clamp(28px,4.2vw,44px)}
+h1{font-size:clamp(34px,6vw,64px)}
+h3{margin:0 0 6px;font-size:19px}
+p,li{margin:0 0 8px}ul,ol{margin:0;padding-left:1.2em}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px}
+.g2>*{min-width:0}
+@media (max-width:760px){.g2{grid-template-columns:minmax(0,1fr)}}
+.box{border-left:4px solid var(--acc);padding:2px 0 2px 16px;margin-bottom:16px}
+.pan{background:var(--panel);border:1px solid var(--grid);border-radius:8px;padding:16px 18px}
+.tw{overflow-x:auto;border:1px solid var(--grid);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:560px;background:var(--panel)}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--grid);vertical-align:top}th{color:var(--acc)}
+.pro{background:var(--panel);border:1px solid var(--grid);border-radius:8px;padding:12px 16px;margin-top:14px}
+svg{max-width:100%;height:auto;display:block}svg text{font:600 17px ui-sans-serif,system-ui,sans-serif;fill:var(--ink)}
+.s-f{fill:var(--panel);stroke:var(--acc);stroke-width:2}.s-l{stroke:var(--acc);stroke-width:2.5;fill:none}.s-a{fill:var(--acc)}
+.mc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px 28px}
+.mc>div:last-child:nth-child(odd){grid-column:1/-1;max-width:calc(50% - 14px);justify-self:center}
+@media (max-width:760px){.mc{grid-template-columns:minmax(0,1fr)}.mc>div:last-child:nth-child(odd){max-width:none}}
+.q{font-weight:600;margin-bottom:4px}.o{margin:0;padding-left:1em}
+.ok{color:var(--ok);font-weight:700}.er{color:var(--err);font-weight:700}
+button{font:inherit;font-size:16px;color:var(--ink);background:var(--panel);border:2px solid var(--acc);border-radius:8px;padding:8px 14px;cursor:pointer;box-shadow:0 4px 0 var(--acc);transition:transform .12s ease-out,box-shadow .12s ease-out,background-color .12s ease-out}
+button:active{transform:translateY(4px);box-shadow:0 0 0 var(--acc)}
+button[aria-pressed=true]{background:var(--acc);color:var(--on-acc)}
+button:disabled{opacity:.5;cursor:not-allowed}
+:focus-visible{outline:3px solid var(--acc);outline-offset:3px}
+@media (hover:hover) and (pointer:fine){button:hover:not(:disabled):not([aria-pressed=true]){background:var(--bg)}}
+.btns{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0 18px}
+#out{min-height:3.2em;border:1px dashed var(--acc);border-radius:8px;padding:10px 14px}
+#bar{position:fixed;left:0;bottom:0;height:6px;background:var(--acc);width:0;transition:width .35s cubic-bezier(.2,.8,.2,1);z-index:5}
+#cnt{position:fixed;right:14px;bottom:12px;background:var(--panel);border:1px solid var(--grid);border-radius:8px;padding:2px 10px;font-size:16px;z-index:5}
+#help{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:9}
+#help.on{display:flex}#help .pan{max-width:520px;margin:16px}
+kbd{font:600 16px ui-monospace,monospace;border:1px solid var(--grid);border-bottom-width:3px;border-radius:5px;padding:0 6px}
+html:not(.js) .slide:first-of-type{opacity:1;visibility:visible;transform:none}.cc{display:flex;flex-direction:column;height:min(460px,60vh);min-height:0;border:1px solid var(--grid);border-radius:8px;background:var(--panel);overflow:hidden}.cc header{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--grid);gap:8px}.cc pre{margin:0;padding:12px 14px;overflow:auto;flex:1;min-height:0;font:16px/1.5 ui-monospace,Menlo,Consolas,monospace}.cc i{font-style:normal}.k{color:var(--acc)}.s{color:var(--ok)}.c{color:var(--mut);font-style:italic}</style></head><body>
+<script>document.documentElement.className="js"</script>
+<main id="deck">
+<section class="slide"><div class="in"><div class="g2" style="align-items:center"><div><p class="eb">Information management · Module 16</p><h1>Database programming in practice</h1><p style="font-size:22px;color:var(--mut)">Local environments, DDL and secure PHP integration with PDO.</p><p class="pro">Press <kbd>→</kbd> or Space to start. Press <kbd>?</kbd> for shortcuts.</p></div><svg viewBox="0 0 480 184" role="img" aria-label="Diagram: local environment, then DDL, then secure PHP connection"><rect class="s-f" x="10" y="0" width="460" height="48" rx="8"/><text x="240" y="30" text-anchor="middle">Local environment</text><path class="s-l" d="M240 48 V62"/><path class="s-a" d="M233 60 L247 60 L240 68 Z"/><rect class="s-f" x="10" y="68" width="460" height="48" rx="8"/><text x="240" y="98" text-anchor="middle">DDL: define the tables</text><path class="s-l" d="M240 116 V130"/><path class="s-a" d="M233 128 L247 128 L240 136 Z"/><rect class="s-f" x="10" y="136" width="460" height="48" rx="8"/><text x="240" y="166" text-anchor="middle">PHP + PDO: connect safely</text></svg></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Goals</p><h2>By the end of this lesson, you can…</h2><div class="g2"><div><ul style="font-size:20px"><li>Explain the differences between traditional local development stacks (like XAMPP) and modern containerized environments (like Docker).</li><li>Discuss and apply DDL commands: CREATE, ALTER, DROP, TRUNCATE and RENAME.</li></ul></div><div><ul style="font-size:20px"><li>Enforce data integrity using SQL constraints.</li><li>Connect a PHP application to a MySQL database securely using PDO with prepared statements.</li></ul></div></div><p class="pro">We bridge the gap between database theory and practical web development.</p></div></section>
+<section class="slide"><div class="in"><p class="eb">Main lesson · 1</p><h2>XAMPP vs. Docker</h2><div class="g2"><div><div class="pan"><h3>XAMPP</h3>A popular open-source package for a local web server. It stands for Cross-Platform (X), Apache (A), MariaDB (M), PHP (P) and Perl (P). Beginner-friendly, with a control panel to start and stop services.</div></div><div><div class="pan"><h3>Its limits</h3><b>Lack of isolation:</b> one global PHP/MySQL version affects all projects.<br><b>Environment inconsistency:</b> it runs directly on your OS, which can cause “works on my machine” issues when deploying.</div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Modern update</p><h2>Docker for PHP development</h2><p><b>Docker</b> packages your entire stack (PHP, MySQL, Nginx) into isolated containers.</p><div class="g2"><div><div class="box"><h3>Consistency</h3>The exact environment runs locally, on staging and in production.</div><div class="box"><h3>Isolation</h3>Run different PHP versions for different projects simultaneously.</div></div><div><div class="box"><h3>Infrastructure as code</h3>A <code>docker-compose.yml</code> file defines the setup, so the whole team can reproduce it.</div><p class="pro"><b>Beginner recommendation:</b> start with XAMPP to learn Apache and MySQL. Move to Docker (or tools like <b>Local</b>) once you collaborate or deploy production apps.</p></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Main lesson · 2</p><h2>Data Definition Language (DDL)</h2><p>DDL defines and modifies the structure of database objects (tables, views, indexes). DDL statements execute immediately and cannot be rolled back.</p><div class="tw"><table><thead><tr><th>DDL command</th><th>Purpose</th></tr></thead><tbody><tr><td><code>CREATE</code></td><td>Creates a new database, table, or view.</td></tr><tr><td><code>ALTER</code></td><td>Modifies an existing database object (e.g., adding a column).</td></tr><tr><td><code>DROP</code></td><td>Deletes an existing object and its data entirely.</td></tr><tr><td><code>TRUNCATE</code></td><td>Removes all data from a table but preserves its structure.</td></tr><tr><td><code>RENAME</code></td><td>Renames an existing database object.</td></tr><tr><td><code>CREATE INDEX</code></td><td>Creates an index on a table to improve query performance.</td></tr><tr><td><code>CREATE VIEW</code></td><td>Creates a virtual table based on a SELECT statement.</td></tr></tbody></table></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Try it</p><h2>Which DDL command?</h2><p>Pick a command to see its purpose.</p><div class="btns" id="btns" role="group" aria-label="Choices"><button aria-pressed="false" data-k="CREATE">CREATE</button><button aria-pressed="false" data-k="ALTER">ALTER</button><button aria-pressed="false" data-k="DROP">DROP</button><button aria-pressed="false" data-k="TRUNCATE">TRUNCATE</button><button aria-pressed="false" data-k="RENAME">RENAME</button><button aria-pressed="false" data-k="CREATE INDEX">CREATE INDEX</button><button aria-pressed="false" data-k="CREATE VIEW">CREATE VIEW</button></div><div id="out" role="status" aria-live="polite">Nothing selected yet.</div></div></section>
+<section class="slide"><div class="in"><p class="eb">Main lesson · 2B</p><h2>DDL code examples</h2><div class="g2"><div><div class="cc"><header><b>DDL examples (SQL)</b><button data-copy="c1" aria-label="Copy DDL examples (SQL) code">Copy</button></header><pre tabindex="0"><code id="c1" data-l="sql">-- CREATE: Define a new table with constraints
+CREATE TABLE employees (
+    employee_id INT PRIMARY KEY,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    email VARCHAR(50) UNIQUE NOT NULL,
+    hire_date DATE NOT NULL
+);
+
+-- ALTER: Add a new column to the existing table
+ALTER TABLE employees
+ADD salary DECIMAL(10, 2) NOT NULL;
+
+-- TRUNCATE: Empty the table but keep the structure
+TRUNCATE TABLE employees;
+
+-- DROP: Delete the table and all its data
+DROP TABLE employees;</code></pre></div></div><div><div class="pan"><h3>Remember</h3><code>DROP</code> removes the table definition <i>and</i> its data. <code>TRUNCATE</code> removes only the data and keeps the table structure intact.</div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Main lesson · 3</p><h2>SQL constraints in practice</h2><div class="g2"><div><div class="cc"><header><b>Foreign key (SQL)</b><button data-copy="c2" aria-label="Copy Foreign key (SQL) code">Copy</button></header><pre tabindex="0"><code id="c2" data-l="sql">CREATE TABLE orders (
+    order_id INT PRIMARY KEY,
+    customer_id INT,
+    order_date DATE,
+    -- FK: customer_id must exist in customers
+    FOREIGN KEY (customer_id)
+        REFERENCES customers(customer_id)
+);</code></pre></div></div><div><div class="pan"><h3>What it does</h3>Constraints enforce rules so data stays accurate and reliable. This <b>foreign key</b> ensures every <code>customer_id</code> in <code>orders</code> exists in the <code>customers</code> table.</div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Main lesson · 4</p><h2>Modern PHP database connection (PDO)</h2><p>PHP once used <code>mysql_*</code> functions, removed in PHP 7.0 due to severe security vulnerabilities. Today the standard is <b>PDO (PHP Data Objects)</b> or <b>MySQLi</b>.</p><div class="g2"><div><div class="pan"><h3>Why PDO?</h3><b>Database agnostic:</b> works with 12+ database systems.<br><b>Security:</b> supports <b>prepared statements</b>, which prevent SQL injection.<br><b>Error handling:</b> uses exceptions.</div></div><div><div class="pan"><h3>Security best practices</h3><b>Never hardcode credentials:</b> use <code>getenv()</code> or a <code>.env</code> file.<br><b>Set the charset:</b> <code>charset=utf8mb4</code> in the DSN.<br><b>Enable exception mode:</b> <code>PDO::ERRMODE_EXCEPTION</code>.<br><b>Use prepared statements:</b> never concatenate user input into SQL.</div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Main lesson · 4B</p><h2>A modern PDO connection</h2><div class="g2"><div><div class="cc"><header><b>PDO connection (PHP)</b><button data-copy="c3" aria-label="Copy PDO connection (PHP) code">Copy</button></header><pre tabindex="0"><code id="c3" data-l="php">&lt;?php
+// 1. Read credentials from environment variables
+$host = getenv('DB_HOST') ?: '127.0.0.1';
+$db   = getenv('DB_NAME') ?: 'mydb';
+$user = getenv('DB_USER') ?: 'root';
+$pass = getenv('DB_PASS') ?: '';
+$charset = 'utf8mb4';
+
+// 2. Construct the Data Source Name (DSN)
+$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+
+// 3. Set PDO options (Error handling, fetch mode)
+$options = [
+    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    // Use real prepared statements
+    PDO::ATTR_EMULATE_PREPARES   => false,
+];
+
+try {
+    // 4. Create the PDO instance
+    $pdo = new PDO($dsn, $user, $pass, $options);
+    echo "Connected successfully to the database!";
+
+    // Example of a safe prepared statement
+    $stmt = $pdo->prepare(
+        'SELECT * FROM employees WHERE email = :email'
+    );
+    $stmt->execute(['email' => 'user@example.com']);
+    $user = $stmt->fetch();
+
+} catch (\PDOException $e) {
+    // 5. Handle connection errors gracefully
+    throw new \PDOException(
+        $e->getMessage(), (int)$e->getCode()
+    );
+}
+?></code></pre></div></div><div><ol start="1"><li>Read credentials from environment variables.</li><li>Build the DSN string.</li><li>Set PDO options: exception errors, fetch mode, real prepared statements.</li><li>Create the PDO instance.</li><li>Handle connection errors gracefully.</li></ol></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Analogy</p><h2>Blueprint and delivery service</h2><div class="g2"><div><div class="box"><h3>DDL: the blueprint and building code</h3>Defines the rooms (<code>CREATE TABLE</code>), adds walls (<code>ALTER TABLE</code>) or demolishes the structure (<code>DROP TABLE</code>). Constraints are the load-bearing walls and safety rails: a <code>NOT NULL</code> constraint ensures no empty rooms.</div></div><div><div class="box"><h3>PDO: the secure delivery service</h3><code>mysql_*</code> is a postcard with your bank details on the back. PDO with prepared statements is a locked armored truck: the SQL and the data stay separate, so malicious code in the data can’t affect the database.</div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">FAQs</p><h2>Common questions</h2><div class="g2"><div><div class="box"><h3>DROP vs. TRUNCATE?</h3><code>DROP</code> deletes the entire table (structure and data). <code>TRUNCATE</code> deletes all data but keeps the structure, indexes and columns.</div><div class="box"><h3>Can I undo a DDL command?</h3>Most DDL commands (like <code>DROP</code> and <code>TRUNCATE</code>) are irreversible and cause immediate data loss. Back up the database before an <code>ALTER</code>.</div></div><div><div class="box"><h3>Why is MySQLi less flexible than PDO?</h3>MySQLi only works with MySQL. PDO offers one API for 12+ databases, so moving to PostgreSQL or SQLite needs no rewrite of the connection logic.</div><div class="box"><h3>How do I handle passwords?</h3>Never store plain text. Use <code>password_hash()</code> with <code>PASSWORD_ARGON2ID</code> or <code>PASSWORD_DEFAULT</code> (Bcrypt) before storing.</div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Hands-on exercise</p><h2>Secure database setup</h2><p>Create a PHP script that connects to MySQL and retrieves data safely. Assume <code>$pdo</code> is the connection from the earlier example.</p><div class="g2"><div><div class="cc"><header><b>1. Create the table (SQL)</b><button data-copy="c4" aria-label="Copy 1. Create the table (SQL) code">Copy</button></header><pre tabindex="0"><code id="c4" data-l="sql">CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);</code></pre></div><div class="cc"><header><b>3. Retrieve the user (PHP)</b><button data-copy="c5" aria-label="Copy 3. Retrieve the user (PHP) code">Copy</button></header><pre tabindex="0"><code id="c5" data-l="php">&lt;?php
+$stmt = $pdo->prepare(
+    'SELECT * FROM users WHERE email = :email'
+);
+$stmt->execute(['email' => 'student@example.com']);
+$user = $stmt->fetch();
+
+// Verify a password against the stored hash
+if ($user &amp;&amp; password_verify(
+        'super_secret_password',
+        $user['password_hash'])) {
+    echo "Login successful!";
+}
+?></code></pre></div></div><div><div class="cc"><header><b>2. Insert a user (PHP)</b><button data-copy="c6" aria-label="Copy 2. Insert a user (PHP) code">Copy</button></header><pre tabindex="0"><code id="c6" data-l="php">&lt;?php
+// Assume $pdo is your connection from above
+$email = 'student@example.com';
+$password = 'super_secret_password';
+
+// Hash the password securely
+$hash = password_hash($password, PASSWORD_ARGON2ID);
+
+$stmt = $pdo->prepare(
+    'INSERT INTO users (email, password_hash)
+     VALUES (:email, :hash)'
+);
+$stmt->execute(['email' => $email, 'hash' => $hash]);
+echo "User created successfully!";
+?></code></pre></div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Key quotes</p><h2>Key definitions to remember</h2><div class="g2"><div><div class="box"><h3>DDL</h3>Defines and modifies the structure of database objects. Executes immediately; cannot be rolled back.</div><div class="box"><h3>DROP vs. TRUNCATE</h3>DROP removes structure and data. TRUNCATE removes only the data.</div></div><div><div class="box"><h3>PDO</h3>PHP Data Objects: a database-agnostic API with prepared statements and exceptions.</div><div class="box"><h3>Prepared statements</h3>Keep SQL and data separate to prevent SQL injection.</div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Recap</p><h2>From theory to practice</h2><p style="font-size:20px">Use <b>XAMPP</b> to start and <b>Docker</b> for production parity. <b>DDL</b> manages structure and <b>constraints</b> enforce integrity.</p><p class="pro">Modern PHP applications must use <b>PDO with prepared statements</b> and environment variables for secure, scalable database connections.</p></div></section>
+<section class="slide"><div class="in"><p class="eb">Activity 1</p><h2>Multiple choice</h2><div class="mc"><div><div class="q">1. Which DDL command is used to remove all data from a table but keep the table structure intact?</div><ul class="o" style="list-style:none"><li>a. DROP</li><li>b. DELETE</li><li>c. TRUNCATE</li><li>d. ALTER</li></ul></div><div><div class="q">2. What is the primary advantage of using PDO over MySQLi?</div><ul class="o" style="list-style:none"><li>a. PDO is faster.</li><li>b. PDO supports multiple database systems (not just MySQL).</li><li>c. PDO does not require prepared statements.</li><li>d. PDO is built into older PHP versions.</li></ul></div><div><div class="q">3. Which PDO option ensures that database errors are thrown as exceptions?</div><ul class="o" style="list-style:none"><li>a. <code>PDO::ATTR_DEFAULT_FETCH_MODE</code></li><li>b. <code>PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION</code></li><li>c. <code>PDO::ATTR_EMULATE_PREPARES => false</code></li><li>d. <code>PDO::ATTR_CASE</code></li></ul></div><div><div class="q">4. In modern PHP development, where should database credentials be stored?</div><ul class="o" style="list-style:none"><li>a. Hardcoded in the PHP file.</li><li>b. In a public GitHub repository.</li><li>c. In environment variables or a <code>.env</code> file.</li><li>d. In a text file on the desktop.</li></ul></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Activity 2</p><h2>Fill in the blanks</h2><ol start="1"><li>______ is an open-source software package that provides a local web server environment (Apache, MariaDB, PHP, Perl).</li><li>______ is a relational database management system (RDBMS) widely used for web applications.</li><li>The main ______ commands are: CREATE, ALTER, DROP, TRUNCATE and RENAME.</li><li>To access the MySQL command line client, type the command <code>mysql -u root</code>. This is the ______ client.</li><li>One way to connect to MySQL from PHP is the ______ function or MySQLi.</li></ol></div></section>
+<section class="slide"><div class="in"><p class="eb">Answer key</p><h2>Multiple choice and fill in the blanks</h2><div class="g2"><div><div class="pan"><h3>Multiple choice</h3><ol start="1"><li><b>c.</b> TRUNCATE empties the table but preserves the structure.</li><li><b>b.</b> PDO provides a uniform interface for 12+ databases.</li><li><b>b.</b> This option enables exception-based error handling.</li><li><b>c.</b> Credentials should never be committed to source code; environment variables are the standard.</li></ol></div></div><div><div class="pan"><h3>Fill in the blanks</h3><ol start="1"><li>XAMPP</li><li>MySQL</li><li>DDL</li><li>MySQL command line</li><li>PDO</li></ol></div></div></div></div></section>
+<section class="slide"><div class="in" style="text-align:center"><p class="eb">That’s a wrap</p><h2>Great work</h2><svg viewBox="0 0 160 160" role="img" aria-label="A check mark inside a circle" style="max-width:160px;margin:0 auto 12px"><circle class="s-f" cx="80" cy="80" r="64"/><path class="s-l" d="M50 82 L72 104 L112 58" stroke-linecap="round" stroke-linejoin="round" style="stroke-width:8"/></svg><p style="font-size:22px">Remember: never put user input straight into SQL. Prepare the statement, then pass the data.</p></div></section>
+</main>
+<div id="bar"></div><div id="cnt" aria-live="polite">1 / 19</div>
+<div id="help" role="dialog" aria-label="Keyboard shortcuts"><div class="pan"><h3>Shortcuts</h3>
+<p><kbd>→</kbd> <kbd>Space</kbd> <kbd>PageDown</kbd> right-click, Mouse5: next</p>
+<p><kbd>←</kbd> <kbd>PageUp</kbd> Mouse4: previous</p><p><kbd>Home</kbd> <kbd>End</kbd> first or last</p>
+<p><kbd>Ctrl</kbd> + <kbd>+</kbd> <kbd>−</kbd> <kbd>0</kbd> or Ctrl + wheel: text size</p><p><kbd>Esc</kbd> closes this box</p></div></div>
+<script>
+(function(){
+var S=[].slice.call(document.querySelectorAll('.slide')),n=0,z=1,cnt=document.getElementById('cnt'),bar=document.getElementById('bar'),help=document.getElementById('help');
+try{var s=parseFloat(localStorage.getItem('zoomIS'));if(s>=.7&&s<=2)z=s}catch(e){}
+function paint(){document.documentElement.style.setProperty('--z',z);cnt.textContent=(n+1)+' / '+S.length+(Math.round(z*100)!==100?' · '+Math.round(z*100)+'%':'');bar.style.width=((n+1)/S.length*100)+'%'}
+function go(i){i=Math.max(0,Math.min(S.length-1,i));if(i===n)return;S[n].classList.remove('on');S[n].classList.toggle('out',i>n);S[n].setAttribute('aria-hidden','true');n=i;S[n].classList.remove('out');S[n].classList.add('on');S[n].removeAttribute('aria-hidden');S[n].scrollTop=0;paint()}
+function zoom(v){z=Math.max(.7,Math.min(2,Math.round(v*100)/100));try{localStorage.setItem('zoomIS',z)}catch(e){}paint()}
+S.forEach(function(e,i){e.setAttribute('aria-hidden','true');e.setAttribute('role','group');e.setAttribute('aria-label','Slide '+(i+1))});
+S[0].classList.add('on');S[0].removeAttribute('aria-hidden');paint();
+document.addEventListener('keydown',function(e){var t=e.target.tagName;if(t==='INPUT'||t==='TEXTAREA'||t==='SELECT'||e.target.isContentEditable)return;
+if((e.ctrlKey||e.metaKey)&&(e.key==='+'||e.key==='='||e.key==='-'||e.key==='0')){e.preventDefault();zoom(e.key==='0'?1:z+(e.key==='-'?-.1:.1));return}
+var k=e.key;if(k==='ArrowRight'||k==='PageDown'||(k===' '&&t!=='BUTTON')){e.preventDefault();go(n+1)}
+else if(k==='ArrowLeft'||k==='PageUp'){e.preventDefault();go(n-1)}else if(k==='Home')go(0);else if(k==='End')go(S.length-1);
+else if(k==='?')help.classList.toggle('on');else if(k==='Escape')help.classList.remove('on')});
+['mousedown','mouseup','auxclick'].forEach(function(t){window.addEventListener(t,function(e){if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation();if(t==='mousedown')go(n+(e.button===4?1:-1))}else if(e.button===2){e.preventDefault();if(t==='mousedown')go(n+1)}},true)});
+window.addEventListener('contextmenu',function(e){e.preventDefault()},true);
+window.addEventListener('wheel',function(e){if(e.ctrlKey){e.preventDefault();zoom(z+(e.deltaY<0?.1:-.1))}},{passive:false});
+var x0=null;document.addEventListener('touchstart',function(e){x0=e.touches[0].clientX},{passive:true});
+document.addEventListener('touchend',function(e){if(x0===null)return;var d=e.changedTouches[0].clientX-x0;if(Math.abs(d)>60)go(n+(d<0?1:-1));x0=null},{passive:true});
+var M={"CREATE": "Creates a new database, table, or view.", "ALTER": "Modifies an existing database object (e.g., adding a column).", "DROP": "Deletes an existing object and its data entirely.", "TRUNCATE": "Removes all data from a table but preserves its structure.", "RENAME": "Renames an existing database object.", "CREATE INDEX": "Creates an index on a table to improve query performance.", "CREATE VIEW": "Creates a virtual table based on a SELECT statement."};var bt=document.getElementById('btns'),out=document.getElementById('out');
+if(bt)bt.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;[].forEach.call(bt.children,function(c){c.setAttribute('aria-pressed',c===b)});out.textContent=b.dataset.k+' → '+M[b.dataset.k]});
+
+var KW={sql:'CREATE|TABLE|INT|PRIMARY|KEY|VARCHAR|NOT|NULL|TEXT|UNIQUE|DECIMAL|CHECK|FOREIGN|REFERENCES|DATE|DEFAULT|SELECT|FROM|JOIN|ON|WHERE|AUTO_INCREMENT|INSERT|INTO|VALUES|UPDATE|SET|DELETE|ALTER|ADD|TRUNCATE|DROP|JSON|VECTOR|TIMESTAMP|CURRENT_TIMESTAMP',php:'try|catch|new|echo|if|throw|PDO|PDOException',dbml:'Table|primary|key|unique|ref|Note|integer|varchar|timestamp',puml:'class|actor|usecase|rectangle|left|to|right|direction|as'},CM={php:'//.*$',sql:'--.*$',dbml:'//.*$',puml:'(?!)'},ST={php:"\"[^\"\\n]*\"|'[^'\\n]*'",sql:"'[^'\\n]*'",dbml:"'[^'\\n]*'",puml:'"[^"\\n]*"'};
+function hl(c){var L=c.dataset.l,t=c.textContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+c.innerHTML=t.replace(new RegExp('('+CM[L]+')|('+ST[L]+')|\\b('+KW[L]+')\\b|(@\\w+|\\$\\w+)','gm'),function(m,cm,st){return cm?'<i class="c">'+m+'</i>':st?'<i class="s">'+m+'</i>':'<b class="k">'+m+'</b>'})}
+[].forEach.call(document.querySelectorAll('code[data-l]'),hl);
+[].forEach.call(document.querySelectorAll('[data-copy]'),function(b){b.addEventListener('click',function(){var done=function(){b.textContent='Copied!';b.setAttribute('aria-pressed','true');setTimeout(function(){b.textContent='Copy';b.setAttribute('aria-pressed','false')},1500)};
+try{navigator.clipboard.writeText(document.getElementById(b.dataset.copy).textContent).then(done,function(){b.textContent='Press Ctrl+C'})}catch(e){b.textContent='Press Ctrl+C'}})});
+})();
+</script></body></html>

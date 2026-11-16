@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Information management · Review and recorded activity: UML and database design</title>
+<style>
+:root{color-scheme:light dark;--bg:#f4f6f8;--panel:#fff;--ink:#14212b;--mut:#44566a;--grid:#c9d3db;--acc:#0b6e6e;--on-acc:#fff;--ok:#1f7a3d;--err:#b3261e;--z:1}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1a22;--panel:#16252f;--ink:#e8eff4;--mut:#a7b8c4;--grid:#2c404e;--acc:#5ec8c8;--on-acc:#0f1a22;--ok:#6fd08c;--err:#ff8f87}}
+*{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:var(--acc) var(--bg)}
+@supports not (scrollbar-color:auto){*::-webkit-scrollbar{width:14px;height:14px}*::-webkit-scrollbar-track{background:var(--bg);border:2px solid var(--grid)}*::-webkit-scrollbar-thumb{background:var(--acc);border:3px solid var(--bg);border-radius:8px}*::-webkit-scrollbar-thumb:hover{filter:brightness(.8)}*::-webkit-scrollbar-corner{background:var(--bg)}}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+:root{padding-top:env(safe-area-inset-top,0)}
+.slide{position:absolute;inset:0 0 6px 0;overflow:auto;opacity:0;visibility:hidden;transform:translateX(var(--from,40px));transition:opacity .35s cubic-bezier(.2,.8,.2,1),transform .35s cubic-bezier(.2,.8,.2,1),visibility 0s .35s}
+.slide.on{opacity:1;visibility:visible;transform:none;transition:opacity .35s cubic-bezier(.2,.8,.2,1),transform .35s cubic-bezier(.2,.8,.2,1)}
+.slide.out{--from:-40px}
+@media (prefers-reduced-motion:reduce){.slide{transform:none!important}}
+.in{zoom:var(--z);padding:clamp(20px,4vw,56px) clamp(20px,6vw,80px) 64px;max-width:1280px;margin:auto}
+.eb{color:var(--acc);font-weight:600;font-size:17px;margin:0 0 4px}
+h1,h2{font-family:"Iowan Old Style",Georgia,serif;line-height:1.12;margin:0 0 18px;font-size:clamp(28px,4.2vw,44px)}
+h1{font-size:clamp(34px,6vw,64px)}
+h3{margin:0 0 6px;font-size:19px}
+p,li{margin:0 0 8px}ul,ol{margin:0;padding-left:1.2em}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px}
+.g2>*{min-width:0}
+@media (max-width:760px){.g2{grid-template-columns:minmax(0,1fr)}}
+.box{border-left:4px solid var(--acc);padding:2px 0 2px 16px;margin-bottom:16px}
+.pan{background:var(--panel);border:1px solid var(--grid);border-radius:8px;padding:16px 18px}
+.tw{overflow-x:auto;border:1px solid var(--grid);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:560px;background:var(--panel)}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--grid);vertical-align:top}th{color:var(--acc)}
+.pro{background:var(--panel);border:1px solid var(--grid);border-radius:8px;padding:12px 16px;margin-top:14px}
+svg{max-width:100%;height:auto;display:block}svg text{font:600 17px ui-sans-serif,system-ui,sans-serif;fill:var(--ink)}
+.s-f{fill:var(--panel);stroke:var(--acc);stroke-width:2}.s-l{stroke:var(--acc);stroke-width:2.5;fill:none}.s-a{fill:var(--acc)}
+.mc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px 28px}
+.mc>div:last-child:nth-child(odd){grid-column:1/-1;max-width:calc(50% - 14px);justify-self:center}
+@media (max-width:760px){.mc{grid-template-columns:minmax(0,1fr)}.mc>div:last-child:nth-child(odd){max-width:none}}
+.q{font-weight:600;margin-bottom:4px}.o{margin:0;padding-left:1em}
+.ok{color:var(--ok);font-weight:700}.er{color:var(--err);font-weight:700}
+button{font:inherit;font-size:16px;color:var(--ink);background:var(--panel);border:2px solid var(--acc);border-radius:8px;padding:8px 14px;cursor:pointer;box-shadow:0 4px 0 var(--acc);transition:transform .12s ease-out,box-shadow .12s ease-out,background-color .12s ease-out}
+button:active{transform:translateY(4px);box-shadow:0 0 0 var(--acc)}
+button[aria-pressed=true]{background:var(--acc);color:var(--on-acc)}
+button:disabled{opacity:.5;cursor:not-allowed}
+:focus-visible{outline:3px solid var(--acc);outline-offset:3px}
+@media (hover:hover) and (pointer:fine){button:hover:not(:disabled):not([aria-pressed=true]){background:var(--bg)}}
+.btns{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0 18px}
+#out{min-height:3.2em;border:1px dashed var(--acc);border-radius:8px;padding:10px 14px}
+#bar{position:fixed;left:0;bottom:0;height:6px;background:var(--acc);width:0;transition:width .35s cubic-bezier(.2,.8,.2,1);z-index:5}
+#cnt{position:fixed;right:14px;bottom:12px;background:var(--panel);border:1px solid var(--grid);border-radius:8px;padding:2px 10px;font-size:16px;z-index:5}
+#help{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:9}
+#help.on{display:flex}#help .pan{max-width:520px;margin:16px}
+kbd{font:600 16px ui-monospace,monospace;border:1px solid var(--grid);border-bottom-width:3px;border-radius:5px;padding:0 6px}
+html:not(.js) .slide:first-of-type{opacity:1;visibility:visible;transform:none}.yr{color:var(--mut)}.q{display:block}
+.recorded-lab .in>ol{font-size:22px;line-height:1.55}.recorded-lab .in>ol li{margin-bottom:18px}
+</style></head><body>
+<script>document.documentElement.className="js"</script>
+<main id="deck">
+<section class="slide"><div class="in"><div class="g2" style="align-items:center"><div><p class="eb">Information management · Module 14</p><h1>Review and recorded activity: UML and database design</h1><p style="font-size:22px;color:var(--mut)">Apply the reviewed concepts in an offline database activity. Submit your SQL, screenshots and activity log for grading.</p><p class="pro">Press <kbd>→</kbd> or Space to start. Press <kbd>?</kbd> for shortcuts.</p></div><svg aria-label="Diagram: recap, then quiz, then answer key" role="img" viewbox="0 0 480 184"><rect class="s-f" height="48" rx="8" width="460" x="10" y="0"></rect><text text-anchor="middle" x="240" y="30">Recap</text><path class="s-l" d="M240 48 V62"></path><path class="s-a" d="M233 60 L247 60 L240 68 Z"></path><rect class="s-f" height="48" rx="8" width="460" x="10" y="68"></rect><text text-anchor="middle" x="240" y="98">Apply the reviewed concepts in an offline database activity. Submit your SQL, screenshots and activity log for grading.</text><path class="s-l" d="M240 116 V130"></path><path class="s-a" d="M233 128 L247 128 L240 136 Z"></path><rect class="s-f" height="48" rx="8" width="460" x="10" y="136"></rect><text text-anchor="middle" x="240" y="166">Apply the reviewed concepts in an offline database activity. Submit your SQL, screenshots and activity log for grading.</text></svg></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Goals</p><h2>By the end of this lesson, you can…</h2><div class="g2"><div><ul style="font-size:20px"><li>Review the key concepts of UML and relational database design.</li><li>Apply the reviewed concepts in an offline database activity. Submit your SQL, screenshots and activity log for grading.</li></ul></div><div><ul style="font-size:20px"><li>Apply the reviewed concepts in an offline database activity. Submit your SQL, screenshots and activity log for grading.</li></ul></div></div><p class="pro">Apply the reviewed concepts in an offline database activity. Submit your SQL, screenshots and activity log for grading.</p></div></section>
+<section class="slide"><div class="in"><p class="eb">Recap · 1</p><h2>UML (Unified Modeling Language)</h2><p>A standard visual language used to create blueprints for software systems. It is divided into <b>Structural</b> (static) and <b>Behavioral</b> (dynamic) diagrams.</p><div class="tw"><table><thead><tr><th>Diagram</th><th>What it shows</th></tr></thead><tbody><tr><td><b>Use Case</b></td><td>Functional requirements and actors</td></tr><tr><td><b>Class</b></td><td>Static structure, attributes and methods</td></tr><tr><td><b>Sequence</b></td><td>Message passing over time</td></tr><tr><td><b>State Machine</b></td><td>States and transitions of an object</td></tr><tr><td><b>Activity</b></td><td>Flow of control and processes</td></tr><tr><td><b>Component</b></td><td>Physical structure of the system</td></tr><tr><td><b>Deployment</b></td><td>Physical hardware and software mapping</td></tr></tbody></table></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Recap · 2</p><h2>Relational model, keys and indexing</h2><div class="g2"><div><div class="box"><h3>Relational database model</h3>Organizes data into tables (relations) of rows (records) and columns (attributes), linked by keys.</div><div class="box"><h3>Primary key</h3>Uniquely identifies a record.</div></div><div><div class="box"><h3>Foreign key</h3>Links to a primary key in another table to establish relationships.</div><div class="box"><h3>Indexing</h3>A data structure (like a book’s index) that speeds up data retrieval.</div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Recap · 3</p><h2>Normalization</h2><p>The process of organizing data to minimize redundancy and dependency.</p><div class="tw"><table><thead><tr><th>Normal form</th><th>Rule</th></tr></thead><tbody><tr><td><b>1NF</b></td><td>Atomic values, unique rows</td></tr><tr><td><b>2NF</b></td><td>No partial dependencies (rely on the whole primary key)</td></tr><tr><td><b>3NF</b></td><td>No transitive dependencies (non-key columns cannot depend on other non-key columns)</td></tr><tr><td><b>BCNF</b></td><td>A stricter version of 3NF</td></tr></tbody></table></div></div></section>
+<section class="slide recorded-lab"><div class="in"><p class="eb">Information Management · Module 14 · Recorded activity</p><h2>Normalize and implement an order system</h2><ol><li>Individual practical activity • 20 points • Suggested time: 60–90 minutes.</li><li>Use XAMPP, the local database server and phpMyAdmin. Keep this deck and the supplied files on your computer.</li><li>Submit your working database export, SQL statements, screenshots and activity log. Your instructor records the score.</li></ol></div></section>
+<section class="slide recorded-lab"><div class="in"><p class="eb">Information Management · Module 14 · Recorded activity</p><h2>Start your offline workspace</h2><ol><li>Before class: the instructor installs and tests XAMPP and copies this activity folder to each computer. No downloads or online accounts are needed during the activity.</li><li>Open XAMPP Control Panel. Start Apache and MySQL. XAMPP commonly bundles MariaDB under the MySQL label; these tasks use compatible SQL.</li><li>Open http://localhost/phpmyadmin in your browser. If Apache uses another port, use the instructor-provided local address.</li></ol></div></section><section class="slide recorded-lab"><div class="in"><p class="eb">Offline activity · Visual sample</p><h2>XAMPP ready for the activity</h2><div style="display:flex;gap:28px;align-items:center;flex-wrap:wrap"><img src="assets/xampp-running.png" alt="Actual XAMPP Control Panel with Apache and MySQL highlighted green and showing Stop buttons" style="width:640px;max-width:100%;height:auto;object-fit:contain"><div style="flex:1;min-width:230px;font-size:21px"><p>1. Start <b>Apache</b> and <b>MySQL</b>.</p><p>2. Both module names should turn green and their buttons should say <b>Stop</b>.</p><p>3. Click <b>Admin</b> beside MySQL to open phpMyAdmin.</p><p style="font-size:16px;color:var(--mut)">Actual classroom setup sample. Your process IDs and installation folder may differ.</p></div></div></div></section>
+<section class="slide recorded-lab"><div class="in"><p class="eb">Information Management · Module 14 · Recorded activity</p><h2>Create your activity database</h2><p><a href="../Offline_Activities/M14/Code.html" target="_blank" rel="noopener" style="color:var(--acc)">Open step-by-step copyable SQL for this activity</a></p><ol><li>Choose New or Databases. Create im_m14_lastname, replacing lastname with your surname using letters, numbers and underscores. Choose utf8mb4_general_ci.</li><li>If that database already exists, use a fresh name ending in _v2; keep your previous work.</li><li>Select the new database in the left sidebar. Use its SQL tab to enter statements and Go to execute. Save each successful statement in a local queries.sql text file.</li></ol></div></section>
+<section class="slide recorded-lab"><div class="in"><p class="eb">Information Management · Module 14 · Recorded activity</p><h2>Inspect the supplied flat data</h2><ol><li>Import starter.sql into your empty activity database using Import &gt; Choose file &gt; Go.</li><li>Browse order_lines_raw. It contains order ID, customer details, product details, quantity and unit price.</li><li>In your log identify repeated customer and product details and describe one update anomaly.</li></ol></div></section>
+<section class="slide recorded-lab"><div class="in"><p class="eb">Information Management · Module 14 · Recorded activity</p><h2>Create the normalized schema</h2><ol><li>Create customers(customer_id INT PRIMARY KEY, customer_name VARCHAR(60)); products(product_id INT PRIMARY KEY, product_name VARCHAR(60)).</li><li>Create orders(order_id INT PRIMARY KEY, customer_id INT NOT NULL) with a customer foreign key.</li><li>Create order_items(order_id INT, product_id INT, quantity INT, unit_price DECIMAL(8,2), PRIMARY KEY(order_id, product_id)) with order and product foreign keys. Use InnoDB.</li></ol></div></section>
+<section class="slide recorded-lab"><div class="in"><p class="eb">Information Management · Module 14 · Recorded activity</p><h2>Migrate and verify</h2><ol><li>Insert unique customers and products from the supplied rows, then orders, then order_items. Keep unit_price on the order line as its sale-time price.</li><li>Write a JOIN that reconstructs all three original order lines.</li><li>Calculate SUM(quantity * unit_price) grouped by order_id. Expected totals: order 1 = 9.00 and order 2 = 2.00. Capture both results.</li></ol></div></section>
+<section class="slide recorded-lab"><div class="in"><p class="eb">Information Management · Module 14 · Recorded activity</p><h2>Export and restore your work</h2><ol><li>Select your activity database. Choose Export &gt; Quick &gt; SQL &gt; Go (or Export) and save database.sql.</li><li>Choose New and create a separate empty database with _restore added to your activity database name. Select it.</li><li>Choose Import &gt; Choose file, select database.sql, then Go. Compare the restored table row counts with the original. Capture the restored database name and data.</li></ol></div></section>
+<section class="slide recorded-lab"><div class="in"><p class="eb">Information Management · Module 14 · Recorded activity</p><h2>Evidence and submission</h2><ol><li>Create a folder named Lastname_Firstname_M14. Save database.sql and queries.sql inside it.</li><li>Save numbered screenshots: database structure, each requested task result or expected error, and the restored database. Include the SQL and result together where possible.</li><li>Add activity_log.txt: your name, section, date, database/server version shown by phpMyAdmin, actions completed, observations requested above, and one problem with its fix.</li><li>Copy the folder to the instructor’s USB drive or designated local submission folder. Show the working database when asked.</li></ol></div></section>
+<section class="slide recorded-lab"><div class="in"><p class="eb">Information Management · Module 14 · Recorded activity</p><h2>Recorded activity criteria</h2><ol><li>Database structure and valid data: 6 points. Full credit when all specified columns, keys and records are correct.</li><li>Task execution and results: 8 points. Award proportionally for completed steps with correct results, including required constraint checks.</li><li>Evidence and activity log: 4 points. Screenshots show the requested work and the log explains observations.</li><li>Export and successful restore: 2 points. SQL backup imports into a separate database and row counts match.</li></ol></div></section>
+<section class="slide recorded-lab"><div class="in"><p class="eb">Information Management · Module 14 · Recorded activity</p><h2>If something stops working</h2><ol><li>Apache or MySQL will not start: capture the Control Panel message and ask the instructor to check the port or service conflict.</li><li>Import says table already exists: select a new empty database and import there once.</li><li>Foreign-key error: create and populate parent tables first; child values must match existing parent IDs.</li><li>Before closing: confirm your submission files are saved outside the browser. Browser history alone is not your activity record.</li></ol></div></section>
+<section class="slide"><div class="in" style="text-align:center"><p class="eb">That’s a wrap</p><h2>Great work</h2><svg viewBox="0 0 160 160" role="img" aria-label="A check mark inside a circle" style="max-width:160px;margin:0 auto 12px"><circle class="s-f" cx="80" cy="80" r="64"/><path class="s-l" d="M50 82 L72 104 L112 58" stroke-linecap="round" stroke-linejoin="round" style="stroke-width:8"/></svg><p style="font-size:22px">Remember: explain each idea in your own words. If you can teach it, you know it.</p></div></section>
+</main>
+<div id="bar"></div><div id="cnt" aria-live="polite">1 / 17</div>
+<div id="help" role="dialog" aria-label="Keyboard shortcuts"><div class="pan"><h3>Shortcuts</h3>
+<p><kbd>→</kbd> <kbd>Space</kbd> <kbd>PageDown</kbd> right-click, Mouse5: next</p>
+<p><kbd>←</kbd> <kbd>PageUp</kbd> Mouse4: previous</p><p><kbd>Home</kbd> <kbd>End</kbd> first or last</p>
+<p><kbd>Ctrl</kbd> + <kbd>+</kbd> <kbd>−</kbd> <kbd>0</kbd> or Ctrl + wheel: text size</p><p><kbd>Esc</kbd> closes this box</p></div></div>
+<script>
+(function(){
+var S=[].slice.call(document.querySelectorAll('.slide')),n=0,z=1,cnt=document.getElementById('cnt'),bar=document.getElementById('bar'),help=document.getElementById('help');
+try{var s=parseFloat(localStorage.getItem('zoomIS'));if(s>=.7&&s<=2)z=s}catch(e){}
+function paint(){document.documentElement.style.setProperty('--z',z);cnt.textContent=(n+1)+' / '+S.length+(Math.round(z*100)!==100?' · '+Math.round(z*100)+'%':'');bar.style.width=((n+1)/S.length*100)+'%'}
+function go(i){i=Math.max(0,Math.min(S.length-1,i));if(i===n)return;S[n].classList.remove('on');S[n].classList.toggle('out',i>n);S[n].setAttribute('aria-hidden','true');n=i;S[n].classList.remove('out');S[n].classList.add('on');S[n].removeAttribute('aria-hidden');S[n].scrollTop=0;paint()}
+function zoom(v){z=Math.max(.7,Math.min(2,Math.round(v*100)/100));try{localStorage.setItem('zoomIS',z)}catch(e){}paint()}
+S.forEach(function(e,i){e.setAttribute('aria-hidden','true');e.setAttribute('role','group');e.setAttribute('aria-label','Slide '+(i+1))});
+S[0].classList.add('on');S[0].removeAttribute('aria-hidden');paint();
+document.addEventListener('keydown',function(e){var t=e.target.tagName;if(t==='INPUT'||t==='TEXTAREA'||t==='SELECT'||e.target.isContentEditable)return;
+if((e.ctrlKey||e.metaKey)&&(e.key==='+'||e.key==='='||e.key==='-'||e.key==='0')){e.preventDefault();zoom(e.key==='0'?1:z+(e.key==='-'?-.1:.1));return}
+var k=e.key;if(k==='ArrowRight'||k==='PageDown'||(k===' '&&t!=='BUTTON')){e.preventDefault();go(n+1)}
+else if(k==='ArrowLeft'||k==='PageUp'){e.preventDefault();go(n-1)}else if(k==='Home')go(0);else if(k==='End')go(S.length-1);
+else if(k==='?')help.classList.toggle('on');else if(k==='Escape')help.classList.remove('on')});
+['mousedown','mouseup','auxclick'].forEach(function(t){window.addEventListener(t,function(e){if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation();if(t==='mousedown')go(n+(e.button===4?1:-1))}else if(e.button===2){e.preventDefault();if(t==='mousedown')go(n+1)}},true)});
+window.addEventListener('contextmenu',function(e){e.preventDefault()},true);
+window.addEventListener('wheel',function(e){if(e.ctrlKey){e.preventDefault();zoom(z+(e.deltaY<0?.1:-.1))}},{passive:false});
+var x0=null;document.addEventListener('touchstart',function(e){x0=e.touches[0].clientX},{passive:true});
+document.addEventListener('touchend',function(e){if(x0===null)return;var d=e.changedTouches[0].clientX-x0;if(Math.abs(d)>60)go(n+(d<0?1:-1));x0=null},{passive:true});
+var M={"x": "x"};var bt=document.getElementById('btns'),out=document.getElementById('out');
+if(bt)bt.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;[].forEach.call(bt.children,function(c){c.setAttribute('aria-pressed',c===b)});out.textContent=b.dataset.k+' → '+M[b.dataset.k]});
+
+var st={};try{st=JSON.parse(localStorage.getItem('imM14'))||{}}catch(e){}
+[].forEach.call(document.querySelectorAll('textarea[data-a]'),function(t){t.value=st[t.dataset.a]||'';t.addEventListener('input',function(){st[t.dataset.a]=t.value;try{localStorage.setItem('imM14',JSON.stringify(st))}catch(e){}upd()})});
+function upd(){[].forEach.call(document.querySelectorAll('[data-yr]'),function(e){var v=(st[e.dataset.yr]||'').trim();e.textContent='Your answer: '+(v||'(left blank)')})}
+upd();
+})();
+</script></body></html>

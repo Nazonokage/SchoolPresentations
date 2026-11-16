@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Information management · Advanced SQL: views, indexes and complex queries</title>
+<style>
+:root{color-scheme:light dark;--bg:#f4f6f8;--panel:#fff;--ink:#14212b;--mut:#44566a;--grid:#c9d3db;--acc:#0b6e6e;--on-acc:#fff;--ok:#1f7a3d;--err:#b3261e;--z:1}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1a22;--panel:#16252f;--ink:#e8eff4;--mut:#a7b8c4;--grid:#2c404e;--acc:#5ec8c8;--on-acc:#0f1a22;--ok:#6fd08c;--err:#ff8f87}}
+*{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:var(--acc) var(--bg)}
+@supports not (scrollbar-color:auto){*::-webkit-scrollbar{width:14px;height:14px}*::-webkit-scrollbar-track{background:var(--bg);border:2px solid var(--grid)}*::-webkit-scrollbar-thumb{background:var(--acc);border:3px solid var(--bg);border-radius:8px}*::-webkit-scrollbar-thumb:hover{filter:brightness(.8)}*::-webkit-scrollbar-corner{background:var(--bg)}}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+:root{padding-top:env(safe-area-inset-top,0)}
+.slide{position:absolute;inset:0 0 6px 0;overflow:auto;opacity:0;visibility:hidden;transform:translateX(var(--from,40px));transition:opacity .35s cubic-bezier(.2,.8,.2,1),transform .35s cubic-bezier(.2,.8,.2,1),visibility 0s .35s}
+.slide.on{opacity:1;visibility:visible;transform:none;transition:opacity .35s cubic-bezier(.2,.8,.2,1),transform .35s cubic-bezier(.2,.8,.2,1)}
+.slide.out{--from:-40px}
+@media (prefers-reduced-motion:reduce){.slide{transform:none!important}}
+.in{zoom:var(--z);padding:clamp(20px,4vw,56px) clamp(20px,6vw,80px) 64px;max-width:1280px;margin:auto}
+.eb{color:var(--acc);font-weight:600;font-size:17px;margin:0 0 4px}
+h1,h2{font-family:"Iowan Old Style",Georgia,serif;line-height:1.12;margin:0 0 18px;font-size:clamp(28px,4.2vw,44px)}
+h1{font-size:clamp(34px,6vw,64px)}
+h3{margin:0 0 6px;font-size:19px}
+p,li{margin:0 0 8px}ul,ol{margin:0;padding-left:1.2em}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px}
+.g2>*{min-width:0}
+@media (max-width:760px){.g2{grid-template-columns:minmax(0,1fr)}}
+.box{border-left:4px solid var(--acc);padding:2px 0 2px 16px;margin-bottom:16px}
+.pan{background:var(--panel);border:1px solid var(--grid);border-radius:8px;padding:16px 18px}
+.tw{overflow-x:auto;border:1px solid var(--grid);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:560px;background:var(--panel)}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--grid);vertical-align:top}th{color:var(--acc)}
+.pro{background:var(--panel);border:1px solid var(--grid);border-radius:8px;padding:12px 16px;margin-top:14px}
+svg{max-width:100%;height:auto;display:block}svg text{font:600 17px ui-sans-serif,system-ui,sans-serif;fill:var(--ink)}
+.s-f{fill:var(--panel);stroke:var(--acc);stroke-width:2}.s-l{stroke:var(--acc);stroke-width:2.5;fill:none}.s-a{fill:var(--acc)}
+.mc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px 28px}
+.mc>div:last-child:nth-child(odd){grid-column:1/-1;max-width:calc(50% - 14px);justify-self:center}
+@media (max-width:760px){.mc{grid-template-columns:minmax(0,1fr)}.mc>div:last-child:nth-child(odd){max-width:none}}
+.q{font-weight:600;margin-bottom:4px}.o{margin:0;padding-left:1em}
+.ok{color:var(--ok);font-weight:700}.er{color:var(--err);font-weight:700}
+button{font:inherit;font-size:16px;color:var(--ink);background:var(--panel);border:2px solid var(--acc);border-radius:8px;padding:8px 14px;cursor:pointer;box-shadow:0 4px 0 var(--acc);transition:transform .12s ease-out,box-shadow .12s ease-out,background-color .12s ease-out}
+button:active{transform:translateY(4px);box-shadow:0 0 0 var(--acc)}
+button[aria-pressed=true]{background:var(--acc);color:var(--on-acc)}
+button:disabled{opacity:.5;cursor:not-allowed}
+:focus-visible{outline:3px solid var(--acc);outline-offset:3px}
+@media (hover:hover) and (pointer:fine){button:hover:not(:disabled):not([aria-pressed=true]){background:var(--bg)}}
+.btns{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0 18px}
+#out{min-height:3.2em;border:1px dashed var(--acc);border-radius:8px;padding:10px 14px}
+#bar{position:fixed;left:0;bottom:0;height:6px;background:var(--acc);width:0;transition:width .35s cubic-bezier(.2,.8,.2,1);z-index:5}
+#cnt{position:fixed;right:14px;bottom:12px;background:var(--panel);border:1px solid var(--grid);border-radius:8px;padding:2px 10px;font-size:16px;z-index:5}
+#help{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:9}
+#help.on{display:flex}#help .pan{max-width:520px;margin:16px}
+kbd{font:600 16px ui-monospace,monospace;border:1px solid var(--grid);border-bottom-width:3px;border-radius:5px;padding:0 6px}
+html:not(.js) .slide:first-of-type{opacity:1;visibility:visible;transform:none}.cc{display:flex;flex-direction:column;height:min(460px,60vh);min-height:0;border:1px solid var(--grid);border-radius:8px;background:var(--panel);overflow:hidden}.cc header{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--grid);gap:8px}.cc pre{margin:0;padding:12px 14px;overflow:auto;flex:1;min-height:0;font:16px/1.5 ui-monospace,Menlo,Consolas,monospace}.cc i{font-style:normal}.k{color:var(--acc)}.s{color:var(--ok)}.c{color:var(--mut);font-style:italic}</style></head><body>
+<script>document.documentElement.className="js"</script>
+<main id="deck">
+<section class="slide"><div class="in"><div class="g2" style="align-items:center"><div><p class="eb">Information management · Module 22</p><h1>Advanced SQL: views, indexes and complex queries</h1><p style="font-size:22px;color:var(--mut)">Organize data with views, speed up searches with indexes, and write complex logic cleanly with subqueries and CTEs.</p><p class="pro">Press <kbd>→</kbd> or Space to start. Press <kbd>?</kbd> for shortcuts.</p></div><svg viewBox="0 0 480 208" role="img" aria-label="Diagram: the four tools covered in this module"><rect class="s-f" x="10" y="0" width="460" height="40" rx="8"/><text x="240" y="26" text-anchor="middle">Views: simplify and secure</text><path class="s-l" d="M240 40 V50"/><path class="s-a" d="M233 48 L247 48 L240 56 Z"/><rect class="s-f" x="10" y="56" width="460" height="40" rx="8"/><text x="240" y="82" text-anchor="middle">Indexes: speed up reads</text><path class="s-l" d="M240 96 V106"/><path class="s-a" d="M233 104 L247 104 L240 112 Z"/><rect class="s-f" x="10" y="112" width="460" height="40" rx="8"/><text x="240" y="138" text-anchor="middle">Clauses: filter results</text><path class="s-l" d="M240 152 V162"/><path class="s-a" d="M233 160 L247 160 L240 168 Z"/><rect class="s-f" x="10" y="168" width="460" height="40" rx="8"/><text x="240" y="194" text-anchor="middle">CTEs: readable logic</text></svg></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Goals</p><h2>By the end of this lesson, you can…</h2><div class="g2"><div><ul style="font-size:20px"><li>Explain the difference between views, indexes and clauses in SQL.</li><li>Describe practical uses for indexes and their performance trade-offs.</li></ul></div><div><ul style="font-size:20px"><li>Describe modern methods of filtering results, including standard FETCH syntax.</li><li>Apply views, indexes, clauses and subqueries in SQL.</li><li>Understand modern alternatives to subqueries, such as Common Table Expressions (CTEs).</li></ul></div></div><p class="pro">As databases grow, simple SELECT * queries won’t cut it. We need tools to organize, speed up and clarify our queries.</p></div></section>
+<section class="slide"><div class="in"><p class="eb">Main lesson · 1</p><h2>What is a view?</h2><p style="font-size:20px">A <b>view</b> is a virtual table based on the result of a <code>SELECT</code> statement. It doesn’t store data physically; the <code>SELECT</code> runs every time the view is queried.</p><div class="g2"><div><div class="box"><h3>Purpose</h3>Simplify complex queries, restrict access to sensitive columns (security), and provide a consistent interface to the underlying data.</div></div><div><div class="box"><h3>Modern update: materialized views</h3>A <b>materialized view</b> physically stores the result. Common in data warehousing to pre-calculate expensive aggregations (like daily sales totals) so dashboards load instantly. They need periodic refreshing.</div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Main lesson · 2</p><h2>What is an index?</h2><p>An <b>index</b> is a data structure that speeds up data retrieval on a table. It works like the index at the back of a textbook: instead of reading the whole book (scanning the whole table), you find the page number (the pointer) instantly.</p><div class="g2"><div><ul><li><b>Speeds up SELECT, UPDATE and DELETE</b> by reducing the data the engine scans.</li><li><b>Enforces uniqueness:</b> unique indexes prevent duplicate values.</li><li><b>Facilitates JOINs:</b> drastically speeds up joins on foreign keys.</li></ul></div><div><div class="pan"><h3>The trade-off</h3>Indexes speed up reads but <b>slow down writes</b> (INSERT, UPDATE, DELETE) because the index must be updated whenever the table changes. They also use extra disk space. Only index columns frequently used in <code>WHERE</code> clauses or <code>JOIN</code> conditions.</div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Main lesson · 3</p><h2>Filtering results: clauses</h2><p>A <b>clause</b> is a specific part of a SQL statement. Different clauses filter data to a manageable level.</p><div class="tw"><table><thead><tr><th>Clause</th><th>Purpose</th><th>Example</th></tr></thead><tbody><tr><td><code>WHERE</code></td><td>Filters rows <i>before</i> any grouping.</td><td><code>SELECT * FROM customers WHERE age &gt; 25;</code></td></tr><tr><td><code>GROUP BY</code></td><td>Groups rows with the same values.</td><td><code>SELECT city, SUM(sales) FROM orders GROUP BY city;</code></td></tr><tr><td><code>HAVING</code></td><td>Filters groups <i>after</i> GROUP BY.</td><td><code>... GROUP BY city HAVING COUNT(*) &gt; 100;</code></td></tr><tr><td><code>LIMIT</code></td><td>Restricts returned rows (MySQL/PostgreSQL).</td><td><code>SELECT * FROM customers LIMIT 10;</code></td></tr><tr><td><code>TOP</code></td><td>Restricts returned rows (SQL Server).</td><td><code>SELECT TOP 10 * FROM customers;</code></td></tr><tr><td><code>FETCH FIRST</code></td><td><b>Modern SQL standard</b> for restricting rows.</td><td><code>SELECT * FROM customers FETCH FIRST 10 ROWS ONLY;</code></td></tr></tbody></table></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Try it</p><h2>Explore the clauses</h2><p>Pick a clause to see its purpose and an example.</p><div class="btns" id="btns" role="group" aria-label="Choices"><button aria-pressed="false" data-k="WHERE">WHERE</button><button aria-pressed="false" data-k="GROUP BY">GROUP BY</button><button aria-pressed="false" data-k="HAVING">HAVING</button><button aria-pressed="false" data-k="LIMIT">LIMIT</button><button aria-pressed="false" data-k="TOP">TOP</button><button aria-pressed="false" data-k="FETCH FIRST">FETCH FIRST</button></div><div id="out" role="status" aria-live="polite">Nothing selected yet.</div></div></section>
+<section class="slide"><div class="in"><p class="eb">Main lesson · 4A</p><h2>Subqueries</h2><p>A <b>subquery</b> is a <code>SELECT</code> statement embedded within another SQL statement, often in the <code>WHERE</code> clause.</p><div class="g2"><div><div class="cc"><header><b>Subquery (SQL)</b><button data-copy="c1" aria-label="Copy Subquery (SQL) code">Copy</button></header><pre tabindex="0"><code id="c1" data-l="sql">-- Customers who ordered in the last 30 days
+SELECT name
+FROM customers
+WHERE id IN (
+    SELECT customer_id
+    FROM orders
+    WHERE order_date > CURRENT_DATE - INTERVAL '30' DAY
+);</code></pre></div></div><div><div class="pan"><h3>Date syntax varies</h3><code>CURRENT_DATE - INTERVAL '30' DAY</code> works in PostgreSQL. SQL Server uses <code>DATEADD(day, -30, GETDATE())</code>.</div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Main lesson · 4B</p><h2>Modern update: CTEs</h2><p>Deeply nested subqueries become hard to read. Modern SQL developers prefer <b>Common Table Expressions (CTEs)</b> using the <code>WITH</code> clause, which make complex queries read from top to bottom.</p><div class="g2"><div><div class="cc"><header><b>CTE (SQL)</b><button data-copy="c2" aria-label="Copy CTE (SQL) code">Copy</button></header><pre tabindex="0"><code id="c2" data-l="sql">-- The modern way (CTE)
+WITH RecentOrders AS (
+    SELECT customer_id
+    FROM orders
+    WHERE order_date > CURRENT_DATE - INTERVAL '30' DAY
+)
+SELECT name
+FROM customers
+WHERE id IN (SELECT customer_id FROM RecentOrders);</code></pre></div></div><div><svg viewBox="0 0 480 240" role="img" aria-label="Diagram: the Customers and Orders tables feed a subquery or CTE, which produces the final customer names"><rect class="s-f" x="10" y="8" width="200" height="44" rx="6"/><text x="110" y="37" text-anchor="middle">Customers</text><rect class="s-f" x="270" y="8" width="200" height="44" rx="6"/><text x="370" y="37" text-anchor="middle">Orders</text><path class="s-l" d="M110 52 L180 102 M370 52 L300 102"/><rect class="s-f" x="120" y="102" width="240" height="46" rx="6"/><text x="240" y="132" text-anchor="middle">Subquery or CTE</text><path class="s-l" d="M240 148 V186"/><path class="s-a" d="M233 180 L247 180 L240 192 Z"/><rect class="s-f" x="100" y="192" width="280" height="44" rx="6"/><text x="240" y="221" text-anchor="middle">Customer names</text></svg></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Analogy</p><h2>The library</h2><div class="g2"><div><ul><li><b>Table:</b> a massive library with millions of books.</li><li><b>Index:</b> the card catalog. Instead of walking every aisle for “Harry Potter”, look it up and go to the exact shelf.</li></ul></div><div><ul><li><b>View:</b> a curated reading list on the wall (“Top 10 Sci-Fi Books”). It creates no new books; it presents existing ones a specific way.</li><li><b>Subquery / CTE:</b> asking the librarian, “Find the names of all authors who wrote a book published after 2020.”</li></ul></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Real-world use case</p><h2>Dashboard performance</h2><p>A company has a <code>sales</code> table with 50 million rows. The CEO wants a daily sales dashboard. Running <code>SELECT SUM(amount) FROM sales</code> on every refresh takes 10 seconds.</p><p class="pro"><b>The solution:</b> a <b>materialized view</b> that pre-calculates daily sales every midnight. The dashboard query hits the materialized view and loads in 50 milliseconds.</p></div></section>
+<section class="slide"><div class="in"><p class="eb">FAQs</p><h2>Common questions</h2><div class="g2"><div><div class="box"><h3>SQL vs. MySQL?</h3><b>SQL</b> is the standard query language for relational databases. <b>MySQL</b> is a specific RDBMS that <i>uses</i> SQL. SQL is the English language; MySQL is a publishing company that prints books in English.</div><div class="box"><h3>View vs. table?</h3>A <b>table</b> physically stores data on disk. A <b>view</b> is virtual: it stores no data and runs a saved <code>SELECT</code> whenever you access it.</div></div><div><div class="box"><h3>CTE or subquery?</h3>Use a CTE for multi-step or complex logic: it reads top-down. Subqueries are fine for simple, one-off checks.</div><div class="box"><h3>Do too many indexes slow things down?</h3>Yes. Every INSERT or UPDATE must also update every index on the table. With 10 indexes, a single insert becomes 11 operations. Index only columns you search by.</div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Hands-on exercise</p><h2>E-commerce database optimization</h2><p>You have a <code>customers</code> table and an <code>orders</code> table.</p><div class="g2"><div><ol start="1"><li><b>Create an index</b> to speed up searches by customer email.</li><li><b>Create a view</b> showing the total money spent by each customer.</li><li><b>Use a CTE</b> to find all customers who have spent more than $500.</li></ol></div><div><div class="cc"><header><b>Solutions (SQL)</b><button data-copy="c3" aria-label="Copy Solutions (SQL) code">Copy</button></header><pre tabindex="0"><code id="c3" data-l="sql">-- 1. Create an index
+CREATE INDEX idx_customer_email
+    ON customers (email);
+
+-- 2. Create a view
+CREATE VIEW customer_total_spend AS
+SELECT c.name, SUM(o.price) AS total_sales
+FROM customers c
+JOIN orders o ON c.id = o.customer_id
+GROUP BY c.name;
+
+-- 3. Use a CTE to filter the view
+WITH BigSpenders AS (
+    SELECT name, total_sales
+    FROM customer_total_spend
+    WHERE total_sales > 500
+)
+SELECT * FROM BigSpenders;</code></pre></div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Key quotes</p><h2>Key definitions to remember</h2><div class="g2"><div><div class="box"><h3>View</h3>A virtual table based on the result of a SELECT statement.</div><div class="box"><h3>Index</h3>A data structure that improves the speed of data retrieval, at the cost of slower writes.</div></div><div><div class="box"><h3>Subquery</h3>A SELECT statement embedded within another SQL statement.</div><div class="box"><h3>CTE</h3>A WITH-clause query that makes complex logic readable from top to bottom.</div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Recap</p><h2>Turbo-charge and tidy your queries</h2><p style="font-size:20px"><b>Views</b> simplify logic and secure data. <b>Indexes</b> turbo-charge reads at the cost of slightly slower writes.</p><p class="pro">Use clauses like <code>WHERE</code> and <code>HAVING</code> to filter precisely, <code>FETCH FIRST</code> for modern pagination, and favor <b>CTEs</b> over deeply nested subqueries for readability.</p></div></section>
+<section class="slide"><div class="in"><p class="eb">Activity 1</p><h2>Multiple choice</h2><div class="mc"><div><div class="q">1. Which of the following is a major disadvantage of creating too many indexes on a table?</div><ul class="o" style="list-style:none"><li>a. It makes SELECT queries slower.</li><li>b. It takes up physical disk space and slows down INSERT/UPDATE operations.</li><li>c. It prevents you from using JOINs.</li><li>d. It deletes old data automatically.</li></ul></div><div><div class="q">2. What is a materialized view?</div><ul class="o" style="list-style:none"><li>a. A view that cannot be updated.</li><li>b. A view that physically stores the query results on disk.</li><li>c. A view that only works in MySQL.</li><li>d. A view created using a subquery.</li></ul></div><div><div class="q">3. Which modern clause is standardized to limit the number of rows returned, replacing TOP and LIMIT?</div><ul class="o" style="list-style:none"><li>a. RESTRICT</li><li>b. FETCH FIRST n ROWS ONLY</li><li>c. MAX ROWS n</li><li>d. ONLY n</li></ul></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Activity 2</p><h2>Fill in the blanks</h2><div class="g2"><div><ol start="1"><li>An ______ is a data structure that allows faster retrieval of data by quickly locating specific values.</li><li>A ______ is a virtual table based on the result of a SELECT statement.</li><li>The ______ clause filters the rows returned by a SELECT statement.</li></ol></div><div><ol start="4"><li>A ______ is a SELECT statement embedded within another statement.</li><li>The ______ clause filters groups based on a condition (after GROUP BY).</li><li>The ______ (or TOP, or FETCH FIRST) clause restricts the number of rows returned.</li></ol></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Answer key</p><h2>Multiple choice and fill in the blanks</h2><div class="g2"><div><div class="pan"><h3>Multiple choice</h3><ol start="1"><li><b>b.</b> Indexes must be updated on writes, a performance penalty.</li><li><b>b.</b> Materialized views cache the data; standard views run on the fly.</li><li><b>b.</b> FETCH FIRST is part of the SQL:2008 standard, supported by PostgreSQL and Oracle.</li></ol></div></div><div><div class="pan"><h3>Fill in the blanks</h3><ol start="1"><li>Index</li><li>View</li><li>WHERE</li><li>Subquery</li><li>HAVING</li><li>LIMIT</li></ol></div></div></div></div></section>
+<section class="slide"><div class="in" style="text-align:center"><p class="eb">That’s a wrap</p><h2>Great work</h2><svg viewBox="0 0 160 160" role="img" aria-label="A check mark inside a circle" style="max-width:160px;margin:0 auto 12px"><circle class="s-f" cx="80" cy="80" r="64"/><path class="s-l" d="M50 82 L72 104 L112 58" stroke-linecap="round" stroke-linejoin="round" style="stroke-width:8"/></svg><p style="font-size:22px">Remember: index the columns you search by, and reach for a CTE when a subquery gets hard to read.</p></div></section>
+</main>
+<div id="bar"></div><div id="cnt" aria-live="polite">1 / 18</div>
+<div id="help" role="dialog" aria-label="Keyboard shortcuts"><div class="pan"><h3>Shortcuts</h3>
+<p><kbd>→</kbd> <kbd>Space</kbd> <kbd>PageDown</kbd> right-click, Mouse5: next</p>
+<p><kbd>←</kbd> <kbd>PageUp</kbd> Mouse4: previous</p><p><kbd>Home</kbd> <kbd>End</kbd> first or last</p>
+<p><kbd>Ctrl</kbd> + <kbd>+</kbd> <kbd>−</kbd> <kbd>0</kbd> or Ctrl + wheel: text size</p><p><kbd>Esc</kbd> closes this box</p></div></div>
+<script>
+(function(){
+var S=[].slice.call(document.querySelectorAll('.slide')),n=0,z=1,cnt=document.getElementById('cnt'),bar=document.getElementById('bar'),help=document.getElementById('help');
+try{var s=parseFloat(localStorage.getItem('zoomIS'));if(s>=.7&&s<=2)z=s}catch(e){}
+function paint(){document.documentElement.style.setProperty('--z',z);cnt.textContent=(n+1)+' / '+S.length+(Math.round(z*100)!==100?' · '+Math.round(z*100)+'%':'');bar.style.width=((n+1)/S.length*100)+'%'}
+function go(i){i=Math.max(0,Math.min(S.length-1,i));if(i===n)return;S[n].classList.remove('on');S[n].classList.toggle('out',i>n);S[n].setAttribute('aria-hidden','true');n=i;S[n].classList.remove('out');S[n].classList.add('on');S[n].removeAttribute('aria-hidden');S[n].scrollTop=0;paint()}
+function zoom(v){z=Math.max(.7,Math.min(2,Math.round(v*100)/100));try{localStorage.setItem('zoomIS',z)}catch(e){}paint()}
+S.forEach(function(e,i){e.setAttribute('aria-hidden','true');e.setAttribute('role','group');e.setAttribute('aria-label','Slide '+(i+1))});
+S[0].classList.add('on');S[0].removeAttribute('aria-hidden');paint();
+document.addEventListener('keydown',function(e){var t=e.target.tagName;if(t==='INPUT'||t==='TEXTAREA'||t==='SELECT'||e.target.isContentEditable)return;
+if((e.ctrlKey||e.metaKey)&&(e.key==='+'||e.key==='='||e.key==='-'||e.key==='0')){e.preventDefault();zoom(e.key==='0'?1:z+(e.key==='-'?-.1:.1));return}
+var k=e.key;if(k==='ArrowRight'||k==='PageDown'||(k===' '&&t!=='BUTTON')){e.preventDefault();go(n+1)}
+else if(k==='ArrowLeft'||k==='PageUp'){e.preventDefault();go(n-1)}else if(k==='Home')go(0);else if(k==='End')go(S.length-1);
+else if(k==='?')help.classList.toggle('on');else if(k==='Escape')help.classList.remove('on')});
+['mousedown','mouseup','auxclick'].forEach(function(t){window.addEventListener(t,function(e){if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation();if(t==='mousedown')go(n+(e.button===4?1:-1))}else if(e.button===2){e.preventDefault();if(t==='mousedown')go(n+1)}},true)});
+window.addEventListener('contextmenu',function(e){e.preventDefault()},true);
+window.addEventListener('wheel',function(e){if(e.ctrlKey){e.preventDefault();zoom(z+(e.deltaY<0?.1:-.1))}},{passive:false});
+var x0=null;document.addEventListener('touchstart',function(e){x0=e.touches[0].clientX},{passive:true});
+document.addEventListener('touchend',function(e){if(x0===null)return;var d=e.changedTouches[0].clientX-x0;if(Math.abs(d)>60)go(n+(d<0?1:-1));x0=null},{passive:true});
+var M={"WHERE": "Filters rows before any grouping. Example: SELECT * FROM customers WHERE age > 25;", "GROUP BY": "Groups rows that have the same values. Example: SELECT city, SUM(sales) FROM orders GROUP BY city;", "HAVING": "Filters groups after GROUP BY. Example: SELECT city, COUNT(*) FROM orders GROUP BY city HAVING COUNT(*) > 100;", "LIMIT": "Restricts the number of returned rows (MySQL/PostgreSQL). Example: SELECT * FROM customers LIMIT 10;", "TOP": "Restricts returned rows (SQL Server). Example: SELECT TOP 10 * FROM customers;", "FETCH FIRST": "The modern SQL standard for restricting rows. Example: SELECT * FROM customers FETCH FIRST 10 ROWS ONLY;"};var bt=document.getElementById('btns'),out=document.getElementById('out');
+if(bt)bt.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;[].forEach.call(bt.children,function(c){c.setAttribute('aria-pressed',c===b)});out.textContent=b.dataset.k+' → '+M[b.dataset.k]});
+
+var KW={sql:'CREATE|TABLE|INT|PRIMARY|KEY|VARCHAR|NOT|NULL|TEXT|UNIQUE|DECIMAL|CHECK|FOREIGN|REFERENCES|DATE|DEFAULT|SELECT|FROM|JOIN|ON|WHERE|AUTO_INCREMENT|INSERT|INTO|VALUES|UPDATE|SET|DELETE|ALTER|ADD|TRUNCATE|DROP|JSON|VECTOR|TIMESTAMP|CURRENT_TIMESTAMP|INDEX|VIEW|AS|WITH|IN|GROUP|BY|HAVING|ORDER|AND|OR|LIMIT|TOP|FETCH|FIRST|ROWS|ONLY|SUM|COUNT|AVG|MIN|MAX|LOWER|UPPER|EXPLAIN|ANALYZE|YEAR|DATABASE|USE|ASC|DESC|DECIMAL',php:'try|catch|new|echo|if|throw|PDO|PDOException',dbml:'Table|primary|key|unique|ref|Note|integer|varchar|timestamp',puml:'class|actor|usecase|rectangle|left|to|right|direction|as'},CM={php:'//.*$',sql:'--.*$',dbml:'//.*$',puml:'(?!)'},ST={php:"\"[^\"\\n]*\"|'[^'\\n]*'",sql:"'[^'\\n]*'",dbml:"'[^'\\n]*'",puml:'"[^"\\n]*"'};
+function hl(c){var L=c.dataset.l,t=c.textContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+c.innerHTML=t.replace(new RegExp('('+CM[L]+')|('+ST[L]+')|\\b('+KW[L]+')\\b|(@\\w+|\\$\\w+)','gm'),function(m,cm,st){return cm?'<i class="c">'+m+'</i>':st?'<i class="s">'+m+'</i>':'<b class="k">'+m+'</b>'})}
+[].forEach.call(document.querySelectorAll('code[data-l]'),hl);
+[].forEach.call(document.querySelectorAll('[data-copy]'),function(b){b.addEventListener('click',function(){var done=function(){b.textContent='Copied!';b.setAttribute('aria-pressed','true');setTimeout(function(){b.textContent='Copy';b.setAttribute('aria-pressed','false')},1500)};
+try{navigator.clipboard.writeText(document.getElementById(b.dataset.copy).textContent).then(done,function(){b.textContent='Press Ctrl+C'})}catch(e){b.textContent='Press Ctrl+C'}})});
+})();
+</script></body></html>

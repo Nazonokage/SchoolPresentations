@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Information management · Basic SQL: SQL functions</title>
+<style>
+:root{color-scheme:light dark;--bg:#f4f6f8;--panel:#fff;--ink:#14212b;--mut:#44566a;--grid:#c9d3db;--acc:#0b6e6e;--on-acc:#fff;--ok:#1f7a3d;--err:#b3261e;--z:1}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1a22;--panel:#16252f;--ink:#e8eff4;--mut:#a7b8c4;--grid:#2c404e;--acc:#5ec8c8;--on-acc:#0f1a22;--ok:#6fd08c;--err:#ff8f87}}
+*{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:var(--acc) var(--bg)}
+@supports not (scrollbar-color:auto){*::-webkit-scrollbar{width:14px;height:14px}*::-webkit-scrollbar-track{background:var(--bg);border:2px solid var(--grid)}*::-webkit-scrollbar-thumb{background:var(--acc);border:3px solid var(--bg);border-radius:8px}*::-webkit-scrollbar-thumb:hover{filter:brightness(.8)}*::-webkit-scrollbar-corner{background:var(--bg)}}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+:root{padding-top:env(safe-area-inset-top,0)}
+.slide{position:absolute;inset:0 0 6px 0;overflow:auto;opacity:0;visibility:hidden;transform:translateX(var(--from,40px));transition:opacity .35s cubic-bezier(.2,.8,.2,1),transform .35s cubic-bezier(.2,.8,.2,1),visibility 0s .35s}
+.slide.on{opacity:1;visibility:visible;transform:none;transition:opacity .35s cubic-bezier(.2,.8,.2,1),transform .35s cubic-bezier(.2,.8,.2,1)}
+.slide.out{--from:-40px}
+@media (prefers-reduced-motion:reduce){.slide{transform:none!important}}
+.in{zoom:var(--z);padding:clamp(20px,4vw,56px) clamp(20px,6vw,80px) 64px;max-width:1280px;margin:auto}
+.eb{color:var(--acc);font-weight:600;font-size:17px;margin:0 0 4px}
+h1,h2{font-family:"Iowan Old Style",Georgia,serif;line-height:1.12;margin:0 0 18px;font-size:clamp(28px,4.2vw,44px)}
+h1{font-size:clamp(34px,6vw,64px)}
+h3{margin:0 0 6px;font-size:19px}
+p,li{margin:0 0 8px}ul,ol{margin:0;padding-left:1.2em}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px}
+.g2>*{min-width:0}
+@media (max-width:760px){.g2{grid-template-columns:minmax(0,1fr)}}
+.box{border-left:4px solid var(--acc);padding:2px 0 2px 16px;margin-bottom:16px}
+.pan{background:var(--panel);border:1px solid var(--grid);border-radius:8px;padding:16px 18px}
+.tw{overflow-x:auto;border:1px solid var(--grid);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:560px;background:var(--panel)}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--grid);vertical-align:top}th{color:var(--acc)}
+.pro{background:var(--panel);border:1px solid var(--grid);border-radius:8px;padding:12px 16px;margin-top:14px}
+svg{max-width:100%;height:auto;display:block}svg text{font:600 17px ui-sans-serif,system-ui,sans-serif;fill:var(--ink)}
+.s-f{fill:var(--panel);stroke:var(--acc);stroke-width:2}.s-l{stroke:var(--acc);stroke-width:2.5;fill:none}.s-a{fill:var(--acc)}
+.mc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px 28px}
+.mc>div:last-child:nth-child(odd){grid-column:1/-1;max-width:calc(50% - 14px);justify-self:center}
+@media (max-width:760px){.mc{grid-template-columns:minmax(0,1fr)}.mc>div:last-child:nth-child(odd){max-width:none}}
+.q{font-weight:600;margin-bottom:4px}.o{margin:0;padding-left:1em}
+.ok{color:var(--ok);font-weight:700}.er{color:var(--err);font-weight:700}
+button{font:inherit;font-size:16px;color:var(--ink);background:var(--panel);border:2px solid var(--acc);border-radius:8px;padding:8px 14px;cursor:pointer;box-shadow:0 4px 0 var(--acc);transition:transform .12s ease-out,box-shadow .12s ease-out,background-color .12s ease-out}
+button:active{transform:translateY(4px);box-shadow:0 0 0 var(--acc)}
+button[aria-pressed=true]{background:var(--acc);color:var(--on-acc)}
+button:disabled{opacity:.5;cursor:not-allowed}
+:focus-visible{outline:3px solid var(--acc);outline-offset:3px}
+@media (hover:hover) and (pointer:fine){button:hover:not(:disabled):not([aria-pressed=true]){background:var(--bg)}}
+.btns{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0 18px}
+#out{min-height:3.2em;border:1px dashed var(--acc);border-radius:8px;padding:10px 14px}
+#bar{position:fixed;left:0;bottom:0;height:6px;background:var(--acc);width:0;transition:width .35s cubic-bezier(.2,.8,.2,1);z-index:5}
+#cnt{position:fixed;right:14px;bottom:12px;background:var(--panel);border:1px solid var(--grid);border-radius:8px;padding:2px 10px;font-size:16px;z-index:5}
+#help{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:9}
+#help.on{display:flex}#help .pan{max-width:520px;margin:16px}
+kbd{font:600 16px ui-monospace,monospace;border:1px solid var(--grid);border-bottom-width:3px;border-radius:5px;padding:0 6px}
+html:not(.js) .slide:first-of-type{opacity:1;visibility:visible;transform:none}.cc{display:flex;flex-direction:column;height:min(460px,60vh);min-height:0;border:1px solid var(--grid);border-radius:8px;background:var(--panel);overflow:hidden}.cc header{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--grid);gap:8px}.cc pre{margin:0;padding:12px 14px;overflow:auto;flex:1;min-height:0;font:16px/1.5 ui-monospace,Menlo,Consolas,monospace}.cc i{font-style:normal}.k{color:var(--acc)}.s{color:var(--ok)}.c{color:var(--mut);font-style:italic}</style></head><body>
+<script>document.documentElement.className="js"</script>
+<main id="deck">
+<section class="slide"><div class="in"><div class="g2" style="align-items:center"><div><p class="eb">Information management · Module 20</p><h1>Basic SQL: SQL functions</h1><p style="font-size:22px;color:var(--mut)">The power tools that transform, format and calculate data inside the database engine.</p><p class="pro">Press <kbd>→</kbd> or Space to start. Press <kbd>?</kbd> for shortcuts.</p></div><svg viewBox="0 0 480 208" role="img" aria-label="Diagram: the main kinds of SQL functions"><rect class="s-f" x="10" y="0" width="460" height="40" rx="8"/><text x="240" y="26" text-anchor="middle">Aggregate</text><path class="s-l" d="M240 40 V50"/><path class="s-a" d="M233 48 L247 48 L240 56 Z"/><rect class="s-f" x="10" y="56" width="460" height="40" rx="8"/><text x="240" y="82" text-anchor="middle">String</text><path class="s-l" d="M240 96 V106"/><path class="s-a" d="M233 104 L247 104 L240 112 Z"/><rect class="s-f" x="10" y="112" width="460" height="40" rx="8"/><text x="240" y="138" text-anchor="middle">Date/Time</text><path class="s-l" d="M240 152 V162"/><path class="s-a" d="M233 160 L247 160 L240 168 Z"/><rect class="s-f" x="10" y="168" width="460" height="40" rx="8"/><text x="240" y="194" text-anchor="middle">Scalar and conversion</text></svg></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Goals</p><h2>By the end of this lesson, you can…</h2><div class="g2"><div><ul style="font-size:20px"><li>Explain the purpose and classification of SQL functions.</li><li>Enumerate and apply the types of SQL functions: aggregate, string, date/time, scalar and conversion.</li></ul></div><div><ul style="font-size:20px"><li>Understand how modern SQL dialects handle data transformations differently.</li><li>Use advanced functions such as JSON manipulation and regular expressions.</li></ul></div></div><p class="pro">Basic statements retrieve and filter data. Functions let you transform it into exactly the format your application needs.</p></div></section>
+<section class="slide"><div class="in"><p class="eb">Main lesson · 1</p><h2>What are SQL functions?</h2><p style="font-size:20px"><b>SQL functions</b> are pre-built, reusable pieces of code that perform specific operations on data in a database. They accept input values (arguments) and return a single output value.</p><p class="pro">Functions can be used in almost any part of a SQL statement, including <code>SELECT</code>, <code>WHERE</code>, <code>ORDER BY</code> and <code>HAVING</code>.</p></div></section>
+<section class="slide"><div class="in"><p class="eb">Main lesson · 2</p><h2>Types of SQL functions</h2><div class="c3"><div class="pan"><h3>Aggregate</h3>COUNT, SUM, AVG, MIN / MAX</div><div class="pan"><h3>String</h3>CONCAT, LENGTH, UPPER / LOWER, SUBSTRING, TRIM</div><div class="pan"><h3>Date/Time</h3>CURRENT_DATE, EXTRACT, DATE_ADD, DATEDIFF</div><div class="pan"><h3>Scalar / Math</h3>ROUND, CEILING, ABS, SQRT</div><div class="pan"><h3>Conversion</h3>CAST, CONVERT</div><div class="pan"><h3>Modern</h3>JSON_EXTRACT, REGEXP</div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Try it</p><h2>Explore the function types</h2><p>Pick a type to see its functions.</p><div class="btns" id="btns" role="group" aria-label="Choices"><button aria-pressed="false" data-k="Aggregate">Aggregate</button><button aria-pressed="false" data-k="String">String</button><button aria-pressed="false" data-k="Date/Time">Date/Time</button><button aria-pressed="false" data-k="Scalar / Math">Scalar / Math</button><button aria-pressed="false" data-k="Conversion">Conversion</button><button aria-pressed="false" data-k="Modern">Modern</button></div><div id="out" role="status" aria-live="polite">Nothing selected yet.</div></div></section>
+<section class="slide"><div class="in"><p class="eb">Main lesson · 2A to 2B</p><h2>Aggregate and string functions</h2><p><b>Aggregate</b> functions (<code>COUNT</code>, <code>SUM</code>, <code>AVG</code>, <code>MIN</code>, <code>MAX</code>) calculate on a set of values and return one value. They were covered in Module 19. <b>String</b> functions manipulate text.</p><div class="tw"><table><thead><tr><th>Function</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>CONCAT()</code></td><td>Joins two or more strings.</td><td><code>SELECT CONCAT(first_name, ' ', last_name) FROM employees;</code></td></tr><tr><td><code>LENGTH()</code></td><td>Number of characters in a string.</td><td><code>SELECT LENGTH(first_name) FROM employees;</code></td></tr><tr><td><code>UPPER()</code> / <code>LOWER()</code></td><td>Converts to all uppercase or lowercase.</td><td><code>SELECT UPPER(email) FROM employees;</code></td></tr><tr><td><code>SUBSTRING()</code></td><td>Extracts part of a string.</td><td><code>SELECT SUBSTRING(email, 1, 5) FROM employees;</code></td></tr><tr><td><code>TRIM()</code></td><td>Removes leading and trailing spaces.</td><td><code>SELECT TRIM(first_name) FROM employees;</code></td></tr></tbody></table></div><p class="pro"><b>Dialect differences:</b> standard SQL concatenates with <code>||</code>, but many databases support <code>CONCAT()</code>. <code>LENGTH()</code> (MySQL/PostgreSQL) is <code>LEN()</code> in SQL Server.</p></div></section>
+<section class="slide"><div class="in"><p class="eb">Main lesson · 2C</p><h2>Date and time functions</h2><p>Extract, format or calculate differences between dates and times.</p><div class="tw"><table><thead><tr><th>Function</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>CURRENT_DATE</code></td><td>Returns the current date.</td><td><code>SELECT CURRENT_DATE;</code></td></tr><tr><td><code>EXTRACT()</code></td><td>Extracts a part of a date (year, month, day).</td><td><code>SELECT EXTRACT(YEAR FROM hire_date) FROM employees;</code></td></tr><tr><td><code>DATEDIFF()</code></td><td>Difference between two dates.</td><td><code>SELECT DATEDIFF(CURRENT_DATE, hire_date) FROM employees;</code></td></tr><tr><td><code>DATE_ADD()</code></td><td>Adds a time interval to a date.</td><td><code>SELECT DATE_ADD(hire_date, INTERVAL 10 DAY) FROM employees;</code></td></tr></tbody></table></div><p class="pro"><b>Pro tip:</b> date manipulation is highly dialect-specific. PostgreSQL uses <code>hire_date + INTERVAL '10 days'</code>; SQL Server uses <code>DATEADD(day, 10, hire_date)</code>.</p></div></section>
+<section class="slide"><div class="in"><p class="eb">Main lesson · 2D to 2E</p><h2>Scalar (math) and conversion functions</h2><div class="g2"><div><div class="pan"><h3>Scalar (math) functions</h3><ul><li><code>ROUND()</code>: rounds to a number of decimal places.</li><li><code>CEILING()</code>: rounds up to the nearest integer.</li><li><code>FLOOR()</code>: rounds down to the nearest integer.</li><li><code>ABS()</code>: the absolute (positive) value.</li><li><code>SQRT()</code>: the square root.</li></ul></div></div><div><div class="cc"><header><b>CAST (SQL)</b><button data-copy="c1" aria-label="Copy CAST (SQL) code">Copy</button></header><pre tabindex="0"><code id="c1" data-l="sql">-- Convert a numeric ID to a string
+SELECT CAST(employee_id AS CHAR) FROM employees;
+
+-- Convert a string to a date (some dialects)
+SELECT CAST('2023-10-01' AS DATE);</code></pre></div></div></div><p class="pro"><b>Conversion</b> functions convert data from one type to another. <code>CAST()</code> is the standard SQL syntax.</p></div></section>
+<section class="slide"><div class="in"><p class="eb">Modern update</p><h2>JSON and regex functions</h2><p>Modern databases handle complex data structures, not just simple text and numbers. For a <code>JSON</code> or <code>JSONB</code> column, use <code>JSON_EXTRACT()</code> (MySQL) or the <code>-&gt;</code> operator (PostgreSQL). Databases also support regular expressions for complex string matching.</p><div class="cc"><header><b>JSON and REGEXP (SQL)</b><button data-copy="c2" aria-label="Copy JSON and REGEXP (SQL) code">Copy</button></header><pre tabindex="0"><code id="c2" data-l="sql">-- Extract a key from a JSON column
+SELECT profile -> 'age' FROM users;
+
+-- Find users whose email matches a pattern
+SELECT * FROM users
+WHERE email REGEXP
+  '^[a-zA-Z0-9._%+-]+@company\.com$';</code></pre></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Analogy</p><h2>The data processing factory</h2><div class="g2"><div><ul><li><b>Raw data:</b> the raw materials (steel, plastic, wire).</li><li><b>Scalar/math functions:</b> cutting and shaping machines (<code>ROUND</code>, <code>CEILING</code>).</li><li><b>String functions:</b> the assembly line that joins parts (<code>CONCAT</code>) or paints them (<code>UPPER</code>).</li></ul></div><div><ul><li><b>Conversion functions:</b> the packaging department (<code>CAST</code>).</li><li><b>Aggregate functions:</b> the quality control manager who summarizes output (“How many items did we produce?”).</li></ul></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Real-world use case</p><h2>AI data preparation</h2><p>Before feeding data into a machine learning model or an LLM, data scientists clean it with SQL functions.</p><ul><li><code>TRIM()</code> removes accidental spaces from user input.</li><li><code>EXTRACT(YEAR FROM purchase_date)</code> creates a new feature for the model.</li><li><code>LOWER()</code> keeps text consistent before generating vector embeddings.</li></ul></div></section>
+<section class="slide"><div class="in"><p class="eb">FAQs</p><h2>Common questions</h2><div class="g2"><div><div class="box"><h3>Performance implications?</h3>Yes. Applying a function to a column in a <code>WHERE</code> clause (e.g., <code>WHERE UPPER(last_name) = 'SMITH'</code>) can stop the database from using an index, making queries slow. Clean input on the application side or use functional indexes.</div><div class="box"><h3>Custom functions?</h3>Yes. Most databases support <b>User-Defined Functions (UDFs)</b> or <b>stored procedures</b> (PL/pgSQL, T-SQL, PL/SQL). Complex business logic is often better in application code to keep the database lean and scalable.</div></div><div><div class="box"><h3>Handling NULL values?</h3>Most functions return <code>NULL</code> if any argument is <code>NULL</code>. Use <code>COALESCE()</code> (or <code>IFNULL()</code> in MySQL) to return the first non-null value: <code>SELECT COALESCE(phone_number, 'Not Provided') FROM customers;</code></div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Hands-on exercise</p><h2>Customer data transformation</h2><p>A table <code>orders</code> has <code>order_id</code>, <code>customer_name</code>, <code>order_date</code>, <code>order_total</code> and <code>quantity</code>.</p><div class="g2"><div><ol start="1"><li><b>String:</b> combine the customer’s first and last name into one uppercase column.</li><li><b>Date:</b> find the delivery date for orders made today (5-day shipping).</li><li><b>Scalar:</b> round <code>order_total</code> to the nearest whole number.</li><li><b>Conversion:</b> convert <code>order_date</code> to a string.</li><li><b>Aggregate:</b> find the total sales for all orders.</li></ol></div><div><div class="cc"><header><b>Solutions (SQL)</b><button data-copy="c3" aria-label="Copy Solutions (SQL) code">Copy</button></header><pre tabindex="0"><code id="c3" data-l="sql">-- 1. String: combine and uppercase
+SELECT UPPER(
+    CONCAT(first_name, ' ', last_name)
+) AS full_name
+FROM orders;
+
+-- 2. Date: delivery date, 5 days from today
+-- (Syntax varies by DB; MySQL style shown)
+SELECT DATE_ADD(CURRENT_DATE, INTERVAL 5 DAY)
+       AS delivery_date
+FROM orders;
+
+-- 3. Scalar: round the total
+SELECT ROUND(order_total) AS rounded_total
+FROM orders;
+
+-- 4. Conversion: date to string
+SELECT CAST(order_date AS CHAR) AS date_string
+FROM orders;
+
+-- 5. Aggregate: total sales
+SELECT SUM(order_total) AS total_sales
+FROM orders;</code></pre></div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Key quotes</p><h2>Key definitions to remember</h2><div class="g2"><div><div class="box"><h3>SQL function</h3>A pre-built, reusable piece of code that takes arguments and returns a single value.</div><div class="box"><h3>Scalar function</h3>Operates on an individual value, not on a whole set of rows.</div></div><div><div class="box"><h3>CAST()</h3>Standard SQL syntax for converting a value from one data type to another.</div><div class="box"><h3>COALESCE()</h3>Returns the first non-null value in a list.</div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Recap</p><h2>Power tools, with dialect differences</h2><p style="font-size:20px"><b>String</b> functions clean text, <b>date/time</b> functions handle temporal calculations, <b>scalar</b> functions do math and <b>conversion</b> functions change data types.</p><p class="pro">Exact syntax varies between SQL dialects (MySQL, PostgreSQL, SQL Server), so always check yours.</p></div></section>
+<section class="slide"><div class="in"><p class="eb">Activity 1</p><h2>Multiple choice</h2><div class="mc"><div><div class="q">1. Which function removes leading and trailing spaces from a string?</div><ul class="o" style="list-style:none"><li>a. <code>CLEAN()</code></li><li>b. <code>TRIM()</code></li><li>c. <code>CUT()</code></li><li>d. <code>SUBSTRING()</code></li></ul></div><div><div class="q">2. To combine <code>first_name</code> and <code>last_name</code> into one column, which function should you use?</div><ul class="o" style="list-style:none"><li>a. <code>MERGE()</code></li><li>b. <code>JOIN()</code></li><li>c. <code>CONCAT()</code></li><li>d. <code>APPEND()</code></li></ul></div><div><div class="q">3. Which function extracts a specific part of a date, such as just the year?</div><ul class="o" style="list-style:none"><li>a. <code>GET_YEAR()</code></li><li>b. <code>EXTRACT()</code></li><li>c. <code>DATE_PART()</code></li><li>d. Both b and c (depending on the dialect)</li></ul></div><div><div class="q">4. What is the output of <code>SELECT ROUND(4.567, 1);</code>?</div><ul class="o" style="list-style:none"><li>a. 4</li><li>b. 4.5</li><li>c. 4.6</li><li>d. 5</li></ul></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Activity 2</p><h2>True or false</h2><div class="g2"><div><ol start="1"><li>Aggregate functions perform calculations on multiple rows of data and return a single value.</li><li>String functions are used to manipulate data stored in character strings.</li><li>Date and time functions are used to manipulate data stored in date and time data types.</li><li>Scalar functions are used to manipulate entire columns of data, not individual values.</li></ol></div><div><ol start="5"><li>Conversion functions are used to convert data between different data types.</li><li>The specific syntax for SQL functions is identical across all SQL servers.</li><li>SQL functions allow you to retrieve and manipulate data in a way that suits your needs.</li></ol></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Answer key</p><h2>Multiple choice and true or false</h2><div class="g2"><div><div class="pan"><h3>Multiple choice</h3><ol start="1"><li><b>b.</b> TRIM() removes whitespace from both ends.</li><li><b>c.</b> CONCAT() joins strings (or use || in standard SQL).</li><li><b>d.</b> EXTRACT(YEAR FROM date) is standard; DATE_PART('year', date) is common in PostgreSQL.</li><li><b>c.</b> ROUND(value, decimal_places) turns 4.567 into 4.6.</li></ol></div></div><div><div class="pan"><h3>True or false</h3><ol start="1"><li><span class="ok">True.</span></li><li><span class="ok">True.</span></li><li><span class="ok">True.</span></li><li><span class="er">False.</span> Scalar functions operate on individual values, not on a whole column.</li><li><span class="ok">True.</span></li><li><span class="er">False.</span> Syntax varies significantly between MySQL, PostgreSQL, SQL Server and others.</li><li><span class="ok">True.</span></li></ol></div></div></div></div></section>
+<section class="slide"><div class="in" style="text-align:center"><p class="eb">That’s a wrap</p><h2>Great work</h2><svg viewBox="0 0 160 160" role="img" aria-label="A check mark inside a circle" style="max-width:160px;margin:0 auto 12px"><circle class="s-f" cx="80" cy="80" r="64"/><path class="s-l" d="M50 82 L72 104 L112 58" stroke-linecap="round" stroke-linejoin="round" style="stroke-width:8"/></svg><p style="font-size:22px">Remember: functions transform data. Check your database’s dialect for the exact syntax.</p></div></section>
+</main>
+<div id="bar"></div><div id="cnt" aria-live="polite">1 / 19</div>
+<div id="help" role="dialog" aria-label="Keyboard shortcuts"><div class="pan"><h3>Shortcuts</h3>
+<p><kbd>→</kbd> <kbd>Space</kbd> <kbd>PageDown</kbd> right-click, Mouse5: next</p>
+<p><kbd>←</kbd> <kbd>PageUp</kbd> Mouse4: previous</p><p><kbd>Home</kbd> <kbd>End</kbd> first or last</p>
+<p><kbd>Ctrl</kbd> + <kbd>+</kbd> <kbd>−</kbd> <kbd>0</kbd> or Ctrl + wheel: text size</p><p><kbd>Esc</kbd> closes this box</p></div></div>
+<script>
+(function(){
+var S=[].slice.call(document.querySelectorAll('.slide')),n=0,z=1,cnt=document.getElementById('cnt'),bar=document.getElementById('bar'),help=document.getElementById('help');
+try{var s=parseFloat(localStorage.getItem('zoomIS'));if(s>=.7&&s<=2)z=s}catch(e){}
+function paint(){document.documentElement.style.setProperty('--z',z);cnt.textContent=(n+1)+' / '+S.length+(Math.round(z*100)!==100?' · '+Math.round(z*100)+'%':'');bar.style.width=((n+1)/S.length*100)+'%'}
+function go(i){i=Math.max(0,Math.min(S.length-1,i));if(i===n)return;S[n].classList.remove('on');S[n].classList.toggle('out',i>n);S[n].setAttribute('aria-hidden','true');n=i;S[n].classList.remove('out');S[n].classList.add('on');S[n].removeAttribute('aria-hidden');S[n].scrollTop=0;paint()}
+function zoom(v){z=Math.max(.7,Math.min(2,Math.round(v*100)/100));try{localStorage.setItem('zoomIS',z)}catch(e){}paint()}
+S.forEach(function(e,i){e.setAttribute('aria-hidden','true');e.setAttribute('role','group');e.setAttribute('aria-label','Slide '+(i+1))});
+S[0].classList.add('on');S[0].removeAttribute('aria-hidden');paint();
+document.addEventListener('keydown',function(e){var t=e.target.tagName;if(t==='INPUT'||t==='TEXTAREA'||t==='SELECT'||e.target.isContentEditable)return;
+if((e.ctrlKey||e.metaKey)&&(e.key==='+'||e.key==='='||e.key==='-'||e.key==='0')){e.preventDefault();zoom(e.key==='0'?1:z+(e.key==='-'?-.1:.1));return}
+var k=e.key;if(k==='ArrowRight'||k==='PageDown'||(k===' '&&t!=='BUTTON')){e.preventDefault();go(n+1)}
+else if(k==='ArrowLeft'||k==='PageUp'){e.preventDefault();go(n-1)}else if(k==='Home')go(0);else if(k==='End')go(S.length-1);
+else if(k==='?')help.classList.toggle('on');else if(k==='Escape')help.classList.remove('on')});
+['mousedown','mouseup','auxclick'].forEach(function(t){window.addEventListener(t,function(e){if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation();if(t==='mousedown')go(n+(e.button===4?1:-1))}else if(e.button===2){e.preventDefault();if(t==='mousedown')go(n+1)}},true)});
+window.addEventListener('contextmenu',function(e){e.preventDefault()},true);
+window.addEventListener('wheel',function(e){if(e.ctrlKey){e.preventDefault();zoom(z+(e.deltaY<0?.1:-.1))}},{passive:false});
+var x0=null;document.addEventListener('touchstart',function(e){x0=e.touches[0].clientX},{passive:true});
+document.addEventListener('touchend',function(e){if(x0===null)return;var d=e.changedTouches[0].clientX-x0;if(Math.abs(d)>60)go(n+(d<0?1:-1));x0=null},{passive:true});
+var M={"Aggregate": "Calculations on a set of values that return a single value: COUNT, SUM, AVG, MIN, MAX.", "String": "Manipulate text: CONCAT, LENGTH, UPPER / LOWER, SUBSTRING, TRIM.", "Date/Time": "Extract, format or calculate differences between dates and times: CURRENT_DATE, EXTRACT, DATE_ADD, DATEDIFF.", "Scalar / Math": "Calculations on numeric values: ROUND, CEILING, FLOOR, ABS, SQRT.", "Conversion": "Convert data from one type to another: CAST, CONVERT.", "Modern": "JSON and regular expression functions: JSON_EXTRACT, the -> operator, REGEXP."};var bt=document.getElementById('btns'),out=document.getElementById('out');
+if(bt)bt.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;[].forEach.call(bt.children,function(c){c.setAttribute('aria-pressed',c===b)});out.textContent=b.dataset.k+' → '+M[b.dataset.k]});
+
+var KW={sql:'CREATE|TABLE|INT|PRIMARY|KEY|VARCHAR|NOT|NULL|TEXT|UNIQUE|DECIMAL|CHECK|FOREIGN|REFERENCES|DATE|DEFAULT|SELECT|FROM|JOIN|ON|WHERE|AUTO_INCREMENT|INSERT|INTO|VALUES|UPDATE|SET|DELETE|ALTER|ADD|TRUNCATE|DROP|JSON|VECTOR|TIMESTAMP|CURRENT_TIMESTAMP',php:'try|catch|new|echo|if|throw|PDO|PDOException',dbml:'Table|primary|key|unique|ref|Note|integer|varchar|timestamp',puml:'class|actor|usecase|rectangle|left|to|right|direction|as'},CM={php:'//.*$',sql:'--.*$',dbml:'//.*$',puml:'(?!)'},ST={php:"\"[^\"\\n]*\"|'[^'\\n]*'",sql:"'[^'\\n]*'",dbml:"'[^'\\n]*'",puml:'"[^"\\n]*"'};
+function hl(c){var L=c.dataset.l,t=c.textContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+c.innerHTML=t.replace(new RegExp('('+CM[L]+')|('+ST[L]+')|\\b('+KW[L]+')\\b|(@\\w+|\\$\\w+)','gm'),function(m,cm,st){return cm?'<i class="c">'+m+'</i>':st?'<i class="s">'+m+'</i>':'<b class="k">'+m+'</b>'})}
+[].forEach.call(document.querySelectorAll('code[data-l]'),hl);
+[].forEach.call(document.querySelectorAll('[data-copy]'),function(b){b.addEventListener('click',function(){var done=function(){b.textContent='Copied!';b.setAttribute('aria-pressed','true');setTimeout(function(){b.textContent='Copy';b.setAttribute('aria-pressed','false')},1500)};
+try{navigator.clipboard.writeText(document.getElementById(b.dataset.copy).textContent).then(done,function(){b.textContent='Press Ctrl+C'})}catch(e){b.textContent='Press Ctrl+C'}})});
+})();
+</script></body></html>

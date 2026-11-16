@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Information management · Basic SQL: Data Query Language (DQL)</title>
+<style>
+:root{color-scheme:light dark;--bg:#f4f6f8;--panel:#fff;--ink:#14212b;--mut:#44566a;--grid:#c9d3db;--acc:#0b6e6e;--on-acc:#fff;--ok:#1f7a3d;--err:#b3261e;--z:1}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1a22;--panel:#16252f;--ink:#e8eff4;--mut:#a7b8c4;--grid:#2c404e;--acc:#5ec8c8;--on-acc:#0f1a22;--ok:#6fd08c;--err:#ff8f87}}
+*{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:var(--acc) var(--bg)}
+@supports not (scrollbar-color:auto){*::-webkit-scrollbar{width:14px;height:14px}*::-webkit-scrollbar-track{background:var(--bg);border:2px solid var(--grid)}*::-webkit-scrollbar-thumb{background:var(--acc);border:3px solid var(--bg);border-radius:8px}*::-webkit-scrollbar-thumb:hover{filter:brightness(.8)}*::-webkit-scrollbar-corner{background:var(--bg)}}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+:root{padding-top:env(safe-area-inset-top,0)}
+.slide{position:absolute;inset:0 0 6px 0;overflow:auto;opacity:0;visibility:hidden;transform:translateX(var(--from,40px));transition:opacity .35s cubic-bezier(.2,.8,.2,1),transform .35s cubic-bezier(.2,.8,.2,1),visibility 0s .35s}
+.slide.on{opacity:1;visibility:visible;transform:none;transition:opacity .35s cubic-bezier(.2,.8,.2,1),transform .35s cubic-bezier(.2,.8,.2,1)}
+.slide.out{--from:-40px}
+@media (prefers-reduced-motion:reduce){.slide{transform:none!important}}
+.in{zoom:var(--z);padding:clamp(20px,4vw,56px) clamp(20px,6vw,80px) 64px;max-width:1280px;margin:auto}
+.eb{color:var(--acc);font-weight:600;font-size:17px;margin:0 0 4px}
+h1,h2{font-family:"Iowan Old Style",Georgia,serif;line-height:1.12;margin:0 0 18px;font-size:clamp(28px,4.2vw,44px)}
+h1{font-size:clamp(34px,6vw,64px)}
+h3{margin:0 0 6px;font-size:19px}
+p,li{margin:0 0 8px}ul,ol{margin:0;padding-left:1.2em}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px}
+.g2>*{min-width:0}
+@media (max-width:760px){.g2{grid-template-columns:minmax(0,1fr)}}
+.box{border-left:4px solid var(--acc);padding:2px 0 2px 16px;margin-bottom:16px}
+.pan{background:var(--panel);border:1px solid var(--grid);border-radius:8px;padding:16px 18px}
+.tw{overflow-x:auto;border:1px solid var(--grid);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:560px;background:var(--panel)}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--grid);vertical-align:top}th{color:var(--acc)}
+.pro{background:var(--panel);border:1px solid var(--grid);border-radius:8px;padding:12px 16px;margin-top:14px}
+svg{max-width:100%;height:auto;display:block}svg text{font:600 17px ui-sans-serif,system-ui,sans-serif;fill:var(--ink)}
+.s-f{fill:var(--panel);stroke:var(--acc);stroke-width:2}.s-l{stroke:var(--acc);stroke-width:2.5;fill:none}.s-a{fill:var(--acc)}
+.mc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px 28px}
+.mc>div:last-child:nth-child(odd){grid-column:1/-1;max-width:calc(50% - 14px);justify-self:center}
+@media (max-width:760px){.mc{grid-template-columns:minmax(0,1fr)}.mc>div:last-child:nth-child(odd){max-width:none}}
+.q{font-weight:600;margin-bottom:4px}.o{margin:0;padding-left:1em}
+.ok{color:var(--ok);font-weight:700}.er{color:var(--err);font-weight:700}
+button{font:inherit;font-size:16px;color:var(--ink);background:var(--panel);border:2px solid var(--acc);border-radius:8px;padding:8px 14px;cursor:pointer;box-shadow:0 4px 0 var(--acc);transition:transform .12s ease-out,box-shadow .12s ease-out,background-color .12s ease-out}
+button:active{transform:translateY(4px);box-shadow:0 0 0 var(--acc)}
+button[aria-pressed=true]{background:var(--acc);color:var(--on-acc)}
+button:disabled{opacity:.5;cursor:not-allowed}
+:focus-visible{outline:3px solid var(--acc);outline-offset:3px}
+@media (hover:hover) and (pointer:fine){button:hover:not(:disabled):not([aria-pressed=true]){background:var(--bg)}}
+.btns{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0 18px}
+#out{min-height:3.2em;border:1px dashed var(--acc);border-radius:8px;padding:10px 14px}
+#bar{position:fixed;left:0;bottom:0;height:6px;background:var(--acc);width:0;transition:width .35s cubic-bezier(.2,.8,.2,1);z-index:5}
+#cnt{position:fixed;right:14px;bottom:12px;background:var(--panel);border:1px solid var(--grid);border-radius:8px;padding:2px 10px;font-size:16px;z-index:5}
+#help{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:9}
+#help.on{display:flex}#help .pan{max-width:520px;margin:16px}
+kbd{font:600 16px ui-monospace,monospace;border:1px solid var(--grid);border-bottom-width:3px;border-radius:5px;padding:0 6px}
+html:not(.js) .slide:first-of-type{opacity:1;visibility:visible;transform:none}.cc{display:flex;flex-direction:column;height:min(460px,60vh);min-height:0;border:1px solid var(--grid);border-radius:8px;background:var(--panel);overflow:hidden}.cc header{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--grid);gap:8px}.cc pre{margin:0;padding:12px 14px;overflow:auto;flex:1;min-height:0;font:16px/1.5 ui-monospace,Menlo,Consolas,monospace}.cc i{font-style:normal}.k{color:var(--acc)}.s{color:var(--ok)}.c{color:var(--mut);font-style:italic}</style></head><body>
+<script>document.documentElement.className="js"</script>
+<main id="deck">
+<section class="slide"><div class="in"><div class="g2" style="align-items:center"><div><p class="eb">Information management · Module 19</p><h1>Basic SQL: Data Query Language (DQL)</h1><p style="font-size:22px;color:var(--mut)">Retrieving and analyzing data: SELECT, aggregate functions, GROUP BY, ORDER BY and window functions.</p><p class="pro">Press <kbd>→</kbd> or Space to start. Press <kbd>?</kbd> for shortcuts.</p></div><svg viewBox="0 0 480 208" role="img" aria-label="Diagram: the main parts of a DQL query"><rect class="s-f" x="10" y="0" width="460" height="40" rx="8"/><text x="240" y="26" text-anchor="middle">SELECT: pick columns</text><path class="s-l" d="M240 40 V50"/><path class="s-a" d="M233 48 L247 48 L240 56 Z"/><rect class="s-f" x="10" y="56" width="460" height="40" rx="8"/><text x="240" y="82" text-anchor="middle">WHERE: filter rows</text><path class="s-l" d="M240 96 V106"/><path class="s-a" d="M233 104 L247 104 L240 112 Z"/><rect class="s-f" x="10" y="112" width="460" height="40" rx="8"/><text x="240" y="138" text-anchor="middle">GROUP BY: summarize</text><path class="s-l" d="M240 152 V162"/><path class="s-a" d="M233 160 L247 160 L240 168 Z"/><rect class="s-f" x="10" y="168" width="460" height="40" rx="8"/><text x="240" y="194" text-anchor="middle">ORDER BY: sort</text></svg></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Goals</p><h2>By the end of this lesson, you can…</h2><div class="g2"><div><ul style="font-size:20px"><li>Discuss the Data Query Language and the SELECT command.</li><li>Explain and apply aggregate functions (SUM, COUNT, AVG, MIN, MAX) in queries.</li></ul></div><div><ul style="font-size:20px"><li>Group and summarize data using GROUP BY.</li><li>Sort query results using ORDER BY.</li><li>Understand modern analysis techniques, including window functions and query execution order.</li></ul></div></div><p class="pro">While DML is about changing data, DQL is about retrieving and analyzing it.</p></div></section>
+<section class="slide"><div class="in"><p class="eb">Main lesson · 1</p><h2>The SELECT statement</h2><p><b>Data Query Language (DQL)</b> is a subset of SQL used to retrieve data. The primary command is <code>SELECT</code>, which selects, filters, sorts and retrieves specific data from one or more tables.</p><div class="cc"><header><b>SELECT basics (SQL)</b><button data-copy="c1" aria-label="Copy SELECT basics (SQL) code">Copy</button></header><pre tabindex="0"><code id="c1" data-l="sql">-- Retrieve all columns from a table
+SELECT * FROM employees;
+
+-- Retrieve specific columns from a table
+SELECT first_name, last_name FROM employees;
+
+-- Filter with WHERE: salary greater than 50,000
+SELECT * FROM employees WHERE salary > 50000;</code></pre></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Main lesson · 2</p><h2>Aggregate functions</h2><p>Aggregate functions perform a calculation on a set of values and return a single value. They are essential for summarizing data.</p><div class="tw"><table><thead><tr><th>Function</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>SUM()</code></td><td>Sum of all values in a column.</td><td><code>SELECT SUM(salary) FROM employees;</code></td></tr><tr><td><code>COUNT()</code></td><td>Number of rows in a column.</td><td><code>SELECT COUNT(*) FROM employees;</code></td></tr><tr><td><code>AVG()</code></td><td>Average of all values in a column.</td><td><code>SELECT AVG(salary) FROM employees;</code></td></tr><tr><td><code>MIN()</code></td><td>Minimum value in a column.</td><td><code>SELECT MIN(salary) FROM employees;</code></td></tr><tr><td><code>MAX()</code></td><td>Maximum value in a column.</td><td><code>SELECT MAX(salary) FROM employees;</code></td></tr><tr><td><code>COUNT(DISTINCT)</code></td><td>Number of unique non-null values.</td><td><code>SELECT COUNT(DISTINCT department) FROM employees;</code></td></tr></tbody></table></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Try it</p><h2>Explore the aggregate functions</h2><p>Pick a function to see what it does.</p><div class="btns" id="btns" role="group" aria-label="Choices"><button aria-pressed="false" data-k="SUM()">SUM()</button><button aria-pressed="false" data-k="COUNT()">COUNT()</button><button aria-pressed="false" data-k="AVG()">AVG()</button><button aria-pressed="false" data-k="MIN()">MIN()</button><button aria-pressed="false" data-k="MAX()">MAX()</button><button aria-pressed="false" data-k="COUNT(DISTINCT)">COUNT(DISTINCT)</button></div><div id="out" role="status" aria-live="polite">Nothing selected yet.</div></div></section>
+<section class="slide"><div class="in"><p class="eb">Main lesson · 3</p><h2>Grouping and sorting</h2><p><code>GROUP BY</code> groups rows with the same values into summary rows. <code>ORDER BY</code> sorts the result in ascending (<code>ASC</code>) or descending (<code>DESC</code>) order.</p><div class="g2"><div><div class="cc"><header><b>GROUP BY, ORDER BY, HAVING (SQL)</b><button data-copy="c2" aria-label="Copy GROUP BY, ORDER BY, HAVING (SQL) code">Copy</button></header><pre tabindex="0"><code id="c2" data-l="sql">-- Total salary for each department
+SELECT department, SUM(salary)
+FROM employees
+GROUP BY department;
+
+-- Sort employees by salary, highest first
+SELECT * FROM employees ORDER BY salary DESC;
+
+-- HAVING filters the groups
+SELECT department, SUM(salary)
+FROM employees
+GROUP BY department
+HAVING SUM(salary) > 200000;</code></pre></div></div><div><div class="pan"><h3>The missing link: HAVING</h3><code>WHERE</code> filters individual rows <i>before</i> grouping. To filter the <i>groups</i> (e.g., show only departments with a total salary above 200,000), use <code>HAVING</code>.</div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Modern update</p><h2>How SQL actually executes</h2><p>You start a query with <code>SELECT</code>, but the engine processes the clauses in a different logical order to optimize performance.</p><div class="g2"><div><svg viewBox="0 0 480 336" role="img" aria-label="Diagram: the seven steps of SQL query execution order"><rect class="s-f" x="10" y="0" width="460" height="36" rx="8"/><text x="240" y="24" text-anchor="middle">FROM / JOIN: combine data</text><path class="s-l" d="M240 36 V44"/><path class="s-a" d="M233 42 L247 42 L240 50 Z"/><rect class="s-f" x="10" y="50" width="460" height="36" rx="8"/><text x="240" y="74" text-anchor="middle">WHERE: filter rows</text><path class="s-l" d="M240 86 V94"/><path class="s-a" d="M233 92 L247 92 L240 100 Z"/><rect class="s-f" x="10" y="100" width="460" height="36" rx="8"/><text x="240" y="124" text-anchor="middle">GROUP BY: form groups</text><path class="s-l" d="M240 136 V144"/><path class="s-a" d="M233 142 L247 142 L240 150 Z"/><rect class="s-f" x="10" y="150" width="460" height="36" rx="8"/><text x="240" y="174" text-anchor="middle">HAVING: filter groups</text><path class="s-l" d="M240 186 V194"/><path class="s-a" d="M233 192 L247 192 L240 200 Z"/><rect class="s-f" x="10" y="200" width="460" height="36" rx="8"/><text x="240" y="224" text-anchor="middle">SELECT: compute columns</text><path class="s-l" d="M240 236 V244"/><path class="s-a" d="M233 242 L247 242 L240 250 Z"/><rect class="s-f" x="10" y="250" width="460" height="36" rx="8"/><text x="240" y="274" text-anchor="middle">ORDER BY: sort the result</text><path class="s-l" d="M240 286 V294"/><path class="s-a" d="M233 292 L247 292 L240 300 Z"/><rect class="s-f" x="10" y="300" width="460" height="36" rx="8"/><text x="240" y="324" text-anchor="middle">LIMIT / OFFSET: restrict rows</text></svg></div><div><div class="pan"><h3>Why it matters</h3>Since <code>SELECT</code> runs late, you can’t use a column alias defined in <code>SELECT</code> inside the <code>WHERE</code> clause.</div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Modern update</p><h2>Window functions</h2><p><code>GROUP BY</code> collapses rows into one summary row. <b>Window functions</b> (the <code>OVER()</code> clause) perform aggregate calculations <i>without</i> losing the individual row details.</p><div class="g2"><div><div class="cc"><header><b>Window function (SQL)</b><button data-copy="c3" aria-label="Copy Window function (SQL) code">Copy</button></header><pre tabindex="0"><code id="c3" data-l="sql">-- Show each employee's row plus the total
+-- salary of their department
+SELECT first_name, department, salary,
+       SUM(salary) OVER(PARTITION BY department)
+         AS dept_total_salary
+FROM employees;</code></pre></div></div><div><div class="pan"><h3>What it does</h3>Adds a column with the total salary of the employee’s department next to every employee’s own row.</div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Analogy</p><h2>The supermarket receipt</h2><div class="g2"><div><ul><li><b>SELECT *:</b> looking at the entire receipt line by line.</li><li><b>WHERE:</b> highlighting only items that cost more than $10.</li><li><b>GROUP BY:</b> sorting items into categories (Produce, Dairy, Meat) to see where you spent most.</li></ul></div><div><ul><li><b>SUM / AVG:</b> the total spent on dairy, or the average price of a meat item.</li><li><b>HAVING:</b> after grouping, looking only at categories where you spent more than $50.</li></ul></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Real-world use case</p><h2>AI-assisted data analysis (Text-to-SQL)</h2><p>AI tools (ChatGPT, Copilot, BI tools) can generate DQL from natural language.</p><div class="g2"><div><div class="box"><h3>The request</h3>A manager asks: “What was the average sales price per category in Q3?”</div></div><div><div class="box"><h3>The query</h3><code>SELECT category, AVG(price) FROM sales WHERE date BETWEEN '2023-07-01' AND '2023-09-30' GROUP BY category;</code></div></div></div><p class="pro">Understanding DQL is crucial for verifying that the AI generated the correct logic.</p></div></section>
+<section class="slide"><div class="in"><p class="eb">FAQs</p><h2>Common questions</h2><div class="g2"><div><div class="box"><h3>Aggregate vs. regular functions?</h3>Aggregate functions work on a <i>set</i> of values and return one value (e.g., <code>SUM</code>). Scalar functions work on a single value and return a single value (e.g., <code>UPPER('hello')</code>).</div><div class="box"><h3>Aggregates in a WHERE clause?</h3>No. <code>WHERE</code> filters individual rows <i>before</i> aggregation. To filter on an aggregate result, use <code>HAVING</code>.</div></div><div><div class="box"><h3>COUNT(*) vs. COUNT(column_name)?</h3><code>COUNT(*)</code> counts all rows, including rows with <code>NULL</code>. <code>COUNT(column_name)</code> counts only rows where that column is not <code>NULL</code>.</div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Hands-on exercise</p><h2>Analyze sales data</h2><p>A database <code>sales</code> has a table <code>sales_data</code>. Write queries for the business questions.</p><div class="g2"><div><div class="tw"><table><thead><tr><th>sales_id</th><th>product_name</th><th>category</th><th>date</th><th>quantity</th><th>price</th></tr></thead><tbody><tr><td>1</td><td>Product A</td><td>Electronics</td><td>2022-01-01</td><td>10</td><td>100</td></tr><tr><td>2</td><td>Product B</td><td>Clothes</td><td>2022-01-02</td><td>5</td><td>50</td></tr><tr><td>3</td><td>Product C</td><td>Electronics</td><td>2022-01-03</td><td>20</td><td>150</td></tr><tr><td>4</td><td>Product D</td><td>Books</td><td>2022-01-04</td><td>15</td><td>25</td></tr></tbody></table></div><ol start="1"><li>How many total products were sold?</li><li>How many transactions are recorded?</li><li>What is the average price?</li><li>What are the minimum and maximum prices?</li><li>How many distinct categories are there?</li><li>How many products were sold in each category?</li><li>Total revenue (quantity × price) by category and date.</li></ol></div><div><div class="cc"><header><b>Solutions (SQL)</b><button data-copy="c4" aria-label="Copy Solutions (SQL) code">Copy</button></header><pre tabindex="0"><code id="c4" data-l="sql">-- 1. Total products sold (Result: 50)
+SELECT SUM(quantity) FROM sales_data;
+
+-- 2. Total transactions (Result: 4)
+SELECT COUNT(*) FROM sales_data;
+
+-- 3. Average price (Result: 81.25)
+SELECT AVG(price) FROM sales_data;
+
+-- 4. Min and max price (Result: 25, 150)
+SELECT MIN(price), MAX(price) FROM sales_data;
+
+-- 5. Distinct categories (Result: 3)
+SELECT COUNT(DISTINCT category) FROM sales_data;
+
+-- 6. Products sold per category
+SELECT category, SUM(quantity)
+FROM sales_data
+GROUP BY category;
+
+-- 7. Revenue by category and date
+SELECT category, date,
+       SUM(quantity * price) AS total_sales
+FROM sales_data
+GROUP BY category, date;</code></pre></div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Key quotes</p><h2>Key definitions to remember</h2><div class="g2"><div><div class="box"><h3>DQL</h3>The subset of SQL used to retrieve data. Primary command: SELECT.</div><div class="box"><h3>Aggregate function</h3>Performs a calculation on a set of values and returns a single value.</div></div><div><div class="box"><h3>HAVING</h3>Filters the groups created by GROUP BY.</div><div class="box"><h3>Window function</h3>Aggregates with OVER() without collapsing individual rows.</div></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Recap</p><h2>Turn raw data into insight</h2><p style="font-size:20px"><b>DQL</b> is the language of data retrieval, anchored by <code>SELECT</code>.</p><p class="pro">By combining filtering (<code>WHERE</code>), aggregation (<code>SUM</code>, <code>COUNT</code>, <code>AVG</code>), grouping (<code>GROUP BY</code>) and sorting (<code>ORDER BY</code>), you turn raw data into meaningful business insights.</p></div></section>
+<section class="slide"><div class="in"><p class="eb">Activity 1</p><h2>Multiple choice</h2><div class="mc"><div><div class="q">1. Which SQL function is used to find the highest value in a column?</div><ul class="o" style="list-style:none"><li>a. <code>MIN()</code></li><li>b. <code>MAX()</code></li><li>c. <code>TOP()</code></li><li>d. <code>HIGH()</code></li></ul></div><div><div class="q">2. To count unique values in a column, ignoring duplicates, which syntax should you use?</div><ul class="o" style="list-style:none"><li>a. <code>COUNT(*)</code></li><li>b. <code>COUNT(ALL column_name)</code></li><li>c. <code>COUNT(DISTINCT column_name)</code></li><li>d. <code>SUM(column_name)</code></li></ul></div><div><div class="q">3. Which clause is used to filter the results of an aggregate function?</div><ul class="o" style="list-style:none"><li>a. <code>WHERE</code></li><li>b. <code>GROUP BY</code></li><li>c. <code>HAVING</code></li><li>d. <code>ORDER BY</code></li></ul></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Activity 2</p><h2>True or false</h2><div class="g2"><div><ol start="1"><li>Aggregate functions can only be used in SELECT statements.</li><li>The COUNT() function counts the number of rows in a table.</li><li>The AVG() function calculates the minimum value of a column.</li><li>The SUM() function calculates the total value of a column.</li></ol></div><div><ol start="5"><li>The MIN() function calculates the maximum value of a column.</li><li>The MAX() function calculates the minimum value of a column.</li><li>The GROUP BY clause groups the results of a SELECT statement by one or more columns.</li><li>The WHERE clause is executed after the GROUP BY clause.</li></ol></div></div></div></section>
+<section class="slide"><div class="in"><p class="eb">Answer key</p><h2>Multiple choice and true or false</h2><div class="g2"><div><div class="pan"><h3>Multiple choice</h3><ol start="1"><li><b>b.</b> MAX() returns the maximum value.</li><li><b>c.</b> COUNT(DISTINCT ...) counts unique values.</li><li><b>c.</b> HAVING is designed to filter grouped data.</li></ol></div></div><div><div class="pan"><h3>True or false</h3><ol start="1"><li><span class="er">False.</span> They can also be used in HAVING and ORDER BY.</li><li><span class="ok">True.</span></li><li><span class="er">False.</span> AVG() calculates the average; MIN() the minimum.</li><li><span class="ok">True.</span></li><li><span class="er">False.</span> MIN() calculates the minimum.</li><li><span class="er">False.</span> MAX() calculates the maximum.</li><li><span class="ok">True.</span></li><li><span class="er">False.</span> WHERE filters rows before grouping; HAVING filters after.</li></ol></div></div></div></div></section>
+<section class="slide"><div class="in" style="text-align:center"><p class="eb">That’s a wrap</p><h2>Great work</h2><svg viewBox="0 0 160 160" role="img" aria-label="A check mark inside a circle" style="max-width:160px;margin:0 auto 12px"><circle class="s-f" cx="80" cy="80" r="64"/><path class="s-l" d="M50 82 L72 104 L112 58" stroke-linecap="round" stroke-linejoin="round" style="stroke-width:8"/></svg><p style="font-size:22px">Remember: WHERE filters rows, HAVING filters groups, and SELECT runs late.</p></div></section>
+</main>
+<div id="bar"></div><div id="cnt" aria-live="polite">1 / 18</div>
+<div id="help" role="dialog" aria-label="Keyboard shortcuts"><div class="pan"><h3>Shortcuts</h3>
+<p><kbd>→</kbd> <kbd>Space</kbd> <kbd>PageDown</kbd> right-click, Mouse5: next</p>
+<p><kbd>←</kbd> <kbd>PageUp</kbd> Mouse4: previous</p><p><kbd>Home</kbd> <kbd>End</kbd> first or last</p>
+<p><kbd>Ctrl</kbd> + <kbd>+</kbd> <kbd>−</kbd> <kbd>0</kbd> or Ctrl + wheel: text size</p><p><kbd>Esc</kbd> closes this box</p></div></div>
+<script>
+(function(){
+var S=[].slice.call(document.querySelectorAll('.slide')),n=0,z=1,cnt=document.getElementById('cnt'),bar=document.getElementById('bar'),help=document.getElementById('help');
+try{var s=parseFloat(localStorage.getItem('zoomIS'));if(s>=.7&&s<=2)z=s}catch(e){}
+function paint(){document.documentElement.style.setProperty('--z',z);cnt.textContent=(n+1)+' / '+S.length+(Math.round(z*100)!==100?' · '+Math.round(z*100)+'%':'');bar.style.width=((n+1)/S.length*100)+'%'}
+function go(i){i=Math.max(0,Math.min(S.length-1,i));if(i===n)return;S[n].classList.remove('on');S[n].classList.toggle('out',i>n);S[n].setAttribute('aria-hidden','true');n=i;S[n].classList.remove('out');S[n].classList.add('on');S[n].removeAttribute('aria-hidden');S[n].scrollTop=0;paint()}
+function zoom(v){z=Math.max(.7,Math.min(2,Math.round(v*100)/100));try{localStorage.setItem('zoomIS',z)}catch(e){}paint()}
+S.forEach(function(e,i){e.setAttribute('aria-hidden','true');e.setAttribute('role','group');e.setAttribute('aria-label','Slide '+(i+1))});
+S[0].classList.add('on');S[0].removeAttribute('aria-hidden');paint();
+document.addEventListener('keydown',function(e){var t=e.target.tagName;if(t==='INPUT'||t==='TEXTAREA'||t==='SELECT'||e.target.isContentEditable)return;
+if((e.ctrlKey||e.metaKey)&&(e.key==='+'||e.key==='='||e.key==='-'||e.key==='0')){e.preventDefault();zoom(e.key==='0'?1:z+(e.key==='-'?-.1:.1));return}
+var k=e.key;if(k==='ArrowRight'||k==='PageDown'||(k===' '&&t!=='BUTTON')){e.preventDefault();go(n+1)}
+else if(k==='ArrowLeft'||k==='PageUp'){e.preventDefault();go(n-1)}else if(k==='Home')go(0);else if(k==='End')go(S.length-1);
+else if(k==='?')help.classList.toggle('on');else if(k==='Escape')help.classList.remove('on')});
+['mousedown','mouseup','auxclick'].forEach(function(t){window.addEventListener(t,function(e){if(e.button===3||e.button===4){e.preventDefault();e.stopImmediatePropagation();if(t==='mousedown')go(n+(e.button===4?1:-1))}else if(e.button===2){e.preventDefault();if(t==='mousedown')go(n+1)}},true)});
+window.addEventListener('contextmenu',function(e){e.preventDefault()},true);
+window.addEventListener('wheel',function(e){if(e.ctrlKey){e.preventDefault();zoom(z+(e.deltaY<0?.1:-.1))}},{passive:false});
+var x0=null;document.addEventListener('touchstart',function(e){x0=e.touches[0].clientX},{passive:true});
+document.addEventListener('touchend',function(e){if(x0===null)return;var d=e.changedTouches[0].clientX-x0;if(Math.abs(d)>60)go(n+(d<0?1:-1));x0=null},{passive:true});
+var M={"SUM()": "Returns the sum of all values in a column. Example: SELECT SUM(salary) FROM employees;", "COUNT()": "Returns the number of rows. Example: SELECT COUNT(*) FROM employees;", "AVG()": "Returns the average of all values in a column. Example: SELECT AVG(salary) FROM employees;", "MIN()": "Returns the minimum value in a column. Example: SELECT MIN(salary) FROM employees;", "MAX()": "Returns the maximum value in a column. Example: SELECT MAX(salary) FROM employees;", "COUNT(DISTINCT)": "Returns the number of unique non-null values. Example: SELECT COUNT(DISTINCT department) FROM employees;"};var bt=document.getElementById('btns'),out=document.getElementById('out');
+if(bt)bt.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;[].forEach.call(bt.children,function(c){c.setAttribute('aria-pressed',c===b)});out.textContent=b.dataset.k+' → '+M[b.dataset.k]});
+
+var KW={sql:'CREATE|TABLE|INT|PRIMARY|KEY|VARCHAR|NOT|NULL|TEXT|UNIQUE|DECIMAL|CHECK|FOREIGN|REFERENCES|DATE|DEFAULT|SELECT|FROM|JOIN|ON|WHERE|AUTO_INCREMENT|INSERT|INTO|VALUES|UPDATE|SET|DELETE|ALTER|ADD|TRUNCATE|DROP|JSON|VECTOR|TIMESTAMP|CURRENT_TIMESTAMP',php:'try|catch|new|echo|if|throw|PDO|PDOException',dbml:'Table|primary|key|unique|ref|Note|integer|varchar|timestamp',puml:'class|actor|usecase|rectangle|left|to|right|direction|as'},CM={php:'//.*$',sql:'--.*$',dbml:'//.*$',puml:'(?!)'},ST={php:"\"[^\"\\n]*\"|'[^'\\n]*'",sql:"'[^'\\n]*'",dbml:"'[^'\\n]*'",puml:'"[^"\\n]*"'};
+function hl(c){var L=c.dataset.l,t=c.textContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+c.innerHTML=t.replace(new RegExp('('+CM[L]+')|('+ST[L]+')|\\b('+KW[L]+')\\b|(@\\w+|\\$\\w+)','gm'),function(m,cm,st){return cm?'<i class="c">'+m+'</i>':st?'<i class="s">'+m+'</i>':'<b class="k">'+m+'</b>'})}
+[].forEach.call(document.querySelectorAll('code[data-l]'),hl);
+[].forEach.call(document.querySelectorAll('[data-copy]'),function(b){b.addEventListener('click',function(){var done=function(){b.textContent='Copied!';b.setAttribute('aria-pressed','true');setTimeout(function(){b.textContent='Copy';b.setAttribute('aria-pressed','false')},1500)};
+try{navigator.clipboard.writeText(document.getElementById(b.dataset.copy).textContent).then(done,function(){b.textContent='Press Ctrl+C'})}catch(e){b.textContent='Press Ctrl+C'}})});
+})();
+</script></body></html>
